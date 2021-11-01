@@ -11,6 +11,8 @@ SHOE, the Sorta Helpful Open Engine (and many other acronyms), is a C++ app desi
 - Blend maps
 - Easy creation of new GameObjects, lights, models, materials, and cameras
 - Easy editing of GameObjects, lights, models, materials, and cameras
+- Multiple render targets
+- Shadow mapping
 - PBR shading
 - Image-Based Lighting (for lighting that emulates the sky)
 

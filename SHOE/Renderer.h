@@ -24,6 +24,18 @@ private:
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> shadowRasterizer;
     std::shared_ptr<SimpleVertexShader> VSShadow;
 
+    // SSAO and MRT render target views
+    // Stored in the following order:
+    // 0 - Color minus ambient
+    // 1 - Only ambient
+    // 2 - Only normals
+    // 3 - Only depths
+    // 4 - Results of SSAO
+    // 5 - SSAO with blur fix
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView>      ssaoRTVs[6] = {};
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>             ssaoTexture2D[6] = {};
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>    ssaoSRV[6] = {};
+
     unsigned int windowHeight;
     unsigned int windowWidth;
 
@@ -33,6 +45,8 @@ private:
     //Camera pointers for shadows
     std::shared_ptr<Camera> flashShadowCamera;
     std::shared_ptr<Camera> mainShadowCamera;
+
+    void InitRenderTargetViews();
 
 public:
     Renderer(

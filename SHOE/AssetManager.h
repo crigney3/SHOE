@@ -51,6 +51,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState;
 
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> ssaoRandomTex;
+
 	// Ambient Occlusion data
 	DirectX::XMFLOAT4 ssaoOffsets[64];
 

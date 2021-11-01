@@ -427,7 +427,7 @@ void Game::FlickeringCheck() {
 void Game::OnResize()
 {
 	if (mainCamera != 0) {
-		mainCamera->UpdateProjectionMatrix((float)(this->width / this->height), 0);
+		mainCamera->UpdateProjectionMatrix((float)(this->width / this->height), 1);
 	}
 
 	// Handle base-level DX resize stuff
@@ -471,10 +471,6 @@ void Game::Update(float deltaTime, float totalTime)
 			hasFlickered = false;
 		}
 	}
-
-	/*for (int i = 5; i < 1000; i++) {
-		Entities[i]->GetTransform()->Rotate(+0.0f, +0.0f, +1.0f * deltaTime * (i/100));
-	}*/
 
 	mainCamera->Update(deltaTime, this->hWnd);
 	//flashShadowCamera->Update(deltaTime, this->hWnd);

@@ -83,24 +83,6 @@ private:
 	// Buffers to hold actual geometry data
 	Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
-	
-	// Shaders and shader-related constructs
-
-	//Texture pointers (old)
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cloverTexture;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> brickTexture;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> stoneTexture;
-
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cushionTexture;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockTexture;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalTexture;
-
-	//Normal map pointers (old)
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cushionNormalMap;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockNormalMap;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalNormalMap;
-
-	std::shared_ptr<Mesh> FlashlightMesh;
 
 	// Create some constant color values
 	const DirectX::XMFLOAT4 red = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);

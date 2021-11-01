@@ -21,10 +21,35 @@ Renderer::Renderer(
 	this->mainCamera = globalAssets.globalCameras.at("mainCamera");
 	this->mainShadowCamera = globalAssets.globalCameras.at("mainShadowCamera");
 	this->flashShadowCamera = globalAssets.globalCameras.at("flashShadowCamera");
+
+	InitRenderTargetViews();
 }
 
 Renderer::~Renderer(){
 
+}
+
+void Renderer::InitRenderTargetViews() {
+	for (int i = 0; i < 4; i++) {
+		D3D11_TEXTURE2D_DESC basicTexDesc = {};
+		basicTexDesc.Width = windowWidth;
+		basicTexDesc.Height = windowHeight;
+		basicTexDesc.ArraySize = 1;
+		basicTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		basicTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		basicTexDesc.MipLevels = 1;
+		basicTexDesc.MiscFlags = 0;
+		basicTexDesc.SampleDesc.Count = 1;
+		device->CreateTexture2D(&basicTexDesc, 0, &ssaoTexture2D[i]);
+
+		D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		rtvDesc.Texture2D.MipSlice = 0;
+		rtvDesc.Format = basicTexDesc.Format;
+		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, ssaoRTVs[i].GetAddressOf());
+
+		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, ssaoSRV[i].GetAddressOf());
+	}
 }
 
 void Renderer::InitShadows() {
@@ -234,7 +259,7 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferI
 }
 
 void Renderer::Draw(std::shared_ptr<Camera> cam) {
-    
+
 	// Background color (Cornflower Blue in this case) for clearing
 	const float color[4] = { 0.4f, 0.6f, 0.75f, 0.0f };
 
@@ -247,6 +272,15 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
 		1.0f,
 		0);
+	for (int i = 0; i < 4; i++) {
+		context->ClearRenderTargetView(ssaoRTVs->Get(), color);
+	}
+
+	ID3D11RenderTargetView* renderTargets[4] = {};
+	for (int i = 0; i < 4; i++) {
+		renderTargets[i] = ssaoRTVs[i].Get();
+	}
+	context->OMSetRenderTargets(4, renderTargets, depthBufferDSV.Get());
 
 	//For now, it's more optimized to set const values such as lights out here.
 	std::shared_ptr<SimplePixelShader> pixShader = globalAssets.globalEntities.at("Bronze Cube")->GetMaterial()->GetPixShader();

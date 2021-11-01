@@ -858,6 +858,16 @@ void AssetManager::InitializeSSAO() {
 	}
 
 	// Need to pass this texture to GPU
+	D3D11_TEXTURE2D_DESC basicTexDesc = {};
+	basicTexDesc.Width = dxInstance->width;
+	basicTexDesc.Height = dxInstance->height;
+	basicTexDesc.ArraySize = 1;
+	basicTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	basicTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	basicTexDesc.MipLevels = 1;
+	basicTexDesc.MiscFlags = 0;
+	basicTexDesc.SampleDesc.Count = 1;
+	device->CreateTexture2D(&basicTexDesc, 0, &ssaoRandomTex);
 
 	// Create SSAO Offset Vectors
 	for (int i = 0; i < 64; i++) {

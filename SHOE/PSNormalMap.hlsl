@@ -27,6 +27,14 @@ cbuffer ExternalData : register(b0)
 	int specIBLTotalMipLevels;
 }
 
+struct PS_Output
+{
+	float4 colorNoAmbient	: SV_TARGET0;
+	float4 ambientColor		: SV_TARGET1;
+	float4 normals			: SV_TARGET2;
+	float depths			: SV_TARGET3;
+};
+
 float3 calcLightExternal(VertexToPixelNormal input, LightStruct light, float3 specColor, float rough, float metal) {
 	return calcLight(input, light, cameraPos, specColor, rough, metal);
 }
@@ -40,7 +48,7 @@ float3 calcLightExternal(VertexToPixelNormal input, LightStruct light, float3 sp
 //    "put the output of this into the current render target"
 // - Named "main" because that's the default the shader compiler looks for
 // --------------------------------------------------------
-float4 main(VertexToPixelNormal input) : SV_TARGET
+PS_Output main(VertexToPixelNormal input)
 {
 	input.uv *= uvMult;
 
@@ -115,13 +123,13 @@ float4 main(VertexToPixelNormal input) : SV_TARGET
 
 	totalLighting *= albedoColor.rgb;
 
-	totalLighting += fullIndirect;
+	//totalLighting += fullIndirect;
 
-	return float4(pow(totalLighting, 1.0f / 2.2f), 1);
+	PS_Output output;
+	output.colorNoAmbient = float4(pow(totalLighting + indirectSpecular, 1.0f / 2.2f), 1);
+	output.ambientColor   = float4(pow(balancedDiff, 1.0f / 2.2f), 1);
+	output.normals		  = float4(input.normal * 0.5f + 0.5f, 1);
+	output.depths		  = input.position.z;
+
+	return output;
 }
-
-/*float3 totalLighting = calcLightExternal(input, dirLight1, specularColor, roughness, metal) +
-		calcLightExternal(input, dirLight2, specularColor, roughness, metal) +
-		calcLightExternal(input, dirLight3, specularColor, roughness, metal) +
-		calcLightExternal(input, pointLight1, specularColor, roughness, metal);*/
-		//(ambientColor * input.surfaceColor.rgb * specularColor)
