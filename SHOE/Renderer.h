@@ -42,6 +42,8 @@ private:
 
     // Ambient Occlusion data
     DirectX::XMFLOAT4 ssaoOffsets[64];
+    const float ssaoRadius = 0.25f;
+    const int ssaoSamples = 64;
 
     unsigned int windowHeight;
     unsigned int windowWidth;

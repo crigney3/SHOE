@@ -327,9 +327,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
 		1.0f,
 		0);
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 6; i++) {
 		context->ClearRenderTargetView(ssaoRTVs->Get(), color);
 	}
+	const float depths[4] = { 1,0,0,0 };
+	context->ClearRenderTargetView(ssaoRTVs[3].Get(), depths);
 
 	ID3D11RenderTargetView* renderTargets[4] = {};
 	for (int i = 0; i < 4; i++) {
@@ -414,9 +416,72 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	
 	terrainEntity->DrawFromVerts(context, VSTerrain, cam, flashShadowCamera, mainShadowCamera);
 
-	DrawPointLights();
-
     this->currentSky->Draw(context, cam);
+
+	std::shared_ptr<SimpleVertexShader> fullscreenVS = globalAssets.vertexShaders.at("FullscreenVS");
+	fullscreenVS->SetShader();
+
+	// SSAO Rendering
+	// First step is the initial SSAO render pass
+	renderTargets[0] = ssaoRTVs[4].Get();
+	renderTargets[1] = 0;
+	renderTargets[2] = 0;
+	renderTargets[3] = 0;
+	context->OMSetRenderTargets(4, renderTargets, 0);
+
+	std::shared_ptr<SimplePixelShader> ssaoPS = globalAssets.pixelShaders.at("SSAOPS");
+	ssaoPS->SetShader();
+
+	// Inverse projection matrix
+	XMFLOAT4X4 invProj;
+	XMFLOAT4X4 view = mainCamera->GetViewMatrix();
+	XMFLOAT4X4 proj = mainCamera->GetProjectionMatrix();
+
+	XMStoreFloat4x4(&invProj, XMMatrixInverse(0, XMLoadFloat4x4(&proj)));
+	ssaoPS->SetMatrix4x4("invProjection", invProj);
+	ssaoPS->SetMatrix4x4("projection", proj);
+	ssaoPS->SetMatrix4x4("view", view);
+	ssaoPS->SetData("offsets", ssaoOffsets, sizeof(XMFLOAT4) * ARRAYSIZE(ssaoOffsets));
+	ssaoPS->SetFloat("ssaoRadius", ssaoRadius);
+	ssaoPS->SetInt("ssaoSamples", ssaoSamples);
+	ssaoPS->SetFloat2("randomTextureScreenScale", XMFLOAT2(windowWidth / 4.0f, windowHeight / 4.0f));
+	ssaoPS->CopyAllBufferData();
+
+	ssaoPS->SetShaderResourceView("normals", ssaoRTVs[2].Get());
+	ssaoPS->SetShaderResourceView("depths", ssaoRTVs[3].Get());
+	ssaoPS->SetShaderResourceView("random", ssaoRandomSRV.Get());
+
+	context->Draw(3, 0);
+
+	renderTargets[0] = ssaoRTVs[5].Get();
+	context->OMSetRenderTargets(1, renderTargets, 0);
+
+	//Do I need to set a sampler state? They all use them but I don't think I'm passing anything rn
+	std::shared_ptr<SimplePixelShader> ssaoBlurPS = globalAssets.pixelShaders.at("SSAOBlurPS");
+	ssaoBlurPS->SetShader();
+	ssaoBlurPS->SetShaderResourceView("sceneColorsNoAmbient", ssaoRTVs[0].Get());
+	ssaoBlurPS->SetShaderResourceView("ambient", ssaoRTVs[1].Get());
+	ssaoBlurPS->SetShaderResourceView("SSAOBlur", ssaoRTVs[5].Get());
+	ssaoBlurPS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
+	ssaoBlurPS->CopyAllBufferData();
+	context->Draw(3, 0);
+
+	// Combine all results
+	renderTargets[0] = backBufferRTV.Get();
+	context->OMSetRenderTargets(1, renderTargets, 0);
+
+	std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.pixelShaders.at("SSAOCombinePS");
+	ssaoCombinePS->SetShader();
+	ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", ssaoRTVs[0].Get());
+	ssaoCombinePS->SetShaderResourceView("ambient", ssaoRTVs[1].Get());
+	ssaoCombinePS->SetShaderResourceView("SSAOBlur", ssaoRTVs[5].Get());
+	ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
+	ssaoCombinePS->CopyAllBufferData();
+	context->Draw(3, 0);
+
+	// Draw the point light
+	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+	DrawPointLights();
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -429,6 +494,10 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	// Due to the usage of a more sophisticated swap chain,
 	// the render target must be re-bound after every call to Present()
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+
+	// Unbind all in-use shader resources
+	ID3D11ShaderResourceView* nullSRVs[16] = {};
+	context->PSSetShaderResources(0, 16, nullSRVs);
 }
 
 void Renderer::SetActiveSky(std::shared_ptr<Sky> sky) {

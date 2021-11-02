@@ -490,6 +490,9 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("IrradiancePS", L"IBLIrradianceMapPS.cso");
 	CreatePixelShader("SpecularConvolutionPS", L"IBLSpecularConvolutionPS.cso");
 	CreatePixelShader("BRDFLookupTablePS", L"IBLBrdfLookUpTablePS.cso");
+	CreatePixelShader("SSAOPS", L"PSAmbientOcclusion.cso");
+	CreatePixelShader("SSAOBlurPS", L"PSOcclusionBlur.cso");
+	CreatePixelShader("SSAOCombinePS", L"PSOcclusionCombine.cso");
 }
 
 Microsoft::WRL::ComPtr<ID3D11InputLayout> AssetManager::GetInputLayout() {
