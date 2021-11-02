@@ -36,6 +36,13 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D>             ssaoTexture2D[6] = {};
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>    ssaoSRV[6] = {};
 
+    // Offset and random values for SSAO blur and texture
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> ssaoRandomTex;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ssaoRandomSRV;
+
+    // Ambient Occlusion data
+    DirectX::XMFLOAT4 ssaoOffsets[64];
+
     unsigned int windowHeight;
     unsigned int windowWidth;
 

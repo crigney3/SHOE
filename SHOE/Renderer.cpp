@@ -1,5 +1,7 @@
 #include "Renderer.h"
 
+using namespace DirectX;
+
 Renderer::Renderer(
         unsigned int windowHeight,
         unsigned int windowWidth,
@@ -49,6 +51,59 @@ void Renderer::InitRenderTargetViews() {
 		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, ssaoRTVs[i].GetAddressOf());
 
 		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, ssaoSRV[i].GetAddressOf());
+	}
+
+	// SSAO needs a random 4x4 texture to work
+	const int textureSize = 4;
+	const int totalPixels = textureSize * textureSize;
+	XMFLOAT4 randomPixels[totalPixels] = {};
+	for (int i = 0; i < totalPixels; i++) {
+		XMVECTOR randomVec = XMVectorSet(RandomRange(-1, 1), RandomRange(-1, 1), 0, 0);
+		XMStoreFloat4(&randomPixels[i], XMVector3Normalize(randomVec));
+	}
+
+	// Need to pass this texture to GPU
+	D3D11_TEXTURE2D_DESC basicTexDesc = {};
+	basicTexDesc.Width = windowWidth;
+	basicTexDesc.Height = windowHeight;
+	basicTexDesc.ArraySize = 1;
+	basicTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	basicTexDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	basicTexDesc.MipLevels = 1;
+	basicTexDesc.MiscFlags = 0;
+	basicTexDesc.SampleDesc.Count = 1;
+
+	D3D11_SUBRESOURCE_DATA data = {};
+	data.pSysMem = randomPixels;
+	data.SysMemPitch = sizeof(float) * 4 * windowWidth;
+
+	device->CreateTexture2D(&basicTexDesc, &data, &ssaoRandomTex);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Format = basicTexDesc.Format;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+
+	device->CreateShaderResourceView(ssaoRandomTex.Get(), &srvDesc, ssaoRandomSRV.GetAddressOf());
+
+	// Create SSAO Offset Vectors
+	for (int i = 0; i < 64; i++) {
+		ssaoOffsets[i] = XMFLOAT4(
+			(float)RandomRange(-1, 1),
+			(float)RandomRange(-1, 1),
+			(float)RandomRange(0, 1),
+			0
+		);
+		XMVECTOR offset = XMVector3Normalize(XMLoadFloat4(&ssaoOffsets[i]));
+
+		float scale = (float)i / 64;
+		XMVECTOR acceleratedScale = XMVectorLerp(
+			XMVectorSet(0.1f, 0.1f, 0.1f, 1),
+			XMVectorSet(1, 1, 1, 1),
+			scale * scale
+		);
+		XMStoreFloat4(&ssaoOffsets[i], offset * acceleratedScale);
 	}
 }
 
