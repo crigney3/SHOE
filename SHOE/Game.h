@@ -73,6 +73,7 @@ private:
 	bool skyWindowEnabled;
 	bool terrainWindowEnabled;
 	bool movingEnabled;
+	bool rtvWindowEnabled;
 	int entityUIIndex;
 	int terrainUIIndex;
 	std::vector<int> childIndices;

@@ -81,6 +81,7 @@ void Game::Init()
 	terrainWindowEnabled = false;
 	skyWindowEnabled = false;
 	objHierarchyEnabled = true;
+	rtvWindowEnabled = false;
 	entUIIt = globalAssets.globalEntities.begin();
 	childIndices = std::vector<int>();
 
@@ -307,6 +308,26 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::End();
 	}
 
+	// TODO: Make MRT menu toggleable
+	if (rtvWindowEnabled) {
+		ImGui::Begin("Multiple Render Target Viewer");
+
+		ImGui::Text("Color Without Ambient");
+		ImGui::Image(renderer->GetRenderTargetSRV(0).Get(), ImVec2(500, 300));
+		ImGui::Text("Ambient Color");
+		ImGui::Image(renderer->GetRenderTargetSRV(1).Get(), ImVec2(500, 300));
+		ImGui::Text("Normals");
+		ImGui::Image(renderer->GetRenderTargetSRV(2).Get(), ImVec2(500, 300));
+		ImGui::Text("Depths");
+		ImGui::Image(renderer->GetRenderTargetSRV(3).Get(), ImVec2(500, 300));
+		ImGui::Text("SSAO");
+		ImGui::Image(renderer->GetRenderTargetSRV(4).Get(), ImVec2(500, 300));
+		ImGui::Text("SSAO Post Blur");
+		ImGui::Image(renderer->GetRenderTargetSRV(5).Get(), ImVec2(500, 300));
+
+		ImGui::End();
+	}
+
 	// TODO: Add skybox menu
 
 	// Display a menu at the top
@@ -324,6 +345,12 @@ void Game::RenderUI(float deltaTime) {
 			ImGui::MenuItem("Terrain", "t", &terrainWindowEnabled);
 			ImGui::MenuItem("Object Hierarchy", "h", &objHierarchyEnabled);
 			ImGui::MenuItem("Skies", "", &skyWindowEnabled);
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("View")) {
+			ImGui::MenuItem("Render Target Views", 0, &rtvWindowEnabled);
 
 			ImGui::EndMenu();
 		}

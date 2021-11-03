@@ -27,14 +27,6 @@ cbuffer ExternalData : register(b0)
 	int specIBLTotalMipLevels;
 }
 
-struct PS_Output
-{
-	float4 colorNoAmbient	: SV_TARGET0;
-	float4 ambientColor		: SV_TARGET1;
-	float4 normals			: SV_TARGET2;
-	float depths			: SV_TARGET3;
-};
-
 float3 calcLightExternal(VertexToPixelNormal input, LightStruct light, float3 specColor, float rough, float metal) {
 	return calcLight(input, light, cameraPos, specColor, rough, metal);
 }
@@ -118,8 +110,7 @@ PS_Output main(VertexToPixelNormal input)
 											   roughness,
 											   specularColor);
 
-	float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse, indirectSpecular, metal);
-	float3 fullIndirect = indirectSpecular + balancedDiff * albedoColor.rgb;
+	float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse, indirectSpecular, metal) * albedoColor.rgb;
 
 	totalLighting *= albedoColor.rgb;
 

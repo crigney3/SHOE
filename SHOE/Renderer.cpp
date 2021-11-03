@@ -32,7 +32,7 @@ Renderer::~Renderer(){
 }
 
 void Renderer::InitRenderTargetViews() {
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 3; i++) {
 		D3D11_TEXTURE2D_DESC basicTexDesc = {};
 		basicTexDesc.Width = windowWidth;
 		basicTexDesc.Height = windowHeight;
@@ -53,6 +53,28 @@ void Renderer::InitRenderTargetViews() {
 		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, ssaoSRV[i].GetAddressOf());
 	}
 
+	// Initialize Depths as just a float texture
+	for (int i = 3; i < 6; i++) {
+		D3D11_TEXTURE2D_DESC basicTexDesc = {};
+		basicTexDesc.Width = windowWidth;
+		basicTexDesc.Height = windowHeight;
+		basicTexDesc.ArraySize = 1;
+		basicTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		basicTexDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		basicTexDesc.MipLevels = 1;
+		basicTexDesc.MiscFlags = 0;
+		basicTexDesc.SampleDesc.Count = 1;
+		device->CreateTexture2D(&basicTexDesc, 0, &ssaoTexture2D[i]);
+
+		D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		rtvDesc.Texture2D.MipSlice = 0;
+		rtvDesc.Format = basicTexDesc.Format;
+		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, ssaoRTVs[i].GetAddressOf());
+
+		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, ssaoSRV[i].GetAddressOf());
+	}
+	
 	// SSAO needs a random 4x4 texture to work
 	const int textureSize = 4;
 	const int totalPixels = textureSize * textureSize;
@@ -63,25 +85,25 @@ void Renderer::InitRenderTargetViews() {
 	}
 
 	// Need to pass this texture to GPU
-	D3D11_TEXTURE2D_DESC basicTexDesc = {};
-	basicTexDesc.Width = windowWidth;
-	basicTexDesc.Height = windowHeight;
-	basicTexDesc.ArraySize = 1;
-	basicTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	basicTexDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	basicTexDesc.MipLevels = 1;
-	basicTexDesc.MiscFlags = 0;
-	basicTexDesc.SampleDesc.Count = 1;
+	D3D11_TEXTURE2D_DESC texDesc = {};
+	texDesc.Width = 4;
+	texDesc.Height = 4;
+	texDesc.ArraySize = 1;
+	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	texDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	texDesc.MipLevels = 1;
+	texDesc.MiscFlags = 0;
+	texDesc.SampleDesc.Count = 1;
 
 	D3D11_SUBRESOURCE_DATA data = {};
 	data.pSysMem = randomPixels;
-	data.SysMemPitch = sizeof(float) * 4 * windowWidth;
+	data.SysMemPitch = sizeof(XMFLOAT4) * 4;
 
-	device->CreateTexture2D(&basicTexDesc, &data, &ssaoRandomTex);
+	device->CreateTexture2D(&texDesc, &data, ssaoRandomTex.GetAddressOf());
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Format = basicTexDesc.Format;
+	srvDesc.Format = texDesc.Format;
 	srvDesc.Texture2D.MipLevels = 1;
 	srvDesc.Texture2D.MostDetailedMip = 0;
 
@@ -328,7 +350,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		1.0f,
 		0);
 	for (int i = 0; i < 6; i++) {
-		context->ClearRenderTargetView(ssaoRTVs->Get(), color);
+		context->ClearRenderTargetView(ssaoRTVs[i].Get(), color);
 	}
 	const float depths[4] = { 1,0,0,0 };
 	context->ClearRenderTargetView(ssaoRTVs[3].Get(), depths);
@@ -447,8 +469,8 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	ssaoPS->SetFloat2("randomTextureScreenScale", XMFLOAT2(windowWidth / 4.0f, windowHeight / 4.0f));
 	ssaoPS->CopyAllBufferData();
 
-	ssaoPS->SetShaderResourceView("normals", ssaoRTVs[2].Get());
-	ssaoPS->SetShaderResourceView("depths", ssaoRTVs[3].Get());
+	ssaoPS->SetShaderResourceView("normals", ssaoSRV[2].Get());
+	ssaoPS->SetShaderResourceView("depths", ssaoSRV[3].Get());
 	ssaoPS->SetShaderResourceView("random", ssaoRandomSRV.Get());
 
 	context->Draw(3, 0);
@@ -456,12 +478,9 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	renderTargets[0] = ssaoRTVs[5].Get();
 	context->OMSetRenderTargets(1, renderTargets, 0);
 
-	//Do I need to set a sampler state? They all use them but I don't think I'm passing anything rn
 	std::shared_ptr<SimplePixelShader> ssaoBlurPS = globalAssets.pixelShaders.at("SSAOBlurPS");
 	ssaoBlurPS->SetShader();
-	ssaoBlurPS->SetShaderResourceView("sceneColorsNoAmbient", ssaoRTVs[0].Get());
-	ssaoBlurPS->SetShaderResourceView("ambient", ssaoRTVs[1].Get());
-	ssaoBlurPS->SetShaderResourceView("SSAOBlur", ssaoRTVs[5].Get());
+	ssaoBlurPS->SetShaderResourceView("SSAO", ssaoSRV[4].Get());
 	ssaoBlurPS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
 	ssaoBlurPS->CopyAllBufferData();
 	context->Draw(3, 0);
@@ -472,10 +491,10 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 	std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.pixelShaders.at("SSAOCombinePS");
 	ssaoCombinePS->SetShader();
-	ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", ssaoRTVs[0].Get());
-	ssaoCombinePS->SetShaderResourceView("ambient", ssaoRTVs[1].Get());
-	ssaoCombinePS->SetShaderResourceView("SSAOBlur", ssaoRTVs[5].Get());
-	ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
+	ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", ssaoSRV[0].Get());
+	ssaoCombinePS->SetShaderResourceView("ambient", ssaoSRV[1].Get());
+	ssaoCombinePS->SetShaderResourceView("SSAOBlur", ssaoSRV[5].Get());
+	//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
 	ssaoCombinePS->CopyAllBufferData();
 	context->Draw(3, 0);
 
@@ -502,4 +521,8 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 void Renderer::SetActiveSky(std::shared_ptr<Sky> sky) {
     this->currentSky = sky;
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetRenderTargetSRV(int index) {
+	return ssaoSRV[index];
 }

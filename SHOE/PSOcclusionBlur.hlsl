@@ -1,8 +1,9 @@
 #include "ShaderShared.hlsli"
 
-Texture2D SSAO;
+Texture2D SSAO		: register(t0);
 
-SamplerState clampSampler;
+SamplerState sampleState		: register(s0);
+SamplerState clampSampler		: register(s1);
 
 cbuffer ExternalData: register(b0) 
 {

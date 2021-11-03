@@ -15,6 +15,8 @@ SHOE, the Sorta Helpful Open Engine (and many other acronyms), is a C++ app desi
 - Shadow mapping
 - PBR shading
 - Image-Based Lighting (for lighting that emulates the sky)
+- Rendering with multiple targets
+- Screen-space ambient occlusion
 
 SHOE will continue to gain features over time, and I hope to turn it into a functional engine that I can build games on top of.
 
