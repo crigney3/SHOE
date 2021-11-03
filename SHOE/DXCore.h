@@ -74,14 +74,6 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthStencilView;
 
-	// SSAO RTVs
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> ssaoColorRTV;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> ssaoIndirectColorRTV;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> ssaoNormalsRTV;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> ssaoDepthsRTV;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> ssaoResultsRTV;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> ssaoBlurredRTV;
-
 	// Helper function for allocating a console window
 	void CreateConsoleWindow(int bufferLines, int bufferColumns, int windowLines, int windowColumns);
 

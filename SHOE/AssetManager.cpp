@@ -490,6 +490,9 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("IrradiancePS", L"IBLIrradianceMapPS.cso");
 	CreatePixelShader("SpecularConvolutionPS", L"IBLSpecularConvolutionPS.cso");
 	CreatePixelShader("BRDFLookupTablePS", L"IBLBrdfLookUpTablePS.cso");
+	CreatePixelShader("SSAOPS", L"PSAmbientOcclusion.cso");
+	CreatePixelShader("SSAOBlurPS", L"PSOcclusionBlur.cso");
+	CreatePixelShader("SSAOCombinePS", L"PSOcclusionCombine.cso");
 }
 
 Microsoft::WRL::ComPtr<ID3D11InputLayout> AssetManager::GetInputLayout() {
@@ -845,36 +848,4 @@ std::shared_ptr<Mesh> AssetManager::ProcessComplexMesh(aiMesh* mesh, const aiSce
 
 	if (hasTangents) return std::make_shared<Mesh>(vertices.data(), vertices.size(), indices.data(), indices.size(), 0, device);
 	else return std::make_shared<Mesh>(vertices.data(), vertices.size(), indices.data(), indices.size(), device);
-}
-
-void AssetManager::InitializeSSAO() {
-	// SSAO needs a random 4x4 texture to work
-	const int textureSize = 4;
-	const int totalPixels = textureSize * textureSize;
-	XMFLOAT4 randomPixels[totalPixels] = {};
-	for (int i = 0; i < totalPixels; i++) {
-		XMVECTOR randomVec = XMVectorSet(RandomRange(-1, 1), RandomRange(-1, 1), 0, 0);
-		XMStoreFloat4(&randomPixels[i], XMVector3Normalize(randomVec));
-	}
-
-	// Need to pass this texture to GPU
-
-	// Create SSAO Offset Vectors
-	for (int i = 0; i < 64; i++) {
-		ssaoOffsets[i] = XMFLOAT4(
-			(float)RandomRange(-1, 1),
-			(float)RandomRange(-1, 1),
-			(float)RandomRange(0, 1),
-			0
-		);
-		XMVECTOR offset = XMVector3Normalize(XMLoadFloat4(&ssaoOffsets[i]));
-
-		float scale = (float)i / 64;
-		XMVECTOR acceleratedScale = XMVectorLerp(
-			XMVectorSet(0.1f, 0.1f, 0.1f, 1),
-			XMVectorSet(1, 1, 1, 1),
-			scale * scale
-		);
-		XMStoreFloat4(&ssaoOffsets[i], offset * acceleratedScale);
-	}
 }

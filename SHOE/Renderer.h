@@ -24,6 +24,28 @@ private:
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> shadowRasterizer;
     std::shared_ptr<SimpleVertexShader> VSShadow;
 
+    // Offset and random values for SSAO blur and texture
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> ssaoRandomTex;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ssaoRandomSRV;
+
+    // SSAO and MRT render target views
+    // Stored in the following order:
+    // 0 - Color minus ambient
+    // 1 - Only ambient
+    // 2 - Only normals
+    // 3 - Only depths
+    // 4 - Results of SSAO
+    // 5 - SSAO with blur fix
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView>      ssaoRTVs[6];
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>             ssaoTexture2D[6];
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>    ssaoSRV[6];
+
+    // Ambient Occlusion data
+    DirectX::XMFLOAT4 ssaoOffsets[64];
+    const float ssaoRadius = 1.5f;
+    const int ssaoSamples = 64;
+    const int emptyRTV = 0;
+
     unsigned int windowHeight;
     unsigned int windowWidth;
 
@@ -33,6 +55,8 @@ private:
     //Camera pointers for shadows
     std::shared_ptr<Camera> flashShadowCamera;
     std::shared_ptr<Camera> mainShadowCamera;
+
+    void InitRenderTargetViews();
 
 public:
     Renderer(
@@ -52,6 +76,8 @@ public:
         Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
         Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
     );
+
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(int index);
 
     void DrawPointLights();
     void Draw(std::shared_ptr<Camera> camera);

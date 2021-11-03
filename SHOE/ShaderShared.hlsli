@@ -518,3 +518,11 @@ float3 ImportanceSampleGGX(float2 Xi, float roughness, float3 N)
 }
 
 #endif
+
+struct PS_Output
+{
+	float4 colorNoAmbient	: SV_TARGET0;
+	float4 ambientColor		: SV_TARGET1;
+	float4 normals			: SV_TARGET2;
+	float depths : SV_TARGET3;
+};

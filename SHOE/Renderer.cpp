@@ -1,5 +1,7 @@
 #include "Renderer.h"
 
+using namespace DirectX;
+
 Renderer::Renderer(
         unsigned int windowHeight,
         unsigned int windowWidth,
@@ -21,10 +23,110 @@ Renderer::Renderer(
 	this->mainCamera = globalAssets.globalCameras.at("mainCamera");
 	this->mainShadowCamera = globalAssets.globalCameras.at("mainShadowCamera");
 	this->flashShadowCamera = globalAssets.globalCameras.at("flashShadowCamera");
+
+	InitRenderTargetViews();
 }
 
 Renderer::~Renderer(){
 
+}
+
+void Renderer::InitRenderTargetViews() {
+	for (int i = 0; i < 3; i++) {
+		D3D11_TEXTURE2D_DESC basicTexDesc = {};
+		basicTexDesc.Width = windowWidth;
+		basicTexDesc.Height = windowHeight;
+		basicTexDesc.ArraySize = 1;
+		basicTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		basicTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		basicTexDesc.MipLevels = 1;
+		basicTexDesc.MiscFlags = 0;
+		basicTexDesc.SampleDesc.Count = 1;
+		device->CreateTexture2D(&basicTexDesc, 0, &ssaoTexture2D[i]);
+
+		D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		rtvDesc.Texture2D.MipSlice = 0;
+		rtvDesc.Format = basicTexDesc.Format;
+		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, ssaoRTVs[i].GetAddressOf());
+
+		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, ssaoSRV[i].GetAddressOf());
+	}
+
+	// Initialize Depths as just a float texture
+	for (int i = 3; i < 6; i++) {
+		D3D11_TEXTURE2D_DESC basicTexDesc = {};
+		basicTexDesc.Width = windowWidth;
+		basicTexDesc.Height = windowHeight;
+		basicTexDesc.ArraySize = 1;
+		basicTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		basicTexDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		basicTexDesc.MipLevels = 1;
+		basicTexDesc.MiscFlags = 0;
+		basicTexDesc.SampleDesc.Count = 1;
+		device->CreateTexture2D(&basicTexDesc, 0, &ssaoTexture2D[i]);
+
+		D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		rtvDesc.Texture2D.MipSlice = 0;
+		rtvDesc.Format = basicTexDesc.Format;
+		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, ssaoRTVs[i].GetAddressOf());
+
+		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, ssaoSRV[i].GetAddressOf());
+	}
+	
+	// SSAO needs a random 4x4 texture to work
+	const int textureSize = 4;
+	const int totalPixels = textureSize * textureSize;
+	XMFLOAT4 randomPixels[totalPixels] = {};
+	for (int i = 0; i < totalPixels; i++) {
+		XMVECTOR randomVec = XMVectorSet(RandomRange(-1, 1), RandomRange(-1, 1), 0, 0);
+		XMStoreFloat4(&randomPixels[i], XMVector3Normalize(randomVec));
+	}
+
+	// Need to pass this texture to GPU
+	D3D11_TEXTURE2D_DESC texDesc = {};
+	texDesc.Width = 4;
+	texDesc.Height = 4;
+	texDesc.ArraySize = 1;
+	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	texDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	texDesc.MipLevels = 1;
+	texDesc.MiscFlags = 0;
+	texDesc.SampleDesc.Count = 1;
+
+	D3D11_SUBRESOURCE_DATA data = {};
+	data.pSysMem = randomPixels;
+	data.SysMemPitch = sizeof(XMFLOAT4) * 4;
+
+	device->CreateTexture2D(&texDesc, &data, ssaoRandomTex.GetAddressOf());
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Format = texDesc.Format;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+
+	device->CreateShaderResourceView(ssaoRandomTex.Get(), &srvDesc, ssaoRandomSRV.GetAddressOf());
+
+	// Create SSAO Offset Vectors
+	for (int i = 0; i < 64; i++) {
+		ssaoOffsets[i] = XMFLOAT4(
+			(float)RandomRange(-1, 1),
+			(float)RandomRange(-1, 1),
+			(float)RandomRange(0, 1),
+			0
+		);
+		XMVECTOR offset = XMVector3Normalize(XMLoadFloat4(&ssaoOffsets[i]));
+
+		float scale = (float)i / 64;
+		XMVECTOR acceleratedScale = XMVectorLerp(
+			XMVectorSet(0.1f, 0.1f, 0.1f, 1),
+			XMVectorSet(1, 1, 1, 1),
+			scale * scale
+		);
+		XMStoreFloat4(&ssaoOffsets[i], offset * acceleratedScale);
+	}
 }
 
 void Renderer::InitShadows() {
@@ -234,7 +336,7 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferI
 }
 
 void Renderer::Draw(std::shared_ptr<Camera> cam) {
-    
+
 	// Background color (Cornflower Blue in this case) for clearing
 	const float color[4] = { 0.4f, 0.6f, 0.75f, 0.0f };
 
@@ -247,6 +349,17 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
 		1.0f,
 		0);
+	for (int i = 0; i < 6; i++) {
+		context->ClearRenderTargetView(ssaoRTVs[i].Get(), color);
+	}
+	const float depths[4] = { 1,0,0,0 };
+	context->ClearRenderTargetView(ssaoRTVs[3].Get(), depths);
+
+	ID3D11RenderTargetView* renderTargets[4] = {};
+	for (int i = 0; i < 4; i++) {
+		renderTargets[i] = ssaoRTVs[i].Get();
+	}
+	context->OMSetRenderTargets(4, renderTargets, depthBufferDSV.Get());
 
 	//For now, it's more optimized to set const values such as lights out here.
 	std::shared_ptr<SimplePixelShader> pixShader = globalAssets.globalEntities.at("Bronze Cube")->GetMaterial()->GetPixShader();
@@ -325,9 +438,69 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	
 	terrainEntity->DrawFromVerts(context, VSTerrain, cam, flashShadowCamera, mainShadowCamera);
 
-	DrawPointLights();
-
     this->currentSky->Draw(context, cam);
+
+	std::shared_ptr<SimpleVertexShader> fullscreenVS = globalAssets.vertexShaders.at("FullscreenVS");
+	fullscreenVS->SetShader();
+
+	// SSAO Rendering
+	// First step is the initial SSAO render pass
+	renderTargets[0] = ssaoRTVs[4].Get();
+	renderTargets[1] = 0;
+	renderTargets[2] = 0;
+	renderTargets[3] = 0;
+	context->OMSetRenderTargets(4, renderTargets, 0);
+
+	std::shared_ptr<SimplePixelShader> ssaoPS = globalAssets.pixelShaders.at("SSAOPS");
+	ssaoPS->SetShader();
+
+	// Inverse projection matrix
+	XMFLOAT4X4 invProj;
+	XMFLOAT4X4 view = mainCamera->GetViewMatrix();
+	XMFLOAT4X4 proj = mainCamera->GetProjectionMatrix();
+
+	XMStoreFloat4x4(&invProj, XMMatrixInverse(0, XMLoadFloat4x4(&proj)));
+	ssaoPS->SetMatrix4x4("invProjection", invProj);
+	ssaoPS->SetMatrix4x4("projection", proj);
+	ssaoPS->SetMatrix4x4("view", view);
+	ssaoPS->SetData("offsets", ssaoOffsets, sizeof(XMFLOAT4) * ARRAYSIZE(ssaoOffsets));
+	ssaoPS->SetFloat("ssaoRadius", ssaoRadius);
+	ssaoPS->SetInt("ssaoSamples", ssaoSamples);
+	ssaoPS->SetFloat2("randomTextureScreenScale", XMFLOAT2(windowWidth / 4.0f, windowHeight / 4.0f));
+	ssaoPS->CopyAllBufferData();
+
+	ssaoPS->SetShaderResourceView("normals", ssaoSRV[2].Get());
+	ssaoPS->SetShaderResourceView("depths", ssaoSRV[3].Get());
+	ssaoPS->SetShaderResourceView("random", ssaoRandomSRV.Get());
+
+	context->Draw(3, 0);
+
+	renderTargets[0] = ssaoRTVs[5].Get();
+	context->OMSetRenderTargets(1, renderTargets, 0);
+
+	std::shared_ptr<SimplePixelShader> ssaoBlurPS = globalAssets.pixelShaders.at("SSAOBlurPS");
+	ssaoBlurPS->SetShader();
+	ssaoBlurPS->SetShaderResourceView("SSAO", ssaoSRV[4].Get());
+	ssaoBlurPS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
+	ssaoBlurPS->CopyAllBufferData();
+	context->Draw(3, 0);
+
+	// Combine all results
+	renderTargets[0] = backBufferRTV.Get();
+	context->OMSetRenderTargets(1, renderTargets, 0);
+
+	std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.pixelShaders.at("SSAOCombinePS");
+	ssaoCombinePS->SetShader();
+	ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", ssaoSRV[0].Get());
+	ssaoCombinePS->SetShaderResourceView("ambient", ssaoSRV[1].Get());
+	ssaoCombinePS->SetShaderResourceView("SSAOBlur", ssaoSRV[5].Get());
+	//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
+	ssaoCombinePS->CopyAllBufferData();
+	context->Draw(3, 0);
+
+	// Draw the point light
+	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+	DrawPointLights();
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -340,8 +513,16 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	// Due to the usage of a more sophisticated swap chain,
 	// the render target must be re-bound after every call to Present()
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+
+	// Unbind all in-use shader resources
+	ID3D11ShaderResourceView* nullSRVs[16] = {};
+	context->PSSetShaderResources(0, 16, nullSRVs);
 }
 
 void Renderer::SetActiveSky(std::shared_ptr<Sky> sky) {
     this->currentSky = sky;
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetRenderTargetSRV(int index) {
+	return ssaoSRV[index];
 }

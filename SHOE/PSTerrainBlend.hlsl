@@ -48,7 +48,7 @@ float3 calcLightExternal(VertexToPixelNormal input, LightStruct light, float3 sp
 //    "put the output of this into the current render target"
 // - Named "main" because that's the default the shader compiler looks for
 // --------------------------------------------------------
-float4 main(VertexToPixelNormal input) : SV_TARGET
+PS_Output main(VertexToPixelNormal input)
 {
 	//First, get the blend map sample
 	float3 blend = blendMap.Sample(sampleState, input.uv).rgb;
@@ -187,12 +187,15 @@ float4 main(VertexToPixelNormal input) : SV_TARGET
 											   roughnessMain,
 											   specularColorMain);
 
-	float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse, indirectSpecular, metalMain);
-	float3 fullIndirect = indirectSpecular + balancedDiff * albedoColorMain.rgb;
+	float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse, indirectSpecular, metalMain) * albedoColorMain.rgb;
 
 	totalLighting *= albedoColorMain.rgb;
 
-	totalLighting += fullIndirect;
+	PS_Output output;
+	output.colorNoAmbient = float4(pow(totalLighting + indirectSpecular, 1.0f / 2.2f), 1);
+	output.ambientColor = float4(pow(balancedDiff, 1.0f / 2.2f), 1);
+	output.normals = float4(input.normal * 0.5f + 0.5f, 1);
+	output.depths = input.position.z;
 
-	return float4(pow(totalLighting, 1.0f / 2.2f), 1);
+	return output;
 }
