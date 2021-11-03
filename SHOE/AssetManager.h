@@ -51,9 +51,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState;
 
-	// Ambient Occlusion data
-	DirectX::XMFLOAT4 ssaoOffsets[64];
-
 	DirectX::XMFLOAT4 redTint = DirectX::XMFLOAT4(0.2f, 0.0f, 0.0f, 1.0f);
 	DirectX::XMFLOAT4 greenTint = DirectX::XMFLOAT4(0.0f, 0.2f, 0.0f, 1.0f);
 	DirectX::XMFLOAT4 blueTint = DirectX::XMFLOAT4(0.0f, 0.0f, 0.2f, 1.0f);
@@ -83,7 +80,6 @@ private:
 	void InitializeTerrainMaterials();
 	void InitializeCameras();
 	void InitializeSkies();
-	void InitializeSSAO();
 
 public:
 	~AssetManager();
