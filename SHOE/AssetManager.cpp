@@ -525,7 +525,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 	file.open(filename, std::ios_base::binary);
 
 	if (file) {
-		file.read((char*)&heights[0], numVertices * 2);
+		file.read((char*)&heights[0], (std::streamsize)numVertices * 2);
 		file.close();
 	}
 	else {
@@ -534,8 +534,8 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 
 	int index = 0;
 	int indexCounter = 0;
-	for (int z = 0; z < mapHeight; z++) {
-		for (int x = 0; x < mapWidth; x++) {
+	for (int z = 0; z < (int)mapHeight; z++) {
+		for (int x = 0; x < (int)mapWidth; x++) {
 			//Get height map and positional data
 			index = mapWidth * z + x;
 			finalHeights[index] = (heights[index] / 65535.0f) * heightScale;
@@ -609,7 +609,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 				normalCount += 2;
 			}
 
-			if (z > 0 && x < mapWidth - 1)
+			if (z > 0 && x < (int)mapWidth - 1)
 			{
 				// "Up right"
 				normalTotal += XMLoadFloat3(&triangleNormals[triIndexPrevRow + 1]);
@@ -617,7 +617,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 				normalCount++;
 			}
 
-			if (z < mapHeight - 1 && x > 0)
+			if (z < (int)mapHeight - 1 && x > 0)
 			{
 				// "Down left"
 				normalTotal += XMLoadFloat3(&triangleNormals[triIndex - 1]);
@@ -625,7 +625,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 				normalCount++;
 			}
 
-			if (z < mapHeight - 1 && x < mapWidth - 1)
+			if (z < (int)mapHeight - 1 && x < (int)mapWidth - 1)
 			{
 				// "Down right" and "down"
 				normalTotal += XMLoadFloat3(&triangleNormals[triIndex]);

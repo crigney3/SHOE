@@ -328,8 +328,8 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferI
 
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
 
-	vp.Width = windowWidth;
-	vp.Height = windowHeight;
+	vp.Width = (float)windowWidth;
+	vp.Height = (float)windowHeight;
 	context->RSSetViewports(1, &vp);
 
 	context->RSSetState(0);

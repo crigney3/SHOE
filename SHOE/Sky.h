@@ -2,7 +2,7 @@
 
 #include "Mesh.h"
 #include "SimpleShader.h"
-#include "packages/directxtk_desktop_2017.2021.8.2.1/include/DDSTextureLoader.h"
+#include "DDSTextureLoader.h"
 #include "Camera.h"
 #include <map>
 #include <memory>

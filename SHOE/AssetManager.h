@@ -4,7 +4,7 @@
 #include "Sky.h"
 #include "SimpleShader.h"
 #include "GameEntity.h"
-#include "packages/directxtk_desktop_2017.2021.8.2.1/include/WICTextureLoader.h"
+#include "WICTextureLoader.h"
 #include <assimp/Importer.hpp>
 #include <assimp/types.h>
 #include <assimp/scene.h>

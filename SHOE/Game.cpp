@@ -5,6 +5,8 @@
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3dcompiler.h>
 
+#pragma warning( disable : 26495)
+
 // For the DirectX Math library
 using namespace DirectX;
 
@@ -485,7 +487,7 @@ void Game::Update(float deltaTime, float totalTime)
 	RenderSky();
 
 	if (flickeringEnabled) {
-		srand(deltaTime);
+		srand((unsigned int)(deltaTime * totalTime));
 		float prevIntensity = globalAssets.globalLights.at(4).intensity;
 		int flickerRand = rand() % 6 + 1;
 		if (flickerRand == 5 && !hasFlickered) {

@@ -88,10 +88,10 @@ PS_Output main(VertexToPixelNormal input)
 
 				float flashShadowAmount = shadowMap.SampleCmpLevelZero(shadowState, shadowUV, lightDepth).r;
 
-				totalLighting += calcLightExternal(input, lights[i], specularColor, roughness, metal) * flashShadowAmount;
+				totalLighting += calcLightExternal(input, lights[i], specularColor, roughness.r, metal.r) * flashShadowAmount;
 			}
 			else {
-				totalLighting += calcLightExternal(input, lights[i], specularColor, roughness, metal) * envShadowAmount;
+				totalLighting += calcLightExternal(input, lights[i], specularColor, roughness.r, metal.r); // *envShadowAmount;
 			}			
 		}
 	}
@@ -107,10 +107,10 @@ PS_Output main(VertexToPixelNormal input)
 											   clampSampler,
 											   viewRefl,
 											   NdotV,
-											   roughness,
+											   roughness.r,
 											   specularColor);
 
-	float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse, indirectSpecular, metal) * albedoColor.rgb;
+	float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse, indirectSpecular, metal.r) * albedoColor.rgb;
 
 	totalLighting *= albedoColor.rgb;
 
