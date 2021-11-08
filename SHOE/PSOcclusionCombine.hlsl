@@ -11,5 +11,7 @@ float4 main(VertexToPixelIrradiance input) : SV_TARGET
 	float3 Ambient = ambient.Sample(basicSampler, input.uv).rgb;
 	float ao = SSAOBlur.Sample(basicSampler, input.uv).r;
 
-	return float4(Ambient * ao + sceneColors, 1);
+	float3 final = ((Ambient * ao) + sceneColors);
+
+	return float4(pow(final, 1.0f / 2.2f), 1);
 }

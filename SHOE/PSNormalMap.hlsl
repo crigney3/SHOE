@@ -117,8 +117,8 @@ PS_Output main(VertexToPixelNormal input)
 	//totalLighting += fullIndirect;
 
 	PS_Output output;
-	output.colorNoAmbient = float4(pow(totalLighting + indirectSpecular, 1.0f / 2.2f), 1);
-	output.ambientColor   = float4(pow(balancedDiff, 1.0f / 2.2f), 1);
+	output.colorNoAmbient = float4(totalLighting + indirectSpecular, 1);
+	output.ambientColor   = float4(balancedDiff, 1);
 	output.normals		  = float4(input.normal * 0.5f + 0.5f, 1);
 	output.depths		  = input.position.z;
 

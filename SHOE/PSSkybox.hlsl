@@ -10,5 +10,5 @@ struct VertexToPixelSky {
 
 float4 main(VertexToPixelSky input) : SV_TARGET
 {
-	return textureSky.Sample(sampleState, input.sampleDir);
+	return pow(textureSky.Sample(sampleState, input.sampleDir), 2.2f);
 }
