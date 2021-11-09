@@ -20,9 +20,9 @@ Renderer::Renderer(
     this->backBufferRTV = backBufferRTV;
     this->depthBufferDSV = depthBufferDSV;
 	this->ambientColor = DirectX::XMFLOAT3(0.05f, 0.05f, 0.1f);
-	this->mainCamera = globalAssets.globalCameras.at("mainCamera");
-	this->mainShadowCamera = globalAssets.globalCameras.at("mainShadowCamera");
-	this->flashShadowCamera = globalAssets.globalCameras.at("flashShadowCamera");
+	this->mainCamera = globalAssets.GetCameraByName("mainCamera");
+	this->mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
+	this->flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
 	InitRenderTargetViews();
 }
@@ -135,7 +135,7 @@ void Renderer::InitShadows() {
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> shadowDepthView;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> envShadowDepthView;
 
-	this->VSShadow = globalAssets.vertexShaders.at("ShadowVS");
+	this->VSShadow = globalAssets.GetVertexShaderByName("ShadowVS");
 
 	D3D11_TEXTURE2D_DESC shadowDesc = {};
 	shadowDesc.Width = shadowSize;
@@ -218,20 +218,20 @@ void Renderer::PostResize(unsigned int windowHeight,
 // ------------------------------------------------------------------------
 void Renderer::DrawPointLights()
 {
-	std::shared_ptr<SimpleVertexShader> lightVS = globalAssets.vertexShaders["BasicVS"];
-	std::shared_ptr<SimplePixelShader> lightPS = globalAssets.pixelShaders["SolidColorPS"];
+	std::shared_ptr<SimpleVertexShader> lightVS = globalAssets.GetVertexShaderByName("BasicVS");
+	std::shared_ptr<SimplePixelShader> lightPS = globalAssets.GetPixelShaderByName("SolidColorPS");
 
 	// Turn on these shaders
 	lightVS->SetShader();
 	lightPS->SetShader();
 
 	// Set up vertex shader
-	lightVS->SetMatrix4x4("view", globalAssets.globalCameras["mainCamera"]->GetViewMatrix());
-	lightVS->SetMatrix4x4("projection", globalAssets.globalCameras["mainCamera"]->GetProjectionMatrix());
+	lightVS->SetMatrix4x4("view", globalAssets.GetCameraByName("mainCamera")->GetViewMatrix());
+	lightVS->SetMatrix4x4("projection", globalAssets.GetCameraByName("mainCamera")->GetProjectionMatrix());
 
-	for (int i = 0; i < globalAssets.globalLights.size(); i++)
+	for (int i = 0; i < globalAssets.GetLightArraySize(); i++)
 	{
-		Light light = globalAssets.globalLights[i];
+		Light light = globalAssets.GetLightArray()[i];
 
 		// Only drawing points, so skip others
 		if (light.type != 1.0f || light.enabled != true)
@@ -270,11 +270,11 @@ void Renderer::DrawPointLights()
 		// Draw
 		UINT stride = sizeof(Vertex);
 		UINT offset = 0;
-		context->IASetVertexBuffers(0, 1, globalAssets.globalMeshes["Sphere"]->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-		context->IASetIndexBuffer(globalAssets.globalMeshes["Sphere"]->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+		context->IASetVertexBuffers(0, 1, globalAssets.GetMeshByName("Sphere")->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(globalAssets.GetMeshByName("Sphere")->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 		context->DrawIndexed(
-			globalAssets.globalMeshes["Sphere"]->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+			globalAssets.GetMeshByName("Sphere")->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
 			0,     // Offset to the first index we want to use
 			0);    // Offset to add to each index when looking up vertices
 	}
@@ -307,21 +307,21 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferI
 	VSShadow->SetMatrix4x4("view", shadowCam->GetViewMatrix());
 	VSShadow->SetMatrix4x4("projection", shadowCam->GetProjectionMatrix());
 
-	std::map<std::string, std::shared_ptr<GameEntity>>::iterator it;
+	std::vector<std::shared_ptr<GameEntity>>::iterator it;
 
-	for (it = globalAssets.globalEntities.begin(); it != globalAssets.globalEntities.end(); it++) {
-		VSShadow->SetMatrix4x4("world", it->second->GetTransform()->GetWorldMatrix());
+	for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
+		VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
 
 		VSShadow->CopyAllBufferData();
 
 		//globalAssets.globalEntities[i]->Draw(context, cam, nullptr, nullptr);
 		UINT stride = sizeof(Vertex);
 		UINT offset = 0;
-		context->IASetVertexBuffers(0, 1, it->second->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-		context->IASetIndexBuffer(it->second->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+		context->IASetVertexBuffers(0, 1, it->get()->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(it->get()->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 		context->DrawIndexed(
-			it->second->GetMesh()->GetIndexCount(),
+			it->get()->GetMesh()->GetIndexCount(),
 			0,     
 			0);    
 	}
@@ -362,31 +362,31 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	context->OMSetRenderTargets(4, renderTargets, depthBufferDSV.Get());
 
 	//For now, it's more optimized to set const values such as lights out here.
-	std::shared_ptr<SimplePixelShader> pixShader = globalAssets.globalEntities.at("Bronze Cube")->GetMaterial()->GetPixShader();
-	unsigned int lightCount = globalAssets.globalLights.size();
+	std::shared_ptr<SimplePixelShader> pixShader = globalAssets.GetGameEntityByName("Bronze Cube")->GetMaterial()->GetPixShader();
+	unsigned int lightCount = globalAssets.GetLightArraySize();
 	pixShader->SetShader();
-	pixShader->SetData("lights", globalAssets.globalLights.data(), sizeof(Light) * 64);
+	pixShader->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
 	pixShader->SetData("lightCount", &lightCount, sizeof(lightCount));
 	pixShader->SetFloat3("ambientColor", ambientColor);
 
 	// Set buffers in the input assembler
 	//  - Do this ONCE PER OBJECT you're drawing, since each object might
 	//    have different geometry.
-	std::map<std::string, std::shared_ptr<GameEntity>>::iterator it;
+	std::vector<std::shared_ptr<GameEntity>>::iterator it;
 
-	for (it = globalAssets.globalEntities.begin(); it != globalAssets.globalEntities.end(); it++) {
+	for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
 		//Calculate pixel lighting before draw
-		pixShader = it->second->GetMaterial()->GetPixShader();
+		pixShader = it->get()->GetMaterial()->GetPixShader();
 		pixShader->SetShader();
-		pixShader->SetFloat("uvMult", it->second->GetMaterial()->GetTiling());
+		pixShader->SetFloat("uvMult", it->get()->GetMaterial()->GetTiling());
 		pixShader->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
-		pixShader->SetSamplerState("sampleState", it->second->GetMaterial()->GetSamplerState().Get());
-		pixShader->SetSamplerState("clampSampler", it->second->GetMaterial()->GetClampSamplerState().Get());
-		pixShader->SetShaderResourceView("textureAlbedo", it->second->GetMaterial()->GetTexture().Get());
-		pixShader->SetShaderResourceView("textureRough", it->second->GetMaterial()->GetRoughMap().Get());
-		pixShader->SetShaderResourceView("textureMetal", it->second->GetMaterial()->GetMetalMap().Get());
-		if (it->second->GetMaterial()->GetNormalMap() != nullptr) {
-			pixShader->SetShaderResourceView("textureNormal", it->second->GetMaterial()->GetNormalMap().Get());
+		pixShader->SetSamplerState("sampleState", it->get()->GetMaterial()->GetSamplerState().Get());
+		pixShader->SetSamplerState("clampSampler", it->get()->GetMaterial()->GetClampSamplerState().Get());
+		pixShader->SetShaderResourceView("textureAlbedo", it->get()->GetMaterial()->GetTexture().Get());
+		pixShader->SetShaderResourceView("textureRough", it->get()->GetMaterial()->GetRoughMap().Get());
+		pixShader->SetShaderResourceView("textureMetal", it->get()->GetMaterial()->GetMetalMap().Get());
+		if (it->get()->GetMaterial()->GetNormalMap() != nullptr) {
+			pixShader->SetShaderResourceView("textureNormal", it->get()->GetMaterial()->GetNormalMap().Get());
 		}
 		pixShader->SetShaderResourceView("shadowMap", shadowSRV.Get());
 		pixShader->SetSamplerState("shadowState", shadowSampler.Get());
@@ -399,34 +399,34 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 		pixShader->CopyAllBufferData();
 
-		it->second->Draw(context, cam, flashShadowCamera, mainShadowCamera);
+		it->get()->Draw(context, cam, flashShadowCamera, mainShadowCamera);
 	}
 
 	//Now deal with rendering the terrain, PS data first
-	std::shared_ptr<SimplePixelShader> PSTerrain = globalAssets.pixelShaders.at("TerrainPS");
-	std::shared_ptr<SimpleVertexShader> VSTerrain = globalAssets.vertexShaders.at("TerrainVS");
-	std::shared_ptr<GameEntity> terrainEntity = globalAssets.globalTerrainEntities.at("Main Terrain");
+	std::shared_ptr<SimplePixelShader> PSTerrain = globalAssets.GetPixelShaderByName("TerrainPS");
+	std::shared_ptr<SimpleVertexShader> VSTerrain = globalAssets.GetVertexShaderByName("TerrainVS");
+	std::shared_ptr<GameEntity> terrainEntity = globalAssets.GetTerrainByName("Main Terrain");
 	PSTerrain->SetShader();
-	PSTerrain->SetData("lights", globalAssets.globalLights.data(), sizeof(Light) * 64);
+	PSTerrain->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
 	PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
 	PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
 	PSTerrain->SetFloat("uvMultNear", 50.0f);
 	PSTerrain->SetFloat("uvMultFar", 150.0f);
 	PSTerrain->SetShaderResourceView("shadowMap", shadowSRV.Get());
-	PSTerrain->SetShaderResourceView("blendMap", globalAssets.globalTerrainMaterials.at("Forest TMaterial")->blendMap.Get());
+	PSTerrain->SetShaderResourceView("blendMap", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMap.Get());
 	PSTerrain->SetSamplerState("shadowState", shadowSampler.Get());
-	PSTerrain->SetSamplerState("clampSampler", globalAssets.globalTerrainMaterials.at("Forest TMaterial")->blendMaterials[0].GetClampSamplerState().Get());
+	PSTerrain->SetSamplerState("clampSampler", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[0].GetClampSamplerState().Get());
 	PSTerrain->SetShaderResourceView("envShadowMap", envShadowSRV.Get());
 
-	for (int i = 0; i < globalAssets.globalTerrainMaterials.at("Forest TMaterial")->blendMaterials.size(); i++) {
+	for (int i = 0; i < globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials.size(); i++) {
 		std::string a = "texture" + std::to_string(i + 1) + "Albedo";
 		std::string n = "texture" + std::to_string(i + 1) + "Normal";
 		std::string r = "texture" + std::to_string(i + 1) + "Rough";
 		std::string m = "texture" + std::to_string(i + 1) + "Metal";
-		PSTerrain->SetShaderResourceView(a, globalAssets.globalTerrainMaterials.at("Forest TMaterial")->blendMaterials[i].GetTexture().Get());
-		PSTerrain->SetShaderResourceView(n, globalAssets.globalTerrainMaterials.at("Forest TMaterial")->blendMaterials[i].GetNormalMap().Get());
-		PSTerrain->SetShaderResourceView(r, globalAssets.globalTerrainMaterials.at("Forest TMaterial")->blendMaterials[i].GetRoughMap().Get());
-		PSTerrain->SetShaderResourceView(m, globalAssets.globalTerrainMaterials.at("Forest TMaterial")->blendMaterials[i].GetMetalMap().Get());
+		PSTerrain->SetShaderResourceView(a, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetTexture().Get());
+		PSTerrain->SetShaderResourceView(n, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetNormalMap().Get());
+		PSTerrain->SetShaderResourceView(r, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetRoughMap().Get());
+		PSTerrain->SetShaderResourceView(m, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetMetalMap().Get());
 
 		PSTerrain->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
 		PSTerrain->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
@@ -440,7 +440,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
     this->currentSky->Draw(context, cam);
 
-	std::shared_ptr<SimpleVertexShader> fullscreenVS = globalAssets.vertexShaders.at("FullscreenVS");
+	std::shared_ptr<SimpleVertexShader> fullscreenVS = globalAssets.GetVertexShaderByName("FullscreenVS");
 	fullscreenVS->SetShader();
 
 	// SSAO Rendering
@@ -451,7 +451,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	renderTargets[3] = 0;
 	context->OMSetRenderTargets(4, renderTargets, 0);
 
-	std::shared_ptr<SimplePixelShader> ssaoPS = globalAssets.pixelShaders.at("SSAOPS");
+	std::shared_ptr<SimplePixelShader> ssaoPS = globalAssets.GetPixelShaderByName("SSAOPS");
 	ssaoPS->SetShader();
 
 	// Inverse projection matrix
@@ -478,7 +478,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	renderTargets[0] = ssaoRTVs[5].Get();
 	context->OMSetRenderTargets(1, renderTargets, 0);
 
-	std::shared_ptr<SimplePixelShader> ssaoBlurPS = globalAssets.pixelShaders.at("SSAOBlurPS");
+	std::shared_ptr<SimplePixelShader> ssaoBlurPS = globalAssets.GetPixelShaderByName("SSAOBlurPS");
 	ssaoBlurPS->SetShader();
 	ssaoBlurPS->SetShaderResourceView("SSAO", ssaoSRV[4].Get());
 	ssaoBlurPS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
@@ -489,7 +489,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	renderTargets[0] = backBufferRTV.Get();
 	context->OMSetRenderTargets(1, renderTargets, 0);
 
-	std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.pixelShaders.at("SSAOCombinePS");
+	std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
 	ssaoCombinePS->SetShader();
 	ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", ssaoSRV[0].Get());
 	ssaoCombinePS->SetShaderResourceView("ambient", ssaoSRV[1].Get());

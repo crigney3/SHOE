@@ -198,6 +198,8 @@ public:
 	size_t GetLightArraySize();
 	size_t GetTerrainMaterialArraySize();
 	size_t GetTerrainEntityArraySize();
+	Light* GetLightArray();
+	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
 
 	std::shared_ptr<Sky> currentSky;
 	int lightCount;

@@ -66,9 +66,9 @@ void Game::Init()
 	// Initialize everything from gameobjects to skies
 	globalAssets.Initialize(device, context);
 
-	mainCamera = globalAssets.globalCameras.at("mainCamera");
-	mainShadowCamera = globalAssets.globalCameras.at("mainShadowCamera");
-	flashShadowCamera = globalAssets.globalCameras.at("flashShadowCamera");
+	mainCamera = globalAssets.GetCameraByName("mainCamera");
+	mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
+	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
 	Entities = globalAssets.globalEntities;
 	entIt = globalAssets.globalEntities.begin();

@@ -29,9 +29,9 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFLOAT3 pos, float aspectRatio, int type) {
 	std::shared_ptr<Camera> newCam;
 
-	newCam = std::make_shared<Camera>(pos, aspectRatio, type);
+	newCam = std::make_shared<Camera>(pos, aspectRatio, type, id);
 
-	this->globalCameras.emplace(id, newCam);
+	this->globalCameras.push_back(newCam);
 
 	return newCam;
 }
@@ -39,9 +39,9 @@ std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFL
 std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::wstring nameToLoad) {
 	std::shared_ptr<SimpleVertexShader> newVS;
 
-	newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str());
+	newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
 
-	vertexShaders.emplace(id, newVS);
+	vertexShaders.push_back(newVS);
 
 	return newVS;
 }
@@ -49,9 +49,9 @@ std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string
 std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string id, std::wstring nameToLoad) {
 	std::shared_ptr<SimplePixelShader> newPS;
 
-	newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str());
+	newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
 
-	pixelShaders.emplace(id, newPS);
+	pixelShaders.push_back(newPS);
 
 	return newPS;
 }
@@ -62,9 +62,9 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 
 	assetPath = "../../../Assets/Models/";
 
-	newMesh = std::make_shared<Mesh>(dxInstance->GetFullPathTo(assetPath + nameToLoad).c_str(), device);
+	newMesh = std::make_shared<Mesh>(dxInstance->GetFullPathTo(assetPath + nameToLoad).c_str(), device, id);
 
-	globalMeshes.emplace(id, newMesh);
+	globalMeshes.push_back(newMesh);
 
 	return newMesh;
 }
@@ -107,8 +107,8 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 
 	device->CreateSamplerState(&clampDesc, &clampState);
 
-	std::shared_ptr<SimpleVertexShader> VSNormal = vertexShaders.at("NormalsVS");
-	std::shared_ptr<SimplePixelShader> PSNormal = pixelShaders.at("NormalsPS");
+	std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
+	std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
 
 	assetPathString = L"../../../Assets/PBR/";
 
@@ -125,9 +125,10 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 										clampState,
 										normals,
 										roughness,
-										metalness);
+										metalness,
+										id);
 
-	globalMaterials.emplace(id, newMat);
+	globalMaterials.push_back(newMat);
 
 	return newMat;
 }
@@ -135,13 +136,13 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name) {
 	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(mesh, XMMatrixIdentity(), mat, name);
 
-	globalEntities.emplace(name, newEnt);
+	globalEntities.push_back(newEnt);
 
 	return newEnt;
 }
 
 std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture) {
-	std::shared_ptr<Mesh> Cube = globalMeshes.at("Cube");
+	std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
 
 	std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, skyTexture, Cube, &pixelShaders, &vertexShaders, device, context);
 
@@ -153,54 +154,54 @@ std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11Shader
 
 #pragma region initAssets
 void AssetManager::InitializeGameEntities() {
-	globalEntities = std::map<std::string, std::shared_ptr<GameEntity>>();
+	globalEntities = std::vector<std::shared_ptr<GameEntity>>();
 
 	//Show example renders
-	CreateGameEntity(globalMeshes.at("Cube"), globalMaterials.at("bronzeMat"), "Bronze Cube");
-	CreateGameEntity(globalMeshes.at("Cylinder"), globalMaterials.at("floorMat"), "Stone Cylinder");
-	CreateGameEntity(globalMeshes.at("Helix"), globalMaterials.at("floorMat"), "Floor Helix");
-	CreateGameEntity(globalMeshes.at("Sphere"), globalMaterials.at("paintMat"), "Paint Sphere");
-	CreateGameEntity(globalMeshes.at("Torus"), globalMaterials.at("roughMat"), "Rough Torus");
-	CreateGameEntity(globalMeshes.at("Sphere"), globalMaterials.at("scratchMat"), "Scratched Sphere");
-	CreateGameEntity(globalMeshes.at("Sphere"), globalMaterials.at("woodMat"), "Wood Sphere");
-	CreateGameEntity(globalMeshes.at("Cube"), globalMaterials.at("largePaintMat"), "Large Paint Rect");
-	CreateGameEntity(globalMeshes.at("Cube"), globalMaterials.at("largeCobbleMat"), "Large Cobble Rect");
+	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("bronzeMat"), "Bronze Cube");
+	CreateGameEntity(GetMeshByName("Cylinder"), GetMaterialByName("floorMat"), "Stone Cylinder");
+	CreateGameEntity(GetMeshByName("Helix"), GetMaterialByName("floorMat"), "Floor Helix");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("paintMat"), "Paint Sphere");
+	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("roughMat"), "Rough Torus");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("scratchMat"), "Scratched Sphere");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("woodMat"), "Wood Sphere");
+	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("largePaintMat"), "Large Paint Rect");
+	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("largeCobbleMat"), "Large Cobble Rect");
 
 	//Reflective objects
-	CreateGameEntity(globalMeshes.at("Sphere"), globalMaterials.at("reflectiveMetal"), "Shiny Metal Sphere");
-	CreateGameEntity(globalMeshes.at("Sphere"), globalMaterials.at("reflectiveRoughMetal"), "Rough Metal Sphere");
-	CreateGameEntity(globalMeshes.at("Sphere"), globalMaterials.at("reflectiveRough"), "Shiny Rough Sphere");
-	CreateGameEntity(globalMeshes.at("Sphere"), globalMaterials.at("reflective"), "Shiny Sphere");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveMetal"), "Shiny Metal Sphere");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveRoughMetal"), "Rough Metal Sphere");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveRough"), "Shiny Rough Sphere");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflective"), "Shiny Sphere");
 
-	globalEntities.at("Bronze Cube")->GetTransform()->SetPosition(+0.7f, +0.0f, +0.0f);
-	globalEntities.at("Stone Cylinder")->GetTransform()->SetPosition(-0.7f, +0.0f, +0.0f);
-	globalEntities.at("Floor Helix")->GetTransform()->SetPosition(+0.0f, +0.7f, +0.0f);
-	globalEntities.at("Paint Sphere")->GetTransform()->SetPosition(+0.0f, -0.7f, +0.0f);
-	globalEntities.at("Scratched Sphere")->GetTransform()->SetPosition(+3.0f, +0.0f, +0.0f);
-	globalEntities.at("Wood Sphere")->GetTransform()->SetPosition(-3.0f, +0.0f, +0.0f);
-	globalEntities.at("Large Paint Rect")->GetTransform()->SetScale(10.0f, 10.0f, 0.2f);
-	globalEntities.at("Large Paint Rect")->GetTransform()->SetPosition(+0.0f, +0.0f, +4.0f);
-	globalEntities.at("Large Cobble Rect")->GetTransform()->SetScale(+10.0f, +10.0f, +0.2f);
-	globalEntities.at("Large Cobble Rect")->GetTransform()->SetPosition(+0.0f, -5.0f, +0.0f);
-	globalEntities.at("Large Cobble Rect")->GetTransform()->Rotate(45.0f, 0.0f, 0.0f);
-	globalTerrainEntities.at("Main Terrain")->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
+	GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.7f, +0.0f, +0.0f);
+	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-0.7f, +0.0f, +0.0f);
+	GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition(+0.0f, +0.7f, +0.0f);
+	GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(+0.0f, -0.7f, +0.0f);
+	GetGameEntityByName("Scratched Sphere")->GetTransform()->SetPosition(+3.0f, +0.0f, +0.0f);
+	GetGameEntityByName("Wood Sphere")->GetTransform()->SetPosition(-3.0f, +0.0f, +0.0f);
+	GetGameEntityByName("Large Paint Rect")->GetTransform()->SetScale(10.0f, 10.0f, 0.2f);
+	GetGameEntityByName("Large Paint Rect")->GetTransform()->SetPosition(+0.0f, +0.0f, +4.0f);
+	GetGameEntityByName("Large Cobble Rect")->GetTransform()->SetScale(+10.0f, +10.0f, +0.2f);
+	GetGameEntityByName("Large Cobble Rect")->GetTransform()->SetPosition(+0.0f, -5.0f, +0.0f);
+	GetGameEntityByName("Large Cobble Rect")->GetTransform()->Rotate(45.0f, 0.0f, 0.0f);
+	GetTerrainByName("Main Terrain")->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
 
-	globalEntities.at("Shiny Metal Sphere")->GetTransform()->SetPosition(+4.0f, +1.0f, 0.0f);
-	globalEntities.at("Rough Metal Sphere")->GetTransform()->SetPosition(+5.0f, +1.0f, 0.0f);
-	globalEntities.at("Shiny Sphere")->GetTransform()->SetPosition(+4.0f, 0.0f, 0.0f);
-	globalEntities.at("Shiny Rough Sphere")->GetTransform()->SetPosition(+5.0f, 0.0f, 0.0f);
+	GetGameEntityByName("Shiny Metal Sphere")->GetTransform()->SetPosition(+4.0f, +1.0f, 0.0f);
+	GetGameEntityByName("Rough Metal Sphere")->GetTransform()->SetPosition(+5.0f, +1.0f, 0.0f);
+	GetGameEntityByName("Shiny Sphere")->GetTransform()->SetPosition(+4.0f, 0.0f, 0.0f);
+	GetGameEntityByName("Shiny Rough Sphere")->GetTransform()->SetPosition(+5.0f, 0.0f, 0.0f);
 
 	//Set up some parenting examples
-	globalEntities.at("Stone Cylinder")->GetTransform()->SetParent(globalEntities.at("Floor Helix")->GetTransform());
-	globalEntities.at("Rough Torus")->GetTransform()->SetParent(globalEntities.at("Paint Sphere")->GetTransform());
-	globalEntities.at("Floor Helix")->GetTransform()->SetParent(globalEntities.at("Rough Torus")->GetTransform());
-	globalEntities.at("Wood Sphere")->GetTransform()->SetParent(globalEntities.at("Floor Helix")->GetTransform());
+	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
+	GetGameEntityByName("Rough Torus")->GetTransform()->SetParent(GetGameEntityByName("Paint Sphere")->GetTransform());
+	GetGameEntityByName("Floor Helix")->GetTransform()->SetParent(GetGameEntityByName("Rough Torus")->GetTransform());
+	GetGameEntityByName("Wood Sphere")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
 
 	CreateComplexGeometry();
 }
 
 void AssetManager::InitializeMaterials() {
-	globalMaterials = std::map<std::string, std::shared_ptr<Material>>();
+	globalMaterials = std::vector<std::shared_ptr<Material>>();
 
 	// Make reflective PBR materials
 	CreatePBRMaterial(std::string("reflectiveMetal"),
@@ -290,7 +291,7 @@ void AssetManager::InitializeMaterials() {
 }
 
 void AssetManager::InitializeMeshes() {
-	globalMeshes = std::map<std::string, std::shared_ptr<Mesh>>();
+	globalMeshes = std::vector<std::shared_ptr<Mesh>>();
 
 	CreateMesh("Cube", "cube.obj");
 	CreateMesh("Cylinder", "cylinder.obj");
@@ -302,9 +303,9 @@ void AssetManager::InitializeMeshes() {
 void AssetManager::InitializeSkies() {
 	skies = std::vector<std::shared_ptr<Sky>>();
 
-	std::shared_ptr<SimpleVertexShader> VSSky = vertexShaders.at("SkyVS");
-	std::shared_ptr<SimplePixelShader> PSSky = pixelShaders.at("SkyPS");
-	std::shared_ptr<Mesh> Cube = globalMeshes.at("Cube");
+	std::shared_ptr<SimpleVertexShader> VSSky = GetVertexShaderByName("SkyVS");
+	std::shared_ptr<SimplePixelShader> PSSky = GetPixelShaderByName("SkyPS");
+	std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
 
 	//Skybox map pointers
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> spaceTexture;
@@ -346,53 +347,53 @@ void AssetManager::InitializeSkies() {
 
 void AssetManager::InitializeLights() {
 	//Init lights list
-	globalLights = std::vector<Light>();
+	globalLights = std::vector<std::shared_ptr<Light>>();
 
 	//white light from the top left
-	Light mainLight = Light();
-	mainLight.type = 0.0f;
-	mainLight.enabled = true;
-	mainLight.color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-	mainLight.intensity = 0.7f;
-	mainLight.direction = DirectX::XMFLOAT3(1, -1, 0);
-	mainLight.range = 100.0f;
+	std::shared_ptr<Light> mainLight = std::make_shared<Light>();
+	mainLight->type = 0.0f;
+	mainLight->enabled = true;
+	mainLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
+	mainLight->intensity = 0.7f;
+	mainLight->direction = DirectX::XMFLOAT3(1, -1, 0);
+	mainLight->range = 100.0f;
 
 	//white light from the back
-	Light backLight = Light();
-	backLight.type = 0.0f;
-	backLight.enabled = false;
-	backLight.color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-	backLight.intensity = 1.0f;
-	backLight.direction = DirectX::XMFLOAT3(0, 0, -1);
-	backLight.range = 100.0f;
+	std::shared_ptr<Light> backLight = std::make_shared<Light>();
+	backLight->type = 0.0f;
+	backLight->enabled = false;
+	backLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
+	backLight->intensity = 1.0f;
+	backLight->direction = DirectX::XMFLOAT3(0, 0, -1);
+	backLight->range = 100.0f;
 
 	//red light on the bottom
-	Light bottomLight = Light();
-	bottomLight.type = 0.0f;
-	bottomLight.enabled = false;
-	bottomLight.color = DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f);
-	bottomLight.intensity = 1.0f;
-	bottomLight.direction = DirectX::XMFLOAT3(0, 1, 0);
-	bottomLight.range = 100.0f;
+	std::shared_ptr<Light> bottomLight = std::make_shared<Light>();
+	bottomLight->type = 0.0f;
+	bottomLight->enabled = false;
+	bottomLight->color = DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f);
+	bottomLight->intensity = 1.0f;
+	bottomLight->direction = DirectX::XMFLOAT3(0, 1, 0);
+	bottomLight->range = 100.0f;
 
 	//red pointlight in the center
-	Light centerLight = Light();
-	centerLight.type = 1.0f;
-	centerLight.enabled = true;
-	centerLight.color = DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f);
-	centerLight.intensity = 1.0f;
-	centerLight.position = DirectX::XMFLOAT3(0, 1.5f, 0);
-	centerLight.range = 2.0f;
+	std::shared_ptr<PointLight> centerLight = std::make_shared<PointLight>();
+	centerLight->type = 1.0f;
+	centerLight->enabled = true;
+	centerLight->color = DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f);
+	centerLight->intensity = 1.0f;
+	centerLight->position = DirectX::XMFLOAT3(0, 1.5f, 0);
+	centerLight->range = 2.0f;
 
 	//flashlight attached to camera +.5z and x
-	DirectionalLight flashLight = DirectionalLight();
-	flashLight.type = 2.0f;
-	flashLight.enabled = false;
-	flashLight.color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-	flashLight.intensity = 20.0f;
-	flashLight.direction = DirectX::XMFLOAT3(0, 0, -1);
-	flashLight.position = DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f);
-	flashLight.range = 10.0f;
+	std::shared_ptr<DirectionalLight> flashLight = std::make_shared<DirectionalLight>();
+	flashLight->type = 2.0f;
+	flashLight->enabled = false;
+	flashLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
+	flashLight->intensity = 20.0f;
+	flashLight->direction = DirectX::XMFLOAT3(0, 0, -1);
+	flashLight->position = DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f);
+	flashLight->range = 10.0f;
 
 	globalLights.push_back(mainLight);
 	globalLights.push_back(backLight);
@@ -402,8 +403,8 @@ void AssetManager::InitializeLights() {
 }
 
 void AssetManager::InitializeTerrainMaterials() {
-	globalTerrainEntities = std::map<std::string, std::shared_ptr<GameEntity>>();
-	globalTerrainMaterials = std::map<std::string, std::shared_ptr<TerrainMats>>();
+	globalTerrainEntities = std::vector<std::shared_ptr<GameEntity>>();
+	globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMats>>();
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogAlbedo;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestAlbedo;
@@ -451,12 +452,12 @@ void AssetManager::InitializeTerrainMaterials() {
 	mainTerrainMaterials->blendMaterials[1].SetTiling(10.0f);
 
 	std::shared_ptr<GameEntity> terrainEntity = std::make_shared<GameEntity>(mainTerrain, XMMatrixIdentity(), nullptr);
-	globalTerrainEntities.emplace(std::string("Main Terrain"), terrainEntity);
-	globalTerrainMaterials.emplace(std::string("Forest TMaterial"), mainTerrainMaterials);
+	globalTerrainEntities.push_back(terrainEntity);
+	globalTerrainMaterials.push_back(mainTerrainMaterials);
 }
 
 void AssetManager::InitializeCameras() {
-	globalCameras = std::map<std::string, std::shared_ptr<Camera>>();
+	globalCameras = std::vector<std::shared_ptr<Camera>>();
 
 	float aspectRatio = (float)(dxInstance->width / dxInstance->height);
 	CreateCamera("mainCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -5.5f), aspectRatio, 1);
@@ -475,8 +476,8 @@ void AssetManager::InitializeCameras() {
 // - We'll have that byte code already loaded below
 // --------------------------------------------------------
 void AssetManager::InitializeShaders() {
-	vertexShaders = std::map<std::string, std::shared_ptr<SimpleVertexShader>>();
-	pixelShaders = std::map<std::string, std::shared_ptr<SimplePixelShader>>();
+	vertexShaders = std::vector<std::shared_ptr<SimpleVertexShader>>();
+	pixelShaders = std::vector<std::shared_ptr<SimplePixelShader>>();
 
 	// Make vertex shaders
 	CreateVertexShader("BasicVS", L"VertexShader.cso");
@@ -552,6 +553,19 @@ size_t AssetManager::GetTerrainMaterialArraySize() {
 
 size_t AssetManager::GetTerrainEntityArraySize() {
 	return this->globalTerrainEntities.size();
+}
+
+Light* AssetManager::GetLightArray() {
+	Light lightArray[64];
+	for (int i = 0; i < lightCount; i++) {
+		lightArray[i] = *globalLights[i];
+	}
+
+	return lightArray;
+}
+
+std::vector<std::shared_ptr<GameEntity>>* AssetManager::GetActiveGameEntities() {
+	return &this->globalEntities;
 }
 
 #pragma endregion
@@ -830,10 +844,10 @@ void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene) {
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
 		std::string newName = "ComplexMesh" + std::to_string(i);
 		mesh->mName = newName;
-		globalMeshes.emplace(mesh->mName.C_Str(), ProcessComplexMesh(mesh, scene));
-		CreateGameEntity(globalMeshes.at(mesh->mName.C_Str()), globalMaterials.at("cobbleMat"), mesh->mName.C_Str());
-		globalEntities.at(mesh->mName.C_Str())->GetTransform()->SetPosition(0.0f, 3.0f * i, 1.0f);
-		globalEntities.at(mesh->mName.C_Str())->GetTransform()->SetScale(0.25f, 0.25f, 0.25f);
+		globalMeshes.push_back(ProcessComplexMesh(mesh, scene));
+		CreateGameEntity(GetMeshByName(mesh->mName.C_Str() + std::string("Mesh")), GetMaterialByName("cobbleMat"), mesh->mName.C_Str());
+		GetGameEntityByName(mesh->mName.C_Str())->GetTransform()->SetPosition(0.0f, 3.0f * i, 1.0f);
+		GetGameEntityByName(mesh->mName.C_Str())->GetTransform()->SetScale(0.25f, 0.25f, 0.25f);
 	}
 
 	for (unsigned int i = 0; i < node->mNumChildren; i++) {
@@ -898,7 +912,7 @@ std::shared_ptr<Mesh> AssetManager::ProcessComplexMesh(aiMesh* mesh, const aiSce
 		//loadMaterial
 	//}
 
-	if (hasTangents) return std::make_shared<Mesh>(vertices.data(), vertices.size(), indices.data(), indices.size(), 0, device);
+	if (hasTangents) return std::make_shared<Mesh>(vertices.data(), vertices.size(), indices.data(), indices.size(), 0, device, mesh->mName.C_Str() + std::string("Mesh"));
 	else return std::make_shared<Mesh>(vertices.data(), vertices.size(), indices.data(), indices.size(), device);
 }
 #pragma endregion
