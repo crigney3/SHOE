@@ -470,6 +470,8 @@ void Game::Update(float deltaTime, float totalTime)
 {
 	RenderUI(deltaTime);
 
+	// To untie something from framerate, multiply by deltatime
+
 	// Quit if the escape key is pressed
 	if (input.KeyDown(VK_ESCAPE)) Quit();
 

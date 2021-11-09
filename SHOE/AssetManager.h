@@ -89,6 +89,8 @@ public:
 
 	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context);
 
+	// Methods to create new assets
+
 	std::shared_ptr<GameEntity> CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name = "GameEntity");
 	std::shared_ptr<Sky> CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture);
 	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::wstring nameToLoad);
@@ -100,6 +102,87 @@ public:
 											    std::wstring normalNameToLoad,
 											    std::wstring metalnessNameToLoad,
 											    std::wstring roughnessNameToLoad);
+
+	// Methods to remove assets
+
+	void RemoveGameEntity(std::string name);
+	void RemoveGameEntity(int id);
+	void RemoveSky(std::string name);
+	void RemoveSky(int id);
+	void RemoveVertexShader(std::string name);
+	void RemoveVertexShader(int id);
+	void RemovePixelShader(std::string name);
+	void RemovePixelShader(int id);
+	void RemoveMesh(std::string name);
+	void RemoveMesh(int id);
+	void RemoveCamera(std::string name);
+	void RemoveCamera(int id);
+	void RemoveTerrain(std::string name);
+	void RemoveTerrain(int id);
+	void RemoveMaterial(std::string name);
+	void RemoveMaterial(int id);
+	void RemoveTerrainMaterial(std::string name);
+	void RemoveTerrainMaterial(int id);
+	void RemoveLight(std::string name);
+	void RemoveLight(int id);
+
+	// Methods to disable and enable assets for rendering
+	// Currently not implemented except for lights
+
+	void DisableGameEntity(std::string name);
+	void DisableGameEntity(int id);
+	void DisableSky(std::string name);
+	void DisableSky(int id);
+	void DisableVertexShader(std::string name);
+	void DisableVertexShader(int id);
+	void DisablePixelShader(std::string name);
+	void DisablePixelShader(int id);
+	void DisableMesh(std::string name);
+	void DisableMesh(int id);
+	void DisableCamera(std::string name);
+	void DisableCamera(int id);
+	void DisableTerrain(std::string name);
+	void DisableTerrain(int id);
+	void DisableMaterial(std::string name);
+	void DisableMaterial(int id);
+	void DisableTerrainMaterial(std::string name);
+	void DisableTerrainMaterial(int id);
+	void DisableLight(std::string name);
+	void DisableLight(int id);
+
+	void EnableGameEntity(std::string name);
+	void EnableGameEntity(int id);
+	void EnableSky(std::string name);
+	void EnableSky(int id);
+	void EnableVertexShader(std::string name);
+	void EnableVertexShader(int id);
+	void EnablePixelShader(std::string name);
+	void EnablePixelShader(int id);
+	void EnableMesh(std::string name);
+	void EnableMesh(int id);
+	void EnableCamera(std::string name);
+	void EnableCamera(int id);
+	void EnableTerrain(std::string name);
+	void EnableTerrain(int id);
+	void EnableMaterial(std::string name);
+	void EnableMaterial(int id);
+	void EnableTerrainMaterial(std::string name);
+	void EnableTerrainMaterial(int id);
+	void EnableLight(std::string name);
+	void EnableLight(int id);
+
+	// Asset search-by-name methods
+
+	std::shared_ptr<GameEntity> GetGameEntityByName(std::string name);
+	std::shared_ptr<Sky> GetSkyByName(std::string name);
+	std::shared_ptr<SimpleVertexShader> GetVertexShaderByName(std::string name);
+	std::shared_ptr<SimplePixelShader> GetPixelShaderByName(std::string name);
+	std::shared_ptr<Mesh> GetMeshByName(std::string name);
+	std::shared_ptr<Camera> GetCameraByName(std::string name);
+	std::shared_ptr<GameEntity> GetTerrainByName(std::string name);
+	std::shared_ptr<Material> GetMaterialByName(std::string name);
+	std::shared_ptr<TerrainMats> GetTerrainMaterialByName(std::string name);
+	std::shared_ptr<Light> GetLightByName(std::string name);
 
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> GetInputLayout();
 
