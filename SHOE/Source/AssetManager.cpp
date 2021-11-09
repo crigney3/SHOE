@@ -513,6 +513,47 @@ Microsoft::WRL::ComPtr<ID3D11Device> AssetManager::GetDevice() {
 Microsoft::WRL::ComPtr<ID3D11DeviceContext> AssetManager::GetContext() {
 	return this->context;
 }
+
+size_t AssetManager::GetPixelShaderArraySize() {
+	return this->pixelShaders.size();
+}
+
+size_t AssetManager::GetVertexShaderArraySize() {
+	return this->vertexShaders.size();
+}
+
+size_t AssetManager::GetSkyArraySize() {
+	return this->skies.size();
+}
+
+size_t AssetManager::GetCameraArraySize() {
+	return this->globalCameras.size();
+}
+
+size_t AssetManager::GetMeshArraySize() {
+	return this->globalMeshes.size();
+}
+
+size_t AssetManager::GetMaterialArraySize() {
+	return this->globalMaterials.size();
+}
+
+size_t AssetManager::GetGameEntityArraySize() {
+	return this->globalEntities.size();
+}
+
+size_t AssetManager::GetLightArraySize() {
+	return this->globalLights.size();
+}
+
+size_t AssetManager::GetTerrainMaterialArraySize() {
+	return this->globalTerrainMaterials.size();
+}
+
+size_t AssetManager::GetTerrainEntityArraySize() {
+	return this->globalTerrainEntities.size();
+}
+
 #pragma endregion
 
 #pragma region buildAssetData
@@ -869,258 +910,172 @@ std::shared_ptr<Mesh> AssetManager::ProcessComplexMesh(aiMesh* mesh, const aiSce
 //
 
 void AssetManager::RemoveGameEntity(std::string name) {
-
+	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
 }
 
 void AssetManager::RemoveGameEntity(int id) {
-
+	globalEntities.erase(globalEntities.begin() + id);
 }
-void AssetManager::RemoveSky(std::string name) {
 
+void AssetManager::RemoveSky(std::string name) {
+	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
 }
 
 void AssetManager::RemoveSky(int id) {
-
+	globalEntities.erase(globalEntities.begin() + id);
 }
 
 void AssetManager::RemoveVertexShader(std::string name) {
-
+	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
 }
 
 void AssetManager::RemoveVertexShader(int id) {
-
+	globalEntities.erase(globalEntities.begin() + id);
 }
 
 void AssetManager::RemovePixelShader(std::string name) {
-
+	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
 }
 
 void AssetManager::RemovePixelShader(int id) {
-
+	globalEntities.erase(globalEntities.begin() + id);
 }
 
 void AssetManager::RemoveMesh(std::string name) {
-
+	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
 }
 
 void AssetManager::RemoveMesh(int id) {
-
+	globalEntities.erase(globalEntities.begin() + id);
 }
 
 void AssetManager::RemoveCamera(std::string name) {
-
+	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
 }
 
 void AssetManager::RemoveCamera(int id) {
-
+	globalEntities.erase(globalEntities.begin() + id);
 }
 
 void AssetManager::RemoveTerrain(std::string name) {
-
+	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
 }
 
 void AssetManager::RemoveTerrain(int id) {
-
+	globalEntities.erase(globalEntities.begin() + id);
 }
 
 void AssetManager::RemoveMaterial(std::string name) {
-
+	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
 }
 
 void AssetManager::RemoveMaterial(int id) {
-
+	globalEntities.erase(globalEntities.begin() + id);
 }
 
 void AssetManager::RemoveTerrainMaterial(std::string name) {
-
+	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
 }
 
 void AssetManager::RemoveTerrainMaterial(int id) {
-
+	globalEntities.erase(globalEntities.begin() + id);
 }
 
 void AssetManager::RemoveLight(std::string name) {
-
+	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
 }
 
 void AssetManager::RemoveLight(int id) {
-
+	globalEntities.erase(globalEntities.begin() + id);
 }
 #pragma endregion
 
-#pragma region disableAssets
+#pragma region enableDisableAssets
 
 //
-// Methods to disable game assets
-// Removes the object from rendering without deleting it
+// Enables or disables assets into or
+// out of the rendering pipeline
 //
 
-void AssetManager::DisableGameEntity(std::string name) {
-
+void AssetManager::EnableDisableGameEntity(std::string name, bool value) {
+	GetGameEntityByName(name)->SetEnableDisable(value);
 }
 
-void AssetManager::DisableGameEntity(int id) {
-
+void AssetManager::EnableDisableGameEntity(int id, bool value) {
+	globalEntities[id]->SetEnableDisable(value);
 }
 
-void AssetManager::DisableSky(std::string name) {
-
+void AssetManager::EnableDisableSky(std::string name, bool value) {
+	GetSkyByName(name)->SetEnableDisable(value);
 }
 
-void AssetManager::DisableSky(int id) {
-
+void AssetManager::EnableDisableSky(int id, bool value) {
+	skies[id]->SetEnableDisable(value);
 }
 
-void AssetManager::DisableVertexShader(std::string name) {
-
+void AssetManager::EnableDisableVertexShader(std::string name, bool value) {
+	GetVertexShaderByName(name)->SetEnableDisable(value);
 }
 
-void AssetManager::DisableVertexShader(int id) {
-
+void AssetManager::EnableDisableVertexShader(int id, bool value) {
+	vertexShaders[id]->SetEnableDisable(value);
 }
 
-void AssetManager::DisablePixelShader(std::string name) {
-
+void AssetManager::EnableDisablePixelShader(std::string name, bool value) {
+	GetPixelShaderByName(name)->SetEnableDisable(value);
 }
 
-void AssetManager::DisablePixelShader(int id) {
-
+void AssetManager::EnableDisablePixelShader(int id, bool value) {
+	pixelShaders[id]->SetEnableDisable(value);
 }
 
-void AssetManager::DisableMesh(std::string name) {
-
+void AssetManager::EnableDisableMesh(std::string name, bool value) {
+	GetMeshByName(name)->SetEnableDisable(value);
 }
 
-void AssetManager::DisableMesh(int id) {
-
+void AssetManager::EnableDisableMesh(int id, bool value) {
+	globalMeshes[id]->SetEnableDisable(value);
 }
 
-void AssetManager::DisableCamera(std::string name) {
-
+void AssetManager::EnableDisableCamera(std::string name, bool value) {
+	GetCameraByName(name)->SetEnableDisable(value);
 }
 
-void AssetManager::DisableCamera(int id) {
-
+void AssetManager::EnableDisableCamera(int id, bool value) {
+	globalCameras[id]->SetEnableDisable(value);
 }
 
-void AssetManager::DisableTerrain(std::string name) {
-
+void AssetManager::EnableDisableTerrain(std::string name, bool value) {
+	GetTerrainByName(name)->SetEnableDisable(value);
 }
 
-void AssetManager::DisableTerrain(int id) {
-
+void AssetManager::EnableDisableTerrain(int id, bool value) {
+	globalTerrainEntities[id]->SetEnableDisable(value);
 }
 
-void AssetManager::DisableMaterial(std::string name) {
-
+void AssetManager::EnableDisableMaterial(std::string name, bool value) {
+	GetMaterialByName(name)->SetEnableDisable(value);
 }
 
-void AssetManager::DisableMaterial(int id) {
-
+void AssetManager::EnableDisableMaterial(int id, bool value) {
+	globalMaterials[id]->SetEnableDisable(value);
 }
 
-void AssetManager::DisableTerrainMaterial(std::string name) {
-
+void AssetManager::EnableDisableTerrainMaterial(std::string name, bool value) {
+	GetTerrainMaterialByName(name)->SetEnableDisable(value);
 }
 
-void AssetManager::DisableTerrainMaterial(int id) {
-
+void AssetManager::EnableDisableTerrainMaterial(int id, bool value) {
+	globalTerrainMaterials[id]->SetEnableDisable(value);
 }
 
-void AssetManager::DisableLight(std::string name) {
+// See GetLightIDByName
+//void AssetManager::EnableDisableLight(std::string name, bool value) {
+//	GetLightByName(name)->SetEnableDisable(value);
+//}
 
-}
-
-void AssetManager::DisableLight(int id) {
-
-}
-#pragma endregion
-
-#pragma region enableAssets
-
-//
-// Re-enables assets back into rendering.
-// Only does anything if the asset is currently disabled.
-//
-
-void AssetManager::EnableGameEntity(std::string name) {
-
-}
-
-void AssetManager::EnableGameEntity(int id) {
-
-}
-
-void AssetManager::EnableSky(std::string name) {
-
-}
-
-void AssetManager::EnableSky(int id) {
-
-}
-
-void AssetManager::EnableVertexShader(std::string name) {
-
-}
-
-void AssetManager::EnableVertexShader(int id) {
-
-}
-
-void AssetManager::EnablePixelShader(std::string name) {
-
-}
-
-void AssetManager::EnablePixelShader(int id) {
-
-}
-
-void AssetManager::EnableMesh(std::string name) {
-
-}
-
-void AssetManager::EnableMesh(int id) {
-
-}
-
-void AssetManager::EnableCamera(std::string name) {
-
-}
-
-void AssetManager::EnableCamera(int id) {
-
-}
-
-void AssetManager::EnableTerrain(std::string name) {
-
-}
-
-void AssetManager::EnableTerrain(int id) {
-
-}
-
-void AssetManager::EnableMaterial(std::string name) {
-
-}
-
-void AssetManager::EnableMaterial(int id) {
-
-}
-
-void AssetManager::EnableTerrainMaterial(std::string name) {
-
-}
-
-void AssetManager::EnableTerrainMaterial(int id) {
-
-}
-
-void AssetManager::EnableLight(std::string name) {
-
-}
-
-void AssetManager::EnableLight(int id) {
-
+void AssetManager::EnableDisableLight(int id, bool value) {
+	globalLights[id]->enabled = value;
 }
 #pragma endregion
 
@@ -1131,42 +1086,199 @@ void AssetManager::EnableLight(int id) {
 //
 
 std::shared_ptr<GameEntity> AssetManager::GetGameEntityByName(std::string name) {
-
+	for (int i = 0; i < globalEntities.size(); i++) {
+		if (globalEntities[i]->GetName() == name) {
+			return globalEntities[i];
+		}
+	}
+	return nullptr;
 }
 
 std::shared_ptr<Sky> AssetManager::GetSkyByName(std::string name) {
-
+	for (int i = 0; i < skies.size(); i++) {
+		if (skies[i]->GetName() == name) {
+			return skies[i];
+		}
+	}
+	return nullptr;
 }
 
 std::shared_ptr<SimpleVertexShader> AssetManager::GetVertexShaderByName(std::string name) {
-
+	for (int i = 0; i < vertexShaders.size(); i++) {
+		if (vertexShaders[i]->GetName() == name) {
+			return vertexShaders[i];
+		}
+	}
+	return nullptr;
 }
 
 std::shared_ptr<SimplePixelShader> AssetManager::GetPixelShaderByName(std::string name) {
-
+	for (int i = 0; i < pixelShaders.size(); i++) {
+		if (pixelShaders[i]->GetName() == name) {
+			return pixelShaders[i];
+		}
+	}
+	return nullptr;
 }
 
 std::shared_ptr<Mesh> AssetManager::GetMeshByName(std::string name) {
-
+	for (int i = 0; i < globalMeshes.size(); i++) {
+		if (globalMeshes[i]->GetName() == name) {
+			return globalMeshes[i];
+		}
+	}
+	return nullptr;
 }
 
 std::shared_ptr<Camera> AssetManager::GetCameraByName(std::string name) {
-
+	for (int i = 0; i < globalCameras.size(); i++) {
+		if (globalCameras[i]->GetName() == name) {
+			return globalCameras[i];
+		}
+	}
+	return nullptr;
 }
 
 std::shared_ptr<GameEntity> AssetManager::GetTerrainByName(std::string name) {
-
+	for (int i = 0; i < globalEntities.size(); i++) {
+		if (globalEntities[i]->GetName() == name) {
+			return globalEntities[i];
+		}
+	}
+	return nullptr;
 }
 
 std::shared_ptr<Material> AssetManager::GetMaterialByName(std::string name) {
-
+	for (int i = 0; i < globalMaterials.size(); i++) {
+		if (globalMaterials[i]->GetName() == name) {
+			return globalMaterials[i];
+		}
+	}
+	return nullptr;
 }
 
 std::shared_ptr<TerrainMats> AssetManager::GetTerrainMaterialByName(std::string name) {
-
+	for (int i = 0; i < globalTerrainMaterials.size(); i++) {
+		if (globalTerrainMaterials[i]->GetName() == name) {
+			return globalTerrainMaterials[i];
+		}
+	}
+	return nullptr;
 }
 
-std::shared_ptr<Light> AssetManager::GetLightByName(std::string name) {
+// Unlikely to be implemented, see GetLightIdByName
+//std::shared_ptr<Light> AssetManager::GetLightByName(std::string name) {
+//	for (int i = 0; i < globalLights.size(); i++) {
+//		if (globalLights[i]->GetName() == name) {
+//			return globalLights[i];
+//		}
+//	}
+//	return nullptr;
+//}
+#pragma endregion
 
+#pragma region getAssetID
+
+//
+// These methods return the location of the entity in the vector
+//
+
+int AssetManager::GetGameEntityIDByName(std::string name) {
+	for (int i = 0; i < globalEntities.size(); i++) {
+		if (globalEntities[i]->GetName() == name) {
+			return i;
+		}
+	}
+	return -1;
 }
+
+int AssetManager::GetSkyIDByName(std::string name) {
+	for (int i = 0; i < skies.size(); i++) {
+		if (skies[i]->GetName() == name) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int AssetManager::GetVertexShaderIDByName(std::string name) {
+	for (int i = 0; i < vertexShaders.size(); i++) {
+		if (vertexShaders[i]->GetName() == name) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int AssetManager::GetPixelShaderIDByName(std::string name) {
+	for (int i = 0; i < pixelShaders.size(); i++) {
+		if (pixelShaders[i]->GetName() == name) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int AssetManager::GetMeshIDByName(std::string name) {
+	for (int i = 0; i < globalMeshes.size(); i++) {
+		if (globalMeshes[i]->GetName() == name) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int AssetManager::GetCameraIDByName(std::string name) {
+	for (int i = 0; i < globalCameras.size(); i++) {
+		if (globalCameras[i]->GetName() == name) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int AssetManager::GetTerrainIDByName(std::string name) {
+	for (int i = 0; i < globalTerrainEntities.size(); i++) {
+		if (globalTerrainEntities[i]->GetName() == name) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int AssetManager::GetMaterialIDByName(std::string name) {
+	for (int i = 0; i < globalMaterials.size(); i++) {
+		if (globalMaterials[i]->GetName() == name) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int AssetManager::GetTerrainMaterialIDByName(std::string name) {
+	for (int i = 0; i < globalTerrainMaterials.size(); i++) {
+		if (globalTerrainMaterials[i]->GetName() == name) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+// Unsure if current design pattern allows this
+// Lights must stay at a specific size to be passed to GPU
+// Could theoretically create map
+// Could also create a wrapper struct with:
+//		Name
+//		Light
+// and do pointer math to return Lights as an array that skips name
+//int AssetManager::GetLightIDByName(std::string name) {
+//	for (int i = 0; i < globalLights.size(); i++) {
+//		if (globalLights[i]-> == name) {
+//			return i;
+//		}
+//	}
+//	return -1;
+//}
+
+
 #pragma endregion

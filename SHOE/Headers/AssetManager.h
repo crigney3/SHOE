@@ -81,6 +81,17 @@ private:
 	void InitializeCameras();
 	void InitializeSkies();
 
+	std::vector<std::shared_ptr<SimplePixelShader>> pixelShaders;
+	std::vector<std::shared_ptr<SimpleVertexShader>> vertexShaders;
+	std::vector<std::shared_ptr<Sky>> skies;
+	std::vector<std::shared_ptr<Camera>> globalCameras;
+	std::vector<std::shared_ptr<Mesh>> globalMeshes;
+	std::vector<std::shared_ptr<Material>> globalMaterials;
+	std::vector<std::shared_ptr<GameEntity>> globalEntities;
+	std::vector<std::shared_ptr<Light>> globalLights;
+	std::vector<std::shared_ptr<TerrainMats>> globalTerrainMaterials;
+	std::vector<std::shared_ptr<GameEntity>> globalTerrainEntities;
+
 public:
 	~AssetManager();
 
@@ -129,47 +140,26 @@ public:
 	// Methods to disable and enable assets for rendering
 	// Currently not implemented except for lights
 
-	void DisableGameEntity(std::string name);
-	void DisableGameEntity(int id);
-	void DisableSky(std::string name);
-	void DisableSky(int id);
-	void DisableVertexShader(std::string name);
-	void DisableVertexShader(int id);
-	void DisablePixelShader(std::string name);
-	void DisablePixelShader(int id);
-	void DisableMesh(std::string name);
-	void DisableMesh(int id);
-	void DisableCamera(std::string name);
-	void DisableCamera(int id);
-	void DisableTerrain(std::string name);
-	void DisableTerrain(int id);
-	void DisableMaterial(std::string name);
-	void DisableMaterial(int id);
-	void DisableTerrainMaterial(std::string name);
-	void DisableTerrainMaterial(int id);
-	void DisableLight(std::string name);
-	void DisableLight(int id);
-
-	void EnableGameEntity(std::string name);
-	void EnableGameEntity(int id);
-	void EnableSky(std::string name);
-	void EnableSky(int id);
-	void EnableVertexShader(std::string name);
-	void EnableVertexShader(int id);
-	void EnablePixelShader(std::string name);
-	void EnablePixelShader(int id);
-	void EnableMesh(std::string name);
-	void EnableMesh(int id);
-	void EnableCamera(std::string name);
-	void EnableCamera(int id);
-	void EnableTerrain(std::string name);
-	void EnableTerrain(int id);
-	void EnableMaterial(std::string name);
-	void EnableMaterial(int id);
-	void EnableTerrainMaterial(std::string name);
-	void EnableTerrainMaterial(int id);
-	void EnableLight(std::string name);
-	void EnableLight(int id);
+	void EnableDisableGameEntity(std::string name, bool value);
+	void EnableDisableGameEntity(int id, bool value);
+	void EnableDisableSky(std::string name, bool value);
+	void EnableDisableSky(int id, bool value);
+	void EnableDisableVertexShader(std::string name, bool value);
+	void EnableDisableVertexShader(int id, bool value);
+	void EnableDisablePixelShader(std::string name, bool value);
+	void EnableDisablePixelShader(int id, bool value);
+	void EnableDisableMesh(std::string name, bool value);
+	void EnableDisableMesh(int id, bool value);
+	void EnableDisableCamera(std::string name, bool value);
+	void EnableDisableCamera(int id, bool value);
+	void EnableDisableTerrain(std::string name, bool value);
+	void EnableDisableTerrain(int id, bool value);
+	void EnableDisableMaterial(std::string name, bool value);
+	void EnableDisableMaterial(int id, bool value);
+	void EnableDisableTerrainMaterial(std::string name, bool value);
+	void EnableDisableTerrainMaterial(int id, bool value);
+	void EnableDisableLight(std::string name, bool value);
+	void EnableDisableLight(int id, bool value);
 
 	// Asset search-by-name methods
 
@@ -184,19 +174,31 @@ public:
 	std::shared_ptr<TerrainMats> GetTerrainMaterialByName(std::string name);
 	std::shared_ptr<Light> GetLightByName(std::string name);
 
+	int GetGameEntityIDByName(std::string name);
+	int GetSkyIDByName(std::string name);
+	int GetVertexShaderIDByName(std::string name);
+	int GetPixelShaderIDByName(std::string name);
+	int GetMeshIDByName(std::string name);
+	int GetCameraIDByName(std::string name);
+	int GetTerrainIDByName(std::string name);
+	int GetMaterialIDByName(std::string name);
+	int GetTerrainMaterialIDByName(std::string name);
+	int GetLightIDByName(std::string name);
+
+	// Relevant Get methods
+	
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> GetInputLayout();
+	size_t GetPixelShaderArraySize();
+	size_t GetVertexShaderArraySize();
+	size_t GetSkyArraySize();
+	size_t GetCameraArraySize();
+	size_t GetMeshArraySize();
+	size_t GetMaterialArraySize();
+	size_t GetGameEntityArraySize();
+	size_t GetLightArraySize();
+	size_t GetTerrainMaterialArraySize();
+	size_t GetTerrainEntityArraySize();
 
 	std::shared_ptr<Sky> currentSky;
 	int lightCount;
-
-	std::map<std::string, std::shared_ptr<SimplePixelShader>> pixelShaders;
-	std::map<std::string, std::shared_ptr<SimpleVertexShader>> vertexShaders;
-	std::vector<std::shared_ptr<Sky>> skies;
-	std::map<std::string, std::shared_ptr<Camera>> globalCameras;
-	std::map<std::string, std::shared_ptr<Mesh>> globalMeshes;
-	std::map<std::string, std::shared_ptr<Material>> globalMaterials;
-	std::map<std::string, std::shared_ptr<GameEntity>> globalEntities;
-	std::vector<Light> globalLights;
-	std::map<std::string, std::shared_ptr<TerrainMats>> globalTerrainMaterials;
-	std::map<std::string, std::shared_ptr<GameEntity>> globalTerrainEntities;
 };
