@@ -8,7 +8,8 @@ Material::Material(DirectX::XMFLOAT4 tint,
 				   Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState, 
 				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap, 
 				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap, 
-				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap) {
+				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
+				   std::string name) {
 	this->colorTint = tint;
 	this->pixShader = pix;
 	this->vertShader = vert;
@@ -20,6 +21,8 @@ Material::Material(DirectX::XMFLOAT4 tint,
 	this->metalMap = metalMap;
 	this->uvTiling = 1.0f;
 	this->clampState = clampState;
+	this->enabled = true;
+	this->name = name;
 }
 
 Material::~Material() {
@@ -76,4 +79,12 @@ void Material::SetTiling(float uv) {
 
 Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetClampSamplerState() {
 	return this->clampState;
+}
+
+void Material::SetEnableDisable(bool value) {
+	this->enabled = value;
+}
+
+bool Material::GetEnableDisable() {
+	return this->enabled;
 }

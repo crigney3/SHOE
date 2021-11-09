@@ -53,5 +53,7 @@ public:
 	GameEntity* GetGameEntity();
 	void SetGameEntity(GameEntity* entity);
 	std::vector<GameEntity*> GetChildrenAsGameEntities();
+
+	void SetEnableDisable(bool value);
 };
 

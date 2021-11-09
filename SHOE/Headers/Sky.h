@@ -12,29 +12,38 @@ class Sky
 public:
 	Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions, 
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, 
-		const char* filename,  
+		const char* filename,
 		std::map<std::string, std::shared_ptr<SimplePixelShader>>* pixShaders,
 		std::map<std::string, std::shared_ptr<SimpleVertexShader>>* vertShaders,
 		Microsoft::WRL::ComPtr<ID3D11Device> device,
-		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context);
+		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
+		std::string name = "sky");
 	Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions, 
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, 
 		std::shared_ptr<Mesh> cubeMesh, 
 		std::map<std::string, std::shared_ptr<SimplePixelShader>>* pixShaders,
 		std::map<std::string, std::shared_ptr<SimpleVertexShader>>* vertShaders,
 		Microsoft::WRL::ComPtr<ID3D11Device> device,
-		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context);
+		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
+		std::string name = "sky");
 	~Sky();
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetIrradianceCubeMap();
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetConvolvedSpecularCubeMap();
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetBRDFLookupTexture();
 	int GetIBLMipLevelCount();
+	std::string GetName();
+
+	void SetEnableDisable(bool value);
+	bool GetEnableDisable();
 
 	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<Camera> cam);
 private:
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext>	context;
+
+	std::string name;
+	bool enabled;
 
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureSRV;

@@ -62,7 +62,7 @@ struct SimpleSampler
 class ISimpleShader
 {
 public:
-	ISimpleShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context);
+	ISimpleShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::string name = "shader");
 	virtual ~ISimpleShader();
 
 	// Simple helpers
@@ -114,8 +114,10 @@ public:
 	const SimpleConstantBuffer* GetBufferInfo(std::string name);
 	const SimpleConstantBuffer* GetBufferInfo(unsigned int index);
 
-	// Misc getters
+	// Misc getters/setters
 	Microsoft::WRL::ComPtr<ID3DBlob> GetShaderBlob() { return shaderBlob; }
+	std::string GetName();
+	void SetName();
 
 	// Error reporting
 	static bool ReportErrors;
@@ -124,6 +126,7 @@ public:
 protected:
 
 	bool shaderValid;
+	std::string name;
 	Microsoft::WRL::ComPtr<ID3DBlob> shaderBlob;
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> deviceContext;
@@ -170,8 +173,8 @@ protected:
 class SimpleVertexShader : public ISimpleShader
 {
 public:
-	SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile);
-	SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout, bool perInstanceCompatible);
+	SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, std::string name = "shader");
+	SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout, bool perInstanceCompatible, std::string name = "shader");
 	~SimpleVertexShader();
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> GetDirectXShader() { return shader; }
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> GetInputLayout() { return inputLayout; }
@@ -196,7 +199,7 @@ protected:
 class SimplePixelShader : public ISimpleShader
 {
 public:
-	SimplePixelShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile);
+	SimplePixelShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, std::string name = "shader");
 	~SimplePixelShader();
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> GetDirectXShader() { return shader; }
 

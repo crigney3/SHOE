@@ -16,15 +16,17 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Buffer> inBuffer;
 	int indices;
 	int materialIndex;
+	bool enabled;
+	std::string name;
 public:
 	//Load mesh from manual array
-	Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, Microsoft::WRL::ComPtr<ID3D11Device> device);
+	Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name = "mesh");
 
 	//Load mesh from file
-	Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device);
+	Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name = "mesh");
 
 	//Load mesh from assimp (don't reset tangents)
-	Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, int associatedMaterialIndex, Microsoft::WRL::ComPtr<ID3D11Device> device);
+	Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, int associatedMaterialIndex, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name = "mesh");
 
 	~Mesh();
 
@@ -35,6 +37,9 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11Buffer> GetIndexBuffer();
 	int GetIndexCount();
 
+	std::string GetName();
 
+	void SetEnableDisable(bool value);
+	bool GetEnableDisable();
 };
 

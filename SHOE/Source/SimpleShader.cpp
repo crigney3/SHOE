@@ -19,7 +19,7 @@ bool ISimpleShader::ReportWarnings = false;
 // --------------------------------------------------------
 // Constructor accepts DirectX device & context
 // --------------------------------------------------------
-ISimpleShader::ISimpleShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context)
+ISimpleShader::ISimpleShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::string name)
 {
 	// Save the device
 	this->device = device;
@@ -29,6 +29,7 @@ ISimpleShader::ISimpleShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Micros
 	this->constantBufferCount = 0;
 	this->constantBuffers = 0;
 	this->shaderValid = false;
+	this->name = name;
 }
 
 // --------------------------------------------------------
@@ -687,8 +688,8 @@ const SimpleConstantBuffer* ISimpleShader::GetBufferInfo(unsigned int index)
 // --------------------------------------------------------
 // Constructor just calls the base
 // --------------------------------------------------------
-SimpleVertexShader::SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile)
-	: ISimpleShader(device, context)
+SimpleVertexShader::SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, std::string name)
+	: ISimpleShader(device, context, name)
 {
 	// Ensure we set to zero to successfully trigger
 	// the Input Layout creation during LoadShaderFile()
@@ -704,8 +705,8 @@ SimpleVertexShader::SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> devi
 // Passing in a valid input layout will stop LoadShaderFile()
 // from creating an input layout from shader reflection
 // --------------------------------------------------------
-SimpleVertexShader::SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout, bool perInstanceCompatible)
-	: ISimpleShader(device, context)
+SimpleVertexShader::SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout, bool perInstanceCompatible, std::string name)
+	: ISimpleShader(device, context, name)
 {
 	// Save the custom input layout
 	this->inputLayout = inputLayout;
@@ -946,8 +947,8 @@ bool SimpleVertexShader::SetSamplerState(std::string name, Microsoft::WRL::ComPt
 // --------------------------------------------------------
 // Constructor just calls the base
 // --------------------------------------------------------
-SimplePixelShader::SimplePixelShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile)
-	: ISimpleShader(device, context)
+SimplePixelShader::SimplePixelShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, std::string name)
+	: ISimpleShader(device, context, name)
 {
 	// Load the actual compiled shader file
 	this->LoadShaderFile(shaderFile);

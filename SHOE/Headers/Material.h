@@ -21,16 +21,21 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap;
+
+	bool enabled;
+	std::string name;
+
 public:
 	Material(DirectX::XMFLOAT4 tint,
-		std::shared_ptr<SimplePixelShader> pix,
-		std::shared_ptr<SimpleVertexShader> vert,
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
-		Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
-		Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap);
+			 std::shared_ptr<SimplePixelShader> pix,
+			 std::shared_ptr<SimpleVertexShader> vert,
+			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
+			 Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
+			 Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
+			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
+			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
+			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
+			 std::string name = "material");
 	~Material();
 
 	DirectX::XMFLOAT4 GetTint();
@@ -46,5 +51,10 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetClampSamplerState();
 	float GetTiling();
 	void SetTiling(float uv);
+
+	std::string GetName();
+
+	void SetEnableDisable(bool value);
+	bool GetEnableDisable();
 };
 

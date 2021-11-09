@@ -6,21 +6,26 @@ Mesh::~Mesh() {
 
 }
 
-Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, Microsoft::WRL::ComPtr<ID3D11Device> device) {
+Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
 	this->materialIndex = -1;
+	this->enabled = true;
+	this->name = name;
 	CalculateTangents(vertexArray, vertices, indices, indexCount);
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
 }
 
-Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, int associatedMaterialIndex, Microsoft::WRL::ComPtr<ID3D11Device> device) {
+Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, int associatedMaterialIndex, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
 	this->materialIndex = associatedMaterialIndex;
+	this->enabled = true;
+	this->name = name;
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
 }
 
-Mesh::Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device) {
+Mesh::Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
 	this->materialIndex = -1;
+	this->name = name;
 	// Author: Chris Cascioli
 	// Purpose: Basic .OBJ 3D model loading, supporting positions, uvs and normals
 	// 
@@ -370,4 +375,12 @@ Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetIndexBuffer() {
 
 int Mesh::GetIndexCount() {
 	return this->indices;
+}
+
+void Mesh::SetEnableDisable(bool value) {
+	this->enabled = value;
+}
+
+bool Mesh::GetEnableDisable() {
+	return this->enabled;
 }

@@ -1013,21 +1013,24 @@ void AssetManager::EnableDisableSky(int id, bool value) {
 	skies[id]->SetEnableDisable(value);
 }
 
-void AssetManager::EnableDisableVertexShader(std::string name, bool value) {
-	GetVertexShaderByName(name)->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisableVertexShader(int id, bool value) {
-	vertexShaders[id]->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisablePixelShader(std::string name, bool value) {
-	GetPixelShaderByName(name)->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisablePixelShader(int id, bool value) {
-	pixelShaders[id]->SetEnableDisable(value);
-}
+// Could cause problems to implement.
+// Replacing disabled shader with a basic one is valid,
+// but out of scope for now.
+//void AssetManager::EnableDisableVertexShader(std::string name, bool value) {
+//	GetVertexShaderByName(name)->SetEnableDisable(value);
+//}
+//
+//void AssetManager::EnableDisableVertexShader(int id, bool value) {
+//	vertexShaders[id]->SetEnableDisable(value);
+//}
+//
+//void AssetManager::EnableDisablePixelShader(std::string name, bool value) {
+//	GetPixelShaderByName(name)->SetEnableDisable(value);
+//}
+//
+//void AssetManager::EnableDisablePixelShader(int id, bool value) {
+//	pixelShaders[id]->SetEnableDisable(value);
+//}
 
 void AssetManager::EnableDisableMesh(std::string name, bool value) {
 	GetMeshByName(name)->SetEnableDisable(value);
@@ -1061,13 +1064,14 @@ void AssetManager::EnableDisableMaterial(int id, bool value) {
 	globalMaterials[id]->SetEnableDisable(value);
 }
 
-void AssetManager::EnableDisableTerrainMaterial(std::string name, bool value) {
-	GetTerrainMaterialByName(name)->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisableTerrainMaterial(int id, bool value) {
-	globalTerrainMaterials[id]->SetEnableDisable(value);
-}
+// Currently unimplementable given structs instead of class
+//void AssetManager::EnableDisableTerrainMaterial(std::string name, bool value) {
+//	GetTerrainMaterialByName(name)->SetEnableDisable(value);
+//}
+//
+//void AssetManager::EnableDisableTerrainMaterial(int id, bool value) {
+//	globalTerrainMaterials[id]->SetEnableDisable(value);
+//}
 
 // See GetLightIDByName
 //void AssetManager::EnableDisableLight(std::string name, bool value) {
@@ -1157,14 +1161,15 @@ std::shared_ptr<Material> AssetManager::GetMaterialByName(std::string name) {
 	return nullptr;
 }
 
-std::shared_ptr<TerrainMats> AssetManager::GetTerrainMaterialByName(std::string name) {
-	for (int i = 0; i < globalTerrainMaterials.size(); i++) {
-		if (globalTerrainMaterials[i]->GetName() == name) {
-			return globalTerrainMaterials[i];
-		}
-	}
-	return nullptr;
-}
+// Struct update seems unnecessary given no use cases
+//std::shared_ptr<TerrainMats> AssetManager::GetTerrainMaterialByName(std::string name) {
+//	for (int i = 0; i < globalTerrainMaterials.size(); i++) {
+//		if (globalTerrainMaterials[i]->GetName() == name) {
+//			return globalTerrainMaterials[i];
+//		}
+//	}
+//	return nullptr;
+//}
 
 // Unlikely to be implemented, see GetLightIdByName
 //std::shared_ptr<Light> AssetManager::GetLightByName(std::string name) {
@@ -1255,14 +1260,15 @@ int AssetManager::GetMaterialIDByName(std::string name) {
 	return -1;
 }
 
-int AssetManager::GetTerrainMaterialIDByName(std::string name) {
-	for (int i = 0; i < globalTerrainMaterials.size(); i++) {
-		if (globalTerrainMaterials[i]->GetName() == name) {
-			return i;
-		}
-	}
-	return -1;
-}
+// Same as above
+//int AssetManager::GetTerrainMaterialIDByName(std::string name) {
+//	for (int i = 0; i < globalTerrainMaterials.size(); i++) {
+//		if (globalTerrainMaterials[i]->GetName() == name) {
+//			return i;
+//		}
+//	}
+//	return -1;
+//}
 
 // Unsure if current design pattern allows this
 // Lights must stay at a specific size to be passed to GPU

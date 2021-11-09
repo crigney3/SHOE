@@ -7,7 +7,8 @@ Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions,
 		 std::map<std::string, std::shared_ptr<SimplePixelShader>>* pixShaders,
 		 std::map<std::string, std::shared_ptr<SimpleVertexShader>>* vertShaders,
 		 Microsoft::WRL::ComPtr<ID3D11Device> device,
-		 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context) {
+		 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
+		 std::string name) {
 	this->samplerOptions = samplerOptions;
 	this->skyGeometry = std::make_shared<Mesh>(modelFile, device);
 	this->skyPixelShader = pixShaders->at("SkyPS");
@@ -19,12 +20,15 @@ Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions,
 
 	this->device = device;
 	this->context = context;
+	this->enabled = true;
 
 	D3D11_RASTERIZER_DESC rDescription = {};
 	rDescription.FillMode = D3D11_FILL_SOLID;
 	rDescription.CullMode = D3D11_CULL_FRONT;
 
 	device->CreateRasterizerState(&rDescription, &this->rasterizerOptions);
+
+	this->name = name;
 
 	D3D11_DEPTH_STENCIL_DESC depthDescription = {};
 	depthDescription.DepthEnable = true;
@@ -43,7 +47,8 @@ Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions,
 		 std::map<std::string, std::shared_ptr<SimplePixelShader>>* pixShaders,
 		 std::map<std::string, std::shared_ptr<SimpleVertexShader>>* vertShaders,
 		 Microsoft::WRL::ComPtr<ID3D11Device> device,
-		 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context) {
+		 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
+		 std::string name) {
 	this->samplerOptions = samplerOptions;
 	this->skyGeometry = cubeMesh;
 	this->skyPixelShader = pixShaders->at("SkyPS");
@@ -67,6 +72,9 @@ Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions,
 	depthDescription.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 
 	device->CreateDepthStencilState(&depthDescription, &this->depthType);
+
+	this->name = name;
+	this->enabled = true;
 
 	IBLCreateIrradianceMap();
 	IBLCreateConvolvedSpecularMap();
@@ -332,4 +340,12 @@ void Sky::IBLCreateBRDFLookUpTexture() {
 
 	context->OMSetRenderTargets(1, prevRTV.GetAddressOf(), prevDSV.Get());
 	context->RSSetViewports(1, &prevVP);
+}
+
+void Sky::SetEnableDisable(bool value) {
+	this->enabled = value;
+}
+
+bool Sky::GetEnableDisable() {
+	return this->enabled;
 }

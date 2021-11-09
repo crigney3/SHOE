@@ -6,6 +6,7 @@ GameEntity::GameEntity(std::shared_ptr<Mesh> mesh, DirectX::XMMATRIX worldIn, st
 	this->transform.SetGameEntity(this);
 	this->mat = mat;
 	this->name = name;
+	this->enabled = true;
 }
 
 GameEntity::~GameEntity() {
@@ -89,4 +90,12 @@ std::string GameEntity::GetName() {
 
 void GameEntity::SetName(std::string Name) {
 	this->name = Name;
+}
+
+void GameEntity::SetEnableDisable(bool value) {
+	this->enabled = value;
+}
+
+bool GameEntity::GetEnableDisable() {
+	return this->enabled;
 }

@@ -2,7 +2,7 @@
 
 using namespace DirectX;
 
-Camera::Camera(float x, float y, float z, float aspectRatio, bool type)
+Camera::Camera(float x, float y, float z, float aspectRatio, bool type, std::string name)
 {
 	this->transform = std::make_shared<Transform>();
 	transform->SetPosition(x, y, z);
@@ -12,12 +12,14 @@ Camera::Camera(float x, float y, float z, float aspectRatio, bool type)
 	this->nearDist = 0.01f;
 	this->lookSpeed = 3.0f;
 	this->moveSpeed = 10.0f;
+	this->enabled = true;
+	this->name = name;
 
 	UpdateViewMatrix();
 	UpdateProjectionMatrix(aspectRatio, type);
 }
 
-Camera::Camera(DirectX::XMFLOAT3 pos, float aspectRatio, bool type)
+Camera::Camera(DirectX::XMFLOAT3 pos, float aspectRatio, bool type, std::string name)
 {
 	this->transform = std::make_shared<Transform>();
 	transform->SetPosition(pos);
@@ -27,6 +29,7 @@ Camera::Camera(DirectX::XMFLOAT3 pos, float aspectRatio, bool type)
 	this->nearDist = 0.01f;
 	this->lookSpeed = 3.0f;
 	this->moveSpeed = 10.0f;
+	this->enabled = true;
 
 	UpdateViewMatrix();
 	UpdateProjectionMatrix(aspectRatio, type);
@@ -140,4 +143,12 @@ void Camera::SetFarDist(float farDist) {
 	this->farDist = farDist;
 
 	UpdateProjectionMatrix(prevAspectRatio, this->type);
+}
+
+void Camera::SetEnableDisable(bool value) {
+	this->enabled = value;
+}
+
+bool Camera::GetEnableDisable() {
+	return this->enabled;
 }
