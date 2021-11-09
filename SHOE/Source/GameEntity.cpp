@@ -1,4 +1,4 @@
-#include "GameEntity.h"
+#include "../Headers/GameEntity.h"
 
 GameEntity::GameEntity(std::shared_ptr<Mesh> mesh, DirectX::XMMATRIX worldIn, std::shared_ptr<Material> mat, std::string name) {
 	this->mesh = mesh;

@@ -1,4 +1,4 @@
-#include "ShaderShared.hlsli"
+#include "../ShaderHeaders/ShaderShared.hlsli"
 
 struct VertexShaderInput
 {

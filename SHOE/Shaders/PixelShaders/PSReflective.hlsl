@@ -1,4 +1,4 @@
-#include "ShaderShared.hlsli"
+#include "../ShaderHeaders/ShaderShared.hlsli"
 
 Texture2D textureDiffuse	: register(t0);
 Texture2D textureNormal		: register(t1);

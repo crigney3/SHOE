@@ -42,12 +42,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-    <None Include="Shaders\ShaderHeaders\ShaderShared.hlsli">
-      <Filter>Shaders\ShaderHeaders</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="Headers\AssetManager.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
@@ -143,9 +137,6 @@
     <FxCompile Include="Shaders\PixelShaders\PSOcclusionCombine.hlsl">
       <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\PixelShaders\PSReflective.hlsl">
-      <Filter>Shaders\PixelShaders</Filter>
-    </FxCompile>
     <FxCompile Include="Shaders\PixelShaders\PSSkybox.hlsl">
       <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
@@ -238,5 +229,11 @@
     <ClCompile Include="Source\Transform.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="Shaders\ShaderHeaders\ShaderShared.hlsli">
+      <Filter>Shaders\ShaderHeaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-#include "ShaderShared.hlsli"
+#include "../ShaderHeaders/ShaderShared.hlsli"
 
 TextureCube textureSky		: register(t0);
 SamplerState sampleState	: register(s0);

@@ -1,4 +1,4 @@
-#include "ShaderShared.hlsli"
+#include "../ShaderHeaders/ShaderShared.hlsli"
 
 Texture2D textureAlbedo		: register(t0);
 Texture2D textureRough		: register(t1);

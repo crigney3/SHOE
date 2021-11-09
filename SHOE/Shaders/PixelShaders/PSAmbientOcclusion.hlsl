@@ -1,4 +1,4 @@
-#include "ShaderShared.hlsli"
+#include "../ShaderHeaders/ShaderShared.hlsli"
 
 Texture2D normals					: register(t0);
 Texture2D depths					: register(t1);

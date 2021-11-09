@@ -9,9 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
-#include "imgui.h"
-#include "backends/imgui_impl_win32.h"
-#include "backends/imgui_impl_dx11.h"
+#include <Windows.h>
 #include "Input.h"
 #include "Renderer.h"
 #include "AssetManager.h"

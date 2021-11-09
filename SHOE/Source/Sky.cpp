@@ -1,4 +1,4 @@
-#include "Sky.h"
+#include "../Headers/Sky.h"
 
 
 Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions, 

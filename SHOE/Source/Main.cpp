@@ -1,6 +1,4 @@
-
-#include <Windows.h>
-#include "Game.h"
+#include "../Headers/Game.h"
 
 // --------------------------------------------------------
 // Entry point for a graphical (non-console) Windows application

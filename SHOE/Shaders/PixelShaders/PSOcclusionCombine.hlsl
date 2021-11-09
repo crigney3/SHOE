@@ -1,4 +1,4 @@
-#include "ShaderShared.hlsli"
+#include "../ShaderHeaders/ShaderShared.hlsli"
 
 Texture2D sceneColorsNoAmbient	: register(t0);
 Texture2D ambient				: register(t1);

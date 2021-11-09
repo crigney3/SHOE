@@ -1,4 +1,4 @@
-#include "Material.h"
+#include "../Headers/Material.h"
 
 Material::Material(DirectX::XMFLOAT4 tint, 
 				   std::shared_ptr<SimplePixelShader> pix, 

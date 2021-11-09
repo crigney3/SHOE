@@ -1,4 +1,4 @@
-#include "DXCore.h"
+#include "../Headers/DXCore.h"
 
 #include <WindowsX.h>
 #include <sstream>

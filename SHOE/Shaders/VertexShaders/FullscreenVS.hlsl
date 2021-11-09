@@ -1,4 +1,4 @@
-#include "ShaderShared.hlsli"
+#include "../ShaderHeaders/ShaderShared.hlsli"
 // This vertex shader receives one piece of input: an id (ideally from 0 - 2, inclusive)
 // 
 // From those values (0, 1 or 2), it creates uv coords and a screen position.

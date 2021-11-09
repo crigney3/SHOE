@@ -1,4 +1,4 @@
-#include "Input.h"
+#include "../Headers/Input.h"
 
 // Singleton requirement
 Input* Input::instance;

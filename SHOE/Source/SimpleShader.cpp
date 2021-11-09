@@ -1,4 +1,4 @@
-#include "SimpleShader.h"
+#include "../Headers/SimpleShader.h"
 
 // Default error reporting state
 bool ISimpleShader::ReportErrors = false;

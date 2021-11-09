@@ -1,5 +1,4 @@
-#include "Game.h"
-#include "Vertex.h"
+#include "../Headers/Game.h"
 
 // Needed for a helper function to read compiled shader files from the hard drive
 #pragma comment(lib, "d3dcompiler.lib")
