@@ -2,6 +2,7 @@
 
 using namespace DirectX;
 
+#pragma region assetClassHandlers
 AssetManager* AssetManager::instance;
 
 AssetManager::~AssetManager() {
@@ -22,7 +23,9 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	InitializeGameEntities();
 	InitializeSkies();
 }
+#pragma endregion
 
+#pragma region createAssets
 std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFLOAT3 pos, float aspectRatio, int type) {
 	std::shared_ptr<Camera> newCam;
 
@@ -146,7 +149,9 @@ std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11Shader
 
 	return newSky;
 }
+#pragma endregion
 
+#pragma region initAssets
 void AssetManager::InitializeGameEntities() {
 	globalEntities = std::map<std::string, std::shared_ptr<GameEntity>>();
 
@@ -494,7 +499,9 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("SSAOBlurPS", L"PSOcclusionBlur.cso");
 	CreatePixelShader("SSAOCombinePS", L"PSOcclusionCombine.cso");
 }
+#pragma endregion
 
+#pragma region getMethods
 Microsoft::WRL::ComPtr<ID3D11InputLayout> AssetManager::GetInputLayout() {
 	return this->inputLayout;
 }
@@ -506,7 +513,9 @@ Microsoft::WRL::ComPtr<ID3D11Device> AssetManager::GetDevice() {
 Microsoft::WRL::ComPtr<ID3D11DeviceContext> AssetManager::GetContext() {
 	return this->context;
 }
+#pragma endregion
 
+#pragma region buildAssetData
 std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale) {
 	std::shared_ptr<Mesh> finalTerrain;
 
@@ -735,7 +744,9 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::CreateCubemap(
 	// Send back the SRV, which is what we need for our shaders
 	return cubeSRV;
 }
+#pragma endregion
 
+#pragma region complexModels
 void AssetManager::CreateComplexGeometry() {
 	Assimp::Importer importer;
 	std::vector<std::shared_ptr<Material>> specialMaterials = std::vector<std::shared_ptr<Material>>();
@@ -849,3 +860,313 @@ std::shared_ptr<Mesh> AssetManager::ProcessComplexMesh(aiMesh* mesh, const aiSce
 	if (hasTangents) return std::make_shared<Mesh>(vertices.data(), vertices.size(), indices.data(), indices.size(), 0, device);
 	else return std::make_shared<Mesh>(vertices.data(), vertices.size(), indices.data(), indices.size(), device);
 }
+#pragma endregion
+
+#pragma region removeAssets
+
+//
+// Asset Removal methods
+//
+
+void AssetManager::RemoveGameEntity(std::string name) {
+
+}
+
+void AssetManager::RemoveGameEntity(int id) {
+
+}
+void AssetManager::RemoveSky(std::string name) {
+
+}
+
+void AssetManager::RemoveSky(int id) {
+
+}
+
+void AssetManager::RemoveVertexShader(std::string name) {
+
+}
+
+void AssetManager::RemoveVertexShader(int id) {
+
+}
+
+void AssetManager::RemovePixelShader(std::string name) {
+
+}
+
+void AssetManager::RemovePixelShader(int id) {
+
+}
+
+void AssetManager::RemoveMesh(std::string name) {
+
+}
+
+void AssetManager::RemoveMesh(int id) {
+
+}
+
+void AssetManager::RemoveCamera(std::string name) {
+
+}
+
+void AssetManager::RemoveCamera(int id) {
+
+}
+
+void AssetManager::RemoveTerrain(std::string name) {
+
+}
+
+void AssetManager::RemoveTerrain(int id) {
+
+}
+
+void AssetManager::RemoveMaterial(std::string name) {
+
+}
+
+void AssetManager::RemoveMaterial(int id) {
+
+}
+
+void AssetManager::RemoveTerrainMaterial(std::string name) {
+
+}
+
+void AssetManager::RemoveTerrainMaterial(int id) {
+
+}
+
+void AssetManager::RemoveLight(std::string name) {
+
+}
+
+void AssetManager::RemoveLight(int id) {
+
+}
+#pragma endregion
+
+#pragma region disableAssets
+
+//
+// Methods to disable game assets
+// Removes the object from rendering without deleting it
+//
+
+void AssetManager::DisableGameEntity(std::string name) {
+
+}
+
+void AssetManager::DisableGameEntity(int id) {
+
+}
+
+void AssetManager::DisableSky(std::string name) {
+
+}
+
+void AssetManager::DisableSky(int id) {
+
+}
+
+void AssetManager::DisableVertexShader(std::string name) {
+
+}
+
+void AssetManager::DisableVertexShader(int id) {
+
+}
+
+void AssetManager::DisablePixelShader(std::string name) {
+
+}
+
+void AssetManager::DisablePixelShader(int id) {
+
+}
+
+void AssetManager::DisableMesh(std::string name) {
+
+}
+
+void AssetManager::DisableMesh(int id) {
+
+}
+
+void AssetManager::DisableCamera(std::string name) {
+
+}
+
+void AssetManager::DisableCamera(int id) {
+
+}
+
+void AssetManager::DisableTerrain(std::string name) {
+
+}
+
+void AssetManager::DisableTerrain(int id) {
+
+}
+
+void AssetManager::DisableMaterial(std::string name) {
+
+}
+
+void AssetManager::DisableMaterial(int id) {
+
+}
+
+void AssetManager::DisableTerrainMaterial(std::string name) {
+
+}
+
+void AssetManager::DisableTerrainMaterial(int id) {
+
+}
+
+void AssetManager::DisableLight(std::string name) {
+
+}
+
+void AssetManager::DisableLight(int id) {
+
+}
+#pragma endregion
+
+#pragma region enableAssets
+
+//
+// Re-enables assets back into rendering.
+// Only does anything if the asset is currently disabled.
+//
+
+void AssetManager::EnableGameEntity(std::string name) {
+
+}
+
+void AssetManager::EnableGameEntity(int id) {
+
+}
+
+void AssetManager::EnableSky(std::string name) {
+
+}
+
+void AssetManager::EnableSky(int id) {
+
+}
+
+void AssetManager::EnableVertexShader(std::string name) {
+
+}
+
+void AssetManager::EnableVertexShader(int id) {
+
+}
+
+void AssetManager::EnablePixelShader(std::string name) {
+
+}
+
+void AssetManager::EnablePixelShader(int id) {
+
+}
+
+void AssetManager::EnableMesh(std::string name) {
+
+}
+
+void AssetManager::EnableMesh(int id) {
+
+}
+
+void AssetManager::EnableCamera(std::string name) {
+
+}
+
+void AssetManager::EnableCamera(int id) {
+
+}
+
+void AssetManager::EnableTerrain(std::string name) {
+
+}
+
+void AssetManager::EnableTerrain(int id) {
+
+}
+
+void AssetManager::EnableMaterial(std::string name) {
+
+}
+
+void AssetManager::EnableMaterial(int id) {
+
+}
+
+void AssetManager::EnableTerrainMaterial(std::string name) {
+
+}
+
+void AssetManager::EnableTerrainMaterial(int id) {
+
+}
+
+void AssetManager::EnableLight(std::string name) {
+
+}
+
+void AssetManager::EnableLight(int id) {
+
+}
+#pragma endregion
+
+#pragma region nameSearch
+
+//
+// Asset Search-By-Name methods
+//
+
+std::shared_ptr<GameEntity> AssetManager::GetGameEntityByName(std::string name) {
+
+}
+
+std::shared_ptr<Sky> AssetManager::GetSkyByName(std::string name) {
+
+}
+
+std::shared_ptr<SimpleVertexShader> AssetManager::GetVertexShaderByName(std::string name) {
+
+}
+
+std::shared_ptr<SimplePixelShader> AssetManager::GetPixelShaderByName(std::string name) {
+
+}
+
+std::shared_ptr<Mesh> AssetManager::GetMeshByName(std::string name) {
+
+}
+
+std::shared_ptr<Camera> AssetManager::GetCameraByName(std::string name) {
+
+}
+
+std::shared_ptr<GameEntity> AssetManager::GetTerrainByName(std::string name) {
+
+}
+
+std::shared_ptr<Material> AssetManager::GetMaterialByName(std::string name) {
+
+}
+
+std::shared_ptr<TerrainMats> AssetManager::GetTerrainMaterialByName(std::string name) {
+
+}
+
+std::shared_ptr<Light> AssetManager::GetLightByName(std::string name) {
+
+}
+#pragma endregion
