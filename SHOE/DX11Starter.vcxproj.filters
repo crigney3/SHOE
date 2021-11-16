@@ -16,203 +16,224 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{e76f01f5-08db-40d4-8720-b5b21f7ec0a3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\IMGUI">
-      <UniqueIdentifier>{77cb36bc-7502-4b52-a7b0-4fecc11456bb}</UniqueIdentifier>
+    <Filter Include="Header Files\SHOE-Headers">
+      <UniqueIdentifier>{c95da14c-2547-4cf3-89e6-b1e257b54bbc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\IMGUI">
-      <UniqueIdentifier>{f72636bb-54bf-4019-9258-c3e6525c366b}</UniqueIdentifier>
+    <Filter Include="Header Files\IMGUI-Headers">
+      <UniqueIdentifier>{de45888b-c224-4b4d-a194-9f251679a098}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\ShaderHeaders">
+      <UniqueIdentifier>{f3918b0a-16a1-4390-b77c-fd93c9129439}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\VertexShaders">
+      <UniqueIdentifier>{476fdd59-8fbd-455d-8e63-ca469138a3ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\PixelShaders">
+      <UniqueIdentifier>{f101dd5d-da82-4edb-bb68-edb2d6dce548}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\ComputeShaders">
+      <UniqueIdentifier>{729d2e93-2ec5-473a-8d6c-4e171e0c801d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\SHOE-Source">
+      <UniqueIdentifier>{987b94f2-1c52-46af-8699-21b84d20eef6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\IMGUI-Source">
+      <UniqueIdentifier>{51f652ae-a3c1-4e99-87b5-30cc4274e769}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DXCore.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Game.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Mesh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Transform.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GameEntity.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Material.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SimpleShader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Sky.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="backends\imgui_impl_dx11.cpp">
-      <Filter>Source Files\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="backends\imgui_impl_win32.cpp">
-      <Filter>Source Files\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui.cpp">
-      <Filter>Source Files\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui_demo.cpp">
-      <Filter>Source Files\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui_draw.cpp">
-      <Filter>Source Files\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui_tables.cpp">
-      <Filter>Source Files\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui_widgets.cpp">
-      <Filter>Source Files\IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="Input.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AssetManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Vertex.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Headers\AssetManager.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="DXCore.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Headers\Camera.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Game.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Headers\DXCore.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Mesh.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Headers\Game.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Transform.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Headers\GameEntity.fwd.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="GameEntity.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Headers\GameEntity.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Camera.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Headers\Input.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Material.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Headers\Lights.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="SimpleShader.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Headers\Material.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Lights.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Headers\Mesh.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Sky.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Headers\Renderer.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="backends\imgui_impl_dx11.h">
-      <Filter>Header Files\IMGUI</Filter>
+    <ClInclude Include="Headers\SimpleShader.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="backends\imgui_impl_win32.h">
-      <Filter>Header Files\IMGUI</Filter>
+    <ClInclude Include="Headers\Sky.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="imconfig.h">
-      <Filter>Header Files\IMGUI</Filter>
+    <ClInclude Include="Headers\Transform.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="imgui.h">
-      <Filter>Header Files\IMGUI</Filter>
+    <ClInclude Include="Headers\Vertex.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="imgui_internal.h">
-      <Filter>Header Files\IMGUI</Filter>
+    <ClInclude Include="IMGUI\Headers\imconfig.h">
+      <Filter>Header Files\IMGUI-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="imstb_rectpack.h">
-      <Filter>Header Files\IMGUI</Filter>
+    <ClInclude Include="IMGUI\Headers\imgui.h">
+      <Filter>Header Files\IMGUI-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="imstb_textedit.h">
-      <Filter>Header Files\IMGUI</Filter>
+    <ClInclude Include="IMGUI\Headers\imgui_impl_dx11.h">
+      <Filter>Header Files\IMGUI-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="imstb_truetype.h">
-      <Filter>Header Files\IMGUI</Filter>
+    <ClInclude Include="IMGUI\Headers\imgui_impl_win32.h">
+      <Filter>Header Files\IMGUI-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Input.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="IMGUI\Headers\imgui_internal.h">
+      <Filter>Header Files\IMGUI-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="GameEntity.fwd.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="IMGUI\Headers\imstb_rectpack.h">
+      <Filter>Header Files\IMGUI-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Renderer.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="IMGUI\Headers\imstb_textedit.h">
+      <Filter>Header Files\IMGUI-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="AssetManager.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="IMGUI\Headers\imstb_truetype.h">
+      <Filter>Header Files\IMGUI-Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="PixelShader.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\PixelShaders\IBLBrdfLookUpTablePS.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="VertexShader.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\PixelShaders\IBLIrradianceMapPS.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="PSNormalMap.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\PixelShaders\IBLSpecularConvolutionPS.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="VSNormalMap.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\PixelShaders\PixelShader.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="VSSkybox.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\PixelShaders\PSAmbientOcclusion.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="PSSkybox.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\PixelShaders\PSNormalMap.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="VSShadowMap.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\PixelShaders\PSOcclusionBlur.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="VSTerrainBlend.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\PixelShaders\PSOcclusionCombine.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="PSTerrainBlend.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\PixelShaders\PSSkybox.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="IBLBrdfLookUpTablePS.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\PixelShaders\PSSolidColor.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="IBLIrradianceMapPS.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\PixelShaders\PSTerrainBlend.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
-    <FxCompile Include="FullscreenVS.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\VertexShaders\FullscreenVS.hlsl">
+      <Filter>Shaders\VertexShaders</Filter>
     </FxCompile>
-    <FxCompile Include="IBLSpecularConvolutionPS.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\VertexShaders\VertexShader.hlsl">
+      <Filter>Shaders\VertexShaders</Filter>
     </FxCompile>
-    <FxCompile Include="PSSolidColor.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\VertexShaders\VSNormalMap.hlsl">
+      <Filter>Shaders\VertexShaders</Filter>
     </FxCompile>
-    <FxCompile Include="PSAmbientOcclusion.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\VertexShaders\VSReflective.hlsl">
+      <Filter>Shaders\VertexShaders</Filter>
     </FxCompile>
-    <FxCompile Include="PSOcclusionBlur.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\VertexShaders\VSShadowMap.hlsl">
+      <Filter>Shaders\VertexShaders</Filter>
     </FxCompile>
-    <FxCompile Include="PSOcclusionCombine.hlsl">
-      <Filter>Shaders</Filter>
+    <FxCompile Include="Shaders\VertexShaders\VSSkybox.hlsl">
+      <Filter>Shaders\VertexShaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\VertexShaders\VSTerrainBlend.hlsl">
+      <Filter>Shaders\VertexShaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="IMGUI\Source\imgui.cpp">
+      <Filter>Source Files\IMGUI-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IMGUI\Source\imgui_demo.cpp">
+      <Filter>Source Files\IMGUI-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IMGUI\Source\imgui_draw.cpp">
+      <Filter>Source Files\IMGUI-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IMGUI\Source\imgui_impl_dx11.cpp">
+      <Filter>Source Files\IMGUI-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IMGUI\Source\imgui_impl_win32.cpp">
+      <Filter>Source Files\IMGUI-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IMGUI\Source\imgui_tables.cpp">
+      <Filter>Source Files\IMGUI-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="IMGUI\Source\imgui_widgets.cpp">
+      <Filter>Source Files\IMGUI-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\AssetManager.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Camera.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\DXCore.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GameEntity.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Input.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Main.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Material.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Mesh.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SimpleShader.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Sky.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Transform.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="ShaderShared.hlsli">
-      <Filter>Shaders</Filter>
+    <None Include="Shaders\ShaderHeaders\ShaderShared.hlsli">
+      <Filter>Shaders\ShaderHeaders</Filter>
     </None>
   </ItemGroup>
 </Project>
