@@ -4,15 +4,15 @@
 Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions, 
 		 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, 
 		 const char* modelFile, 
-		 std::map<std::string, std::shared_ptr<SimplePixelShader>>* pixShaders,
-		 std::map<std::string, std::shared_ptr<SimpleVertexShader>>* vertShaders,
+		 std::vector<std::shared_ptr<SimplePixelShader>> pixShaders,
+		 std::vector<std::shared_ptr<SimpleVertexShader>> vertShaders,
 		 Microsoft::WRL::ComPtr<ID3D11Device> device,
 		 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
 		 std::string name) {
 	this->samplerOptions = samplerOptions;
 	this->skyGeometry = std::make_shared<Mesh>(modelFile, device);
-	this->skyPixelShader = pixShaders->at("SkyPS");
-	this->skyVertexShader = vertShaders->at("SkyVS");
+	this->skyPixelShader = pixShaders[0];
+	this->skyVertexShader = vertShaders[0];
 	this->textureSRV = skyTexture;
 
 	this->vertShaders = vertShaders;
@@ -44,15 +44,15 @@ Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions,
 Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions, 
 		 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, 
 		 std::shared_ptr<Mesh> cubeMesh, 
-		 std::map<std::string, std::shared_ptr<SimplePixelShader>>* pixShaders,
-		 std::map<std::string, std::shared_ptr<SimpleVertexShader>>* vertShaders,
+		 std::vector<std::shared_ptr<SimplePixelShader>> pixShaders,
+		 std::vector<std::shared_ptr<SimpleVertexShader>> vertShaders,
 		 Microsoft::WRL::ComPtr<ID3D11Device> device,
 		 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
 		 std::string name) {
 	this->samplerOptions = samplerOptions;
 	this->skyGeometry = cubeMesh;
-	this->skyPixelShader = pixShaders->at("SkyPS");
-	this->skyVertexShader = vertShaders->at("SkyVS");
+	this->skyPixelShader = pixShaders[0];
+	this->skyVertexShader = vertShaders[0];
 	this->textureSRV = skyTexture;
 
 	this->vertShaders = vertShaders;
@@ -172,10 +172,10 @@ void Sky::IBLCreateIrradianceMap() {
 
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	vertShaders->at("FullscreenVS")->SetShader();
-	pixShaders->at("IrradiancePS")->SetShader();
-	pixShaders->at("IrradiancePS")->SetShaderResourceView("EnvironmentMap", textureSRV.Get());
-	pixShaders->at("IrradiancePS")->SetSamplerState("BasicSampler", samplerOptions.Get());
+	vertShaders[1]->SetShader();
+	pixShaders[1]->SetShader();
+	pixShaders[1]->SetShaderResourceView("EnvironmentMap", textureSRV.Get());
+	pixShaders[1]->SetSamplerState("BasicSampler", samplerOptions.Get());
 
 	for (int face = 0; face < 6; face++) {
 		D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
@@ -192,10 +192,10 @@ void Sky::IBLCreateIrradianceMap() {
 		context->ClearRenderTargetView(rtv.Get(), black);
 		context->OMSetRenderTargets(1, rtv.GetAddressOf(), 0);
 
-		pixShaders->at("IrradiancePS")->SetInt("faceIndex", face);
-		pixShaders->at("IrradiancePS")->SetFloat("sampleStepPhi", 0.025f);
-		pixShaders->at("IrradiancePS")->SetFloat("sampleStepTheta", 0.025f);
-		pixShaders->at("IrradiancePS")->CopyAllBufferData();
+		pixShaders[1]->SetInt("faceIndex", face);
+		pixShaders[1]->SetFloat("sampleStepPhi", 0.025f);
+		pixShaders[1]->SetFloat("sampleStepTheta", 0.025f);
+		pixShaders[1]->CopyAllBufferData();
 
 		context->Draw(3, 0);
 
@@ -238,10 +238,10 @@ void Sky::IBLCreateConvolvedSpecularMap() {
 
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	vertShaders->at("FullscreenVS")->SetShader();
-	pixShaders->at("SpecularConvolutionPS")->SetShader();
-	pixShaders->at("SpecularConvolutionPS")->SetShaderResourceView("EnvironmentMap", textureSRV.Get());
-	pixShaders->at("SpecularConvolutionPS")->SetSamplerState("BasicSampler", samplerOptions.Get());
+	vertShaders[1]->SetShader();
+	pixShaders[2]->SetShader();
+	pixShaders[2]->SetShaderResourceView("EnvironmentMap", textureSRV.Get());
+	pixShaders[2]->SetSamplerState("BasicSampler", samplerOptions.Get());
 
 	for (int mipLevel = 0; mipLevel < mipLevelCount; mipLevel++) {
 		for (int face = 0; face < 6; face++) {
@@ -266,10 +266,10 @@ void Sky::IBLCreateConvolvedSpecularMap() {
 			vp.MaxDepth = 1.0f;
 			context->RSSetViewports(1, &vp);
 
-			pixShaders->at("SpecularConvolutionPS")->SetFloat("roughness", mipLevel / (float)(mipLevelCount - 1));
-			pixShaders->at("SpecularConvolutionPS")->SetInt("faceIndex", face);
-			pixShaders->at("SpecularConvolutionPS")->SetInt("mipLevel", mipLevel);
-			pixShaders->at("SpecularConvolutionPS")->CopyAllBufferData();
+			pixShaders[2]->SetFloat("roughness", mipLevel / (float)(mipLevelCount - 1));
+			pixShaders[2]->SetInt("faceIndex", face);
+			pixShaders[2]->SetInt("mipLevel", mipLevel);
+			pixShaders[2]->CopyAllBufferData();
 
 			context->Draw(3, 0);
 
@@ -319,8 +319,8 @@ void Sky::IBLCreateBRDFLookUpTexture() {
 
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	vertShaders->at("FullscreenVS")->SetShader();
-	pixShaders->at("BRDFLookupTablePS")->SetShader();
+	vertShaders[1]->SetShader();
+	pixShaders[3]->SetShader();
 
 	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
 	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
@@ -348,4 +348,8 @@ void Sky::SetEnableDisable(bool value) {
 
 bool Sky::GetEnableDisable() {
 	return this->enabled;
+}
+
+std::string Sky::GetName() {
+	return this->name;
 }

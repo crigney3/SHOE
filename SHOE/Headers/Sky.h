@@ -10,19 +10,19 @@
 class Sky
 {
 public:
-	Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions, 
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, 
-		const char* filename,
-		std::map<std::string, std::shared_ptr<SimplePixelShader>>* pixShaders,
-		std::map<std::string, std::shared_ptr<SimpleVertexShader>>* vertShaders,
+	Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions,
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture,
+		std::shared_ptr<Mesh> cubeMesh,
+		std::vector<std::shared_ptr<SimplePixelShader>> pixShaders,
+		std::vector<std::shared_ptr<SimpleVertexShader>> vertShaders,
 		Microsoft::WRL::ComPtr<ID3D11Device> device,
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
 		std::string name = "sky");
 	Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions, 
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, 
-		std::shared_ptr<Mesh> cubeMesh, 
-		std::map<std::string, std::shared_ptr<SimplePixelShader>>* pixShaders,
-		std::map<std::string, std::shared_ptr<SimpleVertexShader>>* vertShaders,
+		const char* filename,
+		std::vector<std::shared_ptr<SimplePixelShader>> pixShaders,
+		std::vector<std::shared_ptr<SimpleVertexShader>> vertShaders,
 		Microsoft::WRL::ComPtr<ID3D11Device> device,
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
 		std::string name = "sky");
@@ -61,8 +61,8 @@ private:
 	std::shared_ptr<Mesh> skyGeometry;
 	std::shared_ptr<SimplePixelShader> skyPixelShader;
 	std::shared_ptr<SimpleVertexShader> skyVertexShader;
-	std::map<std::string, std::shared_ptr<SimplePixelShader>>* pixShaders;
-	std::map<std::string, std::shared_ptr<SimpleVertexShader>>* vertShaders;
+	std::vector<std::shared_ptr<SimplePixelShader>> pixShaders;
+	std::vector<std::shared_ptr<SimpleVertexShader>> vertShaders;
 
 	void IBLCreateIrradianceMap();
 	void IBLCreateConvolvedSpecularMap();

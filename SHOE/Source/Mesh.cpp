@@ -384,3 +384,7 @@ void Mesh::SetEnableDisable(bool value) {
 bool Mesh::GetEnableDisable() {
 	return this->enabled;
 }
+
+std::string Mesh::GetName() {
+	return this->name;
+}

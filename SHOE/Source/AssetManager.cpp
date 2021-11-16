@@ -141,10 +141,29 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 	return newEnt;
 }
 
-std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture) {
+std::shared_ptr<GameEntity> AssetManager::CreateTerrainEntity(std::shared_ptr<Mesh> mesh, std::string name) {
+	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(mesh, XMMatrixIdentity(), nullptr, name);
+
+	globalTerrainEntities.push_back(newEnt);
+
+	return newEnt;
+}
+
+std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, std::string name) {
 	std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
 
-	std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, skyTexture, Cube, &pixelShaders, &vertexShaders, device, context);
+	std::vector<std::shared_ptr<SimplePixelShader>> importantSkyPixelShaders;
+	std::vector<std::shared_ptr<SimpleVertexShader>> importantSkyVertexShaders;
+
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("SkyPS"));
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("IrradiancePS"));
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("SpecularConvolutionPS"));
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("BRDFLookupTablePS"));
+
+	importantSkyVertexShaders.push_back(GetVertexShaderByName("SkyVS"));
+	importantSkyVertexShaders.push_back(GetVertexShaderByName("FullscreenVS"));
+
+	std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, skyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
 
 	skies.push_back(newSky);
 
@@ -336,11 +355,11 @@ void AssetManager::InitializeSkies() {
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/forward.png").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/back.png").c_str());
 
-	CreateSky(spaceTexture);
-	CreateSky(sunnyTexture);
-	CreateSky(mountainTexture);
-	CreateSky(niagaraTexture);
-	CreateSky(starTexture);
+	CreateSky(spaceTexture, "space");
+	CreateSky(sunnyTexture, "sunny");
+	CreateSky(mountainTexture, "mountain");
+	CreateSky(niagaraTexture, "niagara");
+	CreateSky(starTexture, "stars");
 
 	currentSky = skies[0];
 }
@@ -451,8 +470,9 @@ void AssetManager::InitializeTerrainMaterials() {
 	mainTerrainMaterials->blendMaterials[0].SetTiling(10.0f);
 	mainTerrainMaterials->blendMaterials[1].SetTiling(10.0f);
 
-	std::shared_ptr<GameEntity> terrainEntity = std::make_shared<GameEntity>(mainTerrain, XMMatrixIdentity(), nullptr);
-	globalTerrainEntities.push_back(terrainEntity);
+	mainTerrainMaterials->name = std::string("Forest TMaterial");
+
+	CreateTerrainEntity(mainTerrain, "Main Terrain");
 	globalTerrainMaterials.push_back(mainTerrainMaterials);
 }
 
@@ -557,7 +577,7 @@ size_t AssetManager::GetTerrainEntityArraySize() {
 
 Light* AssetManager::GetLightArray() {
 	Light lightArray[64];
-	for (int i = 0; i < lightCount; i++) {
+	for (int i = 0; i < globalLights.size(); i++) {
 		lightArray[i] = *globalLights[i];
 	}
 
@@ -566,6 +586,18 @@ Light* AssetManager::GetLightArray() {
 
 std::vector<std::shared_ptr<GameEntity>>* AssetManager::GetActiveGameEntities() {
 	return &this->globalEntities;
+}
+
+std::vector<std::shared_ptr<Sky>>* AssetManager::GetSkyArray() {
+	return &this->skies;
+}
+
+Light* AssetManager::GetFlashlight() {
+	return this->globalLights[4].get();
+}
+
+Light* AssetManager::GetLightAtID(int id) {
+	return this->globalLights[id].get();
 }
 
 #pragma endregion
@@ -1158,9 +1190,9 @@ std::shared_ptr<Camera> AssetManager::GetCameraByName(std::string name) {
 }
 
 std::shared_ptr<GameEntity> AssetManager::GetTerrainByName(std::string name) {
-	for (int i = 0; i < globalEntities.size(); i++) {
-		if (globalEntities[i]->GetName() == name) {
-			return globalEntities[i];
+	for (int i = 0; i < globalTerrainEntities.size(); i++) {
+		if (globalTerrainEntities[i]->GetName() == name) {
+			return globalTerrainEntities[i];
 		}
 	}
 	return nullptr;
@@ -1175,15 +1207,14 @@ std::shared_ptr<Material> AssetManager::GetMaterialByName(std::string name) {
 	return nullptr;
 }
 
-// Struct update seems unnecessary given no use cases
-//std::shared_ptr<TerrainMats> AssetManager::GetTerrainMaterialByName(std::string name) {
-//	for (int i = 0; i < globalTerrainMaterials.size(); i++) {
-//		if (globalTerrainMaterials[i]->GetName() == name) {
-//			return globalTerrainMaterials[i];
-//		}
-//	}
-//	return nullptr;
-//}
+std::shared_ptr<TerrainMats> AssetManager::GetTerrainMaterialByName(std::string name) {
+	for (int i = 0; i < globalTerrainMaterials.size(); i++) {
+		if (globalTerrainMaterials[i]->name == name) {
+			return globalTerrainMaterials[i];
+		}
+	}
+	return nullptr;
+}
 
 // Unlikely to be implemented, see GetLightIdByName
 //std::shared_ptr<Light> AssetManager::GetLightByName(std::string name) {

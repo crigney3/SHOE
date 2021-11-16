@@ -103,7 +103,7 @@ public:
 	// Methods to create new assets
 
 	std::shared_ptr<GameEntity> CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name = "GameEntity");
-	std::shared_ptr<Sky> CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture);
+	std::shared_ptr<Sky> CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, std::string name);
 	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::wstring nameToLoad);
 	std::shared_ptr<SimplePixelShader> CreatePixelShader(std::string id, std::wstring nameToLoad);
 	std::shared_ptr<Mesh> CreateMesh(std::string id, std::string nameToLoad);
@@ -113,6 +113,7 @@ public:
 											    std::wstring normalNameToLoad,
 											    std::wstring metalnessNameToLoad,
 											    std::wstring roughnessNameToLoad);
+	std::shared_ptr<GameEntity> CreateTerrainEntity(std::shared_ptr<Mesh> mesh, std::string name = "Terrain");
 
 	// Methods to remove assets
 
@@ -144,10 +145,10 @@ public:
 	void EnableDisableGameEntity(int id, bool value);
 	void EnableDisableSky(std::string name, bool value);
 	void EnableDisableSky(int id, bool value);
-	void EnableDisableVertexShader(std::string name, bool value);
+	/*void EnableDisableVertexShader(std::string name, bool value);
 	void EnableDisableVertexShader(int id, bool value);
 	void EnableDisablePixelShader(std::string name, bool value);
-	void EnableDisablePixelShader(int id, bool value);
+	void EnableDisablePixelShader(int id, bool value);*/
 	void EnableDisableMesh(std::string name, bool value);
 	void EnableDisableMesh(int id, bool value);
 	void EnableDisableCamera(std::string name, bool value);
@@ -156,9 +157,9 @@ public:
 	void EnableDisableTerrain(int id, bool value);
 	void EnableDisableMaterial(std::string name, bool value);
 	void EnableDisableMaterial(int id, bool value);
-	void EnableDisableTerrainMaterial(std::string name, bool value);
+	/*void EnableDisableTerrainMaterial(std::string name, bool value);
 	void EnableDisableTerrainMaterial(int id, bool value);
-	void EnableDisableLight(std::string name, bool value);
+	void EnableDisableLight(std::string name, bool value);*/
 	void EnableDisableLight(int id, bool value);
 
 	// Asset search-by-name methods
@@ -182,8 +183,8 @@ public:
 	int GetCameraIDByName(std::string name);
 	int GetTerrainIDByName(std::string name);
 	int GetMaterialIDByName(std::string name);
-	int GetTerrainMaterialIDByName(std::string name);
-	int GetLightIDByName(std::string name);
+	/*int GetTerrainMaterialIDByName(std::string name);
+	int GetLightIDByName(std::string name);*/
 
 	// Relevant Get methods
 	
@@ -200,6 +201,9 @@ public:
 	size_t GetTerrainEntityArraySize();
 	Light* GetLightArray();
 	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
+	std::vector<std::shared_ptr<Sky>>* GetSkyArray();
+	Light* GetFlashlight();
+	Light* GetLightAtID(int id);
 
 	std::shared_ptr<Sky> currentSky;
 	int lightCount;

@@ -101,13 +101,11 @@ private:
 	std::shared_ptr<Mesh> mainTerrain;
 	std::shared_ptr<TerrainMats> mainTerrainMaterials;
 
-	std::map<std::string, std::shared_ptr<GameEntity>> Entities;
-	std::map<std::string, std::shared_ptr<GameEntity>>::iterator entIt;
-	std::map<std::string, std::shared_ptr<GameEntity>>::iterator entUIIt;
+	std::vector<std::shared_ptr<GameEntity>>* Entities;
 
 	//Sky pointers
 	int activeSky;
-	std::vector<std::shared_ptr<Sky>> skies;
+	std::vector<std::shared_ptr<Sky>>* skies;
 	std::shared_ptr<Sky> sunnySky;
 	std::shared_ptr<Sky> spaceSky;
 	std::shared_ptr<Sky> mountainSky;
@@ -115,7 +113,6 @@ private:
 	std::shared_ptr<Sky> starSky;
 
 	//Lights
-	std::vector<Light> lights;
 	int lightUIIndex;
 	unsigned int lightCount;
 	DirectionalLight mainLight;

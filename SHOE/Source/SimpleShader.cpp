@@ -72,6 +72,14 @@ void ISimpleShader::CleanUp()
 }
 
 // --------------------------------------------------------
+// Returns the internal name of this shader.
+// --------------------------------------------------------
+
+std::string ISimpleShader::GetName() {
+	return this->name;
+}
+
+// --------------------------------------------------------
 // Loads the specified shader and builds the variable table 
 // using shader reflection.
 //

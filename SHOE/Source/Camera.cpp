@@ -30,6 +30,7 @@ Camera::Camera(DirectX::XMFLOAT3 pos, float aspectRatio, bool type, std::string 
 	this->lookSpeed = 3.0f;
 	this->moveSpeed = 10.0f;
 	this->enabled = true;
+	this->name = name;
 
 	UpdateViewMatrix();
 	UpdateProjectionMatrix(aspectRatio, type);
@@ -103,6 +104,10 @@ void Camera::UpdateProjectionMatrix(float aspectRatio, bool type)
 	XMStoreFloat4x4(&projMatrix, proj);
 
 	this->prevAspectRatio = aspectRatio;
+}
+
+std::string Camera::GetName() {
+	return this->name;
 }
 
 XMFLOAT4X4 Camera::GetViewMatrix()

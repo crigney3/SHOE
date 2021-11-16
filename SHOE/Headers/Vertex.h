@@ -20,4 +20,5 @@ struct TerrainMats
 {
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
 	std::vector<Material> blendMaterials;
+	std::string name;
 };

@@ -70,8 +70,7 @@ void Game::Init()
 	mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
 	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
-	Entities = globalAssets.globalEntities;
-	entIt = globalAssets.globalEntities.begin();
+	Entities = globalAssets.GetActiveGameEntities();
 
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(this->hWnd);
@@ -83,17 +82,16 @@ void Game::Init()
 	skyWindowEnabled = false;
 	objHierarchyEnabled = true;
 	rtvWindowEnabled = false;
-	entUIIt = globalAssets.globalEntities.begin();
 	childIndices = std::vector<int>();
 
 	flashMenuToggle = false;
 	lightUIIndex = 0;
 
-	skies = globalAssets.skies;
+	skies = globalAssets.GetSkyArray();
 	activeSky = 1;
 
 	//Very important this is set accurately
-	lightCount = globalAssets.globalLights.size();
+	lightCount = globalAssets.GetLightArraySize();
 	
 	// Tell the input assembler stage of the pipeline what kind of
 	// geometric primitives (points, lines or triangles) we want to draw.  
@@ -166,12 +164,12 @@ void Game::RenderUI(float deltaTime) {
 
 		ImGui::Text(node.c_str());
 
-		infoStr = std::to_string(lights.size());
+		infoStr = std::to_string(globalAssets.GetLightArraySize());
 		node = "Light count: " + infoStr;
 
 		ImGui::Text(node.c_str());
 
-		infoStr = std::to_string(Entities.size());
+		infoStr = std::to_string(Entities->size());
 		node = "Game Entity count: " + infoStr;
 
 		ImGui::Text(node.c_str());
@@ -196,7 +194,7 @@ void Game::RenderUI(float deltaTime) {
 		if (ImGui::ArrowButton("Previous Light", ImGuiDir_Left)) {
 			lightUIIndex--;
 			if (lightUIIndex < 0) {
-				lightUIIndex = lights.size() - 1;
+				lightUIIndex = globalAssets.GetLightArraySize() - 1;
 			}
 		};
 		ImGui::SameLine();
@@ -204,72 +202,59 @@ void Game::RenderUI(float deltaTime) {
 
 		if (ImGui::ArrowButton("Next Light", ImGuiDir_Right)) {
 			lightUIIndex++;
-			if (lightUIIndex > lights.size() - 1) {
+			if (lightUIIndex > globalAssets.GetLightArraySize() - 1) {
 				lightUIIndex = 0;
 			}
 		};
 		ImGui::SameLine();
 		ImGui::Text("Next Light");
 
-		ImGui::ColorEdit3("Color: ", &lights[lightUIIndex].color.x);
-		ImGui::DragFloat("Intensity: ", &lights[lightUIIndex].intensity, 1, 10.0f, 200.0f);
-		ImGui::DragFloat("Range: ", &lights[lightUIIndex].range, 1, 5.0f, 20.0f);
+		ImGui::ColorEdit3("Color: ", &globalAssets.GetLightAtID(lightUIIndex)->color.x);
+		ImGui::DragFloat("Intensity: ", &globalAssets.GetLightAtID(lightUIIndex)->intensity, 1, 10.0f, 200.0f);
+		ImGui::DragFloat("Range: ", &globalAssets.GetLightAtID(lightUIIndex)->range, 1, 5.0f, 20.0f);
 		ImGui::End();
 	}
 
 	if (objWindowEnabled) {
 		// Display the debug UI for objects
-		std::string indexStr = entUIIt->first;
+		std::string indexStr = std::to_string(entityUIIndex) + " - " + Entities->at(entityUIIndex)->GetName();
 		std::string node = "Editing object " + indexStr;
 		ImGui::Begin("Object Editor");
 		ImGui::Text(node.c_str());
 
 		if (ImGui::ArrowButton("Previous Object", ImGuiDir_Left)) {
-			if (entUIIt == globalAssets.globalEntities.begin()) {
-				for (int i = 0; i < (int)(globalAssets.globalEntities.size() - 1); i++) {
-					entUIIt++;
-				}
-			}
-			else {
-				entUIIt--;
-			}
+			if (entityUIIndex - 1 < 0) entityUIIndex = globalAssets.GetGameEntityArraySize();
+			else entityUIIndex--;
 		};
 		ImGui::SameLine();
 		ImGui::Text("Previous Object");
 		
 		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
-			//Overflow broken, consider iterator redesign?
-			if (entUIIt == globalAssets.globalEntities.end()) {
-				for (int i = 0; i < (int)(globalAssets.globalEntities.size() - 1); i++) {
-					entUIIt--;
-				}
-			}
-			else {
-				entUIIt++;
-			}
+			if (entityUIIndex + 1 > globalAssets.GetGameEntityArraySize()) entityUIIndex = 0;
+			else entityUIIndex++;
 		};
 		ImGui::SameLine();
 		ImGui::Text("Next Object");
 
-		UIPositionEdit = entUIIt->second->GetTransform()->GetPosition();
-		UIRotationEdit = entUIIt->second->GetTransform()->GetPitchYawRoll();
-		UIScaleEdit = entUIIt->second->GetTransform()->GetScale();
+		UIPositionEdit = Entities->at(entityUIIndex)->GetTransform()->GetPosition();
+		UIRotationEdit = Entities->at(entityUIIndex)->GetTransform()->GetPitchYawRoll();
+		UIScaleEdit = Entities->at(entityUIIndex)->GetTransform()->GetScale();
 		
 		ImGui::DragFloat3("Position: ", &UIPositionEdit.x, 0.5f);
 		ImGui::DragFloat3("Rotation: ", &UIRotationEdit.x, 0.5f, 0, 360);
 		ImGui::InputFloat3("Scale: ", &UIScaleEdit.x);
 
-		entUIIt->second->GetTransform()->SetPosition(UIPositionEdit.x, UIPositionEdit.y, UIPositionEdit.z);
-		entUIIt->second->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
-		entUIIt->second->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
+		Entities->at(entityUIIndex)->GetTransform()->SetPosition(UIPositionEdit.x, UIPositionEdit.y, UIPositionEdit.z);
+		Entities->at(entityUIIndex)->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
+		Entities->at(entityUIIndex)->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
 
 		std::string nameBuffer;
 		static char nameBuf[64] = "";
-		nameBuffer = entUIIt->second->GetName();
+		nameBuffer = Entities->at(entityUIIndex)->GetName();
 		strcpy_s(nameBuf, nameBuffer.c_str());
 		ImGui::InputText("Rename GameObject", nameBuf, sizeof(nameBuffer));
 
-		entUIIt->second->SetName(nameBuf);
+		Entities->at(entityUIIndex)->SetName(nameBuf);
 
 		ImGui::End();
 	}
@@ -280,9 +265,9 @@ void Game::RenderUI(float deltaTime) {
 			ImGuiTreeNodeFlags_DefaultOpen |
 			ImGuiTreeNodeFlags_FramePadding)) {
 			ImGui::TextWrapped("Ran out of time to do drag-and-drop parenting, but hey, it shows which ones are parented!");
-			for (entIt = globalAssets.globalEntities.begin(); entIt != globalAssets.globalEntities.end(); entIt++) {
-				if (entIt->second->GetTransform()->GetParent() == NULL) {
-					RenderChildObjectsInUI(entIt->second.get());
+			for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
+				if (Entities->at(i)->GetTransform()->GetParent() == NULL) {
+					RenderChildObjectsInUI(Entities->at(i).get());
 				}
 			}
 			ImGui::TreePop();
@@ -291,7 +276,7 @@ void Game::RenderUI(float deltaTime) {
 			ImGuiTreeNodeFlags_DefaultOpen |
 			ImGuiTreeNodeFlags_FramePadding)) {
 			ImGui::Text("Lights can't be parented (yet)");
-			for (int i = 0; i < lights.size(); i++) {
+			for (int i = 0; i < globalAssets.GetLightArraySize(); i++) {
 				if (ImGui::TreeNode((void*)(intptr_t)i, "Light %d", i)) {
 					ImGui::TreePop();
 				}
@@ -361,7 +346,7 @@ void Game::RenderUI(float deltaTime) {
 			ImGui::Text("This menu will allow easily adding more objects and lights.");
 
 			if (ImGui::Button("Add GameObject")) {
-				globalAssets.CreateGameEntity(globalAssets.globalMeshes["Cube"], globalAssets.globalMaterials["bronzeMat"], "GameEntityTest");
+				globalAssets.CreateGameEntity(globalAssets.GetMeshByName("Cube"), globalAssets.GetMaterialByName("bronzeMat"), "GameEntity" + std::to_string(globalAssets.GetGameEntityArraySize()));
 			}
 
 			ImGui::EndMenu();
@@ -405,37 +390,38 @@ void Game::RenderChildObjectsInUI(GameEntity* entity) {
 void Game::RenderSky() {
 	if (input.KeyPress(VK_RIGHT)) {
 		activeSky++;
-		if (activeSky > skies.size() - 1) {
+		if (activeSky > skies->size() - 1) {
 			activeSky = 0;
 		}
 	}
 	else if (input.KeyPress(VK_LEFT)) {
 		activeSky--;
 		if (activeSky < 0) {
-			activeSky = skies.size() - 1;
+			activeSky = skies->size() - 1;
 		}
 	}
 
-	renderer->SetActiveSky(skies.at(activeSky));
+	renderer->SetActiveSky(skies->at(activeSky));
 }
 
 void Game::Flashlight() {
+	Light* flashlight = globalAssets.GetFlashlight();
 	if (input.KeyPress(0x46)) {
 		flashMenuToggle = !flashMenuToggle;
 	}
 
 	if (flashMenuToggle) {
-		globalAssets.globalLights.at(4).enabled = true;
+		flashlight->enabled = true;
 	}
 	else {
-		globalAssets.globalLights.at(4).enabled = false;
+		flashlight->enabled = false;
 	}
 
 	if (flashMenuToggle) {
 		XMFLOAT3 camPos = mainCamera->GetTransform()->GetPosition();
-		globalAssets.globalLights.at(4).position = XMFLOAT3(camPos.x + 0.5f, camPos.y, camPos.z + 0.5f);
-		globalAssets.globalLights.at(4).direction = mainCamera->GetTransform()->GetForward();
-		flashShadowCamera->GetTransform()->SetPosition(globalAssets.globalLights.at(4).position.x, globalAssets.globalLights.at(4).position.y, globalAssets.globalLights.at(4).position.z);
+		flashlight->position = XMFLOAT3(camPos.x + 0.5f, camPos.y, camPos.z + 0.5f);
+		flashlight->direction = mainCamera->GetTransform()->GetForward();
+		flashShadowCamera->GetTransform()->SetPosition(flashlight->position.x, flashlight->position.y, flashlight->position.z);
 		flashShadowCamera->GetTransform()->SetRotation(mainCamera->GetTransform()->GetPitchYawRoll().x, mainCamera->GetTransform()->GetPitchYawRoll().y, mainCamera->GetTransform()->GetPitchYawRoll().z);
 		flashShadowCamera->UpdateViewMatrix();
 		FlickeringCheck();
@@ -475,19 +461,20 @@ void Game::Update(float deltaTime, float totalTime)
 	if (input.KeyDown(VK_ESCAPE)) Quit();
 
 	if (movingEnabled) {
-		Entities.at("Bronze Cube")->GetTransform()->SetPosition(+2.0f, -(float)sin(totalTime), +0.0f);
-		Entities.at("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(totalTime), +0.0f);
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+2.0f, -(float)sin(totalTime), +0.0f);
+		globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(totalTime), +0.0f);
 
-		Entities.at("Floor Helix")->GetTransform()->SetPosition((float)sin(totalTime), +2.0f, +0.0f);
-		Entities.at("Paint Sphere")->GetTransform()->SetPosition(-(float)sin(totalTime), -2.0f, +0.0f);
+		globalAssets.GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition((float)sin(totalTime), +2.0f, +0.0f);
+		globalAssets.GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(-(float)sin(totalTime), -2.0f, +0.0f);
 
-		Entities.at("Rough Torus")->GetTransform()->Rotate(+0.0f, +0.0f, +1.0f * deltaTime);
+		globalAssets.GetGameEntityByName("Rough Torus")->GetTransform()->Rotate(+0.0f, +0.0f, +1.0f * deltaTime);
 	}
 
 	Flashlight();
 	RenderSky();
 
-	if (flickeringEnabled) {
+	// Flickering is currently broken
+	/*if (flickeringEnabled) {
 		srand((unsigned int)(deltaTime * totalTime));
 		float prevIntensity = globalAssets.globalLights.at(4).intensity;
 		int flickerRand = rand() % 6 + 1;
@@ -500,7 +487,7 @@ void Game::Update(float deltaTime, float totalTime)
 			globalAssets.globalLights.at(4).intensity = prevIntensity;
 			hasFlickered = false;
 		}
-	}
+	}*/
 
 	mainCamera->Update(deltaTime, this->hWnd);
 	//flashShadowCamera->Update(deltaTime, this->hWnd);
