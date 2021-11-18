@@ -515,8 +515,8 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
 
 	// Unbind all in-use shader resources
-	ID3D11ShaderResourceView* nullSRVs[16] = {};
-	context->PSSetShaderResources(0, 16, nullSRVs);
+	ID3D11ShaderResourceView* nullSRVs[32] = {};
+	context->PSSetShaderResources(0, 32, nullSRVs);
 }
 
 void Renderer::SetActiveSky(std::shared_ptr<Sky> sky) {

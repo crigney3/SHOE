@@ -13,6 +13,7 @@
 #include "Input.h"
 #include "Renderer.h"
 #include "AssetManager.h"
+#include "Emitter.h"
 
 class Game 
 	: public DXCore

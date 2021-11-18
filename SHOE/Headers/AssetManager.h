@@ -12,6 +12,7 @@
 #include <map>
 #include <random>
 #include "DXCore.h"
+#include "Emitter.h"
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 
@@ -91,6 +92,7 @@ private:
 	std::vector<std::shared_ptr<Light>> globalLights;
 	std::vector<std::shared_ptr<TerrainMats>> globalTerrainMaterials;
 	std::vector<std::shared_ptr<GameEntity>> globalTerrainEntities;
+	std::vector<std::shared_ptr<Emitter>> globalParticleEmitters;
 
 public:
 	~AssetManager();

@@ -15,10 +15,17 @@ struct Vertex
 	DirectX::XMFLOAT2 uv;
 };
 
-//Struct to hold Terrain data
+// Struct to hold Terrain data
 struct TerrainMats
 {
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
 	std::vector<Material> blendMaterials;
 	std::string name;
+};
+
+// Basic particle struct
+struct Particle 
+{
+	float emitTime;
+	DirectX::XMFLOAT3 startPos;
 };
