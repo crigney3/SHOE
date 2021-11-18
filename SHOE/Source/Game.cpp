@@ -223,15 +223,15 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::Text(node.c_str());
 
 		if (ImGui::ArrowButton("Previous Object", ImGuiDir_Left)) {
-			if (entityUIIndex - 1 < 0) entityUIIndex = globalAssets.GetGameEntityArraySize();
-			else entityUIIndex--;
+			entityUIIndex--;
+			if (entityUIIndex < 0) entityUIIndex = globalAssets.GetGameEntityArraySize();
 		};
 		ImGui::SameLine();
 		ImGui::Text("Previous Object");
 		
 		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
-			if (entityUIIndex + 1 > globalAssets.GetGameEntityArraySize()) entityUIIndex = 0;
-			else entityUIIndex++;
+			entityUIIndex++;
+			if (entityUIIndex > globalAssets.GetGameEntityArraySize()) entityUIIndex = 0;
 		};
 		ImGui::SameLine();
 		ImGui::Text("Next Object");
