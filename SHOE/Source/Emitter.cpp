@@ -8,12 +8,15 @@ Emitter::Emitter(int maxParticles,
 				 std::shared_ptr<SimpleVertexShader> particleVertexShader,
 				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
 				 Microsoft::WRL::ComPtr<ID3D11Device> device,
-				 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context) 
+				 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
+				 std::string name) 
 {
 	this->maxParticles = maxParticles;
 	this->particlesPerSecond = particlesPerSecond;
 	this->particleLifetime = particleLifeTime;
+	this->secondsPerEmission = 1.0f / particlesPerSecond;
 
+	this->timeSinceEmit = 0.0f;
 	this->firstDeadParticle = 0;
 	this->firstLiveParticle = 0;
 	this->liveParticleCount = 0;
@@ -24,6 +27,8 @@ Emitter::Emitter(int maxParticles,
 
 	this->device = device;
 	this->context = context;
+
+	this->name = name;
 
 	this->transform = Transform(DirectX::XMMatrixIdentity(), position);
 
@@ -36,6 +41,7 @@ Emitter::~Emitter() {
 
 void Emitter::Initialize() {
 	particles = new Particle[this->maxParticles];
+	ZeroMemory(particles, sizeof(Particle) * maxParticles);
 
 	D3D11_BUFFER_DESC desc = {};
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -57,23 +63,65 @@ void Emitter::Initialize() {
 		particles[i].emitTime = 0;
 		particles[i].startPos = DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f);
 	}
+
+	indices = new unsigned int[maxParticles * 6];
+	int indexCount = 0;
+	for (int i = 0; i < maxParticles * 4; i += 4) {
+		indices[indexCount++] = i;
+		indices[indexCount++] = i + 1;
+		indices[indexCount++] = i + 2;
+		indices[indexCount++] = i;
+		indices[indexCount++] = i + 2;
+		indices[indexCount++] = i + 3;
+	}
+	D3D11_SUBRESOURCE_DATA indexData = {};
+	indexData.pSysMem = indices;
+
+	// Regular (static) index buffer
+	D3D11_BUFFER_DESC ibDesc = {};
+	ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	ibDesc.CPUAccessFlags = 0;
+	ibDesc.Usage = D3D11_USAGE_DEFAULT;
+	ibDesc.ByteWidth = sizeof(unsigned int) * maxParticles * 6;
+	device->CreateBuffer(&ibDesc, &indexData, inBuffer.GetAddressOf());
+	delete[] indices;
+}
+
+void Emitter::UpdateParticle(float currentTime, int index) {
+	float age = currentTime - particles[index].emitTime;
+	if (age >= particleLifetime) {
+
+	}
 }
 
 void Emitter::Update(float deltaTime, float totalTime) {
+	if (liveParticleCount > 0) {
+		if (firstLiveParticle < firstDeadParticle) {
+			for (int i = firstLiveParticle; i < firstDeadParticle; i++) {
+				UpdateParticle(totalTime, i);
+			}
+		}
+		else if (firstDeadParticle < firstLiveParticle) {
+			for (int i = firstLiveParticle; i < maxParticles; i++) {
+				UpdateParticle(totalTime, i);
+			}
+			for (int i = 0; i < firstDeadParticle; i++) {
+				UpdateParticle(totalTime, i);
+			}
+		}
+		else {
+			for (int i = 0; i < maxParticles; i++) {
+				UpdateParticle(totalTime, i);
+			}
+		}
+	}
+
 	timeSinceEmit += deltaTime;
 	while (timeSinceEmit > secondsPerEmission) {
 		EmitParticle(totalTime);
 		timeSinceEmit -= secondsPerEmission;
 	}
 
-	if (totalTime - particles[firstLiveParticle].emitTime > particleLifetime) {
-		firstLiveParticle++;
-		if (firstLiveParticle > maxParticles) firstLiveParticle = 0;
-		liveParticleCount--;
-	}
-}
-
-void Emitter::Draw() {
 	D3D11_MAPPED_SUBRESOURCE mapped = {};
 	context->Map(particleDataBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
 
@@ -95,16 +143,38 @@ void Emitter::Draw() {
 	context->Unmap(particleDataBuffer.Get(), 0);
 }
 
+void Emitter::Draw(std::shared_ptr<Camera> cam, float currentTime) {
+	UINT stride = 0;
+	UINT offset = 0;
+	ID3D11Buffer* emptyBuffer = 0;
+	context->IASetVertexBuffers(0, 1, &emptyBuffer, &stride, &offset);
+	context->IASetIndexBuffer(inBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+
+	particleVertexShader->SetShader();
+	particlePixelShader->SetShader();
+
+	particleVertexShader->SetShaderResourceView("ParticleData", particleDataSRV);
+	particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV);
+
+	particleVertexShader->SetMatrix4x4("view", cam->GetViewMatrix());
+	particleVertexShader->SetMatrix4x4("projection", cam->GetProjectionMatrix());
+	particleVertexShader->SetFloat("currentTime", currentTime);
+	particleVertexShader->CopyAllBufferData();
+	//particlePixelShader->CopyAllBufferData();
+
+	context->DrawIndexed(liveParticleCount * 6, 0, 0);
+}
+
 void Emitter::EmitParticle(float currentTime) {
+	if (liveParticleCount == maxParticles) return;
+
 	Particle tempParticle = {};
 	tempParticle.emitTime = currentTime;
 	tempParticle.startPos = transform.GetPosition();
 
 	particles[firstDeadParticle] = tempParticle;
 	firstDeadParticle++;
-	liveParticleCount++;
+	firstDeadParticle %= maxParticles;
 
-	if (firstDeadParticle > maxParticles) {
-		firstDeadParticle = 0;
-	}
+	liveParticleCount++;
 }

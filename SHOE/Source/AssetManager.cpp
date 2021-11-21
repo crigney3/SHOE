@@ -22,6 +22,7 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	InitializeTerrainMaterials();
 	InitializeGameEntities();
 	InitializeSkies();
+	InitializeEmitters();
 }
 #pragma endregion
 
@@ -168,6 +169,36 @@ std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11Shader
 	skies.push_back(newSky);
 
 	return newSky;
+}
+
+std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
+															 float particleLifeTime,
+															 float particlesPerSecond,
+															 DirectX::XMFLOAT3 position, 
+															 std::wstring textureNameToLoad,
+															 std::string name) {
+	std::shared_ptr<Emitter> newEmitter;
+
+	std::wstring assetPathString = L"../../../Assets/Particles/";
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
+
+	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + textureNameToLoad).c_str(), nullptr, &albedo);
+
+	newEmitter = std::make_shared<Emitter>(maxParticles,
+										   particleLifeTime,
+										   particlesPerSecond,
+										   position,
+										   GetPixelShaderByName("ParticlesPS"),
+										   GetVertexShaderByName("ParticlesVS"),
+										   albedo,
+										   device,
+										   context,
+										   name);
+
+	globalParticleEmitters.push_back(newEmitter);
+
+	return newEmitter;
 }
 #pragma endregion
 
@@ -505,6 +536,7 @@ void AssetManager::InitializeShaders() {
 	CreateVertexShader("SkyVS", L"VSSkybox.cso");
 	CreateVertexShader("TerrainVS", L"VSTerrainBlend.cso");
 	CreateVertexShader("ShadowVS", L"VSShadowMap.cso");
+	CreateVertexShader("ParticlesVS", L"VSParticles.cso");
 	CreateVertexShader("FullscreenVS", L"FullscreenVS.cso");
 
 	// Make pixel shaders
@@ -519,6 +551,11 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("SSAOPS", L"PSAmbientOcclusion.cso");
 	CreatePixelShader("SSAOBlurPS", L"PSOcclusionBlur.cso");
 	CreatePixelShader("SSAOCombinePS", L"PSOcclusionCombine.cso");
+	CreatePixelShader("ParticlesPS", L"PSParticles.cso");
+}
+
+void AssetManager::InitializeEmitters() {
+	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), L"smoke_01.png", "basicParticle");
 }
 #pragma endregion
 
@@ -575,6 +612,10 @@ size_t AssetManager::GetTerrainEntityArraySize() {
 	return this->globalTerrainEntities.size();
 }
 
+size_t AssetManager::GetEmitterArraySize() {
+	return this->globalParticleEmitters.size();
+}
+
 Light* AssetManager::GetLightArray() {
 	Light lightArray[64];
 	for (int i = 0; i < globalLights.size(); i++) {
@@ -598,6 +639,10 @@ Light* AssetManager::GetFlashlight() {
 
 Light* AssetManager::GetLightAtID(int id) {
 	return this->globalLights[id].get();
+}
+
+std::shared_ptr<Emitter> AssetManager::GetEmitterAtID(int id) {
+	return this->globalParticleEmitters[id];
 }
 
 #pragma endregion

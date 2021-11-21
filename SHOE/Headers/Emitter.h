@@ -3,6 +3,7 @@
 #include "DXCore.h"
 #include "Vertex.h"
 #include "Transform.h"
+#include "Camera.h"
 
 class Emitter {
 public:
@@ -14,18 +15,23 @@ public:
 			std::shared_ptr<SimpleVertexShader> particleVertexShader,
 			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
 			Microsoft::WRL::ComPtr<ID3D11Device> device,
-			Microsoft::WRL::ComPtr<ID3D11DeviceContext> context);
+			Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
+			std::string name);
 	~Emitter();
 
 	void Update(float deltaTime, float totalTime);
-	void Draw();
+	void Draw(std::shared_ptr<Camera> cam, float currentTime);
 private:
 	void Initialize();
 	void EmitParticle(float currentTime);
+	void UpdateParticle(float currentTime, int index);
+
+	std::string name;
 
 	Transform transform;
 
 	Particle* particles;
+	unsigned int* indices;
 
 	int maxParticles;
 	int firstDeadParticle;

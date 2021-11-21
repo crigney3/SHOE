@@ -81,6 +81,7 @@ private:
 	void InitializeTerrainMaterials();
 	void InitializeCameras();
 	void InitializeSkies();
+	void InitializeEmitters();
 
 	std::vector<std::shared_ptr<SimplePixelShader>> pixelShaders;
 	std::vector<std::shared_ptr<SimpleVertexShader>> vertexShaders;
@@ -116,6 +117,12 @@ public:
 											    std::wstring metalnessNameToLoad,
 											    std::wstring roughnessNameToLoad);
 	std::shared_ptr<GameEntity> CreateTerrainEntity(std::shared_ptr<Mesh> mesh, std::string name = "Terrain");
+	std::shared_ptr<Emitter> CreateParticleEmitter(int maxParticles,
+												   float particleLifeTime,
+												   float particlesPerSecond,
+												   DirectX::XMFLOAT3 position, 
+												   std::wstring textureNameToLoad,
+												   std::string name);
 
 	// Methods to remove assets
 
@@ -139,6 +146,8 @@ public:
 	void RemoveTerrainMaterial(int id);
 	void RemoveLight(std::string name);
 	void RemoveLight(int id);
+	void RemoveEmitter(std::string name);
+	void RemoveEmitter(int id);
 
 	// Methods to disable and enable assets for rendering
 	// Currently not implemented except for lights
@@ -201,11 +210,13 @@ public:
 	size_t GetLightArraySize();
 	size_t GetTerrainMaterialArraySize();
 	size_t GetTerrainEntityArraySize();
+	size_t GetEmitterArraySize();
 	Light* GetLightArray();
 	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
 	std::vector<std::shared_ptr<Sky>>* GetSkyArray();
 	Light* GetFlashlight();
 	Light* GetLightAtID(int id);
+	std::shared_ptr<Emitter> GetEmitterAtID(int id);
 
 	std::shared_ptr<Sky> currentSky;
 	int lightCount;

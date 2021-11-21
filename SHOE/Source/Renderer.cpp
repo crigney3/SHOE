@@ -335,7 +335,7 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferI
 	context->RSSetState(0);
 }
 
-void Renderer::Draw(std::shared_ptr<Camera> cam) {
+void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	// Background color (Cornflower Blue in this case) for clearing
 	const float color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -501,6 +501,10 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	// Draw the point light
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
 	DrawPointLights();
+
+	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
+		globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime);
+	}
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());

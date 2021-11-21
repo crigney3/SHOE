@@ -224,7 +224,7 @@ void Game::RenderUI(float deltaTime) {
 
 		if (ImGui::ArrowButton("Previous Object", ImGuiDir_Left)) {
 			entityUIIndex--;
-			if (entityUIIndex < 0) entityUIIndex = globalAssets.GetGameEntityArraySize();
+			if (entityUIIndex < 0) entityUIIndex = globalAssets.GetGameEntityArraySize() - 1;
 		};
 		ImGui::SameLine();
 		ImGui::Text("Previous Object");
@@ -473,6 +473,10 @@ void Game::Update(float deltaTime, float totalTime)
 	Flashlight();
 	RenderSky();
 
+	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
+		globalAssets.GetEmitterAtID(i)->Update(deltaTime, totalTime);
+	}
+
 	// Flickering is currently broken
 	/*if (flickeringEnabled) {
 		srand((unsigned int)(deltaTime * totalTime));
@@ -505,5 +509,5 @@ void Game::Draw(float deltaTime, float totalTime)
 
 	renderer->RenderShadows(mainShadowCamera, 1);
 
-	renderer->Draw(mainCamera);
+	renderer->Draw(mainCamera, totalTime);
 }

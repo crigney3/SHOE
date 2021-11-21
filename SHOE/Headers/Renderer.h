@@ -80,7 +80,7 @@ public:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(int index);
 
     void DrawPointLights();
-    void Draw(std::shared_ptr<Camera> camera);
+    void Draw(std::shared_ptr<Camera> camera, float totalTime);
 
     void SetActiveSky(std::shared_ptr<Sky> sky);
 

@@ -141,6 +141,17 @@ struct VertexToPixel
 	float2 uv			: TEXCOORD;
 };
 
+struct VertexToPixelParticle
+{
+	// Data type
+	//  |
+	//  |   Name          Semantic
+	//  |    |                |
+	//  v    v                v
+	float4 position		: SV_POSITION;
+	float2 uv			: TEXCOORD;
+};
+
 struct VertexToPixelNormal
 {
 	// Data type
