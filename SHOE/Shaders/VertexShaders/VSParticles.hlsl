@@ -11,6 +11,7 @@ cbuffer ExternalData : register(b0)
 	matrix view;
 	matrix projection;
 	float currentTime;
+	float scale;
 }
 
 StructuredBuffer<Particle> ParticleData	: register(t0);
@@ -26,13 +27,15 @@ VertexToPixelParticle main(uint id : SV_VertexID)
 
 	float age = currentTime - p.EmitTime;
 
-	float3 pos = p.StartPosition + age;
+	float3 pos = float3(p.StartPosition.x, p.StartPosition.y + (age * 2), p.StartPosition.z);
+
+	float ageScale = 1.0f + age * scale;
 
 	float2 offsets[4];
-	offsets[0] = float2(-1.0f, +1.0f);
-	offsets[1] = float2(+1.0f, +1.0f);
-	offsets[2] = float2(+1.0f, -1.0f);
-	offsets[3] = float2(-1.0f, -1.0f);
+	offsets[0] = float2(-1.0f, +1.0f) * ageScale;
+	offsets[1] = float2(+1.0f, +1.0f) * ageScale;
+	offsets[2] = float2(+1.0f, -1.0f) * ageScale;
+	offsets[3] = float2(-1.0f, -1.0f) * ageScale;
 
 	pos += float3(view._11, view._12, view._13) * offsets[cornerID].x;
 	pos += float3(view._21, view._22, view._23) * offsets[cornerID].y;

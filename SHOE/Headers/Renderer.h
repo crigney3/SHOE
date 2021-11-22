@@ -28,6 +28,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> ssaoRandomTex;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ssaoRandomSRV;
 
+    Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> particleDepthState;
+
     // SSAO and MRT render target views
     // Stored in the following order:
     // 0 - Color minus ambient

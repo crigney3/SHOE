@@ -127,6 +127,23 @@ void Renderer::InitRenderTargetViews() {
 		);
 		XMStoreFloat4(&ssaoOffsets[i], offset * acceleratedScale);
 	}
+
+	D3D11_DEPTH_STENCIL_DESC particleDepthDesc = {};
+	particleDepthDesc.DepthEnable = true; 
+	particleDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; 
+	particleDepthDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	device->CreateDepthStencilState(&particleDepthDesc, particleDepthState.GetAddressOf());
+
+	D3D11_BLEND_DESC additiveBlendDesc = {};
+	additiveBlendDesc.RenderTarget[0].BlendEnable = true;
+	additiveBlendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD; // Add both colors
+	additiveBlendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD; // Add both alpha values
+	additiveBlendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;   // 100% of source color
+	additiveBlendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;  // 100% of destination color
+	additiveBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;   // 100% of source alpha
+	additiveBlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;  // 100% of destination alpha
+	additiveBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	device->CreateBlendState(&additiveBlendDesc, particleBlendAdditive.GetAddressOf());
 }
 
 void Renderer::InitShadows() {
@@ -502,9 +519,17 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
 	DrawPointLights();
 
+	renderTargets[0] = backBufferRTV.Get();
+	context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
+	context->OMSetBlendState(particleBlendAdditive.Get(), 0, 0xFFFFFFFF);
+	context->OMSetDepthStencilState(particleDepthState.Get(), 0);
+
 	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
 		globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime);
 	}
+
+	context->OMSetBlendState(0, 0, 0xFFFFFFFF);
+	context->OMSetDepthStencilState(0, 0);
 
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());

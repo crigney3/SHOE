@@ -13,6 +13,9 @@
 #include <random>
 #include "DXCore.h"
 #include "Emitter.h"
+#include "experimental\filesystem"
+#include <locale>
+#include <codecvt>
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 
@@ -122,7 +125,8 @@ public:
 												   float particlesPerSecond,
 												   DirectX::XMFLOAT3 position, 
 												   std::wstring textureNameToLoad,
-												   std::string name);
+												   std::string name,
+												   bool isMultiParticle);
 
 	// Methods to remove assets
 
@@ -217,6 +221,8 @@ public:
 	Light* GetFlashlight();
 	Light* GetLightAtID(int id);
 	std::shared_ptr<Emitter> GetEmitterAtID(int id);
+
+	inline std::wstring ConvertToWide(const std::string& as);
 
 	std::shared_ptr<Sky> currentSky;
 	int lightCount;

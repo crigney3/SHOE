@@ -179,7 +179,7 @@ void Game::RenderUI(float deltaTime) {
 
 	if (skyWindowEnabled) {
 		ImGui::Begin("Sky Editor");
-		ImGui::Image((ImTextureID*)globalAssets.currentSky->GetBRDFLookupTexture().Get(), ImVec2(256, 256));
+		ImGui::Image(globalAssets.GetEmitterAtID(0)->particleDataSRV.Get(), ImVec2(256, 256));
 		ImGui::End();
 	}
 

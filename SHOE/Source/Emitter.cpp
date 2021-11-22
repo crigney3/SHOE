@@ -6,10 +6,11 @@ Emitter::Emitter(int maxParticles,
 				 DirectX::XMFLOAT3 position,
 				 std::shared_ptr<SimplePixelShader> particlePixelShader,
 				 std::shared_ptr<SimpleVertexShader> particleVertexShader,
-				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
+				 std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> particleTextureSRV,
 				 Microsoft::WRL::ComPtr<ID3D11Device> device,
 				 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
-				 std::string name) 
+				 std::string name,
+				 bool isMultiParticle) 
 {
 	this->maxParticles = maxParticles;
 	this->particlesPerSecond = particlesPerSecond;
@@ -32,11 +33,30 @@ Emitter::Emitter(int maxParticles,
 
 	this->transform = Transform(DirectX::XMMatrixIdentity(), position);
 
+	this->colorTint = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
+	this->scale = 0.0f;
+
 	Initialize();
 }
 
 Emitter::~Emitter() {
 	delete[] particles;
+}
+
+void Emitter::SetColorTint(DirectX::XMFLOAT3 color) {
+	this->colorTint = color;
+}
+
+DirectX::XMFLOAT3 Emitter::GetColorTint() {
+	return this->colorTint;
+}
+
+void Emitter::SetScale(float scale) {
+	this->scale = scale;
+}
+
+float Emitter::GetScale() {
+	return this->scale;
 }
 
 void Emitter::Initialize() {
@@ -90,7 +110,9 @@ void Emitter::Initialize() {
 void Emitter::UpdateParticle(float currentTime, int index) {
 	float age = currentTime - particles[index].emitTime;
 	if (age >= particleLifetime) {
-
+		firstLiveParticle++;
+		firstLiveParticle %= maxParticles;
+		liveParticleCount--;
 	}
 }
 
@@ -154,13 +176,22 @@ void Emitter::Draw(std::shared_ptr<Camera> cam, float currentTime) {
 	particlePixelShader->SetShader();
 
 	particleVertexShader->SetShaderResourceView("ParticleData", particleDataSRV);
-	particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV);
+
+	/*if (isMultiParticle) {
+		int index = rand() % particleTextureSRV.size();
+		particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV[index]);
+	}
+	else {*/
+		particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV[0]);
+	//}
 
 	particleVertexShader->SetMatrix4x4("view", cam->GetViewMatrix());
 	particleVertexShader->SetMatrix4x4("projection", cam->GetProjectionMatrix());
 	particleVertexShader->SetFloat("currentTime", currentTime);
+	particleVertexShader->SetFloat("scale", this->scale);
 	particleVertexShader->CopyAllBufferData();
-	//particlePixelShader->CopyAllBufferData();
+	particlePixelShader->SetFloat3("colorTint", this->colorTint);
+	particlePixelShader->CopyAllBufferData();
 
 	context->DrawIndexed(liveParticleCount * 6, 0, 0);
 }

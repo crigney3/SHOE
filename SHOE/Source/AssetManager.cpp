@@ -176,25 +176,61 @@ std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
 															 float particlesPerSecond,
 															 DirectX::XMFLOAT3 position, 
 															 std::wstring textureNameToLoad,
-															 std::string name) {
+															 std::string name,
+															 bool isMultiParticle) {
 	std::shared_ptr<Emitter> newEmitter;
 
 	std::wstring assetPathString = L"../../../Assets/Particles/";
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
+	if (isMultiParticle) {
+		// Load all particle textures in a specific subfolder
+		std::string assets = "../../../Assets/Particles/";
+		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+		std::string subfolderPath = converter.to_bytes(textureNameToLoad);
+		
+		std::vector< Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> textures;
+		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(dxInstance->GetFullPathTo(assets + subfolderPath))) {
+			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
+			std::wstring path = ConvertToWide(p.path().string().c_str());
 
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + textureNameToLoad).c_str(), nullptr, &albedo);
+			CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), nullptr, &albedo);
 
-	newEmitter = std::make_shared<Emitter>(maxParticles,
-										   particleLifeTime,
-										   particlesPerSecond,
-										   position,
-										   GetPixelShaderByName("ParticlesPS"),
-										   GetVertexShaderByName("ParticlesVS"),
-										   albedo,
-										   device,
-										   context,
-										   name);
+			textures.push_back(albedo);
+		}
+		
+
+		newEmitter = std::make_shared<Emitter>(maxParticles,
+											   particleLifeTime,
+											   particlesPerSecond,
+											   position,
+											   GetPixelShaderByName("ParticlesPS"),
+											   GetVertexShaderByName("ParticlesVS"),
+											   textures,
+											   device,
+											   context,
+											   name,
+											   isMultiParticle);
+	}
+	else {
+		std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> albedo;
+		albedo.push_back(nullptr);
+
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + textureNameToLoad).c_str(), nullptr, &albedo[0]);
+
+		newEmitter = std::make_shared<Emitter>(maxParticles,
+											   particleLifeTime,
+											   particlesPerSecond,
+											   position,
+											   GetPixelShaderByName("ParticlesPS"),
+											   GetVertexShaderByName("ParticlesVS"),
+											   albedo,
+											   device,
+											   context,
+											   name,
+											   isMultiParticle);
+	}
+
+	
 
 	globalParticleEmitters.push_back(newEmitter);
 
@@ -555,7 +591,16 @@ void AssetManager::InitializeShaders() {
 }
 
 void AssetManager::InitializeEmitters() {
-	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), L"smoke_01.png", "basicParticle");
+	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), L"Smoke/smoke_01.png", "basicParticle", false);
+	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), L"Smoke/smoke_04.png", "basicParticles", false);
+	globalParticleEmitters[1]->SetScale(1.0f);
+	CreateParticleEmitter(30, 2.0f, 5.0f, DirectX::XMFLOAT3(-1.0f, 0.0f, 0.0f), L"Flame/flame_02.png", "flameParticles", false);
+	globalParticleEmitters[2]->SetColorTint(DirectX::XMFLOAT3(0.8f, 0.3f, 0.2f));
+	CreateParticleEmitter(10, 1.0f, 8.0f, DirectX::XMFLOAT3(-2.0f, 0.0f, 0.0f), L"Star/star_01.png", "starParticle", false);
+	CreateParticleEmitter(10, 1.0f, 8.0f, DirectX::XMFLOAT3(-3.0f, 0.0f, 0.0f), L"Star/star_02.png", "starParticles", false);
+	globalParticleEmitters[3]->SetColorTint(DirectX::XMFLOAT3(0.96f, 0.89f, 0.1f));
+	globalParticleEmitters[3]->SetScale(0.5f);
+	globalParticleEmitters[4]->SetColorTint(DirectX::XMFLOAT3(0.96f, 0.89f, 0.1f));
 }
 #pragma endregion
 
@@ -1376,5 +1421,18 @@ int AssetManager::GetMaterialIDByName(std::string name) {
 //	return -1;
 //}
 
+
+#pragma endregion
+
+#pragma inlines
+
+inline std::wstring AssetManager::ConvertToWide(const std::string& as)
+{
+	wchar_t* buf = new wchar_t[as.size() * 2 + 2];
+	swprintf_s(buf, as.size() * 2 + 2, L"%S", as.c_str());
+	std::wstring rval = buf;
+	delete[] buf;
+	return rval;
+}
 
 #pragma endregion

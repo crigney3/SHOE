@@ -5,6 +5,9 @@
 #include "Transform.h"
 #include "Camera.h"
 
+#define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
+#define RandomIntRange(min, max) (int)rand() / RAND_MAX * (max - min) + min
+
 class Emitter {
 public:
 	Emitter(int maxParticles,
@@ -13,14 +16,23 @@ public:
 			DirectX::XMFLOAT3 position,
 			std::shared_ptr<SimplePixelShader> particlePixelShader,
 			std::shared_ptr<SimpleVertexShader> particleVertexShader,
-			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
+			std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> particleTextureSRV,
 			Microsoft::WRL::ComPtr<ID3D11Device> device,
 			Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
-			std::string name);
+			std::string name,
+			bool isMultiParticle);
 	~Emitter();
 
 	void Update(float deltaTime, float totalTime);
 	void Draw(std::shared_ptr<Camera> cam, float currentTime);
+
+	void SetColorTint(DirectX::XMFLOAT3 color);
+	DirectX::XMFLOAT3 GetColorTint();
+
+	void SetScale(float scale);
+	float GetScale();
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleDataSRV;
 private:
 	void Initialize();
 	void EmitParticle(float currentTime);
@@ -46,10 +58,13 @@ private:
 
 	std::shared_ptr<SimplePixelShader> particlePixelShader;
 	std::shared_ptr<SimpleVertexShader> particleVertexShader;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleDataSRV;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;
+	bool isMultiParticle;
+	std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> particleTextureSRV;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> inBuffer;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> particleDataBuffer;
+
+	DirectX::XMFLOAT3 colorTint;
+	float scale;
 
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
