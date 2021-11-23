@@ -16,18 +16,19 @@ public:
 			DirectX::XMFLOAT3 position,
 			std::shared_ptr<SimplePixelShader> particlePixelShader,
 			std::shared_ptr<SimpleVertexShader> particleVertexShader,
-			std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> particleTextureSRV,
+			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
 			Microsoft::WRL::ComPtr<ID3D11Device> device,
 			Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
 			std::string name,
-			bool isMultiParticle);
+			bool isMultiParticle = false,
+			bool additiveBlend = true);
 	~Emitter();
 
 	void Update(float deltaTime, float totalTime);
-	void Draw(std::shared_ptr<Camera> cam, float currentTime);
+	void Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive);
 
-	void SetColorTint(DirectX::XMFLOAT3 color);
-	DirectX::XMFLOAT3 GetColorTint();
+	void SetColorTint(DirectX::XMFLOAT4 color);
+	DirectX::XMFLOAT4 GetColorTint();
 
 	void SetScale(float scale);
 	float GetScale();
@@ -59,11 +60,12 @@ private:
 	std::shared_ptr<SimplePixelShader> particlePixelShader;
 	std::shared_ptr<SimpleVertexShader> particleVertexShader;
 	bool isMultiParticle;
-	std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> particleTextureSRV;
+	bool additiveBlend;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> inBuffer;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> particleDataBuffer;
 
-	DirectX::XMFLOAT3 colorTint;
+	DirectX::XMFLOAT4 colorTint;
 	float scale;
 
 	Microsoft::WRL::ComPtr<ID3D11Device> device;

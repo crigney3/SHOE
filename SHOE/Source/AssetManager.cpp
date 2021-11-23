@@ -177,7 +177,8 @@ std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
 															 DirectX::XMFLOAT3 position, 
 															 std::wstring textureNameToLoad,
 															 std::string name,
-															 bool isMultiParticle) {
+															 bool isMultiParticle,
+															 bool additiveBlendState) {
 	std::shared_ptr<Emitter> newEmitter;
 
 	std::wstring assetPathString = L"../../../Assets/Particles/";
@@ -188,16 +189,54 @@ std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
 		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
 		std::string subfolderPath = converter.to_bytes(textureNameToLoad);
 		
-		std::vector< Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> textures;
+		std::vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>> textures;
+		int i = 0;
 		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(dxInstance->GetFullPathTo(assets + subfolderPath))) {
+			textures.push_back(nullptr);
 			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
 			std::wstring path = ConvertToWide(p.path().string().c_str());
 
-			CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), nullptr, &albedo);
+			CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), (ID3D11Resource**)textures[i].GetAddressOf(), nullptr);
 
-			textures.push_back(albedo);
+			i++;
 		}
-		
+
+		D3D11_TEXTURE2D_DESC faceDesc = {};
+		textures[0]->GetDesc(&faceDesc);
+
+		D3D11_TEXTURE2D_DESC multiTextureDesc = {};
+		multiTextureDesc.ArraySize = (int)textures.size();
+		multiTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		multiTextureDesc.CPUAccessFlags = 0;
+		multiTextureDesc.Format = faceDesc.Format;
+		multiTextureDesc.Width = faceDesc.Width;
+		multiTextureDesc.Height = faceDesc.Height;
+		multiTextureDesc.MipLevels = 1;
+		multiTextureDesc.Usage = D3D11_USAGE_DEFAULT;
+		multiTextureDesc.SampleDesc.Count = 1;
+		multiTextureDesc.SampleDesc.Quality = 0;
+
+		ID3D11Texture2D* outputTexture;
+		device->CreateTexture2D(&multiTextureDesc, 0, &outputTexture);
+
+		for (int i = 0; i < (int)textures.size(); i++) {
+			unsigned int subresource = D3D11CalcSubresource(0, i, 1);
+
+			if (textures[i] != nullptr) {
+				context->CopySubresourceRegion(outputTexture, subresource, 0, 0, 0, (ID3D11Resource*)textures[i].Get(), 0, 0);
+			}
+		}
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = multiTextureDesc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		srvDesc.Texture2DArray.MipLevels = 1;
+		srvDesc.Texture2DArray.ArraySize = (int)textures.size();
+
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureArraySRV;
+		device->CreateShaderResourceView(outputTexture, &srvDesc, textureArraySRV.GetAddressOf());
+
+		outputTexture->Release();
 
 		newEmitter = std::make_shared<Emitter>(maxParticles,
 											   particleLifeTime,
@@ -205,17 +244,17 @@ std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
 											   position,
 											   GetPixelShaderByName("ParticlesPS"),
 											   GetVertexShaderByName("ParticlesVS"),
-											   textures,
+											   textureArraySRV,
 											   device,
 											   context,
 											   name,
-											   isMultiParticle);
+											   isMultiParticle,
+											   additiveBlendState);
 	}
 	else {
-		std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> albedo;
-		albedo.push_back(nullptr);
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
 
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + textureNameToLoad).c_str(), nullptr, &albedo[0]);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + textureNameToLoad).c_str(), nullptr, &albedo);
 
 		newEmitter = std::make_shared<Emitter>(maxParticles,
 											   particleLifeTime,
@@ -227,7 +266,8 @@ std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
 											   device,
 											   context,
 											   name,
-											   isMultiParticle);
+											   isMultiParticle,
+											   additiveBlendState);
 	}
 
 	
@@ -591,16 +631,18 @@ void AssetManager::InitializeShaders() {
 }
 
 void AssetManager::InitializeEmitters() {
-	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), L"Smoke/smoke_01.png", "basicParticle", false);
-	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), L"Smoke/smoke_04.png", "basicParticles", false);
+	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), L"Smoke/smoke_01.png", "basicParticle");
+	CreateParticleEmitter(20, 1.0f, 3.0f, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), L"Smoke/", "basicParticles", true);
 	globalParticleEmitters[1]->SetScale(1.0f);
-	CreateParticleEmitter(30, 2.0f, 5.0f, DirectX::XMFLOAT3(-1.0f, 0.0f, 0.0f), L"Flame/flame_02.png", "flameParticles", false);
-	globalParticleEmitters[2]->SetColorTint(DirectX::XMFLOAT3(0.8f, 0.3f, 0.2f));
-	CreateParticleEmitter(10, 1.0f, 8.0f, DirectX::XMFLOAT3(-2.0f, 0.0f, 0.0f), L"Star/star_01.png", "starParticle", false);
-	CreateParticleEmitter(10, 1.0f, 8.0f, DirectX::XMFLOAT3(-3.0f, 0.0f, 0.0f), L"Star/star_02.png", "starParticles", false);
-	globalParticleEmitters[3]->SetColorTint(DirectX::XMFLOAT3(0.96f, 0.89f, 0.1f));
-	globalParticleEmitters[3]->SetScale(0.5f);
-	globalParticleEmitters[4]->SetColorTint(DirectX::XMFLOAT3(0.96f, 0.89f, 0.1f));
+	CreateParticleEmitter(30, 2.0f, 15.0f, DirectX::XMFLOAT3(-1.0f, 0.0f, 0.0f), L"Flame/", "flameParticles", true);
+	globalParticleEmitters[2]->SetColorTint(DirectX::XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
+	CreateParticleEmitter(10, 1.0f, 8.0f, DirectX::XMFLOAT3(-2.0f, 0.0f, 0.0f), L"Star/", "starParticle", true);
+	CreateParticleEmitter(4, 2.0f, 8.0f, DirectX::XMFLOAT3(-3.0f, 0.0f, 0.0f), L"Star/star_08.png", "starParticles");
+	globalParticleEmitters[3]->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+	globalParticleEmitters[3]->SetScale(0.75f);
+	globalParticleEmitters[4]->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+	//CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);
+	//globalParticleEmitters[5]->SetColorTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f));
 }
 #pragma endregion
 

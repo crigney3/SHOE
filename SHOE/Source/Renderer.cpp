@@ -535,11 +535,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	renderTargets[0] = backBufferRTV.Get();
 	context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
-	context->OMSetBlendState(particleBlendAdditive.Get(), 0, 0xFFFFFFFF);
+	
 	context->OMSetDepthStencilState(particleDepthState.Get(), 0);
 
 	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
-		globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime);
+		globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime, particleBlendAdditive);
 	}
 
 	context->OMSetBlendState(0, 0, 0xFFFFFFFF);

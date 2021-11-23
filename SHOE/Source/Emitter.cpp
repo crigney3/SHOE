@@ -6,11 +6,12 @@ Emitter::Emitter(int maxParticles,
 				 DirectX::XMFLOAT3 position,
 				 std::shared_ptr<SimplePixelShader> particlePixelShader,
 				 std::shared_ptr<SimpleVertexShader> particleVertexShader,
-				 std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> particleTextureSRV,
+				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
 				 Microsoft::WRL::ComPtr<ID3D11Device> device,
 				 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
 				 std::string name,
-				 bool isMultiParticle) 
+				 bool isMultiParticle,
+				 bool additiveBlendState) 
 {
 	this->maxParticles = maxParticles;
 	this->particlesPerSecond = particlesPerSecond;
@@ -33,7 +34,7 @@ Emitter::Emitter(int maxParticles,
 
 	this->transform = Transform(DirectX::XMMatrixIdentity(), position);
 
-	this->colorTint = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
+	this->colorTint = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	this->scale = 0.0f;
 
 	Initialize();
@@ -43,14 +44,18 @@ Emitter::~Emitter() {
 	delete[] particles;
 }
 
-void Emitter::SetColorTint(DirectX::XMFLOAT3 color) {
+void Emitter::SetColorTint(DirectX::XMFLOAT4 color) {
 	this->colorTint = color;
 }
 
-DirectX::XMFLOAT3 Emitter::GetColorTint() {
+DirectX::XMFLOAT4 Emitter::GetColorTint() {
 	return this->colorTint;
 }
 
+//
+// Scale defaults to 0 - anything above 0
+// will cause the particle to grow over time
+//
 void Emitter::SetScale(float scale) {
 	this->scale = scale;
 }
@@ -165,7 +170,14 @@ void Emitter::Update(float deltaTime, float totalTime) {
 	context->Unmap(particleDataBuffer.Get(), 0);
 }
 
-void Emitter::Draw(std::shared_ptr<Camera> cam, float currentTime) {
+void Emitter::Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive) {
+	if (additiveBlend) {
+		context->OMSetBlendState(particleBlendAdditive.Get(), 0, 0xFFFFFFFF);
+	}
+	else {
+		context->OMSetBlendState(0, 0, 0xFFFFFFFF);
+	}
+
 	UINT stride = 0;
 	UINT offset = 0;
 	ID3D11Buffer* emptyBuffer = 0;
@@ -182,7 +194,7 @@ void Emitter::Draw(std::shared_ptr<Camera> cam, float currentTime) {
 		particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV[index]);
 	}
 	else {*/
-		particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV[0]);
+	particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV);
 	//}
 
 	particleVertexShader->SetMatrix4x4("view", cam->GetViewMatrix());
@@ -190,7 +202,7 @@ void Emitter::Draw(std::shared_ptr<Camera> cam, float currentTime) {
 	particleVertexShader->SetFloat("currentTime", currentTime);
 	particleVertexShader->SetFloat("scale", this->scale);
 	particleVertexShader->CopyAllBufferData();
-	particlePixelShader->SetFloat3("colorTint", this->colorTint);
+	particlePixelShader->SetFloat4("colorTint", this->colorTint);
 	particlePixelShader->CopyAllBufferData();
 
 	context->DrawIndexed(liveParticleCount * 6, 0, 0);

@@ -126,7 +126,8 @@ public:
 												   DirectX::XMFLOAT3 position, 
 												   std::wstring textureNameToLoad,
 												   std::string name,
-												   bool isMultiParticle);
+												   bool isMultiParticle = false,
+												   bool additiveBlendState = true);
 
 	// Methods to remove assets
 

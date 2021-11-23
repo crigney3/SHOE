@@ -50,5 +50,7 @@ VertexToPixelParticle main(uint id : SV_VertexID)
 	uvs[3] = float2(0, 1);
 	output.uv = uvs[cornerID];
 
+	output.id = particleID;
+
 	return output;
 }

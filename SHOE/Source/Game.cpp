@@ -86,6 +86,7 @@ void Game::Init()
 
 	flashMenuToggle = false;
 	lightUIIndex = 0;
+	emitterUIIndex = 0;
 
 	skies = globalAssets.GetSkyArray();
 	activeSky = 1;
@@ -198,7 +199,6 @@ void Game::RenderUI(float deltaTime) {
 			}
 		};
 		ImGui::SameLine();
-		ImGui::Text("Previous Light");
 
 		if (ImGui::ArrowButton("Next Light", ImGuiDir_Right)) {
 			lightUIIndex++;
@@ -206,8 +206,6 @@ void Game::RenderUI(float deltaTime) {
 				lightUIIndex = 0;
 			}
 		};
-		ImGui::SameLine();
-		ImGui::Text("Next Light");
 
 		ImGui::ColorEdit3("Color: ", &globalAssets.GetLightAtID(lightUIIndex)->color.x);
 		ImGui::DragFloat("Intensity: ", &globalAssets.GetLightAtID(lightUIIndex)->intensity, 1, 10.0f, 200.0f);
@@ -227,14 +225,11 @@ void Game::RenderUI(float deltaTime) {
 			if (entityUIIndex < 0) entityUIIndex = globalAssets.GetGameEntityArraySize() - 1;
 		};
 		ImGui::SameLine();
-		ImGui::Text("Previous Object");
 		
 		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
 			entityUIIndex++;
 			if (entityUIIndex > globalAssets.GetGameEntityArraySize()) entityUIIndex = 0;
 		};
-		ImGui::SameLine();
-		ImGui::Text("Next Object");
 
 		UIPositionEdit = Entities->at(entityUIIndex)->GetTransform()->GetPosition();
 		UIRotationEdit = Entities->at(entityUIIndex)->GetTransform()->GetPitchYawRoll();
@@ -255,6 +250,36 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::InputText("Rename GameObject", nameBuf, sizeof(nameBuffer));
 
 		Entities->at(entityUIIndex)->SetName(nameBuf);
+
+		ImGui::End();
+	}
+
+	// Particle Menu
+	if (particleWindowEnabled) {
+		ImGui::Begin("Particle Editor");
+
+		std::string indexStr = std::to_string(emitterUIIndex);
+		std::string node = "Editing Particle Emitter " + indexStr;
+		ImGui::Text(node.c_str());
+
+		if (ImGui::ArrowButton("Previous Emitter", ImGuiDir_Left)) {
+			emitterUIIndex--;
+			if (emitterUIIndex < 0) {
+				emitterUIIndex = globalAssets.GetEmitterArraySize() - 1;
+			}
+		};
+		ImGui::SameLine();
+
+		if (ImGui::ArrowButton("Next Emitter", ImGuiDir_Right)) {
+			emitterUIIndex++;
+			if (emitterUIIndex > globalAssets.GetEmitterArraySize() - 1) {
+				emitterUIIndex = 0;
+			}
+		};
+
+		DirectX::XMFLOAT4 currentTint = globalAssets.GetEmitterAtID(emitterUIIndex)->GetColorTint();
+		ImGui::ColorEdit3("Color: ", &currentTint.x);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetColorTint(currentTint);
 
 		ImGui::End();
 	}
@@ -328,6 +353,7 @@ void Game::RenderUI(float deltaTime) {
 		if (ImGui::BeginMenu("Edit")) {
 			ImGui::MenuItem("Lights", "l", &lightWindowEnabled);
 			ImGui::MenuItem("GameObjects", "g", &objWindowEnabled);
+			ImGui::MenuItem("Particles", "p", &particleWindowEnabled);
 			ImGui::MenuItem("Terrain", "t", &terrainWindowEnabled);
 			ImGui::MenuItem("Object Hierarchy", "h", &objHierarchyEnabled);
 			ImGui::MenuItem("Skies", "", &skyWindowEnabled);
