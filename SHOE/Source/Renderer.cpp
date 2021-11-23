@@ -24,7 +24,7 @@ Renderer::Renderer(
 	this->mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
 	this->flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
-	InitRenderTargetViews();
+	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
 
 Renderer::~Renderer(){
@@ -33,6 +33,9 @@ Renderer::~Renderer(){
 
 void Renderer::InitRenderTargetViews() {
 	for (int i = 0; i < 3; i++) {
+		ssaoTexture2D[i].Reset();
+		ssaoRTVs[i].Reset();
+
 		D3D11_TEXTURE2D_DESC basicTexDesc = {};
 		basicTexDesc.Width = windowWidth;
 		basicTexDesc.Height = windowHeight;
@@ -55,6 +58,9 @@ void Renderer::InitRenderTargetViews() {
 
 	// Initialize Depths as just a float texture
 	for (int i = 3; i < 6; i++) {
+		ssaoTexture2D[i].Reset();
+		ssaoRTVs[i].Reset();
+
 		D3D11_TEXTURE2D_DESC basicTexDesc = {};
 		basicTexDesc.Width = windowWidth;
 		basicTexDesc.Height = windowHeight;
@@ -85,6 +91,9 @@ void Renderer::InitRenderTargetViews() {
 	}
 
 	// Need to pass this texture to GPU
+	ssaoRandomTex.Reset();
+	ssaoRandomSRV.Reset();
+
 	D3D11_TEXTURE2D_DESC texDesc = {};
 	texDesc.Width = 4;
 	texDesc.Height = 4;
@@ -127,6 +136,9 @@ void Renderer::InitRenderTargetViews() {
 		);
 		XMStoreFloat4(&ssaoOffsets[i], offset * acceleratedScale);
 	}
+
+	particleDepthState.Reset();
+	particleBlendAdditive.Reset();
 
 	D3D11_DEPTH_STENCIL_DESC particleDepthDesc = {};
 	particleDepthDesc.DepthEnable = true; 
@@ -228,6 +240,8 @@ void Renderer::PostResize(unsigned int windowHeight,
 	this->windowWidth = windowWidth;
 	this->backBufferRTV = backBufferRTV;
 	this->depthBufferDSV = depthBufferDSV;
+
+	InitRenderTargetViews();
 }
 
 // ------------------------------------------------------------------------

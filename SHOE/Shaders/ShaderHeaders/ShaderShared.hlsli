@@ -283,7 +283,7 @@ float3 calcLight(VertexToPixel input, LightStruct light, float3 cameraPos, float
 
 		finalColor *= att * att;*/
 
-		finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
+		//finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
 
 		return finalColor;
 	}
@@ -304,7 +304,7 @@ float3 calcLight(VertexToPixel input, LightStruct light, float3 cameraPos, float
 
 		finalColor *= att * att;
 
-		finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
+		//finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
 
 		return finalColor;
 	}
@@ -329,7 +329,7 @@ float3 calcLight(VertexToPixel input, LightStruct light, float3 cameraPos, float
 
 		finalColor *= att * att;
 
-		finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
+		//finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
 
 		return finalColor;
 	}
@@ -399,7 +399,7 @@ float3 calcLight(VertexToPixelNormal input, LightStruct light, float3 cameraPos,
 
 		finalColor *= att * att;
 
-		finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 100.0f);
+		//finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 100.0f);
 
 		return finalColor;
 	}

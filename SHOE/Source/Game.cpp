@@ -441,11 +441,13 @@ void Game::FlickeringCheck() {
 void Game::OnResize()
 {
 	if (mainCamera != 0) {
-		mainCamera->UpdateProjectionMatrix((float)(this->width / this->height), 1);
+		mainCamera->UpdateProjectionMatrix((float)this->width / (float)this->height, 1);
 	}
 
 	// Handle base-level DX resize stuff
 	DXCore::OnResize();
+
+	renderer->PostResize(this->height, this->width, this->backBufferRTV, this->depthStencilView);
 }
 
 // --------------------------------------------------------
