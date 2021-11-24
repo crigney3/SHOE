@@ -37,7 +37,9 @@ Emitter::Emitter(int maxParticles,
 	this->colorTint = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	this->scale = 0.0f;
 
-	Initialize();
+	this->additiveBlend = additiveBlendState;
+
+	Initialize(this->maxParticles);
 }
 
 Emitter::~Emitter() {
@@ -64,8 +66,57 @@ float Emitter::GetScale() {
 	return this->scale;
 }
 
-void Emitter::Initialize() {
-	particles = new Particle[this->maxParticles];
+void Emitter::SetBlendState(bool AdditiveOrNot) {
+	this->additiveBlend = AdditiveOrNot;
+}
+
+bool Emitter::GetBlendState() {
+	return this->additiveBlend;
+}
+
+void Emitter::SetName(std::string name) {
+	this->name = name;
+}
+
+std::string Emitter::GetName() {
+	return this->name;
+}
+
+void Emitter::SetParticlesPerSecond(float particlesPerSecond) {
+	this->particlesPerSecond = particlesPerSecond;
+	this->secondsPerEmission = 1.0f / particlesPerSecond;
+}
+
+float Emitter::GetParticlesPerSecond() {
+	return this->particlesPerSecond;
+}
+
+void Emitter::SetParticleLifetime(float particleLifetime) {
+	this->particleLifetime = particleLifetime;
+}
+
+float Emitter::GetParticleLifetime() {
+	return this->particleLifetime;
+}
+
+void Emitter::SetMaxParticles(int maxParticles) {
+	if (this->maxParticles != maxParticles) {
+		this->firstDeadParticle = 0;
+		this->firstLiveParticle = 0;
+		this->liveParticleCount = 0;
+
+		delete[] particles;
+		this->maxParticles = maxParticles;
+		Initialize(this->maxParticles);
+	}
+}
+
+int Emitter::GetMaxParticles() {
+	return this->maxParticles;
+}
+
+void Emitter::Initialize(int maxParticles) {
+	particles = new Particle[maxParticles];
 	ZeroMemory(particles, sizeof(Particle) * maxParticles);
 
 	D3D11_BUFFER_DESC desc = {};

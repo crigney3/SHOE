@@ -258,7 +258,7 @@ void Game::RenderUI(float deltaTime) {
 	if (particleWindowEnabled) {
 		ImGui::Begin("Particle Editor");
 
-		std::string indexStr = std::to_string(emitterUIIndex);
+		std::string indexStr = globalAssets.GetEmitterAtID(emitterUIIndex)->GetName();
 		std::string node = "Editing Particle Emitter " + indexStr;
 		ImGui::Text(node.c_str());
 
@@ -277,9 +277,48 @@ void Game::RenderUI(float deltaTime) {
 			}
 		};
 
+		std::string nameBuffer;
+		static char nameBuf[64] = "";
+		nameBuffer = globalAssets.GetEmitterAtID(emitterUIIndex)->GetName();
+		strcpy_s(nameBuf, nameBuffer.c_str());
+		ImGui::InputText("Rename Emitter: ", nameBuf, sizeof(nameBuffer));
+
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetName(nameBuf);
+
 		DirectX::XMFLOAT4 currentTint = globalAssets.GetEmitterAtID(emitterUIIndex)->GetColorTint();
 		ImGui::ColorEdit3("Color: ", &currentTint.x);
 		globalAssets.GetEmitterAtID(emitterUIIndex)->SetColorTint(currentTint);
+
+		bool blendState = globalAssets.GetEmitterAtID(emitterUIIndex)->GetBlendState();
+		ImGui::Checkbox("Blend State: ", &blendState);
+		ImGui::SameLine();
+		if (blendState) {
+			ImGui::Text("Blend state is additive.");
+		}
+		else {
+			ImGui::Text("Blend state is not additive.");
+		}
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetBlendState(blendState);
+
+		float scale = globalAssets.GetEmitterAtID(emitterUIIndex)->GetScale();
+		ImGui::SliderFloat("Scale with age: ", &scale, 0.0f, 2.0f);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetScale(scale);
+
+		float particlesPerSecond = globalAssets.GetEmitterAtID(emitterUIIndex)->GetParticlesPerSecond();
+		ImGui::SliderFloat("Particles per Second: ", &particlesPerSecond, 0.1f, 20.0f);
+		ImGui::SameLine();
+		ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetParticlesPerSecond(particlesPerSecond);
+
+		float particlesLifetime = globalAssets.GetEmitterAtID(emitterUIIndex)->GetParticleLifetime();
+		ImGui::SliderFloat("Particles Lifetime: ", &particlesLifetime, 0.1f, 20.0f);
+		ImGui::SameLine();
+		ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetParticleLifetime(particlesLifetime);
+
+		int maxParticles = globalAssets.GetEmitterAtID(emitterUIIndex)->GetMaxParticles();
+		ImGui::InputInt("Max Particles: ", &maxParticles);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetMaxParticles(maxParticles);
 
 		ImGui::End();
 	}

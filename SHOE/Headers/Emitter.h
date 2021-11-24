@@ -33,9 +33,24 @@ public:
 	void SetScale(float scale);
 	float GetScale();
 
+	void SetBlendState(bool AdditiveOrNot);
+	bool GetBlendState();
+
+	void SetParticlesPerSecond(float particlesPerSecond);
+	float GetParticlesPerSecond();
+
+	void SetParticleLifetime(float particleLifetime);
+	float GetParticleLifetime();
+
+	void SetMaxParticles(int maxParticles);
+	int GetMaxParticles();
+
+	void SetName(std::string name);
+	std::string GetName();
+
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleDataSRV;
 private:
-	void Initialize();
+	void Initialize(int maxParticles);
 	void EmitParticle(float currentTime);
 	void UpdateParticle(float currentTime, int index);
 
