@@ -111,6 +111,9 @@
     <ClInclude Include="IMGUI\Headers\imstb_truetype.h">
       <Filter>Header Files\IMGUI-Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\Emitter.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\PixelShaders\IBLBrdfLookUpTablePS.hlsl">
@@ -165,6 +168,12 @@
       <Filter>Shaders\VertexShaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\VertexShaders\VSTerrainBlend.hlsl">
+      <Filter>Shaders\VertexShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PixelShaders\PSParticles.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\VertexShaders\VSParticles.hlsl">
       <Filter>Shaders\VertexShaders</Filter>
     </FxCompile>
   </ItemGroup>
@@ -227,6 +236,9 @@
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\Transform.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Emitter.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
   </ItemGroup>

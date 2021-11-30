@@ -12,6 +12,10 @@
 #include <map>
 #include <random>
 #include "DXCore.h"
+#include "Emitter.h"
+#include "experimental\filesystem"
+#include <locale>
+#include <codecvt>
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 
@@ -80,6 +84,7 @@ private:
 	void InitializeTerrainMaterials();
 	void InitializeCameras();
 	void InitializeSkies();
+	void InitializeEmitters();
 
 	std::vector<std::shared_ptr<SimplePixelShader>> pixelShaders;
 	std::vector<std::shared_ptr<SimpleVertexShader>> vertexShaders;
@@ -91,6 +96,7 @@ private:
 	std::vector<std::shared_ptr<Light>> globalLights;
 	std::vector<std::shared_ptr<TerrainMats>> globalTerrainMaterials;
 	std::vector<std::shared_ptr<GameEntity>> globalTerrainEntities;
+	std::vector<std::shared_ptr<Emitter>> globalParticleEmitters;
 
 public:
 	~AssetManager();
@@ -114,6 +120,14 @@ public:
 											    std::wstring metalnessNameToLoad,
 											    std::wstring roughnessNameToLoad);
 	std::shared_ptr<GameEntity> CreateTerrainEntity(std::shared_ptr<Mesh> mesh, std::string name = "Terrain");
+	std::shared_ptr<Emitter> CreateParticleEmitter(int maxParticles,
+												   float particleLifeTime,
+												   float particlesPerSecond,
+												   DirectX::XMFLOAT3 position, 
+												   std::wstring textureNameToLoad,
+												   std::string name,
+												   bool isMultiParticle = false,
+												   bool additiveBlendState = true);
 
 	// Methods to remove assets
 
@@ -137,6 +151,8 @@ public:
 	void RemoveTerrainMaterial(int id);
 	void RemoveLight(std::string name);
 	void RemoveLight(int id);
+	void RemoveEmitter(std::string name);
+	void RemoveEmitter(int id);
 
 	// Methods to disable and enable assets for rendering
 	// Currently not implemented except for lights
@@ -199,11 +215,15 @@ public:
 	size_t GetLightArraySize();
 	size_t GetTerrainMaterialArraySize();
 	size_t GetTerrainEntityArraySize();
+	size_t GetEmitterArraySize();
 	Light* GetLightArray();
 	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
 	std::vector<std::shared_ptr<Sky>>* GetSkyArray();
 	Light* GetFlashlight();
 	Light* GetLightAtID(int id);
+	std::shared_ptr<Emitter> GetEmitterAtID(int id);
+
+	inline std::wstring ConvertToWide(const std::string& as);
 
 	std::shared_ptr<Sky> currentSky;
 	int lightCount;

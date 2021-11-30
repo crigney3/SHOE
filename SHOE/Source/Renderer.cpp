@@ -24,7 +24,7 @@ Renderer::Renderer(
 	this->mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
 	this->flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
-	InitRenderTargetViews();
+	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
 
 Renderer::~Renderer(){
@@ -33,6 +33,9 @@ Renderer::~Renderer(){
 
 void Renderer::InitRenderTargetViews() {
 	for (int i = 0; i < 3; i++) {
+		ssaoTexture2D[i].Reset();
+		ssaoRTVs[i].Reset();
+
 		D3D11_TEXTURE2D_DESC basicTexDesc = {};
 		basicTexDesc.Width = windowWidth;
 		basicTexDesc.Height = windowHeight;
@@ -55,6 +58,9 @@ void Renderer::InitRenderTargetViews() {
 
 	// Initialize Depths as just a float texture
 	for (int i = 3; i < 6; i++) {
+		ssaoTexture2D[i].Reset();
+		ssaoRTVs[i].Reset();
+
 		D3D11_TEXTURE2D_DESC basicTexDesc = {};
 		basicTexDesc.Width = windowWidth;
 		basicTexDesc.Height = windowHeight;
@@ -85,6 +91,9 @@ void Renderer::InitRenderTargetViews() {
 	}
 
 	// Need to pass this texture to GPU
+	ssaoRandomTex.Reset();
+	ssaoRandomSRV.Reset();
+
 	D3D11_TEXTURE2D_DESC texDesc = {};
 	texDesc.Width = 4;
 	texDesc.Height = 4;
@@ -127,6 +136,26 @@ void Renderer::InitRenderTargetViews() {
 		);
 		XMStoreFloat4(&ssaoOffsets[i], offset * acceleratedScale);
 	}
+
+	particleDepthState.Reset();
+	particleBlendAdditive.Reset();
+
+	D3D11_DEPTH_STENCIL_DESC particleDepthDesc = {};
+	particleDepthDesc.DepthEnable = true; 
+	particleDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; 
+	particleDepthDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	device->CreateDepthStencilState(&particleDepthDesc, particleDepthState.GetAddressOf());
+
+	D3D11_BLEND_DESC additiveBlendDesc = {};
+	additiveBlendDesc.RenderTarget[0].BlendEnable = true;
+	additiveBlendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD; // Add both colors
+	additiveBlendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD; // Add both alpha values
+	additiveBlendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;   // 100% of source color
+	additiveBlendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;  // 100% of destination color
+	additiveBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;   // 100% of source alpha
+	additiveBlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;  // 100% of destination alpha
+	additiveBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	device->CreateBlendState(&additiveBlendDesc, particleBlendAdditive.GetAddressOf());
 }
 
 void Renderer::InitShadows() {
@@ -211,6 +240,8 @@ void Renderer::PostResize(unsigned int windowHeight,
 	this->windowWidth = windowWidth;
 	this->backBufferRTV = backBufferRTV;
 	this->depthBufferDSV = depthBufferDSV;
+
+	InitRenderTargetViews();
 }
 
 // ------------------------------------------------------------------------
@@ -335,7 +366,7 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferI
 	context->RSSetState(0);
 }
 
-void Renderer::Draw(std::shared_ptr<Camera> cam) {
+void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	// Background color (Cornflower Blue in this case) for clearing
 	const float color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -502,6 +533,18 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
 	DrawPointLights();
 
+	renderTargets[0] = backBufferRTV.Get();
+	context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
+	
+	context->OMSetDepthStencilState(particleDepthState.Get(), 0);
+
+	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
+		globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime, particleBlendAdditive);
+	}
+
+	context->OMSetBlendState(0, 0, 0xFFFFFFFF);
+	context->OMSetDepthStencilState(0, 0);
+
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
@@ -515,8 +558,8 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
 
 	// Unbind all in-use shader resources
-	ID3D11ShaderResourceView* nullSRVs[16] = {};
-	context->PSSetShaderResources(0, 16, nullSRVs);
+	ID3D11ShaderResourceView* nullSRVs[32] = {};
+	context->PSSetShaderResources(0, 32, nullSRVs);
 }
 
 void Renderer::SetActiveSky(std::shared_ptr<Sky> sky) {

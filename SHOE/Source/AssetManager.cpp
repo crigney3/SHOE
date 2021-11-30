@@ -22,6 +22,7 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	InitializeTerrainMaterials();
 	InitializeGameEntities();
 	InitializeSkies();
+	InitializeEmitters();
 }
 #pragma endregion
 
@@ -168,6 +169,112 @@ std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11Shader
 	skies.push_back(newSky);
 
 	return newSky;
+}
+
+std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
+															 float particleLifeTime,
+															 float particlesPerSecond,
+															 DirectX::XMFLOAT3 position, 
+															 std::wstring textureNameToLoad,
+															 std::string name,
+															 bool isMultiParticle,
+															 bool additiveBlendState) {
+	std::shared_ptr<Emitter> newEmitter;
+
+	std::wstring assetPathString = L"../../../Assets/Particles/";
+
+	if (isMultiParticle) {
+		// Load all particle textures in a specific subfolder
+		std::string assets = "../../../Assets/Particles/";
+		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+		std::string subfolderPath = converter.to_bytes(textureNameToLoad);
+		
+		std::vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>> textures;
+		int i = 0;
+		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(dxInstance->GetFullPathTo(assets + subfolderPath))) {
+			textures.push_back(nullptr);
+			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
+			std::wstring path = ConvertToWide(p.path().string().c_str());
+
+			CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), (ID3D11Resource**)textures[i].GetAddressOf(), nullptr);
+
+			i++;
+		}
+
+		D3D11_TEXTURE2D_DESC faceDesc = {};
+		textures[0]->GetDesc(&faceDesc);
+
+		D3D11_TEXTURE2D_DESC multiTextureDesc = {};
+		multiTextureDesc.ArraySize = (int)textures.size();
+		multiTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		multiTextureDesc.CPUAccessFlags = 0;
+		multiTextureDesc.Format = faceDesc.Format;
+		multiTextureDesc.Width = faceDesc.Width;
+		multiTextureDesc.Height = faceDesc.Height;
+		multiTextureDesc.MipLevels = 1;
+		multiTextureDesc.Usage = D3D11_USAGE_DEFAULT;
+		multiTextureDesc.SampleDesc.Count = 1;
+		multiTextureDesc.SampleDesc.Quality = 0;
+
+		ID3D11Texture2D* outputTexture;
+		device->CreateTexture2D(&multiTextureDesc, 0, &outputTexture);
+
+		for (int i = 0; i < (int)textures.size(); i++) {
+			unsigned int subresource = D3D11CalcSubresource(0, i, 1);
+
+			if (textures[i] != nullptr) {
+				context->CopySubresourceRegion(outputTexture, subresource, 0, 0, 0, (ID3D11Resource*)textures[i].Get(), 0, 0);
+			}
+		}
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = multiTextureDesc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		srvDesc.Texture2DArray.MipLevels = 1;
+		srvDesc.Texture2DArray.ArraySize = (int)textures.size();
+
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureArraySRV;
+		device->CreateShaderResourceView(outputTexture, &srvDesc, textureArraySRV.GetAddressOf());
+
+		outputTexture->Release();
+
+		newEmitter = std::make_shared<Emitter>(maxParticles,
+											   particleLifeTime,
+											   particlesPerSecond,
+											   position,
+											   GetPixelShaderByName("ParticlesPS"),
+											   GetVertexShaderByName("ParticlesVS"),
+											   textureArraySRV,
+											   device,
+											   context,
+											   name,
+											   isMultiParticle,
+											   additiveBlendState);
+	}
+	else {
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
+
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + textureNameToLoad).c_str(), nullptr, &albedo);
+
+		newEmitter = std::make_shared<Emitter>(maxParticles,
+											   particleLifeTime,
+											   particlesPerSecond,
+											   position,
+											   GetPixelShaderByName("ParticlesPS"),
+											   GetVertexShaderByName("ParticlesVS"),
+											   albedo,
+											   device,
+											   context,
+											   name,
+											   isMultiParticle,
+											   additiveBlendState);
+	}
+
+	
+
+	globalParticleEmitters.push_back(newEmitter);
+
+	return newEmitter;
 }
 #pragma endregion
 
@@ -505,6 +612,7 @@ void AssetManager::InitializeShaders() {
 	CreateVertexShader("SkyVS", L"VSSkybox.cso");
 	CreateVertexShader("TerrainVS", L"VSTerrainBlend.cso");
 	CreateVertexShader("ShadowVS", L"VSShadowMap.cso");
+	CreateVertexShader("ParticlesVS", L"VSParticles.cso");
 	CreateVertexShader("FullscreenVS", L"FullscreenVS.cso");
 
 	// Make pixel shaders
@@ -519,6 +627,22 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("SSAOPS", L"PSAmbientOcclusion.cso");
 	CreatePixelShader("SSAOBlurPS", L"PSOcclusionBlur.cso");
 	CreatePixelShader("SSAOCombinePS", L"PSOcclusionCombine.cso");
+	CreatePixelShader("ParticlesPS", L"PSParticles.cso");
+}
+
+void AssetManager::InitializeEmitters() {
+	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), L"Smoke/smoke_01.png", "basicParticle");
+	CreateParticleEmitter(20, 1.0f, 3.0f, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), L"Smoke/", "basicParticles", true);
+	globalParticleEmitters[1]->SetScale(1.0f);
+	CreateParticleEmitter(30, 2.0f, 15.0f, DirectX::XMFLOAT3(-1.0f, 0.0f, 0.0f), L"Flame/", "flameParticles", true);
+	globalParticleEmitters[2]->SetColorTint(DirectX::XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
+	CreateParticleEmitter(10, 1.0f, 8.0f, DirectX::XMFLOAT3(-2.0f, 0.0f, 0.0f), L"Star/", "starParticle", true);
+	CreateParticleEmitter(4, 2.0f, 8.0f, DirectX::XMFLOAT3(-3.0f, 0.0f, 0.0f), L"Star/star_08.png", "starParticles");
+	globalParticleEmitters[3]->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+	globalParticleEmitters[3]->SetScale(0.75f);
+	globalParticleEmitters[4]->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+	//CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);
+	//globalParticleEmitters[5]->SetColorTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f));
 }
 #pragma endregion
 
@@ -575,6 +699,10 @@ size_t AssetManager::GetTerrainEntityArraySize() {
 	return this->globalTerrainEntities.size();
 }
 
+size_t AssetManager::GetEmitterArraySize() {
+	return this->globalParticleEmitters.size();
+}
+
 Light* AssetManager::GetLightArray() {
 	Light lightArray[64];
 	for (int i = 0; i < globalLights.size(); i++) {
@@ -598,6 +726,10 @@ Light* AssetManager::GetFlashlight() {
 
 Light* AssetManager::GetLightAtID(int id) {
 	return this->globalLights[id].get();
+}
+
+std::shared_ptr<Emitter> AssetManager::GetEmitterAtID(int id) {
+	return this->globalParticleEmitters[id];
 }
 
 #pragma endregion
@@ -1331,5 +1463,18 @@ int AssetManager::GetMaterialIDByName(std::string name) {
 //	return -1;
 //}
 
+
+#pragma endregion
+
+#pragma inlines
+
+inline std::wstring AssetManager::ConvertToWide(const std::string& as)
+{
+	wchar_t* buf = new wchar_t[as.size() * 2 + 2];
+	swprintf_s(buf, as.size() * 2 + 2, L"%S", as.c_str());
+	std::wstring rval = buf;
+	delete[] buf;
+	return rval;
+}
 
 #pragma endregion

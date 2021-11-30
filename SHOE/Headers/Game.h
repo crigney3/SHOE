@@ -13,6 +13,7 @@
 #include "Input.h"
 #include "Renderer.h"
 #include "AssetManager.h"
+#include "Emitter.h"
 
 class Game 
 	: public DXCore
@@ -67,6 +68,7 @@ private:
 	bool statsEnabled;
 	bool lightWindowEnabled;
 	bool objWindowEnabled;
+	bool particleWindowEnabled;
 	bool objHierarchyEnabled;
 	bool skyWindowEnabled;
 	bool terrainWindowEnabled;
@@ -74,6 +76,7 @@ private:
 	bool rtvWindowEnabled;
 	int entityUIIndex;
 	int terrainUIIndex;
+	int emitterUIIndex;
 	std::vector<int> childIndices;
 	DirectX::XMFLOAT3 UIPositionEdit;
 	DirectX::XMFLOAT3 UIRotationEdit;

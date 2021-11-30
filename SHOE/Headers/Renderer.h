@@ -28,6 +28,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> ssaoRandomTex;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ssaoRandomSRV;
 
+    Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> particleDepthState;
+
     // SSAO and MRT render target views
     // Stored in the following order:
     // 0 - Color minus ambient
@@ -80,7 +83,7 @@ public:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(int index);
 
     void DrawPointLights();
-    void Draw(std::shared_ptr<Camera> camera);
+    void Draw(std::shared_ptr<Camera> camera, float totalTime);
 
     void SetActiveSky(std::shared_ptr<Sky> sky);
 
