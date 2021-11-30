@@ -23,6 +23,7 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	InitializeGameEntities();
 	InitializeSkies();
 	InitializeEmitters();
+	InitializeAudio();
 }
 #pragma endregion
 
@@ -644,6 +645,17 @@ void AssetManager::InitializeEmitters() {
 	//CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);
 	//globalParticleEmitters[5]->SetColorTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f));
 }
+
+void AssetManager::InitializeAudio() {
+	audioInstance.Initialize();
+
+	globalSounds = std::vector<FMOD::Sound*>();
+	FMOD::Sound* sound;
+
+	sound = audioInstance.LoadSound(dxInstance->GetFullPathTo("../../../Assets/Sounds/PianoNotes/68437__pinkyfinger__piano-a.wav"), FMOD_DEFAULT);
+
+	globalSounds.push_back(sound);
+}
 #pragma endregion
 
 #pragma region getMethods
@@ -730,6 +742,10 @@ Light* AssetManager::GetLightAtID(int id) {
 
 std::shared_ptr<Emitter> AssetManager::GetEmitterAtID(int id) {
 	return this->globalParticleEmitters[id];
+}
+
+FMOD::Sound* AssetManager::GetSoundAtID(int id) {
+	return this->globalSounds[id];
 }
 
 #pragma endregion

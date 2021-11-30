@@ -149,6 +149,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Headers\AssetManager.h" />
+    <ClInclude Include="Headers\AudioHandler.h" />
     <ClInclude Include="Headers\Camera.h" />
     <ClInclude Include="Headers\DXCore.h" />
     <ClInclude Include="Headers\Emitter.h" />
@@ -304,6 +305,7 @@
     <ClCompile Include="IMGUI\Source\imgui_tables.cpp" />
     <ClCompile Include="IMGUI\Source\imgui_widgets.cpp" />
     <ClCompile Include="Source\AssetManager.cpp" />
+    <ClCompile Include="Source\AudioHandler.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\DXCore.cpp" />
     <ClCompile Include="Source\Emitter.cpp" />

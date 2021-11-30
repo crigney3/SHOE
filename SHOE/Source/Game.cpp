@@ -55,6 +55,7 @@ Game::~Game()
 
 	delete& Input::GetInstance();
 	delete& AssetManager::GetInstance();
+	delete& AudioHandler::GetInstance();
 }
 
 // --------------------------------------------------------
@@ -323,6 +324,16 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::End();
 	}
 
+	if (soundWindowEnabled) {
+		ImGui::Begin("Sound Menu");
+
+		if (ImGui::Button("Play Piano Sound")) {
+			audioHandler.BasicPlaySound(globalAssets.GetSoundAtID(0));
+		}
+
+		ImGui::End();
+	}
+
 	if (objHierarchyEnabled) {
 		// Display the UI for setting parents
 		if (ImGui::TreeNodeEx("GameObjects", 
@@ -520,6 +531,8 @@ void Game::OnResize()
 // --------------------------------------------------------
 void Game::Update(float deltaTime, float totalTime)
 {
+	audioHandler.GetSoundSystem()->update();
+
 	RenderUI(deltaTime);
 
 	// To untie something from framerate, multiply by deltatime
