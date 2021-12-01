@@ -43,7 +43,7 @@ Emitter::Emitter(int maxParticles,
 }
 
 Emitter::~Emitter() {
-	delete[] particles;
+	delete[this->maxParticles] particles;
 }
 
 void Emitter::SetColorTint(DirectX::XMFLOAT4 color) {
@@ -105,7 +105,9 @@ void Emitter::SetMaxParticles(int maxParticles) {
 		this->firstLiveParticle = 0;
 		this->liveParticleCount = 0;
 
-		delete[] particles;
+		delete[this->maxParticles] particles;
+		particleDataSRV.Reset();
+		particleDataBuffer.Reset();
 		this->maxParticles = maxParticles;
 		Initialize(this->maxParticles);
 	}

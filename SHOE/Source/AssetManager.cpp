@@ -7,6 +7,8 @@ AssetManager* AssetManager::instance;
 
 AssetManager::~AssetManager() {
 	// Everything should be smart-pointer managed
+	// Except sounds
+	globalSounds.clear();
 }
 
 void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context) {
@@ -28,6 +30,17 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 #pragma endregion
 
 #pragma region createAssets
+FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode) {
+	FMOD::Sound* sound;
+	std::string assetPath = "../../../Assets/Sounds/";
+
+	sound = audioInstance.LoadSound(dxInstance->GetFullPathTo(assetPath + path), mode);
+
+	globalSounds.push_back(sound);
+
+	return sound;
+}
+
 std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFLOAT3 pos, float aspectRatio, int type) {
 	std::shared_ptr<Camera> newCam;
 
@@ -650,11 +663,16 @@ void AssetManager::InitializeAudio() {
 	audioInstance.Initialize();
 
 	globalSounds = std::vector<FMOD::Sound*>();
-	FMOD::Sound* sound;
-
-	sound = audioInstance.LoadSound(dxInstance->GetFullPathTo("../../../Assets/Sounds/PianoNotes/68437__pinkyfinger__piano-a.wav"), FMOD_DEFAULT);
-
-	globalSounds.push_back(sound);
+	
+	CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-bb.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-c.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-e.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-eb.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-d.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-f.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-g.wav", FMOD_DEFAULT);
 }
 #pragma endregion
 
@@ -713,6 +731,10 @@ size_t AssetManager::GetTerrainEntityArraySize() {
 
 size_t AssetManager::GetEmitterArraySize() {
 	return this->globalParticleEmitters.size();
+}
+
+size_t AssetManager::GetSoundArraySize() {
+	return this->globalSounds.size();
 }
 
 Light* AssetManager::GetLightArray() {

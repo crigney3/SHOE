@@ -327,10 +327,13 @@ void Game::RenderUI(float deltaTime) {
 	if (soundWindowEnabled) {
 		ImGui::Begin("Sound Menu");
 
-		if (ImGui::Button("Play Piano Sound")) {
-			audioHandler.BasicPlaySound(globalAssets.GetSoundAtID(0));
+		for (int i = 0; i < globalAssets.GetSoundArraySize(); i++) {
+			std::string buttonName = "Play Piano Sound ##" + std::to_string(i);
+			if (ImGui::Button(buttonName.c_str())) {
+				audioHandler.BasicPlaySound(globalAssets.GetSoundAtID(i));
+			}
 		}
-
+		
 		ImGui::End();
 	}
 
@@ -407,6 +410,7 @@ void Game::RenderUI(float deltaTime) {
 			ImGui::MenuItem("Terrain", "t", &terrainWindowEnabled);
 			ImGui::MenuItem("Object Hierarchy", "h", &objHierarchyEnabled);
 			ImGui::MenuItem("Skies", "", &skyWindowEnabled);
+			ImGui::MenuItem("Sound", "", &soundWindowEnabled);
 
 			ImGui::EndMenu();
 		}

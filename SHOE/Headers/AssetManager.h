@@ -132,6 +132,8 @@ public:
 												   std::string name,
 												   bool isMultiParticle = false,
 												   bool additiveBlendState = true);
+	FMOD::Sound* CreateSound(std::string filePath,
+							 FMOD_MODE mode);
 
 	// Methods to remove assets
 
@@ -221,6 +223,7 @@ public:
 	size_t GetTerrainMaterialArraySize();
 	size_t GetTerrainEntityArraySize();
 	size_t GetEmitterArraySize();
+	size_t GetSoundArraySize();
 	Light* GetLightArray();
 	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
 	std::vector<std::shared_ptr<Sky>>* GetSkyArray();
