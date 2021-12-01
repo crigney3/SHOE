@@ -33,6 +33,7 @@ public:
 private:
 	// Asset Manager instance
 	AssetManager& globalAssets = AssetManager::GetInstance();
+	AudioHandler& audioHandler = AudioHandler::GetInstance();
 
 	// Initialization helper methods
 
@@ -74,6 +75,7 @@ private:
 	bool terrainWindowEnabled;
 	bool movingEnabled;
 	bool rtvWindowEnabled;
+	bool soundWindowEnabled;
 	int entityUIIndex;
 	int terrainUIIndex;
 	int emitterUIIndex;

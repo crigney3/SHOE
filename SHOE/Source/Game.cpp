@@ -55,6 +55,7 @@ Game::~Game()
 
 	delete& Input::GetInstance();
 	delete& AssetManager::GetInstance();
+	delete& AudioHandler::GetInstance();
 }
 
 // --------------------------------------------------------
@@ -323,6 +324,19 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::End();
 	}
 
+	if (soundWindowEnabled) {
+		ImGui::Begin("Sound Menu");
+
+		for (int i = 0; i < globalAssets.GetSoundArraySize(); i++) {
+			std::string buttonName = "Play Piano Sound ##" + std::to_string(i);
+			if (ImGui::Button(buttonName.c_str())) {
+				audioHandler.BasicPlaySound(globalAssets.GetSoundAtID(i));
+			}
+		}
+		
+		ImGui::End();
+	}
+
 	if (objHierarchyEnabled) {
 		// Display the UI for setting parents
 		if (ImGui::TreeNodeEx("GameObjects", 
@@ -396,6 +410,7 @@ void Game::RenderUI(float deltaTime) {
 			ImGui::MenuItem("Terrain", "t", &terrainWindowEnabled);
 			ImGui::MenuItem("Object Hierarchy", "h", &objHierarchyEnabled);
 			ImGui::MenuItem("Skies", "", &skyWindowEnabled);
+			ImGui::MenuItem("Sound", "", &soundWindowEnabled);
 
 			ImGui::EndMenu();
 		}
@@ -520,6 +535,8 @@ void Game::OnResize()
 // --------------------------------------------------------
 void Game::Update(float deltaTime, float totalTime)
 {
+	audioHandler.GetSoundSystem()->update();
+
 	RenderUI(deltaTime);
 
 	// To untie something from framerate, multiply by deltatime

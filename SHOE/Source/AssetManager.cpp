@@ -7,6 +7,8 @@ AssetManager* AssetManager::instance;
 
 AssetManager::~AssetManager() {
 	// Everything should be smart-pointer managed
+	// Except sounds
+	globalSounds.clear();
 }
 
 void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context) {
@@ -23,10 +25,22 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	InitializeGameEntities();
 	InitializeSkies();
 	InitializeEmitters();
+	InitializeAudio();
 }
 #pragma endregion
 
 #pragma region createAssets
+FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode) {
+	FMOD::Sound* sound;
+	std::string assetPath = "../../../Assets/Sounds/";
+
+	sound = audioInstance.LoadSound(dxInstance->GetFullPathTo(assetPath + path), mode);
+
+	globalSounds.push_back(sound);
+
+	return sound;
+}
+
 std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFLOAT3 pos, float aspectRatio, int type) {
 	std::shared_ptr<Camera> newCam;
 
@@ -644,6 +658,22 @@ void AssetManager::InitializeEmitters() {
 	//CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);
 	//globalParticleEmitters[5]->SetColorTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f));
 }
+
+void AssetManager::InitializeAudio() {
+	audioInstance.Initialize();
+
+	globalSounds = std::vector<FMOD::Sound*>();
+	
+	CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-bb.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-c.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-e.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-eb.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-d.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-f.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-g.wav", FMOD_DEFAULT);
+}
 #pragma endregion
 
 #pragma region getMethods
@@ -703,6 +733,10 @@ size_t AssetManager::GetEmitterArraySize() {
 	return this->globalParticleEmitters.size();
 }
 
+size_t AssetManager::GetSoundArraySize() {
+	return this->globalSounds.size();
+}
+
 Light* AssetManager::GetLightArray() {
 	Light lightArray[64];
 	for (int i = 0; i < globalLights.size(); i++) {
@@ -730,6 +764,10 @@ Light* AssetManager::GetLightAtID(int id) {
 
 std::shared_ptr<Emitter> AssetManager::GetEmitterAtID(int id) {
 	return this->globalParticleEmitters[id];
+}
+
+FMOD::Sound* AssetManager::GetSoundAtID(int id) {
+	return this->globalSounds[id];
 }
 
 #pragma endregion
