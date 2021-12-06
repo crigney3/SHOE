@@ -55,7 +55,7 @@ PS_Output main(VertexToPixelNormal input)
 
 	input.normal = mul(unpackedNormal, TBN);
 
-	float3 albedoColor = pow(textureAlbedo.Sample(sampleState, input.uv).rgb, 2.2f);
+	float3 albedoColor = textureAlbedo.Sample(sampleState, input.uv).rgb;
 
 	//Sample roughness map
 	float roughness = textureRough.Sample(sampleState, input.uv).r;

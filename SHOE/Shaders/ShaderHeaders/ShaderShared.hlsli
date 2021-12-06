@@ -141,6 +141,18 @@ struct VertexToPixel
 	float2 uv			: TEXCOORD;
 };
 
+struct VertexToPixelParticle
+{
+	// Data type
+	//  |
+	//  |   Name          Semantic
+	//  |    |                |
+	//  v    v                v
+	float4 position		: SV_POSITION;
+	float2 uv			: TEXCOORD;
+	uint id				: VERTEX_ID;
+};
+
 struct VertexToPixelNormal
 {
 	// Data type
@@ -272,7 +284,7 @@ float3 calcLight(VertexToPixel input, LightStruct light, float3 cameraPos, float
 
 		finalColor *= att * att;*/
 
-		finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
+		//finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
 
 		return finalColor;
 	}
@@ -293,7 +305,7 @@ float3 calcLight(VertexToPixel input, LightStruct light, float3 cameraPos, float
 
 		finalColor *= att * att;
 
-		finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
+		//finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
 
 		return finalColor;
 	}
@@ -318,7 +330,7 @@ float3 calcLight(VertexToPixel input, LightStruct light, float3 cameraPos, float
 
 		finalColor *= att * att;
 
-		finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
+		//finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 20.0f);
 
 		return finalColor;
 	}
@@ -388,7 +400,7 @@ float3 calcLight(VertexToPixelNormal input, LightStruct light, float3 cameraPos,
 
 		finalColor *= att * att;
 
-		finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 100.0f);
+		//finalColor *= pow(max(dot(-toLight, light.direction), 0.0f), 100.0f);
 
 		return finalColor;
 	}

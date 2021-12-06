@@ -30,16 +30,27 @@ public:
 	void UpdateProjectionMatrix(float aspectRatio, bool type);
 	void UpdateViewMatrix();
 	void Update(float dt, HWND windowHandle);
+
+	float GetFOV();
 	void SetFOV(float fov);
+
+	float GetNearDist();
 	void SetNearDist(float nearDist);
+
+	float GetFarDist();
 	void SetFarDist(float farDist);
+
+	float GetMoveSpeed();
 	void SetMoveSpeed(float moveSpeed);
+
+	float GetLookSpeed();
 	void SetLookSpeed(float lookSpeed);
 
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();
 
 	std::string GetName();
+	void SetName(std::string name);
 
 private:
 	std::shared_ptr<Transform> transform;

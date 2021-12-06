@@ -55,6 +55,7 @@ Game::~Game()
 
 	delete& Input::GetInstance();
 	delete& AssetManager::GetInstance();
+	delete& AudioHandler::GetInstance();
 }
 
 // --------------------------------------------------------
@@ -86,6 +87,8 @@ void Game::Init()
 
 	flashMenuToggle = false;
 	lightUIIndex = 0;
+	emitterUIIndex = 0;
+	camUIIndex = 0;
 
 	skies = globalAssets.GetSkyArray();
 	activeSky = 1;
@@ -179,7 +182,7 @@ void Game::RenderUI(float deltaTime) {
 
 	if (skyWindowEnabled) {
 		ImGui::Begin("Sky Editor");
-		ImGui::Image((ImTextureID*)globalAssets.currentSky->GetBRDFLookupTexture().Get(), ImVec2(256, 256));
+		ImGui::Image(globalAssets.GetEmitterAtID(0)->particleDataSRV.Get(), ImVec2(256, 256));
 		ImGui::End();
 	}
 
@@ -198,7 +201,6 @@ void Game::RenderUI(float deltaTime) {
 			}
 		};
 		ImGui::SameLine();
-		ImGui::Text("Previous Light");
 
 		if (ImGui::ArrowButton("Next Light", ImGuiDir_Right)) {
 			lightUIIndex++;
@@ -206,8 +208,6 @@ void Game::RenderUI(float deltaTime) {
 				lightUIIndex = 0;
 			}
 		};
-		ImGui::SameLine();
-		ImGui::Text("Next Light");
 
 		ImGui::ColorEdit3("Color: ", &globalAssets.GetLightAtID(lightUIIndex)->color.x);
 		ImGui::DragFloat("Intensity: ", &globalAssets.GetLightAtID(lightUIIndex)->intensity, 1, 10.0f, 200.0f);
@@ -223,18 +223,15 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::Text(node.c_str());
 
 		if (ImGui::ArrowButton("Previous Object", ImGuiDir_Left)) {
-			if (entityUIIndex - 1 < 0) entityUIIndex = globalAssets.GetGameEntityArraySize();
-			else entityUIIndex--;
+			entityUIIndex--;
+			if (entityUIIndex < 0) entityUIIndex = globalAssets.GetGameEntityArraySize() - 1;
 		};
 		ImGui::SameLine();
-		ImGui::Text("Previous Object");
 		
 		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
-			if (entityUIIndex + 1 > globalAssets.GetGameEntityArraySize()) entityUIIndex = 0;
-			else entityUIIndex++;
+			entityUIIndex++;
+			if (entityUIIndex > globalAssets.GetGameEntityArraySize()) entityUIIndex = 0;
 		};
-		ImGui::SameLine();
-		ImGui::Text("Next Object");
 
 		UIPositionEdit = Entities->at(entityUIIndex)->GetTransform()->GetPosition();
 		UIRotationEdit = Entities->at(entityUIIndex)->GetTransform()->GetPitchYawRoll();
@@ -256,6 +253,88 @@ void Game::RenderUI(float deltaTime) {
 
 		Entities->at(entityUIIndex)->SetName(nameBuf);
 
+		ImGui::End();
+	}
+
+	// Particle Menu
+	if (particleWindowEnabled) {
+		ImGui::Begin("Particle Editor");
+
+		std::string indexStr = globalAssets.GetEmitterAtID(emitterUIIndex)->GetName();
+		std::string node = "Editing Particle Emitter " + indexStr;
+		ImGui::Text(node.c_str());
+
+		if (ImGui::ArrowButton("Previous Emitter", ImGuiDir_Left)) {
+			emitterUIIndex--;
+			if (emitterUIIndex < 0) {
+				emitterUIIndex = globalAssets.GetEmitterArraySize() - 1;
+			}
+		};
+		ImGui::SameLine();
+
+		if (ImGui::ArrowButton("Next Emitter", ImGuiDir_Right)) {
+			emitterUIIndex++;
+			if (emitterUIIndex > globalAssets.GetEmitterArraySize() - 1) {
+				emitterUIIndex = 0;
+			}
+		};
+
+		std::string nameBuffer;
+		static char nameBuf[64] = "";
+		nameBuffer = globalAssets.GetEmitterAtID(emitterUIIndex)->GetName();
+		strcpy_s(nameBuf, nameBuffer.c_str());
+		ImGui::InputText("Rename Emitter: ", nameBuf, sizeof(nameBuffer));
+
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetName(nameBuf);
+
+		DirectX::XMFLOAT4 currentTint = globalAssets.GetEmitterAtID(emitterUIIndex)->GetColorTint();
+		ImGui::ColorEdit3("Color: ", &currentTint.x);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetColorTint(currentTint);
+
+		bool blendState = globalAssets.GetEmitterAtID(emitterUIIndex)->GetBlendState();
+		ImGui::Checkbox("Blend State: ", &blendState);
+		ImGui::SameLine();
+		if (blendState) {
+			ImGui::Text("Blend state is additive.");
+		}
+		else {
+			ImGui::Text("Blend state is not additive.");
+		}
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetBlendState(blendState);
+
+		float scale = globalAssets.GetEmitterAtID(emitterUIIndex)->GetScale();
+		ImGui::SliderFloat("Scale with age: ", &scale, 0.0f, 2.0f);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetScale(scale);
+
+		float particlesPerSecond = globalAssets.GetEmitterAtID(emitterUIIndex)->GetParticlesPerSecond();
+		ImGui::SliderFloat("Particles per Second: ", &particlesPerSecond, 0.1f, 20.0f);
+		ImGui::SameLine();
+		ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetParticlesPerSecond(particlesPerSecond);
+
+		float particlesLifetime = globalAssets.GetEmitterAtID(emitterUIIndex)->GetParticleLifetime();
+		ImGui::SliderFloat("Particles Lifetime: ", &particlesLifetime, 0.1f, 20.0f);
+		ImGui::SameLine();
+		ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetParticleLifetime(particlesLifetime);
+
+		int maxParticles = globalAssets.GetEmitterAtID(emitterUIIndex)->GetMaxParticles();
+		ImGui::InputInt("Max Particles: ", &maxParticles);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetMaxParticles(maxParticles);
+
+		ImGui::End();
+	}
+
+	if (soundWindowEnabled) {
+		ImGui::Begin("Sound Menu");
+
+		for (int i = 0; i < globalAssets.GetSoundArraySize(); i++) {
+			std::string buttonName = "Play Piano Sound ##" + std::to_string(i);
+			if (ImGui::Button(buttonName.c_str())) {
+				audioHandler.BasicPlaySound(globalAssets.GetSoundAtID(i));
+			}
+		}
+		
 		ImGui::End();
 	}
 
@@ -314,6 +393,63 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::End();
 	}
 
+	if (camWindowEnabled) {
+		ImGui::Begin("Camera Editor");
+
+		std::shared_ptr<Camera> currentCam = globalAssets.GetCameraAtID(camUIIndex);
+
+		std::string indexStr = currentCam->GetName();
+		std::string node = "Editing Camera " + indexStr;
+		ImGui::Text(node.c_str());
+
+		if (ImGui::ArrowButton("Previous Camera", ImGuiDir_Left)) {
+			camUIIndex--;
+			if (camUIIndex < 0) {
+				camUIIndex = globalAssets.GetCameraArraySize() - 1;
+			}
+		};
+		ImGui::SameLine();
+
+		if (ImGui::ArrowButton("Next Camera", ImGuiDir_Right)) {
+			camUIIndex++;
+			if (camUIIndex > globalAssets.GetCameraArraySize() - 1) {
+				camUIIndex = 0;
+			}
+		};
+
+		std::string nameBuffer;
+		static char nameBuf[64] = "";
+		nameBuffer = currentCam->GetName();
+		strcpy_s(nameBuf, nameBuffer.c_str());
+		ImGui::InputText("Rename Camera (disabled) ", nameBuf, sizeof(nameBuffer));
+
+		// Wait, isn't this a really bad idea?
+		// 30 Minutes later, I have determined that this was, in fact a terrible idea.
+		//currentCam->SetName(nameBuf);
+
+		float fov = currentCam->GetFOV();
+		ImGui::SliderFloat("FOV", &fov, 0, XM_PI - 0.01f);
+		currentCam->SetFOV(fov);
+
+		float nearDist = currentCam->GetNearDist();
+		ImGui::SliderFloat("Near Distance", &nearDist, 0.001f, 1.0f);
+		currentCam->SetNearDist(nearDist);
+
+		float farDist = currentCam->GetFarDist();
+		ImGui::SliderFloat("Far Distance", &farDist, 100.0f, 1000.0f);
+		currentCam->SetFarDist(farDist);
+
+		float lookSpeed = currentCam->GetLookSpeed();
+		ImGui::SliderFloat("Look Speed", &lookSpeed, 0.5f, 10.0f);
+		currentCam->SetLookSpeed(lookSpeed);
+
+		float moveSpeed = currentCam->GetMoveSpeed();
+		ImGui::SliderFloat("Move Speed", &moveSpeed, 1.0f, 20.0f);
+		currentCam->SetMoveSpeed(moveSpeed);
+
+		ImGui::End();
+	}
+
 	// TODO: Add skybox menu
 
 	// Display a menu at the top
@@ -328,9 +464,12 @@ void Game::RenderUI(float deltaTime) {
 		if (ImGui::BeginMenu("Edit")) {
 			ImGui::MenuItem("Lights", "l", &lightWindowEnabled);
 			ImGui::MenuItem("GameObjects", "g", &objWindowEnabled);
+			ImGui::MenuItem("Particles", "p", &particleWindowEnabled);
 			ImGui::MenuItem("Terrain", "t", &terrainWindowEnabled);
 			ImGui::MenuItem("Object Hierarchy", "h", &objHierarchyEnabled);
 			ImGui::MenuItem("Skies", "", &skyWindowEnabled);
+			ImGui::MenuItem("Sound", "", &soundWindowEnabled);
+			ImGui::MenuItem("Camera", "c", &camWindowEnabled);
 
 			ImGui::EndMenu();
 		}
@@ -441,11 +580,15 @@ void Game::FlickeringCheck() {
 void Game::OnResize()
 {
 	if (mainCamera != 0) {
-		mainCamera->UpdateProjectionMatrix((float)(this->width / this->height), 1);
+		mainCamera->UpdateProjectionMatrix((float)this->width / (float)this->height, 1);
 	}
+
+	renderer->PreResize();
 
 	// Handle base-level DX resize stuff
 	DXCore::OnResize();
+
+	renderer->PostResize(this->height, this->width, this->backBufferRTV, this->depthStencilView);
 }
 
 // --------------------------------------------------------
@@ -453,6 +596,8 @@ void Game::OnResize()
 // --------------------------------------------------------
 void Game::Update(float deltaTime, float totalTime)
 {
+	audioHandler.GetSoundSystem()->update();
+
 	RenderUI(deltaTime);
 
 	// To untie something from framerate, multiply by deltatime
@@ -472,6 +617,10 @@ void Game::Update(float deltaTime, float totalTime)
 
 	Flashlight();
 	RenderSky();
+
+	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
+		globalAssets.GetEmitterAtID(i)->Update(deltaTime, totalTime);
+	}
 
 	// Flickering is currently broken
 	/*if (flickeringEnabled) {
@@ -505,5 +654,5 @@ void Game::Draw(float deltaTime, float totalTime)
 
 	renderer->RenderShadows(mainShadowCamera, 1);
 
-	renderer->Draw(mainCamera);
+	renderer->Draw(mainCamera, totalTime);
 }

@@ -110,6 +110,10 @@ std::string Camera::GetName() {
 	return this->name;
 }
 
+void Camera::SetName(std::string name) {
+	this->name = name;
+}
+
 XMFLOAT4X4 Camera::GetViewMatrix()
 {
 	return vMatrix;
@@ -122,6 +126,26 @@ XMFLOAT4X4 Camera::GetProjectionMatrix()
 
 std::shared_ptr<Transform> Camera::GetTransform() {
 	return this->transform;
+}
+
+float Camera::GetFOV() {
+	return this->fov;
+}
+
+float Camera::GetNearDist() {
+	return this->nearDist;
+}
+
+float Camera::GetFarDist() {
+	return this->farDist;
+}
+
+float Camera::GetLookSpeed() {
+	return this->lookSpeed;
+}
+
+float Camera::GetMoveSpeed() {
+	return this->moveSpeed;
 }
 
 void Camera::SetFOV(float fov) {

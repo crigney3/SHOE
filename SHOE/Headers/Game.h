@@ -13,6 +13,7 @@
 #include "Input.h"
 #include "Renderer.h"
 #include "AssetManager.h"
+#include "Emitter.h"
 
 class Game 
 	: public DXCore
@@ -32,6 +33,7 @@ public:
 private:
 	// Asset Manager instance
 	AssetManager& globalAssets = AssetManager::GetInstance();
+	AudioHandler& audioHandler = AudioHandler::GetInstance();
 
 	// Initialization helper methods
 
@@ -67,13 +69,18 @@ private:
 	bool statsEnabled;
 	bool lightWindowEnabled;
 	bool objWindowEnabled;
+	bool particleWindowEnabled;
 	bool objHierarchyEnabled;
 	bool skyWindowEnabled;
 	bool terrainWindowEnabled;
 	bool movingEnabled;
 	bool rtvWindowEnabled;
+	bool soundWindowEnabled;
+	bool camWindowEnabled;
 	int entityUIIndex;
 	int terrainUIIndex;
+	int emitterUIIndex;
+	int camUIIndex;
 	std::vector<int> childIndices;
 	DirectX::XMFLOAT3 UIPositionEdit;
 	DirectX::XMFLOAT3 UIRotationEdit;
