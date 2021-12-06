@@ -770,6 +770,10 @@ FMOD::Sound* AssetManager::GetSoundAtID(int id) {
 	return this->globalSounds[id];
 }
 
+std::shared_ptr<Camera> AssetManager::GetCameraAtID(int id) {
+	return this->globalCameras[id];
+}
+
 #pragma endregion
 
 #pragma region buildAssetData

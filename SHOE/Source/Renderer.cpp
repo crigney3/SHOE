@@ -35,6 +35,7 @@ void Renderer::InitRenderTargetViews() {
 	for (int i = 0; i < 3; i++) {
 		ssaoTexture2D[i].Reset();
 		ssaoRTVs[i].Reset();
+		ssaoSRV[i].Reset();
 
 		D3D11_TEXTURE2D_DESC basicTexDesc = {};
 		basicTexDesc.Width = windowWidth;
@@ -60,6 +61,7 @@ void Renderer::InitRenderTargetViews() {
 	for (int i = 3; i < 6; i++) {
 		ssaoTexture2D[i].Reset();
 		ssaoRTVs[i].Reset();
+		ssaoSRV[i].Reset();
 
 		D3D11_TEXTURE2D_DESC basicTexDesc = {};
 		basicTexDesc.Width = windowWidth;
@@ -228,6 +230,11 @@ void Renderer::InitShadows() {
 
 	shadowDepthBuffers.push_back(shadowDepthView);
 	shadowDepthBuffers.push_back(envShadowDepthView);
+}
+
+void Renderer::PreResize() {
+	this->backBufferRTV.Reset();
+	this->depthBufferDSV.Reset();
 }
 
 void Renderer::PostResize(unsigned int windowHeight,

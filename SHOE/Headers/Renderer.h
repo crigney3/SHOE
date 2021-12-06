@@ -79,6 +79,7 @@ public:
         Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
         Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
     );
+    void PreResize();
 
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(int index);
 

@@ -4,9 +4,6 @@
 #include <fmod_common.h>
 #include <string>
 #include "DXCore.h"
-//#include <fmod_common.h>
-//#include <fmod_output.h>
-//#include <fmod_codec.h>
 
 class AudioHandler
 {

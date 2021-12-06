@@ -76,9 +76,11 @@ private:
 	bool movingEnabled;
 	bool rtvWindowEnabled;
 	bool soundWindowEnabled;
+	bool camWindowEnabled;
 	int entityUIIndex;
 	int terrainUIIndex;
 	int emitterUIIndex;
+	int camUIIndex;
 	std::vector<int> childIndices;
 	DirectX::XMFLOAT3 UIPositionEdit;
 	DirectX::XMFLOAT3 UIRotationEdit;

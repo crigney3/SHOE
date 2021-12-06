@@ -88,6 +88,7 @@ void Game::Init()
 	flashMenuToggle = false;
 	lightUIIndex = 0;
 	emitterUIIndex = 0;
+	camUIIndex = 0;
 
 	skies = globalAssets.GetSkyArray();
 	activeSky = 1;
@@ -392,6 +393,63 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::End();
 	}
 
+	if (camWindowEnabled) {
+		ImGui::Begin("Camera Editor");
+
+		std::shared_ptr<Camera> currentCam = globalAssets.GetCameraAtID(camUIIndex);
+
+		std::string indexStr = currentCam->GetName();
+		std::string node = "Editing Camera " + indexStr;
+		ImGui::Text(node.c_str());
+
+		if (ImGui::ArrowButton("Previous Camera", ImGuiDir_Left)) {
+			camUIIndex--;
+			if (camUIIndex < 0) {
+				camUIIndex = globalAssets.GetCameraArraySize() - 1;
+			}
+		};
+		ImGui::SameLine();
+
+		if (ImGui::ArrowButton("Next Camera", ImGuiDir_Right)) {
+			camUIIndex++;
+			if (camUIIndex > globalAssets.GetCameraArraySize() - 1) {
+				camUIIndex = 0;
+			}
+		};
+
+		std::string nameBuffer;
+		static char nameBuf[64] = "";
+		nameBuffer = currentCam->GetName();
+		strcpy_s(nameBuf, nameBuffer.c_str());
+		ImGui::InputText("Rename Camera (disabled) ", nameBuf, sizeof(nameBuffer));
+
+		// Wait, isn't this a really bad idea?
+		// 30 Minutes later, I have determined that this was, in fact a terrible idea.
+		//currentCam->SetName(nameBuf);
+
+		float fov = currentCam->GetFOV();
+		ImGui::SliderFloat("FOV", &fov, 0, XM_PI - 0.01f);
+		currentCam->SetFOV(fov);
+
+		float nearDist = currentCam->GetNearDist();
+		ImGui::SliderFloat("Near Distance", &nearDist, 0.001f, 1.0f);
+		currentCam->SetNearDist(nearDist);
+
+		float farDist = currentCam->GetFarDist();
+		ImGui::SliderFloat("Far Distance", &farDist, 100.0f, 1000.0f);
+		currentCam->SetFarDist(farDist);
+
+		float lookSpeed = currentCam->GetLookSpeed();
+		ImGui::SliderFloat("Look Speed", &lookSpeed, 0.5f, 10.0f);
+		currentCam->SetLookSpeed(lookSpeed);
+
+		float moveSpeed = currentCam->GetMoveSpeed();
+		ImGui::SliderFloat("Move Speed", &moveSpeed, 1.0f, 20.0f);
+		currentCam->SetMoveSpeed(moveSpeed);
+
+		ImGui::End();
+	}
+
 	// TODO: Add skybox menu
 
 	// Display a menu at the top
@@ -411,6 +469,7 @@ void Game::RenderUI(float deltaTime) {
 			ImGui::MenuItem("Object Hierarchy", "h", &objHierarchyEnabled);
 			ImGui::MenuItem("Skies", "", &skyWindowEnabled);
 			ImGui::MenuItem("Sound", "", &soundWindowEnabled);
+			ImGui::MenuItem("Camera", "c", &camWindowEnabled);
 
 			ImGui::EndMenu();
 		}
@@ -523,6 +582,8 @@ void Game::OnResize()
 	if (mainCamera != 0) {
 		mainCamera->UpdateProjectionMatrix((float)this->width / (float)this->height, 1);
 	}
+
+	renderer->PreResize();
 
 	// Handle base-level DX resize stuff
 	DXCore::OnResize();

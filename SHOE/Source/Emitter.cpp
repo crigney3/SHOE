@@ -105,9 +105,10 @@ void Emitter::SetMaxParticles(int maxParticles) {
 		this->firstLiveParticle = 0;
 		this->liveParticleCount = 0;
 
-		delete[this->maxParticles] particles;
+		delete[] particles;
 		particleDataSRV.Reset();
 		particleDataBuffer.Reset();
+		inBuffer.Reset();
 		this->maxParticles = maxParticles;
 		Initialize(this->maxParticles);
 	}

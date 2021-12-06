@@ -232,6 +232,7 @@ public:
 	Light* GetLightAtID(int id);
 	std::shared_ptr<Emitter> GetEmitterAtID(int id);
 	FMOD::Sound* GetSoundAtID(int id);
+	std::shared_ptr<Camera> GetCameraAtID(int id);
 
 	inline std::wstring ConvertToWide(const std::string& as);
 
