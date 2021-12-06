@@ -2,7 +2,7 @@
 
 ## What is SHOE?
 
-SHOE, the Sorta Helpful Open Engine (and many other acronyms), is a C++ app designed to provide convenient access to efficient graphics features needed to render a 3D environment. In its current version of V0.1, SHOE supports:
+SHOE, the Sorta Helpful Open Engine (and many other acronyms), is a C++ app designed to provide convenient access to efficient graphics features needed to render a 3D environment. In its current version of V0.2, SHOE supports:
 
 - 3D Object Rendering
 - Basic lighting, including point, spot, and directional lights
@@ -17,6 +17,8 @@ SHOE, the Sorta Helpful Open Engine (and many other acronyms), is a C++ app desi
 - Image-Based Lighting (for lighting that emulates the sky)
 - Rendering with multiple targets
 - Screen-space ambient occlusion
+- Particles
+- Sound through [FMOD Core](https://www.fmod.com/)
 
 SHOE will continue to gain features over time, and I hope to turn it into a functional engine that I can build games on top of.
 
