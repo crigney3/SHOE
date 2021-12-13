@@ -251,6 +251,10 @@ void Renderer::PostResize(unsigned int windowHeight,
 	InitRenderTargetViews();
 }
 
+void Renderer::RunComputeShaders() {
+	std::shared_ptr<SimpleComputeShader> particleVertexCS = globalAssets.GetComputeShaderByName("ParticleMovementCS");
+}
+
 // ------------------------------------------------------------------------
 // Draws the point lights as solid color spheres - credit to Chris Cascioli
 // ------------------------------------------------------------------------

@@ -71,6 +71,16 @@ std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string i
 	return newPS;
 }
 
+std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::wstring nameToLoad) {
+	std::shared_ptr<SimpleComputeShader> newCS;
+
+	newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
+
+	computeShaders.push_back(newCS);
+
+	return newCS;
+}
+
 std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameToLoad) {
 	std::shared_ptr<Mesh> newMesh;
 	std::string assetPath;
@@ -619,6 +629,7 @@ void AssetManager::InitializeCameras() {
 void AssetManager::InitializeShaders() {
 	vertexShaders = std::vector<std::shared_ptr<SimpleVertexShader>>();
 	pixelShaders = std::vector<std::shared_ptr<SimplePixelShader>>();
+	computeShaders = std::vector<std::shared_ptr<SimpleComputeShader>>();
 
 	// Make vertex shaders
 	CreateVertexShader("BasicVS", L"VertexShader.cso");
@@ -642,6 +653,9 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("SSAOBlurPS", L"PSOcclusionBlur.cso");
 	CreatePixelShader("SSAOCombinePS", L"PSOcclusionCombine.cso");
 	CreatePixelShader("ParticlesPS", L"PSParticles.cso");
+
+	// Make compute shaders
+	CreateComputeShader("ParticleMovementCS", L"CSParticleFlow");
 }
 
 void AssetManager::InitializeEmitters() {
@@ -695,6 +709,10 @@ size_t AssetManager::GetPixelShaderArraySize() {
 
 size_t AssetManager::GetVertexShaderArraySize() {
 	return this->vertexShaders.size();
+}
+
+size_t AssetManager::GetComputeShaderArraySize() {
+	return this->computeShaders.size();
 }
 
 size_t AssetManager::GetSkyArraySize() {
@@ -1340,6 +1358,15 @@ std::shared_ptr<SimplePixelShader> AssetManager::GetPixelShaderByName(std::strin
 	for (int i = 0; i < pixelShaders.size(); i++) {
 		if (pixelShaders[i]->GetName() == name) {
 			return pixelShaders[i];
+		}
+	}
+	return nullptr;
+}
+
+std::shared_ptr<SimpleComputeShader> AssetManager::GetComputeShaderByName(std::string name) {
+	for (int i = 0; i < computeShaders.size(); i++) {
+		if (computeShaders[i]->GetName() == name) {
+			return computeShaders[i];
 		}
 	}
 	return nullptr;

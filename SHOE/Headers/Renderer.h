@@ -83,6 +83,7 @@ public:
 
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(int index);
 
+    void RunComputeShaders();
     void DrawPointLights();
     void Draw(std::shared_ptr<Camera> camera, float totalTime);
 

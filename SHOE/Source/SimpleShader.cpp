@@ -1684,8 +1684,8 @@ unsigned int SimpleGeometryShader::CalcComponentCount(unsigned int mask)
 // --------------------------------------------------------
 // Constructor just calls the base
 // --------------------------------------------------------
-SimpleComputeShader::SimpleComputeShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile)
-	: ISimpleShader(device, context)
+SimpleComputeShader::SimpleComputeShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, std::string name)
+	: ISimpleShader(device, context, name)
 {
 	this->threadsTotal = 0;
 	this->threadsX = 0;

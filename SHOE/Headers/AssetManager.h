@@ -91,6 +91,7 @@ private:
 
 	std::vector<std::shared_ptr<SimplePixelShader>> pixelShaders;
 	std::vector<std::shared_ptr<SimpleVertexShader>> vertexShaders;
+	std::vector<std::shared_ptr<SimpleComputeShader>> computeShaders;
 	std::vector<std::shared_ptr<Sky>> skies;
 	std::vector<std::shared_ptr<Camera>> globalCameras;
 	std::vector<std::shared_ptr<Mesh>> globalMeshes;
@@ -116,6 +117,7 @@ public:
 	std::shared_ptr<Sky> CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, std::string name);
 	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::wstring nameToLoad);
 	std::shared_ptr<SimplePixelShader> CreatePixelShader(std::string id, std::wstring nameToLoad);
+	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::wstring nameToLoad);
 	std::shared_ptr<Mesh> CreateMesh(std::string id, std::string nameToLoad);
 	std::shared_ptr<Camera> CreateCamera(std::string id, DirectX::XMFLOAT3 pos, float aspectRatio, int type);
 	std::shared_ptr<Material> CreatePBRMaterial(std::string id,
@@ -190,6 +192,7 @@ public:
 	std::shared_ptr<Sky> GetSkyByName(std::string name);
 	std::shared_ptr<SimpleVertexShader> GetVertexShaderByName(std::string name);
 	std::shared_ptr<SimplePixelShader> GetPixelShaderByName(std::string name);
+	std::shared_ptr<SimpleComputeShader> GetComputeShaderByName(std::string name);
 	std::shared_ptr<Mesh> GetMeshByName(std::string name);
 	std::shared_ptr<Camera> GetCameraByName(std::string name);
 	std::shared_ptr<GameEntity> GetTerrainByName(std::string name);
@@ -202,6 +205,7 @@ public:
 	int GetSkyIDByName(std::string name);
 	int GetVertexShaderIDByName(std::string name);
 	int GetPixelShaderIDByName(std::string name);
+	int GetComputeShaderIDByName(std::string name);
 	int GetMeshIDByName(std::string name);
 	int GetCameraIDByName(std::string name);
 	int GetTerrainIDByName(std::string name);
@@ -214,6 +218,7 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> GetInputLayout();
 	size_t GetPixelShaderArraySize();
 	size_t GetVertexShaderArraySize();
+	size_t GetComputeShaderArraySize();
 	size_t GetSkyArraySize();
 	size_t GetCameraArraySize();
 	size_t GetMeshArraySize();

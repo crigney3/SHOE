@@ -36,6 +36,8 @@ Emitter::Emitter(int maxParticles,
 
 	this->colorTint = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	this->scale = 0.0f;
+	this->speed = 1.0f;
+	this->destination = DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f);
 
 	this->additiveBlend = additiveBlendState;
 
@@ -118,6 +120,36 @@ int Emitter::GetMaxParticles() {
 	return this->maxParticles;
 }
 
+void Emitter::SetSpeed(float speed) {
+	this->speed = speed;
+}
+
+float Emitter::GetSpeed() {
+	return this->speed;
+}
+
+void Emitter::SetDestination(DirectX::XMFLOAT3 destination) {
+	this->destination = destination;
+}
+
+DirectX::XMFLOAT3 Emitter::GetDestination() {
+	return this->destination;
+}
+
+void Emitter::SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> computeShader, ParticleComputeShaderType type) {
+	switch(type) {
+		case 0:
+			this->particleEmitComputeShader = computeShader;
+			break;
+		case 1:
+			this->particleSimComputeShader = computeShader;
+			break;
+		case 2:
+			this->particleCopyComputeShader = computeShader;
+			break;
+	}
+}
+
 void Emitter::Initialize(int maxParticles) {
 	particles = new Particle[maxParticles];
 	ZeroMemory(particles, sizeof(Particle) * maxParticles);
@@ -137,6 +169,10 @@ void Emitter::Initialize(int maxParticles) {
 	srvDesc.Buffer.FirstElement = 0;
 	srvDesc.Buffer.NumElements = maxParticles;
 	device->CreateShaderResourceView(particleDataBuffer.Get(), &srvDesc, particleDataSRV.GetAddressOf());
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.Format = srvDesc.Format;
+	device->CreateUnorderedAccessView(particleDataBuffer.Get(), &uavDesc, particleUAV.GetAddressOf());
 	
 	for (int i = 0; i < maxParticles; i++) {
 		particles[i].emitTime = 0;
@@ -176,6 +212,19 @@ void Emitter::UpdateParticle(float currentTime, int index) {
 }
 
 void Emitter::Update(float deltaTime, float totalTime) {
+	if (particleSimComputeShader != nullptr) {
+		particleSimComputeShader->SetShader();
+		particleSimComputeShader->SetUnorderedAccessView("verts", particleUAV);
+
+		particleSimComputeShader->SetFloat3("startPos", this->transform.GetPosition());
+		particleSimComputeShader->SetFloat("speed", this->speed);
+		particleSimComputeShader->SetFloat3("endPos", this->destination);
+		particleSimComputeShader->SetFloat("deltaTime", deltaTime);
+
+		particleSimComputeShader->DispatchByThreads(maxParticles, 0, 0);
+	}
+
+
 	if (liveParticleCount > 0) {
 		if (firstLiveParticle < firstDeadParticle) {
 			for (int i = firstLiveParticle; i < firstDeadParticle; i++) {
@@ -242,14 +291,7 @@ void Emitter::Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WR
 	particlePixelShader->SetShader();
 
 	particleVertexShader->SetShaderResourceView("ParticleData", particleDataSRV);
-
-	/*if (isMultiParticle) {
-		int index = rand() % particleTextureSRV.size();
-		particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV[index]);
-	}
-	else {*/
 	particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV);
-	//}
 
 	particleVertexShader->SetMatrix4x4("view", cam->GetViewMatrix());
 	particleVertexShader->SetMatrix4x4("projection", cam->GetProjectionMatrix());
@@ -263,6 +305,10 @@ void Emitter::Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WR
 }
 
 void Emitter::EmitParticle(float currentTime) {
+	if (usesComputeShader) {
+
+	}
+
 	if (liveParticleCount == maxParticles) return;
 
 	Particle tempParticle = {};

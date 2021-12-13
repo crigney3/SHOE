@@ -29,3 +29,10 @@ struct Particle
 	float emitTime;
 	DirectX::XMFLOAT3 startPos;
 };
+
+enum ParticleComputeShaderType
+{
+	Emit,
+	Simulate,
+	Copy
+};

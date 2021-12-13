@@ -318,6 +318,14 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
 		globalAssets.GetEmitterAtID(emitterUIIndex)->SetParticleLifetime(particlesLifetime);
 
+		float speed = globalAssets.GetEmitterAtID(emitterUIIndex)->GetSpeed();
+		ImGui::SliderFloat("Particle Speed: ", &speed, 0.1f, 5.0f);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetSpeed(speed);
+
+		DirectX::XMFLOAT3 destination = globalAssets.GetEmitterAtID(emitterUIIndex)->GetDestination();
+		ImGui::InputFloat3("Particles Move Towards: ", &destination.x);
+		globalAssets.GetEmitterAtID(emitterUIIndex)->SetDestination(destination);
+
 		int maxParticles = globalAssets.GetEmitterAtID(emitterUIIndex)->GetMaxParticles();
 		ImGui::InputInt("Max Particles: ", &maxParticles);
 		globalAssets.GetEmitterAtID(emitterUIIndex)->SetMaxParticles(maxParticles);

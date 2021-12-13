@@ -48,6 +48,14 @@ public:
 	void SetName(std::string name);
 	std::string GetName();
 
+	void SetSpeed(float speed);
+	float GetSpeed();
+
+	void SetDestination(DirectX::XMFLOAT3 destination);
+	DirectX::XMFLOAT3 GetDestination();
+
+	void SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> shader, ParticleComputeShaderType type);
+
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleDataSRV;
 private:
 	void Initialize(int maxParticles);
@@ -74,14 +82,21 @@ private:
 
 	std::shared_ptr<SimplePixelShader> particlePixelShader;
 	std::shared_ptr<SimpleVertexShader> particleVertexShader;
+	std::shared_ptr<SimpleComputeShader> particleEmitComputeShader;
+	std::shared_ptr<SimpleComputeShader> particleSimComputeShader;
+	std::shared_ptr<SimpleComputeShader> particleCopyComputeShader;
 	bool isMultiParticle;
 	bool additiveBlend;
+	bool usesComputeShader;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> inBuffer;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> particleDataBuffer;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleUAV;
 
 	DirectX::XMFLOAT4 colorTint;
 	float scale;
+	float speed;
+	DirectX::XMFLOAT3 destination;
 
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
