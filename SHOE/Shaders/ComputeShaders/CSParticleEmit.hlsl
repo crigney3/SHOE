@@ -1,34 +1,37 @@
 #include "../ShaderHeaders/ShaderShared.hlsli"
 
-RWStructuredBuffer<Particle> particles	: register(u0);
-RWStructuredBuffer<uint> deadList		: register(u1);
-RWStructuredBuffer<float2> sortList		: register(u2);
+RWStructuredBuffer<Particle> particles		: register(u0);
+ConsumeStructuredBuffer<uint> deadList		: register(u1);
+AppendStructuredBuffer<float2> sortList		: register(u2);
 
 cbuffer ExternalData : register(b0)
 {
 	float3 startPos;
+	uint maxParticles;
 	float3 cameraPos;
+	float emitTime;
 }
 
 [numthreads(8, 8, 1)]
 void main(uint3 threadID : SV_DispatchThreadID)
 {
-	// Do all particle emission calculations in here
-	// Would need more data
-	// And if statements, but I think those are fine for compute shaders
-	// The internet is unhelpful in verifying that
-	// Can essentially copy over current particle emission and reformat for HLSL
-	// I think? Maybe I'm overthinking this. Oh well, ask Chris
+	// Can't get size of deadList - how do I check for maxParticles return?
+	// Can't use sortList either
+
 	uint index = deadList.Consume();
 
 	Particle particle;
 
 	particle.age = 0.0f;
 	particle.startPosition = startPos;
+	particle.emitTime = emitTime;
+	particle.position = startPos; // Until it moves, it's at the start
 
 	particles[index] = particle;
 
 	float camDistance = distance(particles[index].startPosition, cameraPos);
 
-	sortList.Append(index, camDistance);
+	float2 sortObj = float2(index, camDistance);
+
+	sortList.Append(sortObj);
 }

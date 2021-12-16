@@ -28,6 +28,8 @@ struct Particle
 {
 	float emitTime;
 	DirectX::XMFLOAT3 startPos;
+	float age;
+	DirectX::XMFLOAT3 currentPos;
 };
 
 enum ParticleComputeShaderType

@@ -56,6 +56,8 @@ public:
 
 	void SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> shader, ParticleComputeShaderType type);
 
+	void SetMainCamera(std::shared_ptr<Camera> cam);
+
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleDataSRV;
 private:
 	void Initialize(int maxParticles);
@@ -89,15 +91,22 @@ private:
 	bool additiveBlend;
 	bool usesComputeShader;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> sortListSRV;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> drawListSRV;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> inBuffer;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> particleDataBuffer;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> argsBuffer;
 	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleUAV;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> deadListUAV;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> sortListUAV;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> drawListUAV;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> argsListUAV;
 
 	DirectX::XMFLOAT4 colorTint;
 	float scale;
 	float speed;
 	DirectX::XMFLOAT3 destination;
 
+	std::shared_ptr<Camera> cam;
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
 };

@@ -294,7 +294,12 @@ std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
 											   additiveBlendState);
 	}
 
-	
+	newEmitter->SetMainCamera(GetCameraByName("mainCamera"));
+
+	// Set all the compute shaders here
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleEmitCS"), (ParticleComputeShaderType)0);
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleMoveCS"), (ParticleComputeShaderType)1);
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleCopyCS"), (ParticleComputeShaderType)2);
 
 	globalParticleEmitters.push_back(newEmitter);
 
@@ -655,7 +660,9 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("ParticlesPS", L"PSParticles.cso");
 
 	// Make compute shaders
-	CreateComputeShader("ParticleMovementCS", L"CSParticleFlow");
+	CreateComputeShader("ParticleMoveCS", L"CSParticleFlow.cso");
+	CreateComputeShader("ParticleEmitCS", L"CSParticleEmit.cso");
+	CreateComputeShader("ParticleCopyCS", L"CSCopyDrawCount.cso");
 }
 
 void AssetManager::InitializeEmitters() {

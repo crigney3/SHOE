@@ -131,6 +131,8 @@ struct Vertex {
 // Wait, maybe not
 struct Particle {
 	float age;
+	float3 position;
+	float emitTime;
 	float3 startPosition;
 };
 

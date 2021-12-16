@@ -1,11 +1,5 @@
 #include "../ShaderHeaders/ShaderShared.hlsli"
 
-struct Particle
-{
-	float EmitTime;
-	float3 StartPosition;
-};
-
 cbuffer ExternalData : register(b0)
 {
 	matrix view;
@@ -25,9 +19,9 @@ VertexToPixelParticle main(uint id : SV_VertexID)
 
 	Particle p = ParticleData.Load(particleID);
 
-	float age = currentTime - p.EmitTime;
+	float age = currentTime - p.emitTime;
 
-	float3 pos = float3(p.StartPosition.x, p.StartPosition.y + (age * 2), p.StartPosition.z);
+	float3 pos = float3(p.startPosition.x, p.startPosition.y + (age * 2), p.startPosition.z);
 
 	float ageScale = 1.0f + age * scale;
 
