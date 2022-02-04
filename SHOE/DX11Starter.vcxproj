@@ -163,6 +163,7 @@
     <ClInclude Include="Headers\GameEntity.fwd.h" />
     <ClInclude Include="Headers\GameEntity.h" />
     <ClInclude Include="Headers\Input.h" />
+    <ClInclude Include="Headers\Keybind.h" />
     <ClInclude Include="Headers\Lights.h" />
     <ClInclude Include="Headers\Material.h" />
     <ClInclude Include="Headers\Mesh.h" />
@@ -321,6 +322,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Headers\Keybind.cpp" />
     <ClCompile Include="IMGUI\Source\imgui.cpp" />
     <ClCompile Include="IMGUI\Source\imgui_demo.cpp" />
     <ClCompile Include="IMGUI\Source\imgui_draw.cpp" />
@@ -336,6 +338,7 @@
     <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\GameEntity.cpp" />
     <ClCompile Include="Source\Input.cpp" />
+    <ClCompile Include="Source\Keybind.cpp" />
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\Material.cpp" />
     <ClCompile Include="Source\Mesh.cpp" />

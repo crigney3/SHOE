@@ -646,7 +646,7 @@ void Game::RenderSky() {
 
 void Game::Flashlight() {
 	Light* flashlight = globalAssets.GetFlashlight();
-	if (input.KeyPress(0x46)) {
+	if (input.TestKeyAction(KeyActions::ToggleFlashlight)) {
 		flashMenuToggle = !flashMenuToggle;
 	}
 
@@ -669,7 +669,7 @@ void Game::Flashlight() {
 }
 
 void Game::FlickeringCheck() {
-	if (input.KeyPress(0x47)) {
+	if (input.TestKeyAction(KeyActions::ToggleFlashlightFlicker)) {
 		flickeringEnabled = !flickeringEnabled;
 	}
 }
@@ -704,7 +704,7 @@ void Game::Update(float deltaTime, float totalTime)
 	// To untie something from framerate, multiply by deltatime
 
 	// Quit if the escape key is pressed
-	if (input.KeyDown(VK_ESCAPE)) Quit();
+	if (input.TestKeyAction(KeyActions::QuitGame)) Quit();
 
 	if (movingEnabled) {
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+2.0f, -(float)sin(totalTime), +0.0f);
