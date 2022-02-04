@@ -62,6 +62,7 @@ Input::~Input()
 {
 	delete[] kbState;
 	delete[] prevKbState;
+	delete[] keybinds;
 }
 
 // ---------------------------------------------------
@@ -85,6 +86,21 @@ void Input::Initialize(HWND windowHandle)
 	mouseXDelta = 0; mouseYDelta = 0;
 
 	this->windowHandle = windowHandle;
+
+	keybinds = new Keybind[KeyActions::Length]{};
+
+	//Default Keybinds
+	keybinds[KeyActions::MoveForward].Bind(0, 0, 0, 0, 1, new int[] { 'W' }, 1, new int[] { 'S' });
+	keybinds[KeyActions::MoveBack].Bind(0, 0, 0, 0, 1, new int[] { 'S' }, 1, new int[] { 'W' });
+	keybinds[KeyActions::StrafeLeft].Bind(0, 0, 0, 0, 1, new int[] { 'A' }, 1, new int[] { 'D' });
+	keybinds[KeyActions::StrafeRight].Bind(0, 0, 0, 0, 1, new int[] { 'D' }, 1, new int[] { 'A' });
+	keybinds[KeyActions::MoveDown].Bind(0, 0, 0, 0, 1, new int[] { 'X' }, 1, new int[] { ' ' });
+	keybinds[KeyActions::MoveUp].Bind(0, 0, 0, 0, 1, new int[] { ' ' }, 1, new int[] { 'X' });
+	keybinds[KeyActions::SprintModifier].Bind(0, 0, 0, 0, 1, new int[] { VK_SHIFT }, 1, new int[] { VK_CONTROL });
+	keybinds[KeyActions::SneakModifier].Bind(0, 0, 0, 0, 1, new int[] { VK_CONTROL }, 1, new int[] { VK_SHIFT });
+	keybinds[KeyActions::ToggleFlashlight].Bind(1, new int[] { 'F' });
+	keybinds[KeyActions::ToggleFlashlightFlicker].Bind(1, new int[] { 'V' });
+	keybinds[KeyActions::QuitGame].Bind(1, new int[] { VK_ESCAPE });
 }
 
 // ----------------------------------------------------------
@@ -161,6 +177,64 @@ void Input::SetWheelDelta(float delta)
 	wheelDelta = delta;
 }
 
+/// <summary>
+/// Registers a key action to a partial keyboard state
+/// CUSTODY OF PASSED ARRAYS ARE HANDED TO THE KEYBIND. DO NOT MANUALLY CLEAN
+/// </summary>
+void Input::BindKeyAction(KeyActions action, int triggerByPressCt, int* triggerByPress, int triggerByReleaseCt, int* triggerByRelease, int triggerByDownCt, int* triggerByDown, int mustHaveUpCt, int* mustHaveUp, int mustHaveDownCt, int* mustHaveDown)
+{
+	keybinds[action].Bind(
+		triggerByPressCt, triggerByPress,
+		triggerByReleaseCt, triggerByRelease,
+		triggerByDownCt, triggerByDown,
+		mustHaveUpCt, mustHaveUp,
+		mustHaveDownCt, mustHaveDown
+	);
+}
+
+/// <summary>
+/// Tests whether a given key action was triggered this frame
+/// </summary>
+bool Input::TestKeyAction(KeyActions action)
+{
+	if (action == KeyActions::Length || guiWantsKeyboard)
+		return false;
+	Keybind* keybind = &keybinds[action];
+	for (int i = 0; i < keybind->mustHaveDownCt; i++)
+	{
+		if (!KeyDown(keybind->mustHaveDown[i]))
+			return false;
+	}
+	for (int i = 0; i < keybind->mustHaveUpCt; i++)
+	{
+		if (KeyDown(keybind->mustHaveUp[i]))
+			return false;
+	}
+	for (int i = 0; i < keybind->triggerByDownCt; i++)
+	{
+		if (KeyDown(keybind->triggerByDown[i]))
+			return true;
+	}
+	for (int i = 0; i < keybind->triggerByPressCt; i++)
+	{
+		if (KeyPress(keybind->triggerByPress[i]))
+			return true;
+	}
+	for (int i = 0; i < keybind->triggerByReleaseCt; i++)
+	{
+		if (KeyRelease(keybind->triggerByRelease[i]))
+			return true;
+	}
+	return false;
+}
+
+/// <summary>
+/// Unbinds a key action so it can not be triggered
+/// </summary>
+void Input::UnbindKeyAction(KeyActions action)
+{
+	keybinds[action].Unbind();
+}
 
 // ----------------------------------------------------------
 //  Is the given key down this frame?
