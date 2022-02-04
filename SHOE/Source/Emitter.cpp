@@ -31,6 +31,7 @@ Emitter::Emitter(int maxParticles,
 	this->context = context;
 
 	this->name = name;
+	this->enabled = true;
 
 	this->transform = Transform(DirectX::XMMatrixIdentity(), position);
 
@@ -47,7 +48,7 @@ Emitter::Emitter(int maxParticles,
 Emitter::~Emitter() {
 	delete[this->maxParticles] particles;
 	argsBuffer->Release();
-	//particleCopyComputeShader->SetUnorderedAccessView("drawList", NULL);
+	particleCopyComputeShader->SetUnorderedAccessView("drawList", NULL);
 }
 
 void Emitter::SetColorTint(DirectX::XMFLOAT4 color) {
@@ -101,6 +102,14 @@ void Emitter::SetParticleLifetime(float particleLifetime) {
 
 float Emitter::GetParticleLifetime() {
 	return this->particleLifetime;
+}
+
+void Emitter::SetEnableDisable(bool enabled) {
+	this->enabled = enabled;
+}
+
+bool Emitter::GetEnableDisable() {
+	return this->enabled;
 }
 
 void Emitter::SetMaxParticles(int maxParticles) {

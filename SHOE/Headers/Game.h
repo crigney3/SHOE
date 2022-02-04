@@ -81,6 +81,7 @@ private:
 	int terrainUIIndex;
 	int emitterUIIndex;
 	int camUIIndex;
+	int skyUIIndex;
 	std::vector<int> childIndices;
 	DirectX::XMFLOAT3 UIPositionEdit;
 	DirectX::XMFLOAT3 UIRotationEdit;

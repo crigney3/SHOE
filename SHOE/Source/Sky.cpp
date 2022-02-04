@@ -353,3 +353,7 @@ bool Sky::GetEnableDisable() {
 std::string Sky::GetName() {
 	return this->name;
 }
+
+void Sky::SetName(std::string name) {
+	this->name = name;
+}

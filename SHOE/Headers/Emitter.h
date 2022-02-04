@@ -54,6 +54,9 @@ public:
 	void SetDestination(DirectX::XMFLOAT3 destination);
 	DirectX::XMFLOAT3 GetDestination();
 
+	void SetEnableDisable(bool enabled);
+	bool GetEnableDisable();
+
 	void SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> shader, ParticleComputeShaderType type);
 
 	void SetMainCamera(std::shared_ptr<Camera> cam);
@@ -65,6 +68,7 @@ private:
 	void UpdateParticle(float currentTime, int index);
 
 	std::string name;
+	bool enabled;
 
 	Transform transform;
 

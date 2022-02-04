@@ -238,6 +238,8 @@ public:
 	std::shared_ptr<Emitter> GetEmitterAtID(int id);
 	FMOD::Sound* GetSoundAtID(int id);
 	std::shared_ptr<Camera> GetCameraAtID(int id);
+	std::shared_ptr<GameEntity> GetTerrainAtID(int id);
+	std::shared_ptr<Sky> GetSkyAtID(int id);
 
 	inline std::wstring ConvertToWide(const std::string& as);
 

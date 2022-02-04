@@ -799,6 +799,14 @@ std::shared_ptr<Camera> AssetManager::GetCameraAtID(int id) {
 	return this->globalCameras[id];
 }
 
+std::shared_ptr<GameEntity> AssetManager::GetTerrainAtID(int id) {
+	return this->globalTerrainEntities[id];
+}
+
+std::shared_ptr<Sky> AssetManager::GetSkyAtID(int id) {
+	return this->skies[id];
+}
+
 #pragma endregion
 
 #pragma region buildAssetData
