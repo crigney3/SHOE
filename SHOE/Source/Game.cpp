@@ -90,7 +90,7 @@ void Game::Init()
 	emitterUIIndex = 0;
 	camUIIndex = 0;
 	terrainUIIndex = 0;
-	skyUIIndex = 0;
+	skyUIIndex = 1;
 
 	skies = globalAssets.GetSkyArray();
 
@@ -383,6 +383,20 @@ void Game::RenderUI(float deltaTime) {
 		int maxParticles = currentEmitter->GetMaxParticles();
 		ImGui::InputInt("Max Particles ", &maxParticles);
 		currentEmitter->SetMaxParticles(maxParticles);
+
+		if (ImGui::CollapsingHeader("Particle Data ")) {
+			ImGui::Text("Sort List - Cannot be Edited live, Shader Only: ");
+			if (ImGui::BeginListBox("SortList")) {
+				DirectX::XMFLOAT2* list = (DirectX::XMFLOAT2*)currentEmitter->GetSortListSRV().Get();
+				for (int i = 0; i < maxParticles; i++) {
+					std::string listItem = "##Value at " + i;
+					listItem += ": ";
+					listItem += list[i].x;
+					ImGui::Text(listItem.c_str());
+				}
+				ImGui::EndListBox();
+			}
+		}
 
 		ImGui::End();
 	}

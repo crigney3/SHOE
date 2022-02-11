@@ -36,5 +36,6 @@ enum ParticleComputeShaderType
 {
 	Emit,
 	Simulate,
-	Copy
+	Copy,
+	DeadListInit
 };

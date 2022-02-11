@@ -300,6 +300,7 @@ std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
 	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleEmitCS"), (ParticleComputeShaderType)0);
 	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleMoveCS"), (ParticleComputeShaderType)1);
 	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleCopyCS"), (ParticleComputeShaderType)2);
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleInitDeadCS"), (ParticleComputeShaderType)3);
 
 	globalParticleEmitters.push_back(newEmitter);
 
@@ -663,21 +664,28 @@ void AssetManager::InitializeShaders() {
 	CreateComputeShader("ParticleMoveCS", L"CSParticleFlow.cso");
 	CreateComputeShader("ParticleEmitCS", L"CSParticleEmit.cso");
 	CreateComputeShader("ParticleCopyCS", L"CSCopyDrawCount.cso");
+	CreateComputeShader("ParticleInitDeadCS", L"CSInitDeadList.cso");
 }
 
 void AssetManager::InitializeEmitters() {
 	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), L"Smoke/smoke_01.png", "basicParticle");
 	CreateParticleEmitter(20, 1.0f, 3.0f, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), L"Smoke/", "basicParticles", true);
-	globalParticleEmitters[1]->SetScale(1.0f);
+	GetEmitterByName("basicParticles")->SetScale(1.0f);
 	CreateParticleEmitter(30, 2.0f, 15.0f, DirectX::XMFLOAT3(-1.0f, 0.0f, 0.0f), L"Flame/", "flameParticles", true);
-	globalParticleEmitters[2]->SetColorTint(DirectX::XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
-	CreateParticleEmitter(10, 1.0f, 8.0f, DirectX::XMFLOAT3(-2.0f, 0.0f, 0.0f), L"Star/", "starParticle", true);
-	CreateParticleEmitter(4, 2.0f, 8.0f, DirectX::XMFLOAT3(-3.0f, 0.0f, 0.0f), L"Star/star_08.png", "starParticles");
-	globalParticleEmitters[3]->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
-	globalParticleEmitters[3]->SetScale(0.75f);
-	globalParticleEmitters[4]->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
-	//CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);
-	//globalParticleEmitters[5]->SetColorTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f));
+	GetEmitterByName("flameParticles")->SetColorTint(DirectX::XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
+	CreateParticleEmitter(30, 1.0f, 8.0f, DirectX::XMFLOAT3(-2.0f, 0.0f, 0.0f), L"Star/", "starParticles", true);
+	CreateParticleEmitter(30, 2.0f, 8.0f, DirectX::XMFLOAT3(-3.0f, 0.0f, 0.0f), L"Star/star_08.png", "starParticle");
+	GetEmitterByName("starParticles")->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+	GetEmitterByName("starParticle")->SetScale(0.75f);
+	GetEmitterByName("starParticle")->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+
+	// This was terrifying. Take graphics ideas from Jimmy Digrazia at your own peril.
+	/*CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);
+	GetEmitterByName("emojiParticles")->SetColorTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f));*/
+
+	for (int i = 0; i < globalParticleEmitters.size(); i++) {
+		globalParticleEmitters[i]->SetDestination(DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f));
+	}
 }
 
 void AssetManager::InitializeAudio() {
@@ -1346,6 +1354,15 @@ std::shared_ptr<GameEntity> AssetManager::GetGameEntityByName(std::string name) 
 	for (int i = 0; i < globalEntities.size(); i++) {
 		if (globalEntities[i]->GetName() == name) {
 			return globalEntities[i];
+		}
+	}
+	return nullptr;
+}
+
+std::shared_ptr<Emitter> AssetManager::GetEmitterByName(std::string name) {
+	for (int i = 0; i < globalParticleEmitters.size(); i++) {
+		if (globalParticleEmitters[i]->GetName() == name) {
+			return globalParticleEmitters[i];
 		}
 	}
 	return nullptr;

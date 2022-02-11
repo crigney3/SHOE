@@ -198,6 +198,7 @@ public:
 	std::shared_ptr<GameEntity> GetTerrainByName(std::string name);
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
 	std::shared_ptr<TerrainMats> GetTerrainMaterialByName(std::string name);
+	std::shared_ptr<Emitter> GetEmitterByName(std::string name);
 	std::shared_ptr<Light> GetLightByName(std::string name);
 	FMOD::Sound* GetSoundByName();
 

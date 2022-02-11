@@ -191,6 +191,9 @@
     <FxCompile Include="Shaders\ComputeShaders\CSParticleEmit.hlsl">
       <Filter>Shaders\ComputeShaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ComputeShaders\CSInitDeadList.hlsl">
+      <Filter>Shaders\ComputeShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IMGUI\Source\imgui.cpp">

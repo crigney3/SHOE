@@ -59,12 +59,15 @@ public:
 
 	void SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> shader, ParticleComputeShaderType type);
 
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetDrawListSRV();
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetSortListSRV();
+
 	void SetMainCamera(std::shared_ptr<Camera> cam);
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleDataSRV;
 private:
 	void Initialize(int maxParticles);
-	void EmitParticle(float currentTime);
+	void EmitParticle(float currentTime, int emitCount);
 	void UpdateParticle(float currentTime, int index);
 
 	std::string name;
@@ -91,6 +94,8 @@ private:
 	std::shared_ptr<SimpleComputeShader> particleEmitComputeShader;
 	std::shared_ptr<SimpleComputeShader> particleSimComputeShader;
 	std::shared_ptr<SimpleComputeShader> particleCopyComputeShader;
+	std::shared_ptr<SimpleComputeShader> particleDeadListInitComputeShader;
+
 	bool isMultiParticle;
 	bool additiveBlend;
 	bool usesComputeShader;
