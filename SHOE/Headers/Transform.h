@@ -4,8 +4,9 @@
 #include <DirectXMath.h>
 #include <vector>
 #include "GameEntity.fwd.h"
+#include "IComponent.h"
 
-class Transform
+class Transform : public IComponent
 {
 private:
 	DirectX::XMFLOAT4X4 worldMatrix;
@@ -18,7 +19,6 @@ private:
 
 	Transform* parent;
 	std::vector<Transform*> children;
-	GameEntity* entity;
 public:
 	Transform();
 	Transform(DirectX::XMMATRIX worldIn, DirectX::XMFLOAT3 posIn = DirectX::XMFLOAT3(+0.0f, +0.0f, +0.0f), DirectX::XMFLOAT3 scaleIn = DirectX::XMFLOAT3(+1.0f, +1.0f, +1.0f), DirectX::XMFLOAT4 rotIn = DirectX::XMFLOAT4(+0.0f, +0.0f, +0.0f, +0.0f), Transform* parent = NULL);
@@ -50,8 +50,6 @@ public:
 	int IndexOfChild(Transform* child);
 	unsigned int GetChildCount();
 
-	GameEntity* GetGameEntity();
-	void SetGameEntity(GameEntity* entity);
 	std::vector<GameEntity*> GetChildrenAsGameEntities();
 
 	void SetEnableDisable(bool value);

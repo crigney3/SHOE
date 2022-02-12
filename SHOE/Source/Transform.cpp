@@ -10,7 +10,6 @@ Transform::Transform() {
 	this->scale = XMFLOAT3(+1.0f, +1.0f, +1.0f);
 	this->rotQuat = XMFLOAT4(+0.0f, +0.0f, +0.0f, +0.0f);
 	this->children = std::vector<Transform*>();
-	this->entity = NULL;
 }
 
 Transform::Transform(XMMATRIX worldIn, XMFLOAT3 posIn, XMFLOAT3 scaleIn, XMFLOAT4 rotIn, Transform* parent) {
@@ -21,7 +20,6 @@ Transform::Transform(XMMATRIX worldIn, XMFLOAT3 posIn, XMFLOAT3 scaleIn, XMFLOAT
 	this->scale = scaleIn;
 	this->rotQuat = rotIn;
 	this->children = std::vector<Transform*>();
-	this->entity = NULL;
 }
 
 Transform::~Transform() {
@@ -214,14 +212,6 @@ void Transform::MarkChildTransformsDirty() {
 		children[i]->isDirty = true;
 		children[i]->MarkChildTransformsDirty();
 	}
-}
-
-GameEntity* Transform::GetGameEntity() {
-	return this->entity;
-}
-
-void Transform::SetGameEntity(GameEntity* entity) {
-	this->entity = entity;
 }
 
 std::vector<GameEntity*> Transform::GetChildrenAsGameEntities() {
