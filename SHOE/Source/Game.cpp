@@ -3,6 +3,7 @@
 // Needed for a helper function to read compiled shader files from the hard drive
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3dcompiler.h>
+#include "..\Headers\ComponentManager.h"
 
 #pragma warning( disable : 26495)
 
@@ -53,6 +54,7 @@ Game::~Game()
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
+	ComponentManager::DumpAll();
 	delete& Input::GetInstance();
 	delete& AssetManager::GetInstance();
 	delete& AudioHandler::GetInstance();
@@ -64,6 +66,8 @@ Game::~Game()
 // --------------------------------------------------------
 void Game::Init()
 {
+	ComponentManager::Initialize();
+
 	// Initialize everything from gameobjects to skies
 	globalAssets.Initialize(device, context);
 
