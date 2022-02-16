@@ -53,8 +53,7 @@ Game::~Game()
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
-
-	ComponentManager::DumpAll();
+	
 	delete& Input::GetInstance();
 	delete& AssetManager::GetInstance();
 	delete& AudioHandler::GetInstance();
@@ -66,8 +65,6 @@ Game::~Game()
 // --------------------------------------------------------
 void Game::Init()
 {
-	ComponentManager::Initialize();
-
 	// Initialize everything from gameobjects to skies
 	globalAssets.Initialize(device, context);
 
@@ -483,8 +480,8 @@ void Game::RenderUI(float deltaTime) {
 			ImGuiTreeNodeFlags_DefaultOpen |
 			ImGuiTreeNodeFlags_FramePadding)) {
 			for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
-				if (Entities->at(i)->GetTransform()->GetParent() == NULL) {
-					RenderChildObjectsInUI(Entities->at(i).get());
+				if (Entities->at(i)->GetTransform()->GetParent() == nullptr) {
+					RenderChildObjectsInUI(Entities->at(i));
 				}
 			}
 
@@ -707,14 +704,14 @@ void Game::RenderUI(float deltaTime) {
 	}
 }
 
-void Game::RenderChildObjectsInUI(GameEntity* entity) {
+void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 	std::string nodeName = entity->GetName();
 	if (ImGui::TreeNodeEx(nodeName.c_str(), 
 		ImGuiTreeNodeFlags_DefaultOpen |
 		ImGuiTreeNodeFlags_FramePadding)) {
 		int childCount = entity->GetTransform()->GetChildCount();
 		if (childCount > 0) {
-			std::vector<GameEntity*> children = entity->GetTransform()->GetChildrenAsGameEntities();
+			std::vector<std::shared_ptr<GameEntity>> children = entity->GetTransform()->GetChildrenAsGameEntities();
 			for (int i = 0; i < childCount; i++) {
 				RenderChildObjectsInUI(children[i]);
 			}

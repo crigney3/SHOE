@@ -1,63 +1,84 @@
 #pragma once
+#include <memory>
+#include <queue>
+
+#include "GameEntity.fwd.h"
 #include "IComponent.h"
 
-#define POOL_SIZE 30;
+constexpr auto POOL_SIZE = 30;
 
 template <typename T>
 class ComponentPool
 {
 public:
-	static T* Instantiate(GameEntity* gameEntity, bool* generatedNewPool);
-	static void Free(T* component);
+	static std::shared_ptr<T> Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
+	static void Free(std::shared_ptr<IComponent> component);
 	static int GetActiveCount();
-	static void DumpAll();
+	static std::vector<std::shared_ptr<T>> GetAll();
 
 private:
-	static int activeCount = 0;
-	static IComponent* pool = nullptr;
-	static T* unallocatedHead;
+	static std::vector<std::shared_ptr<T>> allocated;
+	static std::queue<std::shared_ptr<T>> unallocated;
 };
 
 template<typename T>
-inline T* ComponentPool<T>::Instantiate(GameEntity* gameEntity, bool* generatedNewPool)
+std::vector<std::shared_ptr<T>> ComponentPool<T>::allocated =
+std::vector<std::shared_ptr<T>>();
+
+template<typename T>
+std::queue<std::shared_ptr<T>> ComponentPool<T>::unallocated =
+std::queue<std::shared_ptr<T>>();
+
+/**
+ * \brief Binds an unallocated component from the pool to a GameEntity
+ * \param gameEntity The GameEntity the component is to be attached to
+ * \param hierarchyIsEnabled Whether the GameEntity to be attached to is enabled
+ * \return A newly bound component from the pool
+ */
+template<typename T>
+std::shared_ptr<T> ComponentPool<T>::Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled)
 {
-	//Allocates a new pool if there is no active one
-	if (pool == nullptr) {
-		pool = new T[POOL_SIZE];
-		unallocatedHead = pool[0];
-		for (int i = 0; i < POOL_SIZE - 1; i++)
-			pool[i].Free(pool[i + 1]);
-		*generatedNewPool = true;
+	//Allocates a new pool if there is no available components
+	if (unallocated.size() == 0) {
+		for (int i = 0; i < POOL_SIZE; i++) {
+			unallocated.push(std::make_shared<T>());
+		}
 	}
 
-	//If out of space
-	if (unallocatedHead == nullptr) {
-		throw;
-	}
-
-	T* component = unallocatedHead;
-	unallocatedHead = component->GetNext();
-	component->Bind(gameEntity);
-	activeCount++;
+	std::shared_ptr<T> component = unallocated.front();
+	allocated.emplace_back(component);
+	unallocated.pop();
+	component->Bind(gameEntity, hierarchyIsEnabled);
 	return component;
 }
 
+/**
+ * \brief Unbinds a given component and marks it free for use
+ * \param component The component to unbind
+ */
 template<typename T>
-inline void ComponentPool<T>::Free(T* component)
+void ComponentPool<T>::Free(std::shared_ptr<IComponent> component)
 {
-	component->Free(unallocatedHead);
-	unallocatedHead = component;
-	activeCount--;
+	component->Free();
+	unallocated.push(std::dynamic_pointer_cast<T>(component));
+	allocated.erase(std::remove(allocated.begin(), allocated.end(), std::dynamic_pointer_cast<T>(component)), allocated.end());
 }
 
+/**
+ * \brief Gives the amount of components of this type currently bound
+ * \return Total amount of bound components from this pool
+ */
 template<typename T>
-inline int ComponentPool<T>::GetActiveCount()
+int ComponentPool<T>::GetActiveCount()
 {
-	return activeCount;
+	return allocated.size();
 }
 
+/**
+ * \brief Returns a vector of all currently bound components in the pool
+ */
 template<typename T>
-inline void ComponentPool<T>::DumpAll()
+std::vector<std::shared_ptr<T>> ComponentPool<T>::GetAll()
 {
-	delete[] pool;
+	return allocated;
 }

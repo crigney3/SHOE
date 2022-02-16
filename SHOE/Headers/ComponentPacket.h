@@ -1,12 +1,13 @@
 #pragma once
-#include "IComponent.h"
 #include <functional>
 
-struct ComponentPacket {
-	IComponent* component;
-	std::function<void(IComponent*)> deallocator;
+class IComponent;
 
-	ComponentPacket(IComponent* component, std::function<void(IComponent*)> deallocator)
+struct ComponentPacket {
+	std::shared_ptr<IComponent> component;
+	std::function<void(std::shared_ptr<IComponent>)> deallocator;
+
+	ComponentPacket(std::shared_ptr<IComponent> component, std::function<void(std::shared_ptr<IComponent>)> deallocator)
 	{
 		this->component = component;
 		this->deallocator = deallocator;

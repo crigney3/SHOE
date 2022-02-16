@@ -1,19 +1,61 @@
 #include "../Headers/GameEntity.h"
-#include "..\Headers\ComponentManager.h"
+
+void GameEntity::UpdateHierarchyIsEnabled(bool active)
+{
+	for (std::shared_ptr<ComponentPacket> packet : componentList)
+	{
+		packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
+	}
+	for (std::shared_ptr<GameEntity> children : transform->GetChildrenAsGameEntities())
+	{
+		children->UpdateHierarchyIsEnabled(GetEnableDisable());
+	}
+}
 
 GameEntity::GameEntity(std::shared_ptr<Mesh> mesh, DirectX::XMMATRIX worldIn, std::shared_ptr<Material> mat, std::string name) {
 	this->mesh = mesh;
-	this->componentList = std::vector<IComponent*>();
-	this->transform = ComponentManager::Instantiate<Transform>(this);
-	componentList.push_back(transform);
+	this->componentList = std::vector<std::shared_ptr<ComponentPacket>>();
 	this->mat = mat;
 	this->name = name;
 	this->enabled = true;
+	this->hierarchyIsEnabled = true;
 }
 
 GameEntity::~GameEntity() {
-	for (auto& component : componentList) {
-		ComponentManager::Free(component);
+}
+
+void GameEntity::Initialize()
+{
+	this->transform = AddComponent<Transform>();
+}
+
+void GameEntity::Update()
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->Update();
+		}
+	}
+}
+
+void GameEntity::OnCollisionEnter(std::shared_ptr<GameEntity> other)
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->OnCollisionEnter(other);
+		}
+	}
+}
+
+void GameEntity::OnTriggerEnter(std::shared_ptr<GameEntity> other)
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->OnTriggerEnter(other);
+		}
 	}
 }
 
@@ -21,7 +63,7 @@ std::shared_ptr<Mesh> GameEntity::GetMesh() {
 	return this->mesh;
 }
 
-Transform* GameEntity::GetTransform() {
+std::shared_ptr<Transform> GameEntity::GetTransform() {
 	return transform;
 }
 
@@ -96,6 +138,18 @@ void GameEntity::DrawFromVerts(Microsoft::WRL::ComPtr<ID3D11DeviceContext> conte
 		0);    // Offset to add to each index when looking up vertices
 }
 
+void GameEntity::Release()
+{
+	for(std::shared_ptr<GameEntity> child : transform->GetChildrenAsGameEntities())
+	{
+		child->GetTransform()->SetParent(nullptr);
+	}
+	for (std::shared_ptr<ComponentPacket> packet : componentList) {
+		packet->component->OnDestroy();
+		packet->deallocator(packet->component);
+	}
+}
+
 std::string GameEntity::GetName() {
 	return this->name;
 }
@@ -106,8 +160,14 @@ void GameEntity::SetName(std::string Name) {
 
 void GameEntity::SetEnableDisable(bool value) {
 	this->enabled = value;
+	UpdateHierarchyIsEnabled(hierarchyIsEnabled);
 }
 
 bool GameEntity::GetEnableDisable() {
-	return this->enabled;
+	return this->enabled && this->hierarchyIsEnabled;
+}
+
+bool GameEntity::GetHierarchyIsEnabled()
+{
+	return hierarchyIsEnabled;
 }

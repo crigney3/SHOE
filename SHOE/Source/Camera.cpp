@@ -1,10 +1,11 @@
 #include "../Headers/Camera.h"
+#include "..\Headers\ComponentManager.h"
 
 using namespace DirectX;
 
 Camera::Camera(float x, float y, float z, float aspectRatio, bool type, std::string name)
 {
-	this->transform = std::make_shared<Transform>();
+	this->transform = ComponentManager::Instantiate<Transform>(nullptr, true);
 	transform->SetPosition(x, y, z);
 
 	this->fov = XM_PIDIV4;
@@ -21,7 +22,7 @@ Camera::Camera(float x, float y, float z, float aspectRatio, bool type, std::str
 
 Camera::Camera(DirectX::XMFLOAT3 pos, float aspectRatio, bool type, std::string name)
 {
-	this->transform = std::make_shared<Transform>();
+	this->transform = ComponentManager::Instantiate<Transform>(nullptr, true);
 	transform->SetPosition(pos);
 
 	this->fov = XM_PIDIV4;
@@ -38,6 +39,8 @@ Camera::Camera(DirectX::XMFLOAT3 pos, float aspectRatio, bool type, std::string 
 
 Camera::~Camera()
 {
+	transform->OnDestroy();
+	ComponentManager::Free<Transform>(transform);
 }
 
 void Camera::Update(float dt, HWND windowHandle)
