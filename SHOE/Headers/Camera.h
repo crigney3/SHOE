@@ -5,7 +5,6 @@
 
 #include <DirectXMath.h>
 #include <Windows.h>
-#include <memory>
 #include <string>
 
 class Camera

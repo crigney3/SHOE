@@ -12,20 +12,29 @@ void IComponent::OnDestroy()
 {
 }
 
-void IComponent::Bind(GameEntity* gameEntity)
+void IComponent::OnCollisionEnter(std::shared_ptr<GameEntity> other)
+{
+}
+
+void IComponent::OnTriggerEnter(std::shared_ptr<GameEntity> other)
+{
+}
+
+void IComponent::Bind(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled)
 {
 	this->gameEntity = gameEntity;
+	this->hierarchyIsEnabled = hierarchyIsEnabled;
 	Start();
 }
 
-void IComponent::Free(IComponent* next)
+void IComponent::Free()
 {
-	this->next = next;
+	gameEntity = nullptr;
 }
 
 bool IComponent::IsEnabled()
 {
-	return enabled;
+	return enabled && hierarchyIsEnabled;
 }
 
 void IComponent::SetEnabled(bool enabled)
@@ -33,12 +42,12 @@ void IComponent::SetEnabled(bool enabled)
 	this->enabled = enabled;
 }
 
-IComponent* IComponent::GetNext()
-{
-	return next;
-}
-
-GameEntity* IComponent::GetGameEntity()
+std::shared_ptr<GameEntity> IComponent::GetGameEntity()
 {
 	return gameEntity;
+}
+
+void IComponent::UpdateHierarchyIsEnabled(bool active)
+{
+	hierarchyIsEnabled = active;
 }

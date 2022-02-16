@@ -133,6 +133,6 @@ private:
 	PointLight centerLight;
 
 	// UI Helper/Recursive Functions
-	void RenderChildObjectsInUI(GameEntity* entity);
+	void RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity);
 };
 

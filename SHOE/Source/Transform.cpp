@@ -2,28 +2,14 @@
 
 using namespace DirectX;
 
-Transform::Transform() {
-	this->parent = NULL;
+void Transform::Start() {
+	this->parent = nullptr;
 	this->isDirty = false;
 	XMStoreFloat4x4(&this->worldMatrix, XMMatrixIdentity());
 	this->pos = XMFLOAT3(+0.0f, +0.0f, +0.0f);
 	this->scale = XMFLOAT3(+1.0f, +1.0f, +1.0f);
 	this->rotQuat = XMFLOAT4(+0.0f, +0.0f, +0.0f, +0.0f);
-	this->children = std::vector<Transform*>();
-}
-
-Transform::Transform(XMMATRIX worldIn, XMFLOAT3 posIn, XMFLOAT3 scaleIn, XMFLOAT4 rotIn, Transform* parent) {
-	this->parent = parent;
-	this->isDirty = false;
-	XMStoreFloat4x4(&this->worldMatrix, worldIn);
-	this->pos = posIn;
-	this->scale = scaleIn;
-	this->rotQuat = rotIn;
-	this->children = std::vector<Transform*>();
-}
-
-Transform::~Transform() {
-	//delete &this->worldMatrix;
+	this->children.clear();
 }
 
 void Transform::SetPosition(float x, float y, float z) {
@@ -84,12 +70,8 @@ XMFLOAT4X4 Transform::GetWorldMatrix() {
 		XMStoreFloat4x4(&this->worldMatrix, world);
 
 		this->isDirty = false;
-
-		return this->worldMatrix;
 	}
-	else {
-		return this->worldMatrix;
-	}
+	return this->worldMatrix;
 }
 
 void Transform::MoveAbsolute(float x, float y, float z) {
@@ -154,53 +136,42 @@ DirectX::XMFLOAT3 Transform::GetForward() {
 	return forwardVec;
 }
 
-void Transform::AddChild(Transform* child) {
+void Transform::AddChild(std::shared_ptr<Transform> child) {
 	this->children.push_back(child);
 
+	child->parent = shared_from_this();
 	child->isDirty = true;
 	child->MarkChildTransformsDirty();
-	child->parent = this;
 }
 
-void Transform::RemoveChild(Transform* child) {
-	int index = IndexOfChild(child);
-	if (index != -1) {
-
-		children[index] = NULL;
-	}
+void Transform::RemoveChild(std::shared_ptr<Transform> child) {
+	child->parent = nullptr;
+	children.erase(std::remove(children.begin(), children.end(), child), children.end());
 }
 
-void Transform::SetParent(Transform* newParent) {
-	if (newParent != NULL) {
+void Transform::SetParent(std::shared_ptr<Transform> newParent) {
+	if (newParent.get() != nullptr) {
 		this->parent = newParent;
-		newParent->children.push_back(this);
+		newParent->children.push_back(shared_from_this());
 	}
 	else {
-		this->parent = NULL;
+		this->parent->RemoveChild(shared_from_this());
+		this->parent = nullptr;
 	}
 
 	isDirty = true;
 	MarkChildTransformsDirty();
 }
 
-Transform* Transform::GetParent() {
+std::shared_ptr<Transform> Transform::GetParent() {
 	return parent;
 }
 
-Transform* Transform::GetChild(unsigned int index) {
+std::shared_ptr<Transform> Transform::GetChild(unsigned int index) {
 	if (children[index] != NULL) {
 		return children[index];
 	}
 	return 0;
-}
-
-int Transform::IndexOfChild(Transform* child) {
-	for (int i = 0; i < children.size(); i++) {
-		if (children[i] == child) {
-			return i;
-		}
-	}
-	return -1;
 }
 
 unsigned int Transform::GetChildCount() {
@@ -214,8 +185,8 @@ void Transform::MarkChildTransformsDirty() {
 	}
 }
 
-std::vector<GameEntity*> Transform::GetChildrenAsGameEntities() {
-	std::vector<GameEntity*> list = std::vector<GameEntity*>();
+std::vector<std::shared_ptr<GameEntity>> Transform::GetChildrenAsGameEntities() {
+	std::vector<std::shared_ptr<GameEntity>> list = std::vector<std::shared_ptr<GameEntity>>();
 
 	for (unsigned int i = 0; i < GetChildCount(); i++) {
 		list.push_back(children[i]->GetGameEntity());

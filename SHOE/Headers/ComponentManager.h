@@ -1,48 +1,39 @@
 #pragma once
-#include <map>
 #include "ComponentPool.h"
-#include <string>
-#include <vector>
-#include <functional>
 
 class ComponentManager
 {
 public:
-	static void Initialize();
 	template <typename T>
-	static T* Instantiate(GameEntity* gameEntity);
+	static std::shared_ptr<T> Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
 	template <typename T>
-	static void Free(T* component);
+	static void Free(std::shared_ptr<IComponent> component);
 	template <typename T>
 	static int ActiveCount();
-
-	static void DumpAll();
-private:
-	static std::vector<std::function<void()>> poolDeallocateCalls;
+	template <typename T>
+	static std::vector<std::shared_ptr<T>> GetAll();
 };
 
 template<typename T>
-inline T* ComponentManager::Instantiate(GameEntity* gameEntity)
+std::shared_ptr<T> ComponentManager::Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled)
 {
-	bool newPool = false;
-	T* component = ComponentPool<T>()->Instantiate(gameEntity, &newPool);
-
-	//Makes sure memory will be handled properly
-	if (newPool) {
-		poolDeallocateCalls.push_back(ComponentPool<T>()->DumpAll);
-	}
-
-	return component;
+	return ComponentPool<T>::Instantiate(gameEntity, hierarchyIsEnabled);
 }
 
 template<typename T>
-inline void ComponentManager::Free(T* component)
+void ComponentManager::Free(std::shared_ptr<IComponent> component)
 {
-	ComponentPool<T>()->Free(component);
+	ComponentPool<T>::Free(component);
 }
 
 template<typename T>
-inline int ComponentManager::ActiveCount()
+int ComponentManager::ActiveCount()
 {
-	return ComponentPool<T>()::GetActiveCount();
+	return ComponentPool<T>::GetActiveCount();
+}
+
+template<typename T>
+std::vector<std::shared_ptr<T>> ComponentManager::GetAll()
+{
+	return ComponentPool<T>::GetAll();
 }

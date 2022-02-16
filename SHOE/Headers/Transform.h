@@ -1,12 +1,11 @@
 #pragma once
 
-#include <memory>
 #include <DirectXMath.h>
 #include <vector>
 #include "GameEntity.fwd.h"
 #include "IComponent.h"
 
-class Transform : public IComponent
+class Transform : public IComponent,  public std::enable_shared_from_this<Transform>
 {
 private:
 	DirectX::XMFLOAT4X4 worldMatrix;
@@ -17,13 +16,11 @@ private:
 	bool isDirty;
 	void MarkChildTransformsDirty();
 
-	Transform* parent;
-	std::vector<Transform*> children;
+	std::shared_ptr<Transform> parent;
+	std::vector<std::shared_ptr<Transform>> children = std::vector<std::shared_ptr<Transform>>();
 public:
-	Transform();
-	Transform(DirectX::XMMATRIX worldIn, DirectX::XMFLOAT3 posIn = DirectX::XMFLOAT3(+0.0f, +0.0f, +0.0f), DirectX::XMFLOAT3 scaleIn = DirectX::XMFLOAT3(+1.0f, +1.0f, +1.0f), DirectX::XMFLOAT4 rotIn = DirectX::XMFLOAT4(+0.0f, +0.0f, +0.0f, +0.0f), Transform* parent = NULL);
-	~Transform();
-
+	void Start();
+	
 	void SetPosition(float x, float y, float z);
 	void SetPosition(DirectX::XMFLOAT3 pos);
 	void SetRotation(float pitch, float yaw, float roll);
@@ -42,15 +39,14 @@ public:
 	void Rotate(float pitch, float yaw, float roll);
 	void Scale(float x, float y, float z);
 
-	void AddChild(Transform* child);
-	void RemoveChild(Transform* child);
-	void SetParent(Transform* newParent);
-	Transform* GetParent();
-	Transform* GetChild(unsigned int index);
-	int IndexOfChild(Transform* child);
+	void AddChild(std::shared_ptr<Transform> child);
+	void RemoveChild(std::shared_ptr<Transform> child);
+	void SetParent(std::shared_ptr<Transform> newParent);
+	std::shared_ptr<Transform> GetParent();
+	std::shared_ptr<Transform> GetChild(unsigned int index);
 	unsigned int GetChildCount();
 
-	std::vector<GameEntity*> GetChildrenAsGameEntities();
+	std::vector<std::shared_ptr<GameEntity>> GetChildrenAsGameEntities();
 
 	void SetEnableDisable(bool value);
 };

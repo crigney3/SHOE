@@ -173,6 +173,7 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name) {
 	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(mesh, XMMatrixIdentity(), mat, name);
+	newEnt->Initialize();
 
 	globalEntities.push_back(newEnt);
 
@@ -183,6 +184,7 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 
 std::shared_ptr<GameEntity> AssetManager::CreateTerrainEntity(std::shared_ptr<Mesh> mesh, std::string name) {
 	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(mesh, XMMatrixIdentity(), nullptr, name);
+	newEnt->Initialize();
 
 	globalTerrainEntities.push_back(newEnt);
 
@@ -1237,69 +1239,70 @@ std::shared_ptr<Mesh> AssetManager::ProcessComplexMesh(aiMesh* mesh, const aiSce
 //
 
 void AssetManager::RemoveGameEntity(std::string name) {
-	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
+	RemoveGameEntity(GetGameEntityIDByName(name));
 }
 
 void AssetManager::RemoveGameEntity(int id) {
+	globalEntities[id]->Release();
 	globalEntities.erase(globalEntities.begin() + id);
 }
 
 void AssetManager::RemoveSky(std::string name) {
-	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
+	skies.erase(skies.begin() + GetSkyIDByName(name));
 }
 
 void AssetManager::RemoveSky(int id) {
-	globalEntities.erase(globalEntities.begin() + id);
+	skies.erase(skies.begin() + id);
 }
 
 void AssetManager::RemoveVertexShader(std::string name) {
-	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
+	vertexShaders.erase(vertexShaders.begin() + GetVertexShaderIDByName(name));
 }
 
 void AssetManager::RemoveVertexShader(int id) {
-	globalEntities.erase(globalEntities.begin() + id);
+	vertexShaders.erase(vertexShaders.begin() + id);
 }
 
 void AssetManager::RemovePixelShader(std::string name) {
-	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
+	pixelShaders.erase(pixelShaders.begin() + GetPixelShaderIDByName(name));
 }
 
 void AssetManager::RemovePixelShader(int id) {
-	globalEntities.erase(globalEntities.begin() + id);
+	pixelShaders.erase(pixelShaders.begin() + id);
 }
 
 void AssetManager::RemoveMesh(std::string name) {
-	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
+	globalMeshes.erase(globalMeshes.begin() + GetMeshIDByName(name));
 }
 
 void AssetManager::RemoveMesh(int id) {
-	globalEntities.erase(globalEntities.begin() + id);
+	globalMeshes.erase(globalMeshes.begin() + id);
 }
 
 void AssetManager::RemoveCamera(std::string name) {
-	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
+	globalCameras.erase(globalCameras.begin() + GetCameraIDByName(name));
 }
 
 void AssetManager::RemoveCamera(int id) {
-	globalEntities.erase(globalEntities.begin() + id);
+	globalCameras.erase(globalCameras.begin() + id);
 }
 
 void AssetManager::RemoveTerrain(std::string name) {
-	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
+	globalTerrainEntities.erase(globalTerrainEntities.begin() + GetTerrainIDByName(name));
 }
 
 void AssetManager::RemoveTerrain(int id) {
-	globalEntities.erase(globalEntities.begin() + id);
+	globalTerrainEntities.erase(globalTerrainEntities.begin() + id);
 }
 
 void AssetManager::RemoveMaterial(std::string name) {
-	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
+	globalMaterials.erase(globalMaterials.begin() + GetMaterialIDByName(name));
 }
 
 void AssetManager::RemoveMaterial(int id) {
-	globalEntities.erase(globalEntities.begin() + id);
+	globalMaterials.erase(globalMaterials.begin() + id);
 }
-
+/*
 void AssetManager::RemoveTerrainMaterial(std::string name) {
 	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
 }
@@ -1315,6 +1318,7 @@ void AssetManager::RemoveLight(std::string name) {
 void AssetManager::RemoveLight(int id) {
 	globalEntities.erase(globalEntities.begin() + id);
 }
+*/
 #pragma endregion
 
 #pragma region enableDisableAssets

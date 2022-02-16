@@ -286,12 +286,6 @@
     <ClCompile Include="Source\Keybind.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
-    <ClCompile Include="Source\ComponentManager.cpp">
-      <Filter>Source Files\SHOE-Source\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\ComponentParcel.cpp">
-      <Filter>Source Files\SHOE-Source\Components</Filter>
-    </ClCompile>
     <ClCompile Include="Source\IComponent.cpp">
       <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>

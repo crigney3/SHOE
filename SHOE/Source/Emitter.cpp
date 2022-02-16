@@ -30,7 +30,8 @@ Emitter::Emitter(int maxParticles,
 	this->name = name;
 	this->enabled = false;
 
-	this->transform = Transform(DirectX::XMMatrixIdentity(), position);
+	this->transform = Transform();
+	this->transform.SetPosition(position);
 
 	this->colorTint = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	this->scale = 0.0f;
