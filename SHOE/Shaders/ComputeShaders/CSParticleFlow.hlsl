@@ -25,28 +25,26 @@ void main(uint3 threadID : SV_DispatchThreadID)
 
 	Particle p = particles.Load(threadIndexWithOffset);
 
-	if (p.age > lifeTime) {
+	if (p.alive == 0.0f) {
 		// These are already dead, don't append
 		return;
 	}
 
 	p.age += deltaTime;
+	p.alive = (float)(p.age < lifeTime);
 
-
-	uint numStructs;
-	uint strides;
-	deadList.GetDimensions(numStructs, strides);
 	//float distanceFromEnd = distance(p.position, endPos);
 
 	p.position.y += deltaTime * speed;
-	p.position.z += (numStructs % maxParticles) * 2;
 
 	particles[threadIndexWithOffset] = p;
 
 	// float camDistance = distance(particles[threadID.x].startPosition, cameraPos);
 
-	if (p.age >= lifeTime) {
+	if (p.alive == 0.0f) {
 		// If it died this frame, skip drawing and append to dead
+		p.debugTrackingAlive = 0;
+		particles[threadIndexWithOffset] = p;
 		deadList.Append(threadID.x);
 	}
 	else {

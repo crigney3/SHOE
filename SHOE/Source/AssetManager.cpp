@@ -671,9 +671,9 @@ void AssetManager::InitializeEmitters() {
 	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), L"Smoke/smoke_01.png", "basicParticle");
 	CreateParticleEmitter(20, 1.0f, 3.0f, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), L"Smoke/", "basicParticles", true);
 	GetEmitterByName("basicParticles")->SetScale(1.0f);
-	CreateParticleEmitter(30, 2.0f, 15.0f, DirectX::XMFLOAT3(-1.0f, 0.0f, 0.0f), L"Flame/", "flameParticles", true);
+	CreateParticleEmitter(10, 2.0f, 5.0f, DirectX::XMFLOAT3(-1.0f, 0.0f, 0.0f), L"Flame/", "flameParticles", true);
 	GetEmitterByName("flameParticles")->SetColorTint(DirectX::XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
-	CreateParticleEmitter(30, 1.0f, 8.0f, DirectX::XMFLOAT3(-2.0f, 0.0f, 0.0f), L"Star/", "starParticles", true);
+	CreateParticleEmitter(300, 2.0f, 80.0f, DirectX::XMFLOAT3(-2.0f, 0.0f, 0.0f), L"Star/", "starParticles", true);
 	CreateParticleEmitter(30, 2.0f, 8.0f, DirectX::XMFLOAT3(-3.0f, 0.0f, 0.0f), L"Star/star_08.png", "starParticle");
 	GetEmitterByName("starParticles")->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
 	GetEmitterByName("starParticle")->SetScale(0.75f);

@@ -68,20 +68,15 @@ public:
 private:
 	void Initialize(int maxParticles);
 	void EmitParticle(float currentTime, int emitCount);
-	void UpdateParticle(float currentTime, int index);
 
 	std::string name;
 	bool enabled;
 
 	Transform transform;
 
-	Particle* particles;
 	unsigned int* indices;
 
 	int maxParticles;
-	int firstDeadParticle;
-	int firstLiveParticle;
-	int liveParticleCount;
 
 	float particlesPerSecond;
 	float secondsPerEmission;

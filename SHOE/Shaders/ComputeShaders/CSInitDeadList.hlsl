@@ -10,7 +10,7 @@ AppendStructuredBuffer<uint> DeadList : register(u0);
 void main(uint3 id : SV_DispatchThreadID)
 {
 	// For each valid id, fill the array with ids
-	if (id.x >= (uint)(maxParticles + 1) | id.x == 0) return;
+	if (id.x >= (uint)(maxParticles + 1)) return;
 
-	DeadList.Append(id.x);
+	DeadList.Append((maxParticles) - id.x);
 }

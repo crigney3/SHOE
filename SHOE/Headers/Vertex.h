@@ -30,6 +30,9 @@ struct Particle
 	DirectX::XMFLOAT3 startPos;
 	float age;
 	DirectX::XMFLOAT3 currentPos;
+	float alive;
+	float debugTrackingAlive;
+	DirectX::XMFLOAT2 padding;
 };
 
 enum ParticleComputeShaderType
