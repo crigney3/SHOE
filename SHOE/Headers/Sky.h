@@ -32,7 +32,9 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetConvolvedSpecularCubeMap();
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetBRDFLookupTexture();
 	int GetIBLMipLevelCount();
+
 	std::string GetName();
+	void SetName(std::string name);
 
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();

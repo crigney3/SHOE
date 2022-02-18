@@ -122,6 +122,23 @@ float3 MicrofacetBRDF(float3 n, float3 l, float3 v, float roughness, float metal
 	return (D * F * G) / (4 * max(dot(n, v), dot(n, l)));
 }
 
+struct Vertex {
+	float3 position;
+	float2 uv;
+};
+
+// This must always match the Particle definition from the CPU.
+// Wait, maybe not
+struct Particle {
+	float age;
+	float3 position;
+	float emitTime;
+	float3 startPosition;
+	float alive;
+	float debugTrackingAlive;
+	float2 padding;
+};
+
 // Struct representing the data we expect to receive from earlier pipeline stages
 // - Should match the output of our corresponding vertex shader
 // - The name of the struct itself is unimportant

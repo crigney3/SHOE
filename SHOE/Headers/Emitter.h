@@ -48,23 +48,35 @@ public:
 	void SetName(std::string name);
 	std::string GetName();
 
+	void SetSpeed(float speed);
+	float GetSpeed();
+
+	void SetDestination(DirectX::XMFLOAT3 destination);
+	DirectX::XMFLOAT3 GetDestination();
+
+	void SetEnableDisable(bool enabled);
+	bool GetEnableDisable();
+
+	void SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> shader, ParticleComputeShaderType type);
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetDrawListSRV();
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetSortListSRV();
+
+	void SetMainCamera(std::shared_ptr<Camera> cam);
+
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleDataSRV;
 private:
 	void Initialize(int maxParticles);
-	void EmitParticle(float currentTime);
-	void UpdateParticle(float currentTime, int index);
+	void EmitParticle(float currentTime, int emitCount);
 
 	std::string name;
+	bool enabled;
 
 	Transform transform;
 
-	Particle* particles;
 	unsigned int* indices;
 
 	int maxParticles;
-	int firstDeadParticle;
-	int firstLiveParticle;
-	int liveParticleCount;
 
 	float particlesPerSecond;
 	float secondsPerEmission;
@@ -74,15 +86,31 @@ private:
 
 	std::shared_ptr<SimplePixelShader> particlePixelShader;
 	std::shared_ptr<SimpleVertexShader> particleVertexShader;
+	std::shared_ptr<SimpleComputeShader> particleEmitComputeShader;
+	std::shared_ptr<SimpleComputeShader> particleSimComputeShader;
+	std::shared_ptr<SimpleComputeShader> particleCopyComputeShader;
+	std::shared_ptr<SimpleComputeShader> particleDeadListInitComputeShader;
+
 	bool isMultiParticle;
 	bool additiveBlend;
+	bool usesComputeShader;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> sortListSRV;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> drawListSRV;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> inBuffer;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> particleDataBuffer;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> argsBuffer;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleUAV;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> deadListUAV;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> sortListUAV;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> drawListUAV;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> argsListUAV;
 
 	DirectX::XMFLOAT4 colorTint;
 	float scale;
+	float speed;
+	DirectX::XMFLOAT3 destination;
 
+	std::shared_ptr<Camera> cam;
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
 };

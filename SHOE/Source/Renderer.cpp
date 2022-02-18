@@ -251,6 +251,10 @@ void Renderer::PostResize(unsigned int windowHeight,
 	InitRenderTargetViews();
 }
 
+void Renderer::RunComputeShaders() {
+	std::shared_ptr<SimpleComputeShader> particleVertexCS = globalAssets.GetComputeShaderByName("ParticleMovementCS");
+}
+
 // ------------------------------------------------------------------------
 // Draws the point lights as solid color spheres - credit to Chris Cascioli
 // ------------------------------------------------------------------------
@@ -413,6 +417,8 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	std::vector<std::shared_ptr<GameEntity>>::iterator it;
 
 	for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
+		if (!it->get()->GetEnableDisable()) continue;
+
 		//Calculate pixel lighting before draw
 		pixShader = it->get()->GetMaterial()->GetPixShader();
 		pixShader->SetShader();
@@ -430,10 +436,12 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		pixShader->SetSamplerState("shadowState", shadowSampler.Get());
 		pixShader->SetShaderResourceView("envShadowMap", envShadowSRV.Get());
 
-		pixShader->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
-		pixShader->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
-		pixShader->SetShaderResourceView("brdfLookUpMap", currentSky->GetBRDFLookupTexture().Get());
-		pixShader->SetShaderResourceView("specularIBLMap", currentSky->GetConvolvedSpecularCubeMap().Get());
+		if (this->currentSky->GetEnableDisable()) {
+			pixShader->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
+			pixShader->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
+			pixShader->SetShaderResourceView("brdfLookUpMap", currentSky->GetBRDFLookupTexture().Get());
+			pixShader->SetShaderResourceView("specularIBLMap", currentSky->GetConvolvedSpecularCubeMap().Get());
+		}
 
 		pixShader->CopyAllBufferData();
 
@@ -441,43 +449,49 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	}
 
 	//Now deal with rendering the terrain, PS data first
-	std::shared_ptr<SimplePixelShader> PSTerrain = globalAssets.GetPixelShaderByName("TerrainPS");
-	std::shared_ptr<SimpleVertexShader> VSTerrain = globalAssets.GetVertexShaderByName("TerrainVS");
 	std::shared_ptr<GameEntity> terrainEntity = globalAssets.GetTerrainByName("Main Terrain");
-	PSTerrain->SetShader();
-	PSTerrain->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
-	PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
-	PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
-	PSTerrain->SetFloat("uvMultNear", 50.0f);
-	PSTerrain->SetFloat("uvMultFar", 150.0f);
-	PSTerrain->SetShaderResourceView("shadowMap", shadowSRV.Get());
-	PSTerrain->SetShaderResourceView("blendMap", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMap.Get());
-	PSTerrain->SetSamplerState("shadowState", shadowSampler.Get());
-	PSTerrain->SetSamplerState("clampSampler", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[0].GetClampSamplerState().Get());
-	PSTerrain->SetShaderResourceView("envShadowMap", envShadowSRV.Get());
+	if (terrainEntity->GetEnableDisable()) {
+		std::shared_ptr<SimplePixelShader> PSTerrain = globalAssets.GetPixelShaderByName("TerrainPS");
+		std::shared_ptr<SimpleVertexShader> VSTerrain = globalAssets.GetVertexShaderByName("TerrainVS");
+		PSTerrain->SetShader();
+		PSTerrain->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
+		PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
+		PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
+		PSTerrain->SetFloat("uvMultNear", 50.0f);
+		PSTerrain->SetFloat("uvMultFar", 150.0f);
+		PSTerrain->SetShaderResourceView("shadowMap", shadowSRV.Get());
+		PSTerrain->SetShaderResourceView("blendMap", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMap.Get());
+		PSTerrain->SetSamplerState("shadowState", shadowSampler.Get());
+		PSTerrain->SetSamplerState("clampSampler", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[0].GetClampSamplerState().Get());
+		PSTerrain->SetShaderResourceView("envShadowMap", envShadowSRV.Get());
 
-	for (int i = 0; i < globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials.size(); i++) {
-		std::string a = "texture" + std::to_string(i + 1) + "Albedo";
-		std::string n = "texture" + std::to_string(i + 1) + "Normal";
-		std::string r = "texture" + std::to_string(i + 1) + "Rough";
-		std::string m = "texture" + std::to_string(i + 1) + "Metal";
-		PSTerrain->SetShaderResourceView(a, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetTexture().Get());
-		PSTerrain->SetShaderResourceView(n, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetNormalMap().Get());
-		PSTerrain->SetShaderResourceView(r, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetRoughMap().Get());
-		PSTerrain->SetShaderResourceView(m, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetMetalMap().Get());
+		for (int i = 0; i < globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials.size(); i++) {
+			std::string a = "texture" + std::to_string(i + 1) + "Albedo";
+			std::string n = "texture" + std::to_string(i + 1) + "Normal";
+			std::string r = "texture" + std::to_string(i + 1) + "Rough";
+			std::string m = "texture" + std::to_string(i + 1) + "Metal";
+			PSTerrain->SetShaderResourceView(a, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetTexture().Get());
+			PSTerrain->SetShaderResourceView(n, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetNormalMap().Get());
+			PSTerrain->SetShaderResourceView(r, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetRoughMap().Get());
+			PSTerrain->SetShaderResourceView(m, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetMetalMap().Get());
 
-		PSTerrain->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
-		PSTerrain->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
-		PSTerrain->SetShaderResourceView("brdfLookUpMap", currentSky->GetBRDFLookupTexture().Get());
-		PSTerrain->SetShaderResourceView("specularIBLMap", currentSky->GetConvolvedSpecularCubeMap().Get());
+			if (this->currentSky->GetEnableDisable()) {
+				PSTerrain->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
+				PSTerrain->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
+				PSTerrain->SetShaderResourceView("brdfLookUpMap", currentSky->GetBRDFLookupTexture().Get());
+				PSTerrain->SetShaderResourceView("specularIBLMap", currentSky->GetConvolvedSpecularCubeMap().Get());
+			}
+		}
+
+		PSTerrain->CopyAllBufferData();
+
+		terrainEntity->DrawFromVerts(context, VSTerrain, cam, flashShadowCamera, mainShadowCamera);
 	}
 
-	PSTerrain->CopyAllBufferData();
-	
-	terrainEntity->DrawFromVerts(context, VSTerrain, cam, flashShadowCamera, mainShadowCamera);
-
-    this->currentSky->Draw(context, cam);
-
+	if (this->currentSky->GetEnableDisable()) {
+		this->currentSky->Draw(context, cam);
+	}
+    
 	std::shared_ptr<SimpleVertexShader> fullscreenVS = globalAssets.GetVertexShaderByName("FullscreenVS");
 	fullscreenVS->SetShader();
 
@@ -546,6 +560,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	context->OMSetDepthStencilState(particleDepthState.Get(), 0);
 
 	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
+		if (!globalAssets.GetEmitterAtID(i)->GetEnableDisable()) continue;
 		globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime, particleBlendAdditive);
 	}
 

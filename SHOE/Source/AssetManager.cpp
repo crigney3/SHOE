@@ -71,6 +71,16 @@ std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string i
 	return newPS;
 }
 
+std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::wstring nameToLoad) {
+	std::shared_ptr<SimpleComputeShader> newCS;
+
+	newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
+
+	computeShaders.push_back(newCS);
+
+	return newCS;
+}
+
 std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameToLoad) {
 	std::shared_ptr<Mesh> newMesh;
 	std::string assetPath;
@@ -284,7 +294,13 @@ std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
 											   additiveBlendState);
 	}
 
-	
+	newEmitter->SetMainCamera(GetCameraByName("mainCamera"));
+
+	// Set all the compute shaders here
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleEmitCS"), (ParticleComputeShaderType)0);
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleMoveCS"), (ParticleComputeShaderType)1);
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleCopyCS"), (ParticleComputeShaderType)2);
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleInitDeadCS"), (ParticleComputeShaderType)3);
 
 	globalParticleEmitters.push_back(newEmitter);
 
@@ -619,6 +635,7 @@ void AssetManager::InitializeCameras() {
 void AssetManager::InitializeShaders() {
 	vertexShaders = std::vector<std::shared_ptr<SimpleVertexShader>>();
 	pixelShaders = std::vector<std::shared_ptr<SimplePixelShader>>();
+	computeShaders = std::vector<std::shared_ptr<SimpleComputeShader>>();
 
 	// Make vertex shaders
 	CreateVertexShader("BasicVS", L"VertexShader.cso");
@@ -642,21 +659,33 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("SSAOBlurPS", L"PSOcclusionBlur.cso");
 	CreatePixelShader("SSAOCombinePS", L"PSOcclusionCombine.cso");
 	CreatePixelShader("ParticlesPS", L"PSParticles.cso");
+
+	// Make compute shaders
+	CreateComputeShader("ParticleMoveCS", L"CSParticleFlow.cso");
+	CreateComputeShader("ParticleEmitCS", L"CSParticleEmit.cso");
+	CreateComputeShader("ParticleCopyCS", L"CSCopyDrawCount.cso");
+	CreateComputeShader("ParticleInitDeadCS", L"CSInitDeadList.cso");
 }
 
 void AssetManager::InitializeEmitters() {
 	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), L"Smoke/smoke_01.png", "basicParticle");
 	CreateParticleEmitter(20, 1.0f, 3.0f, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), L"Smoke/", "basicParticles", true);
-	globalParticleEmitters[1]->SetScale(1.0f);
-	CreateParticleEmitter(30, 2.0f, 15.0f, DirectX::XMFLOAT3(-1.0f, 0.0f, 0.0f), L"Flame/", "flameParticles", true);
-	globalParticleEmitters[2]->SetColorTint(DirectX::XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
-	CreateParticleEmitter(10, 1.0f, 8.0f, DirectX::XMFLOAT3(-2.0f, 0.0f, 0.0f), L"Star/", "starParticle", true);
-	CreateParticleEmitter(4, 2.0f, 8.0f, DirectX::XMFLOAT3(-3.0f, 0.0f, 0.0f), L"Star/star_08.png", "starParticles");
-	globalParticleEmitters[3]->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
-	globalParticleEmitters[3]->SetScale(0.75f);
-	globalParticleEmitters[4]->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
-	//CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);
-	//globalParticleEmitters[5]->SetColorTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f));
+	GetEmitterByName("basicParticles")->SetScale(1.0f);
+	CreateParticleEmitter(10, 2.0f, 5.0f, DirectX::XMFLOAT3(-1.0f, 0.0f, 0.0f), L"Flame/", "flameParticles", true);
+	GetEmitterByName("flameParticles")->SetColorTint(DirectX::XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
+	CreateParticleEmitter(300, 2.0f, 80.0f, DirectX::XMFLOAT3(-2.0f, 0.0f, 0.0f), L"Star/", "starParticles", true);
+	CreateParticleEmitter(300, 2.0f, 80.0f, DirectX::XMFLOAT3(-3.0f, 0.0f, 0.0f), L"Star/star_08.png", "starParticle");
+	GetEmitterByName("starParticles")->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+	GetEmitterByName("starParticle")->SetScale(0.75f);
+	GetEmitterByName("starParticle")->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+
+	// This was terrifying. Take graphics ideas from Jimmy Digrazia at your own peril.
+	/*CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);
+	GetEmitterByName("emojiParticles")->SetColorTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f));*/
+
+	for (int i = 0; i < globalParticleEmitters.size(); i++) {
+		globalParticleEmitters[i]->SetDestination(DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f));
+	}
 }
 
 void AssetManager::InitializeAudio() {
@@ -695,6 +724,10 @@ size_t AssetManager::GetPixelShaderArraySize() {
 
 size_t AssetManager::GetVertexShaderArraySize() {
 	return this->vertexShaders.size();
+}
+
+size_t AssetManager::GetComputeShaderArraySize() {
+	return this->computeShaders.size();
 }
 
 size_t AssetManager::GetSkyArraySize() {
@@ -772,6 +805,14 @@ FMOD::Sound* AssetManager::GetSoundAtID(int id) {
 
 std::shared_ptr<Camera> AssetManager::GetCameraAtID(int id) {
 	return this->globalCameras[id];
+}
+
+std::shared_ptr<GameEntity> AssetManager::GetTerrainAtID(int id) {
+	return this->globalTerrainEntities[id];
+}
+
+std::shared_ptr<Sky> AssetManager::GetSkyAtID(int id) {
+	return this->skies[id];
 }
 
 #pragma endregion
@@ -1318,6 +1359,15 @@ std::shared_ptr<GameEntity> AssetManager::GetGameEntityByName(std::string name) 
 	return nullptr;
 }
 
+std::shared_ptr<Emitter> AssetManager::GetEmitterByName(std::string name) {
+	for (int i = 0; i < globalParticleEmitters.size(); i++) {
+		if (globalParticleEmitters[i]->GetName() == name) {
+			return globalParticleEmitters[i];
+		}
+	}
+	return nullptr;
+}
+
 std::shared_ptr<Sky> AssetManager::GetSkyByName(std::string name) {
 	for (int i = 0; i < skies.size(); i++) {
 		if (skies[i]->GetName() == name) {
@@ -1340,6 +1390,15 @@ std::shared_ptr<SimplePixelShader> AssetManager::GetPixelShaderByName(std::strin
 	for (int i = 0; i < pixelShaders.size(); i++) {
 		if (pixelShaders[i]->GetName() == name) {
 			return pixelShaders[i];
+		}
+	}
+	return nullptr;
+}
+
+std::shared_ptr<SimpleComputeShader> AssetManager::GetComputeShaderByName(std::string name) {
+	for (int i = 0; i < computeShaders.size(); i++) {
+		if (computeShaders[i]->GetName() == name) {
+			return computeShaders[i];
 		}
 	}
 	return nullptr;

@@ -199,7 +199,7 @@ bool ISimpleShader::LoadShaderFile(LPCWSTR shaderFile)
 		// Create this constant buffer
 		D3D11_BUFFER_DESC newBuffDesc = {};
 		newBuffDesc.Usage = D3D11_USAGE_DEFAULT;
-		newBuffDesc.ByteWidth = bufferDesc.Size;
+		newBuffDesc.ByteWidth = ((bufferDesc.Size + 15) / 16) * 16; // Quick and dirty 16-byte alignment using integer division
 		newBuffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		newBuffDesc.CPUAccessFlags = 0;
 		newBuffDesc.MiscFlags = 0;
@@ -1684,8 +1684,8 @@ unsigned int SimpleGeometryShader::CalcComponentCount(unsigned int mask)
 // --------------------------------------------------------
 // Constructor just calls the base
 // --------------------------------------------------------
-SimpleComputeShader::SimpleComputeShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile)
-	: ISimpleShader(device, context)
+SimpleComputeShader::SimpleComputeShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, std::string name)
+	: ISimpleShader(device, context, name)
 {
 	this->threadsTotal = 0;
 	this->threadsX = 0;

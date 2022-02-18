@@ -89,9 +89,10 @@ void Game::Init()
 	lightUIIndex = 0;
 	emitterUIIndex = 0;
 	camUIIndex = 0;
+	terrainUIIndex = 0;
+	skyUIIndex = 1;
 
 	skies = globalAssets.GetSkyArray();
-	activeSky = 1;
 
 	//Very important this is set accurately
 	lightCount = globalAssets.GetLightArraySize();
@@ -182,12 +183,50 @@ void Game::RenderUI(float deltaTime) {
 
 	if (skyWindowEnabled) {
 		ImGui::Begin("Sky Editor");
-		ImGui::Image(globalAssets.GetEmitterAtID(0)->particleDataSRV.Get(), ImVec2(256, 256));
+
+		std::shared_ptr<Sky> currentSky = globalAssets.GetSkyAtID(skyUIIndex);
+
+		if (ImGui::ArrowButton("Previous Sky", ImGuiDir_Left)) {
+			skyUIIndex--;
+			if (skyUIIndex < 0) {
+				skyUIIndex = globalAssets.GetSkyArraySize() - 1;
+			}
+			renderer->SetActiveSky(globalAssets.GetSkyAtID(skyUIIndex));
+		};
+		ImGui::SameLine();
+
+		if (ImGui::ArrowButton("Next Sky", ImGuiDir_Right)) {
+			skyUIIndex++;
+			if (skyUIIndex > globalAssets.GetSkyArraySize() - 1) {
+				skyUIIndex = 0;
+			}
+			renderer->SetActiveSky(globalAssets.GetSkyAtID(skyUIIndex));
+		};
+
+		std::string nameBuffer;
+		static char nameBuf[64] = "";
+		nameBuffer = currentSky->GetName();
+		strcpy_s(nameBuf, nameBuffer.c_str());
+		ImGui::InputText("Rename Sky ", nameBuf, sizeof(nameBuffer));
+
+		currentSky->SetName(nameBuf);
+
+		bool skyEnabled = currentSky->GetEnableDisable();
+		ImGui::Checkbox("Enabled ", &skyEnabled);
+		currentSky->SetEnableDisable(skyEnabled);
+
+		if (skyEnabled && ImGui::CollapsingHeader("BRDF Lookup Texture")) {
+			ImGui::Image((ImTextureID*)currentSky->GetBRDFLookupTexture().Get(), ImVec2(256, 256));
+		}
+
+		//ImGui::Image(globalAssets.GetEmitterAtID(0)->particleDataSRV.Get(), ImVec2(256, 256));
 		ImGui::End();
 	}
 
 	if (lightWindowEnabled) {
 		// Display the debug UI for lights
+		Light* currentLight = globalAssets.GetLightAtID(lightUIIndex);
+
 		std::string indexStr = std::to_string(lightUIIndex);
 		std::string node = "Editing light " + indexStr;
 		ImGui::Begin("Light Editor");
@@ -209,15 +248,20 @@ void Game::RenderUI(float deltaTime) {
 			}
 		};
 
-		ImGui::ColorEdit3("Color: ", &globalAssets.GetLightAtID(lightUIIndex)->color.x);
-		ImGui::DragFloat("Intensity: ", &globalAssets.GetLightAtID(lightUIIndex)->intensity, 1, 10.0f, 200.0f);
-		ImGui::DragFloat("Range: ", &globalAssets.GetLightAtID(lightUIIndex)->range, 1, 5.0f, 20.0f);
+		bool lightEnabled = (bool)currentLight->enabled;
+		ImGui::Checkbox("Enabled ", &lightEnabled);
+		lightEnabled ? currentLight->enabled = 1.0f : currentLight->enabled = 0.0f;
+
+		ImGui::ColorEdit3("Color ", &currentLight->color.x);
+		ImGui::DragFloat("Intensity ", &currentLight->intensity, 1, 10.0f, 200.0f);
+		ImGui::DragFloat("Range ", &currentLight->range, 1, 5.0f, 20.0f);
 		ImGui::End();
 	}
 
 	if (objWindowEnabled) {
 		// Display the debug UI for objects
-		std::string indexStr = std::to_string(entityUIIndex) + " - " + Entities->at(entityUIIndex)->GetName();
+		std::shared_ptr<GameEntity> currentEntity = Entities->at(entityUIIndex);
+		std::string indexStr = std::to_string(entityUIIndex) + " - " + currentEntity->GetName();
 		std::string node = "Editing object " + indexStr;
 		ImGui::Begin("Object Editor");
 		ImGui::Text(node.c_str());
@@ -230,28 +274,32 @@ void Game::RenderUI(float deltaTime) {
 		
 		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
 			entityUIIndex++;
-			if (entityUIIndex > globalAssets.GetGameEntityArraySize()) entityUIIndex = 0;
+			if (entityUIIndex > globalAssets.GetGameEntityArraySize() - 1) entityUIIndex = 0;
 		};
-
-		UIPositionEdit = Entities->at(entityUIIndex)->GetTransform()->GetPosition();
-		UIRotationEdit = Entities->at(entityUIIndex)->GetTransform()->GetPitchYawRoll();
-		UIScaleEdit = Entities->at(entityUIIndex)->GetTransform()->GetScale();
-		
-		ImGui::DragFloat3("Position: ", &UIPositionEdit.x, 0.5f);
-		ImGui::DragFloat3("Rotation: ", &UIRotationEdit.x, 0.5f, 0, 360);
-		ImGui::InputFloat3("Scale: ", &UIScaleEdit.x);
-
-		Entities->at(entityUIIndex)->GetTransform()->SetPosition(UIPositionEdit.x, UIPositionEdit.y, UIPositionEdit.z);
-		Entities->at(entityUIIndex)->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
-		Entities->at(entityUIIndex)->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
 
 		std::string nameBuffer;
 		static char nameBuf[64] = "";
-		nameBuffer = Entities->at(entityUIIndex)->GetName();
+		nameBuffer = currentEntity->GetName();
 		strcpy_s(nameBuf, nameBuffer.c_str());
 		ImGui::InputText("Rename GameObject", nameBuf, sizeof(nameBuffer));
 
-		Entities->at(entityUIIndex)->SetName(nameBuf);
+		currentEntity->SetName(nameBuf);
+
+		bool entityEnabled = currentEntity->GetEnableDisable();
+		ImGui::Checkbox("Enabled: ", &entityEnabled);
+		currentEntity->SetEnableDisable(entityEnabled);
+
+		UIPositionEdit = currentEntity->GetTransform()->GetPosition();
+		UIRotationEdit = currentEntity->GetTransform()->GetPitchYawRoll();
+		UIScaleEdit = currentEntity->GetTransform()->GetScale();
+		
+		ImGui::DragFloat3("Position ", &UIPositionEdit.x, 0.5f);
+		ImGui::DragFloat3("Rotation ", &UIRotationEdit.x, 0.5f, 0, 360);
+		ImGui::InputFloat3("Scale ", &UIScaleEdit.x);
+
+		currentEntity->GetTransform()->SetPosition(UIPositionEdit.x, UIPositionEdit.y, UIPositionEdit.z);
+		currentEntity->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
+		currentEntity->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
 
 		ImGui::End();
 	}
@@ -260,7 +308,9 @@ void Game::RenderUI(float deltaTime) {
 	if (particleWindowEnabled) {
 		ImGui::Begin("Particle Editor");
 
-		std::string indexStr = globalAssets.GetEmitterAtID(emitterUIIndex)->GetName();
+		std::shared_ptr<Emitter> currentEmitter = globalAssets.GetEmitterAtID(emitterUIIndex);
+
+		std::string indexStr = currentEmitter->GetName();
 		std::string node = "Editing Particle Emitter " + indexStr;
 		ImGui::Text(node.c_str());
 
@@ -281,18 +331,22 @@ void Game::RenderUI(float deltaTime) {
 
 		std::string nameBuffer;
 		static char nameBuf[64] = "";
-		nameBuffer = globalAssets.GetEmitterAtID(emitterUIIndex)->GetName();
+		nameBuffer = currentEmitter->GetName();
 		strcpy_s(nameBuf, nameBuffer.c_str());
-		ImGui::InputText("Rename Emitter: ", nameBuf, sizeof(nameBuffer));
+		ImGui::InputText("Rename Emitter ", nameBuf, sizeof(nameBuffer));
 
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetName(nameBuf);
+		currentEmitter->SetName(nameBuf);
 
-		DirectX::XMFLOAT4 currentTint = globalAssets.GetEmitterAtID(emitterUIIndex)->GetColorTint();
-		ImGui::ColorEdit3("Color: ", &currentTint.x);
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetColorTint(currentTint);
+		bool emitterEnabled = currentEmitter->GetEnableDisable();
+		ImGui::Checkbox("Enabled ", &emitterEnabled);
+		currentEmitter->SetEnableDisable(emitterEnabled);
 
-		bool blendState = globalAssets.GetEmitterAtID(emitterUIIndex)->GetBlendState();
-		ImGui::Checkbox("Blend State: ", &blendState);
+		DirectX::XMFLOAT4 currentTint = currentEmitter->GetColorTint();
+		ImGui::ColorEdit3("Color ", &currentTint.x);
+		currentEmitter->SetColorTint(currentTint);
+
+		bool blendState = currentEmitter->GetBlendState();
+		ImGui::Checkbox("Blend State ", &blendState);
 		ImGui::SameLine();
 		if (blendState) {
 			ImGui::Text("Blend state is additive.");
@@ -300,27 +354,49 @@ void Game::RenderUI(float deltaTime) {
 		else {
 			ImGui::Text("Blend state is not additive.");
 		}
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetBlendState(blendState);
+		currentEmitter->SetBlendState(blendState);
 
-		float scale = globalAssets.GetEmitterAtID(emitterUIIndex)->GetScale();
-		ImGui::SliderFloat("Scale with age: ", &scale, 0.0f, 2.0f);
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetScale(scale);
+		float scale = currentEmitter->GetScale();
+		ImGui::SliderFloat("Scale with age ", &scale, 0.0f, 2.0f);
+		currentEmitter->SetScale(scale);
 
-		float particlesPerSecond = globalAssets.GetEmitterAtID(emitterUIIndex)->GetParticlesPerSecond();
-		ImGui::SliderFloat("Particles per Second: ", &particlesPerSecond, 0.1f, 20.0f);
+		float particlesPerSecond = currentEmitter->GetParticlesPerSecond();
+		ImGui::SliderFloat("Particles per Second ", &particlesPerSecond, 0.1f, 20.0f);
 		ImGui::SameLine();
 		ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetParticlesPerSecond(particlesPerSecond);
+		currentEmitter->SetParticlesPerSecond(particlesPerSecond);
 
-		float particlesLifetime = globalAssets.GetEmitterAtID(emitterUIIndex)->GetParticleLifetime();
-		ImGui::SliderFloat("Particles Lifetime: ", &particlesLifetime, 0.1f, 20.0f);
+		float particlesLifetime = currentEmitter->GetParticleLifetime();
+		ImGui::SliderFloat("Particles Lifetime ", &particlesLifetime, 0.1f, 20.0f);
 		ImGui::SameLine();
 		ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetParticleLifetime(particlesLifetime);
+		currentEmitter->SetParticleLifetime(particlesLifetime);
 
-		int maxParticles = globalAssets.GetEmitterAtID(emitterUIIndex)->GetMaxParticles();
-		ImGui::InputInt("Max Particles: ", &maxParticles);
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetMaxParticles(maxParticles);
+		float speed = currentEmitter->GetSpeed();
+		ImGui::SliderFloat("Particle Speed ", &speed, 0.1f, 5.0f);
+		currentEmitter->SetSpeed(speed);
+
+		DirectX::XMFLOAT3 destination = currentEmitter->GetDestination();
+		ImGui::InputFloat3("Particles Move Towards ", &destination.x);
+		currentEmitter->SetDestination(destination);
+
+		int maxParticles = currentEmitter->GetMaxParticles();
+		ImGui::InputInt("Max Particles ", &maxParticles);
+		currentEmitter->SetMaxParticles(maxParticles);
+
+		if (ImGui::CollapsingHeader("Particle Data ")) {
+			ImGui::Text("Sort List - Cannot be Edited live, Shader Only: ");
+			if (ImGui::BeginListBox("SortList")) {
+				DirectX::XMFLOAT2* list = (DirectX::XMFLOAT2*)currentEmitter->GetSortListSRV().Get();
+				for (int i = 0; i < maxParticles; i++) {
+					std::string listItem = "##Value at " + i;
+					listItem += ": ";
+					listItem += list[i].x;
+					ImGui::Text(listItem.c_str());
+				}
+				ImGui::EndListBox();
+			}
+		}
 
 		ImGui::End();
 	}
@@ -368,8 +444,47 @@ void Game::RenderUI(float deltaTime) {
 		// Display the debug UI for terrain
 		ImGui::Begin("Terrain Editor");
 
-		ImGui::Text("Currently unimplemented");
-		
+		std::shared_ptr<GameEntity> currentEntity = globalAssets.GetTerrainAtID(terrainUIIndex);
+		std::string indexStr = std::to_string(entityUIIndex) + " - " + currentEntity->GetName();
+		std::string node = "Editing Terrain " + indexStr;
+		ImGui::Text(node.c_str());
+
+		if (ImGui::ArrowButton("Previous Object", ImGuiDir_Left)) {
+			terrainUIIndex--;
+			if (terrainUIIndex < 0) terrainUIIndex = globalAssets.GetTerrainEntityArraySize() - 1;
+		};
+		ImGui::SameLine();
+
+		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
+			terrainUIIndex++;
+			if (terrainUIIndex > globalAssets.GetTerrainEntityArraySize() - 1) terrainUIIndex = 0;
+		};
+
+		std::string nameBuffer;
+		static char nameBuf[64] = "";
+		nameBuffer = currentEntity->GetName();
+		strcpy_s(nameBuf, nameBuffer.c_str());
+		ImGui::InputText("Rename Terrain", nameBuf, sizeof(nameBuffer));
+
+		// Like camera, terrain is currently fetched by name, so this is disabled.
+		// currentEntity->SetName(nameBuf);
+
+		bool entityEnabled = currentEntity->GetEnableDisable();
+		ImGui::Checkbox("Enabled ", &entityEnabled);
+		currentEntity->SetEnableDisable(entityEnabled);
+
+		UIPositionEdit = currentEntity->GetTransform()->GetPosition();
+		UIRotationEdit = currentEntity->GetTransform()->GetPitchYawRoll();
+		UIScaleEdit = currentEntity->GetTransform()->GetScale();
+
+		ImGui::DragFloat3("Position ", &UIPositionEdit.x, 0.5f);
+		ImGui::DragFloat3("Rotation ", &UIRotationEdit.x, 0.5f, 0, 360);
+		ImGui::InputFloat3("Scale ", &UIScaleEdit.x);
+
+		currentEntity->GetTransform()->SetPosition(UIPositionEdit.x, UIPositionEdit.y, UIPositionEdit.z);
+		currentEntity->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
+		currentEntity->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
+
 		ImGui::End();
 	}
 
@@ -528,19 +643,19 @@ void Game::RenderChildObjectsInUI(GameEntity* entity) {
 
 void Game::RenderSky() {
 	if (input.KeyPress(VK_RIGHT)) {
-		activeSky++;
-		if (activeSky > skies->size() - 1) {
-			activeSky = 0;
+		skyUIIndex++;
+		if (skyUIIndex > skies->size() - 1) {
+			skyUIIndex = 0;
 		}
 	}
 	else if (input.KeyPress(VK_LEFT)) {
-		activeSky--;
-		if (activeSky < 0) {
-			activeSky = skies->size() - 1;
+		skyUIIndex--;
+		if (skyUIIndex < 0) {
+			skyUIIndex = skies->size() - 1;
 		}
 	}
 
-	renderer->SetActiveSky(skies->at(activeSky));
+	renderer->SetActiveSky(skies->at(skyUIIndex));
 }
 
 void Game::Flashlight() {

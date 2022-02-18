@@ -296,7 +296,7 @@ protected:
 class SimpleComputeShader : public ISimpleShader
 {
 public:
-	SimpleComputeShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile);
+	SimpleComputeShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, std::string name);
 	~SimpleComputeShader();
 	Microsoft::WRL::ComPtr<ID3D11ComputeShader> GetDirectXShader() { return shader; }
 

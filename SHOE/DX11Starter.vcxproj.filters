@@ -182,6 +182,18 @@
     <FxCompile Include="Shaders\VertexShaders\VSParticles.hlsl">
       <Filter>Shaders\VertexShaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ComputeShaders\CSParticleFlow.hlsl">
+      <Filter>Shaders\ComputeShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeShaders\CSCopyDrawCount.hlsl">
+      <Filter>Shaders\ComputeShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeShaders\CSParticleEmit.hlsl">
+      <Filter>Shaders\ComputeShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeShaders\CSInitDeadList.hlsl">
+      <Filter>Shaders\ComputeShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IMGUI\Source\imgui.cpp">
