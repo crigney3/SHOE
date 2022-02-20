@@ -135,8 +135,7 @@ struct Particle {
 	float emitTime;
 	float3 startPosition;
 	float alive;
-	float debugTrackingAlive;
-	float2 padding;
+	float3 padding;
 };
 
 // Struct representing the data we expect to receive from earlier pipeline stages

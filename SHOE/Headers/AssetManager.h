@@ -111,6 +111,9 @@ public:
 
 	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context);
 
+	// Called whenever a material changes, or when a GameEntity is added
+	void SortEntitiesByMaterial();
+
 	// Methods to create new assets
 
 	std::shared_ptr<GameEntity> CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name = "GameEntity");
@@ -239,8 +242,18 @@ public:
 	std::shared_ptr<Emitter> GetEmitterAtID(int id);
 	FMOD::Sound* GetSoundAtID(int id);
 	std::shared_ptr<Camera> GetCameraAtID(int id);
+	std::shared_ptr<Material> GetMaterialAtID(int id);
+	std::shared_ptr<Mesh> GetMeshAtID(int id);
+	std::shared_ptr<SimpleVertexShader> GetVertexShaderAtID(int id);
+	std::shared_ptr<SimplePixelShader> GetPixelShaderAtID(int id);
+	std::shared_ptr<SimpleComputeShader> GetComputeShaderAtID(int id);
 	std::shared_ptr<GameEntity> GetTerrainAtID(int id);
+	std::shared_ptr<GameEntity> GetGameEntityByID(int id);
 	std::shared_ptr<Sky> GetSkyAtID(int id);
+
+	// Asset internals set functions
+	void SetGameEntityMesh(std::shared_ptr<GameEntity> entity, std::shared_ptr<Mesh> newMesh);
+	void SetGameEntityMaterial(std::shared_ptr<GameEntity> entity, std::shared_ptr<Material> newMaterial);
 
 	inline std::wstring ConvertToWide(const std::string& as);
 

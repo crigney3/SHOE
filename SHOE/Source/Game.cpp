@@ -301,6 +301,69 @@ void Game::RenderUI(float deltaTime) {
 		currentEntity->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
 		currentEntity->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
 
+		// Material changes
+		if (ImGui::CollapsingHeader("Material Swapping")) {
+			static int materialIndex = 0;
+
+			std::string nameBuffer;
+			static char nameBuf[64] = "";
+			nameBuffer = currentEntity->GetMaterial()->GetName();
+			strcpy_s(nameBuf, nameBuffer.c_str());
+
+			ImGui::Text(nameBuf);
+			if (ImGui::BeginListBox("MaterialList")) {
+				for (int i = 0; i < globalAssets.GetMaterialArraySize() - 1; i++) {
+					const bool is_selected = (materialIndex == i);
+					if (ImGui::Selectable(globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
+						materialIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+			}
+
+			/*ImGui::LabelText("Switch to Selected Material: ", 0);
+			ImGui::SameLine();*/
+			if (ImGui::Button("Swap")) {
+				globalAssets.SetGameEntityMaterial(currentEntity, globalAssets.GetMaterialAtID(materialIndex));
+
+				// If a swap happens, the list will be resorted, so we need to
+				// change the UI index.
+
+				entityUIIndex = globalAssets.GetGameEntityIDByName(currentEntity->GetName());
+			}
+		}
+
+		// Mesh Swapping
+		if (ImGui::CollapsingHeader("Mesh Swapping")) {
+			static int meshIndex = 0;
+
+			std::string nameBuffer;
+			static char nameBuf[64] = "";
+			nameBuffer = currentEntity->GetMesh()->GetName();
+			strcpy_s(nameBuf, nameBuffer.c_str());
+
+			ImGui::Text(nameBuf);
+			if (ImGui::BeginListBox("MeshList")) {
+				for (int i = 0; i < globalAssets.GetMeshArraySize() - 1; i++) {
+					const bool is_selected = (meshIndex == i);
+					if (ImGui::Selectable(globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
+						meshIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+			}
+
+			/*ImGui::LabelText("Switch to Selected Mesh: ", 0);
+			ImGui::SameLine();*/
+			if (ImGui::Button("Swap")) globalAssets.SetGameEntityMesh(currentEntity, globalAssets.GetMeshAtID(meshIndex));
+		}
+
 		ImGui::End();
 	}
 
@@ -419,12 +482,12 @@ void Game::RenderUI(float deltaTime) {
 		if (ImGui::TreeNodeEx("GameObjects", 
 			ImGuiTreeNodeFlags_DefaultOpen |
 			ImGuiTreeNodeFlags_FramePadding)) {
-			ImGui::TextWrapped("Ran out of time to do drag-and-drop parenting, but hey, it shows which ones are parented!");
 			for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
 				if (Entities->at(i)->GetTransform()->GetParent() == NULL) {
 					RenderChildObjectsInUI(Entities->at(i).get());
 				}
 			}
+
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Lights", 
@@ -637,6 +700,40 @@ void Game::RenderChildObjectsInUI(GameEntity* entity) {
 				RenderChildObjectsInUI(children[i]);
 			}
 		}
+
+		if (ImGui::IsItemClicked()) {
+			entityUIIndex = globalAssets.GetGameEntityIDByName(entity->GetName());
+			objWindowEnabled = true;
+		}
+
+		if (ImGui::BeginDragDropTarget()) {
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PARENTING_CELL")) 
+			{
+				IM_ASSERT(payload->DataSize == sizeof(int));
+				int payload_n = *(const int*)payload->Data;
+
+				// Logic to parent objects and reorder list
+				std::shared_ptr<GameEntity> sourceEntity = globalAssets.GetGameEntityByID(payload_n);
+
+				sourceEntity->GetTransform()->SetParent(entity->GetTransform());
+
+				// Re-render children list
+				for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
+					if (Entities->at(i)->GetTransform()->GetParent() == NULL) {
+						RenderChildObjectsInUI(Entities->at(i).get());
+					}
+				}
+			}
+
+			ImGui::EndDragDropTarget();
+		}
+
+		if (ImGui::BeginDragDropSource()) {
+			ImGui::SetDragDropPayload("PARENTING_CELL", &entityUIIndex, sizeof(int));
+
+			ImGui::EndDragDropSource();
+		}
+
 		ImGui::TreePop();
 	}
 }

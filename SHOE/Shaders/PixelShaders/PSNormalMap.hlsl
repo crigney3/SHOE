@@ -16,15 +16,17 @@ SamplerState clampSampler				: register(s1);
 
 SamplerComparisonState shadowState		: register(s2);
 
-cbuffer ExternalData : register(b0)
+cbuffer PerFrame : register(b0)
 {
 	LightStruct lights[64];
-	float3 ambientColor;
-	float specularity;
 	float3 cameraPos;
-	float uvMult;
 	uint lightCount;
 	int specIBLTotalMipLevels;
+}
+
+cbuffer PerMaterial : register(b1)
+{
+	float uvMult;
 }
 
 float3 calcLightExternal(VertexToPixelNormal input, LightStruct light, float3 specColor, float rough, float metal) {

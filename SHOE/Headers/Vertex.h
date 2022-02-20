@@ -26,13 +26,12 @@ struct TerrainMats
 // Basic particle struct
 struct Particle 
 {
-	float emitTime;
-	DirectX::XMFLOAT3 startPos;
 	float age;
+	DirectX::XMFLOAT3 startPos;
+	float emitTime;
 	DirectX::XMFLOAT3 currentPos;
 	float alive;
-	float debugTrackingAlive;
-	DirectX::XMFLOAT2 padding;
+	DirectX::XMFLOAT3 padding;
 };
 
 enum ParticleComputeShaderType

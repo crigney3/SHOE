@@ -1,6 +1,44 @@
 #include "GameEntity.h"
 #include "AssetManager.h"
 
+#define MAX_LIGHTS 64
+
+// These need to match the expected per-frame/object/material vertex shader data
+struct VSPerFrameData
+{
+    DirectX::XMFLOAT4X4 ViewMatrix;
+    DirectX::XMFLOAT4X4 ProjectionMatrix;
+    DirectX::XMFLOAT4X4 LightViewMatrix;
+    DirectX::XMFLOAT4X4 LightProjectionMatrix;
+    DirectX::XMFLOAT4X4 EnvLightViewMatrix;
+    DirectX::XMFLOAT4X4 EnvLightProjectionMatrix;
+};
+
+struct VSPerMaterialData
+{
+    DirectX::XMFLOAT4 ColorTint;
+};
+
+struct VSPerObjectData
+{
+    DirectX::XMFLOAT4X4 world;
+};
+
+// These need to match the expected per-frame/object/material pixel shader data
+struct PSPerFrameData
+{
+    Light Lights[MAX_LIGHTS];
+    DirectX::XMFLOAT3 CameraPosition;
+    unsigned int LightCount;
+    int SpecIBLMipLevel;
+};
+
+struct PSPerMaterialData
+{
+    DirectX::XMFLOAT3 AmbientColor;
+    float UvMult;
+};
+
 class Renderer
 {
 private:
@@ -83,7 +121,6 @@ public:
 
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(int index);
 
-    void RunComputeShaders();
     void DrawPointLights();
     void Draw(std::shared_ptr<Camera> camera, float totalTime);
 

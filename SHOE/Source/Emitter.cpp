@@ -138,7 +138,7 @@ void Emitter::SetMaxParticles(int maxParticles) {
 		particleDeadListInitComputeShader->SetInt("maxParticles", this->maxParticles);
 		particleDeadListInitComputeShader->SetUnorderedAccessView("DeadList", this->deadListUAV);
 		particleDeadListInitComputeShader->CopyAllBufferData();
-		particleDeadListInitComputeShader->DispatchByThreads(this->maxParticles + 1, 1, 1);
+		particleDeadListInitComputeShader->DispatchByThreads(this->maxParticles, 1, 1);
 	}
 }
 
@@ -181,7 +181,7 @@ void Emitter::SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> comp
 			particleDeadListInitComputeShader->SetInt("maxParticles", this->maxParticles);
 			particleDeadListInitComputeShader->SetUnorderedAccessView("DeadList", this->deadListUAV);
 			particleDeadListInitComputeShader->CopyAllBufferData();
-			particleDeadListInitComputeShader->DispatchByThreads(this->maxParticles + 1, 1, 1);
+			particleDeadListInitComputeShader->DispatchByThreads(this->maxParticles, 1, 1);
 			break;
 	}
 }
@@ -383,7 +383,7 @@ void Emitter::Update(float deltaTime, float totalTime) {
 
 		particleSimComputeShader->CopyAllBufferData();
 
-		particleSimComputeShader->DispatchByThreads(this->maxParticles + 1, 1, 1);
+		particleSimComputeShader->DispatchByThreads(this->maxParticles, 1, 1);
 
 		context->CSSetUnorderedAccessViews(0, 8, none, 0);
 	}

@@ -19,11 +19,11 @@ cbuffer ExternalData : register(b0)
 void main(uint3 threadID : SV_DispatchThreadID)
 {
 	// Need threads between 0 and maxParticles + 1, exclusive
-	if (threadID.x > (uint)maxParticles | threadID.x == 0) return;
+	if (threadID.x >= (uint)maxParticles) return;
 
-	uint threadIndexWithOffset = threadID.x - 1;
+	// uint threadIndexWithOffset = threadID.x - 1;
 
-	Particle p = particles.Load(threadIndexWithOffset);
+	Particle p = particles.Load(threadID.x);
 
 	if (p.alive == 0.0f) {
 		// These are already dead, don't append
@@ -37,22 +37,20 @@ void main(uint3 threadID : SV_DispatchThreadID)
 
 	p.position.y += deltaTime * speed;
 
-	particles[threadIndexWithOffset] = p;
-
 	// float camDistance = distance(particles[threadID.x].startPosition, cameraPos);
 
 	if (p.alive == 0.0f) {
 		// If it died this frame, skip drawing and append to dead
-		p.debugTrackingAlive = 0;
-		particles[threadIndexWithOffset] = p;
 		deadList.Append(threadID.x);
 	}
 	else {
 		// Add to sortlist for drawing
 		uint sortIndex = sortList.IncrementCounter();
 
-		float2 sortObj = float2(threadIndexWithOffset, threadID.x);
+		float2 sortObj = float2(threadID.x, threadID.x);
 
 		sortList[sortIndex] = sortObj;
 	}
+
+	particles[threadID.x] = p;
 }

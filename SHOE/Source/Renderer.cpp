@@ -251,10 +251,6 @@ void Renderer::PostResize(unsigned int windowHeight,
 	InitRenderTargetViews();
 }
 
-void Renderer::RunComputeShaders() {
-	std::shared_ptr<SimpleComputeShader> particleVertexCS = globalAssets.GetComputeShaderByName("ParticleMovementCS");
-}
-
 // ------------------------------------------------------------------------
 // Draws the point lights as solid color spheres - credit to Chris Cascioli
 // ------------------------------------------------------------------------
@@ -403,49 +399,132 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	}
 	context->OMSetRenderTargets(4, renderTargets, depthBufferDSV.Get());
 
-	//For now, it's more optimized to set const values such as lights out here.
-	std::shared_ptr<SimplePixelShader> pixShader = globalAssets.GetGameEntityByName("Bronze Cube")->GetMaterial()->GetPixShader();
+	// Per Frame data can be set out here for optimization
+	// This section could be improved, see Chris's Demos and
+	// Structs in header. Currently only supports the single default 
+	// PBR+IBL shader
 	unsigned int lightCount = globalAssets.GetLightArraySize();
-	pixShader->SetShader();
-	pixShader->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
-	pixShader->SetData("lightCount", &lightCount, sizeof(lightCount));
-	pixShader->SetFloat3("ambientColor", ambientColor);
+
+	std::shared_ptr<SimpleVertexShader> perFrameVS = globalAssets.GetVertexShaderByName("NormalsVS");
+
+	perFrameVS->SetMatrix4x4("view", cam->GetViewMatrix());
+	perFrameVS->SetMatrix4x4("projection", cam->GetProjectionMatrix());
+	perFrameVS->SetMatrix4x4("lightView", flashShadowCamera->GetViewMatrix());
+	perFrameVS->SetMatrix4x4("lightProjection", flashShadowCamera->GetProjectionMatrix());
+
+	perFrameVS->SetMatrix4x4("envLightView", mainShadowCamera->GetViewMatrix());
+	perFrameVS->SetMatrix4x4("envLightProjection", mainShadowCamera->GetProjectionMatrix());
+
+	std::shared_ptr<SimplePixelShader> perFramePS = globalAssets.GetPixelShaderByName("NormalsPS");
+
+	perFramePS->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
+	perFramePS->SetData("lightCount", &lightCount, sizeof(lightCount));
+	perFramePS->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
+	if (this->currentSky->GetEnableDisable()) {
+		perFramePS->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
+	}
 
 	// Set buffers in the input assembler
 	//  - Do this ONCE PER OBJECT you're drawing, since each object might
 	//    have different geometry.
 	std::vector<std::shared_ptr<GameEntity>>::iterator it;
 
+	// Material-Sort Rendering:
+	// We can assume the list is sorted by this step.
+	// To potentially save operations, track a current Material and Mesh
+	// A note that this list is NOT sorted by mesh - current Mesh
+	// is tracked on the chance of saving a cycle if two+ concurrent
+	// Meshes are the same.
+	// VS and PS are tracked for materials that differ, but share
+	// shaders with other objects.
+
+	SimpleVertexShader* currentVS = 0;
+	SimplePixelShader* currentPS = 0;
+	Material* currentMaterial = 0;
+	Mesh* currentMesh = 0;
+
 	for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
 		if (!it->get()->GetEnableDisable()) continue;
 
-		//Calculate pixel lighting before draw
-		pixShader = it->get()->GetMaterial()->GetPixShader();
-		pixShader->SetShader();
-		pixShader->SetFloat("uvMult", it->get()->GetMaterial()->GetTiling());
-		pixShader->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
-		pixShader->SetSamplerState("sampleState", it->get()->GetMaterial()->GetSamplerState().Get());
-		pixShader->SetSamplerState("clampSampler", it->get()->GetMaterial()->GetClampSamplerState().Get());
-		pixShader->SetShaderResourceView("textureAlbedo", it->get()->GetMaterial()->GetTexture().Get());
-		pixShader->SetShaderResourceView("textureRough", it->get()->GetMaterial()->GetRoughMap().Get());
-		pixShader->SetShaderResourceView("textureMetal", it->get()->GetMaterial()->GetMetalMap().Get());
-		if (it->get()->GetMaterial()->GetNormalMap() != nullptr) {
-			pixShader->SetShaderResourceView("textureNormal", it->get()->GetMaterial()->GetNormalMap().Get());
+		std::shared_ptr<Material> itMatPtr = it->get()->GetMaterial();
+		std::shared_ptr<Mesh> itMeshPtr = it->get()->GetMesh();
+		Transform* itTransPtr = it->get()->GetTransform();
+
+		if (currentMaterial != itMatPtr.get())
+		{
+			// Eventual improvement:
+			// Move all VS and PS "Set" calls into Material
+			// This would require storing a lot more data in material
+			// With shadows, it would also require passing in a lot of data
+			// And handling edge cases like main camera swaps
+
+			currentMaterial = itMatPtr.get();
+
+			if (currentVS != currentMaterial->GetVertShader().get()) {
+				// Set new Shader and copy per-frame data
+				currentVS = currentMaterial->GetVertShader().get();
+				currentVS->SetShader();
+
+				perFrameVS->CopyBufferData("PerFrame");
+			}
+
+			if (currentPS != currentMaterial->GetPixShader().get()) {
+				// Set new Shader and copy per-frame data
+				currentPS = currentMaterial->GetPixShader().get();
+				currentPS->SetShader();
+
+				perFramePS->CopyBufferData("PerFrame");
+			}
+
+			// Per-Material VS Data
+			currentVS->SetFloat4("colorTint", currentMaterial->GetTint());
+
+			currentVS->CopyBufferData("PerMaterial");
+
+			// Per-Material PS Data
+			currentPS->SetFloat("uvMult", itMatPtr->GetTiling());
+
+			currentPS->CopyBufferData("PerMaterial");
+
+			// Set textures and samplers
+			currentPS->SetSamplerState("sampleState", itMatPtr->GetSamplerState().Get());
+			currentPS->SetSamplerState("clampSampler", itMatPtr->GetClampSamplerState().Get());
+			currentPS->SetShaderResourceView("textureAlbedo", itMatPtr->GetTexture().Get());
+			currentPS->SetShaderResourceView("textureRough", itMatPtr->GetRoughMap().Get());
+			currentPS->SetShaderResourceView("textureMetal", itMatPtr->GetMetalMap().Get());
+			if (itMatPtr->GetNormalMap() != nullptr) {
+				currentPS->SetShaderResourceView("textureNormal", itMatPtr->GetNormalMap().Get());
+			}
+			currentPS->SetShaderResourceView("shadowMap", shadowSRV.Get());
+			currentPS->SetSamplerState("shadowState", shadowSampler.Get());
+			currentPS->SetShaderResourceView("envShadowMap", envShadowSRV.Get());
+
+			if (this->currentSky->GetEnableDisable()) {
+				currentPS->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
+				currentPS->SetShaderResourceView("brdfLookUpMap", currentSky->GetBRDFLookupTexture().Get());
+				currentPS->SetShaderResourceView("specularIBLMap", currentSky->GetConvolvedSpecularCubeMap().Get());
+			}
 		}
-		pixShader->SetShaderResourceView("shadowMap", shadowSRV.Get());
-		pixShader->SetSamplerState("shadowState", shadowSampler.Get());
-		pixShader->SetShaderResourceView("envShadowMap", envShadowSRV.Get());
 
-		if (this->currentSky->GetEnableDisable()) {
-			pixShader->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
-			pixShader->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
-			pixShader->SetShaderResourceView("brdfLookUpMap", currentSky->GetBRDFLookupTexture().Get());
-			pixShader->SetShaderResourceView("specularIBLMap", currentSky->GetConvolvedSpecularCubeMap().Get());
+		if (currentMesh != itMeshPtr.get()) {
+			currentMesh = itMeshPtr.get();
+
+			UINT stride = sizeof(Vertex);
+			UINT offset = 0;
+			context->IASetVertexBuffers(0, 1, itMeshPtr->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(itMeshPtr->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		}
 
-		pixShader->CopyAllBufferData();
+		if (currentVS != 0) {
+			// Per-Object data
+			currentVS->SetMatrix4x4("world", itTransPtr->GetWorldMatrix());
 
-		it->get()->Draw(context, cam, flashShadowCamera, mainShadowCamera);
+			currentVS->CopyBufferData("PerObject");
+		}
+
+		if (currentMesh != 0) {
+			context->DrawIndexed(itMeshPtr->GetIndexCount(), 0, 0);
+		}
 	}
 
 	//Now deal with rendering the terrain, PS data first
@@ -474,13 +553,13 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 			PSTerrain->SetShaderResourceView(n, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetNormalMap().Get());
 			PSTerrain->SetShaderResourceView(r, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetRoughMap().Get());
 			PSTerrain->SetShaderResourceView(m, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetMetalMap().Get());
+		}
 
-			if (this->currentSky->GetEnableDisable()) {
-				PSTerrain->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
-				PSTerrain->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
-				PSTerrain->SetShaderResourceView("brdfLookUpMap", currentSky->GetBRDFLookupTexture().Get());
-				PSTerrain->SetShaderResourceView("specularIBLMap", currentSky->GetConvolvedSpecularCubeMap().Get());
-			}
+		if (this->currentSky->GetEnableDisable()) {
+			PSTerrain->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
+			PSTerrain->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
+			PSTerrain->SetShaderResourceView("brdfLookUpMap", currentSky->GetBRDFLookupTexture().Get());
+			PSTerrain->SetShaderResourceView("specularIBLMap", currentSky->GetConvolvedSpecularCubeMap().Get());
 		}
 
 		PSTerrain->CopyAllBufferData();
