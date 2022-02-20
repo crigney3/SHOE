@@ -77,6 +77,9 @@ private:
 	bool rtvWindowEnabled;
 	bool soundWindowEnabled;
 	bool camWindowEnabled;
+
+	// Transfer these to static locals
+	// Then add helper functions for setting them?
 	int entityUIIndex;
 	int terrainUIIndex;
 	int emitterUIIndex;

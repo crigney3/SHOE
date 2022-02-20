@@ -16,6 +16,9 @@ private:
 	std::shared_ptr<Material> mat;
 	std::string name;
 	bool enabled;
+
+	void SetMaterial(std::shared_ptr<Material> newMaterial);
+	void SetMesh(std::shared_ptr<Mesh> newMesh);
 public:
 	GameEntity(std::shared_ptr<Mesh> mesh, DirectX::XMMATRIX worldIn, std::shared_ptr<Material> mat, std::string name = "GameObject");
 	~GameEntity();
@@ -32,6 +35,7 @@ public:
 
 	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<Camera> cam, std::shared_ptr<Camera> shadowCam1, std::shared_ptr<Camera> shadowCam2);
 	void DrawFromVerts(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<SimpleVertexShader> vs, std::shared_ptr<Camera> cam, std::shared_ptr<Camera> shadowCam1, std::shared_ptr<Camera> shadowCam2);
-	//void GenShadows(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<Camera> shadowCam);
+
+	friend class AssetManager;
 };
 

@@ -20,9 +20,9 @@ void main(uint3 threadID : SV_DispatchThreadID)
 
 	uint index = deadList.Consume();
 
-	uint indexWithOffset = index - 1;
+	// uint indexWithOffset = index - 1;
 
-	Particle particle = particles.Load(indexWithOffset);
+	Particle particle = particles.Load(index);
 
 	float3 startPosition = float3(startPos.x, startPos.y, startPos.z);
 
@@ -31,7 +31,6 @@ void main(uint3 threadID : SV_DispatchThreadID)
 	particle.emitTime = emitTime;
 	particle.position = startPosition; // Until it moves, it's at the start
 	particle.alive = 1.0f;
-	particle.debugTrackingAlive = 1.0f;
 
-	particles[indexWithOffset] = particle;
+	particles[index] = particle;
 }

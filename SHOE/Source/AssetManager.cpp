@@ -78,6 +78,19 @@ std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::stri
 
 	computeShaders.push_back(newCS);
 
+	Microsoft::WRL::ComPtr<ID3DBlob> assembly;
+	Microsoft::WRL::ComPtr<ID3DBlob> binary;
+
+	binary = newCS->GetShaderBlob();
+
+	HRESULT hr = D3DDisassemble(
+		binary->GetBufferPointer(),
+		binary->GetBufferSize(),
+		D3D_DISASM_ENABLE_INSTRUCTION_NUMBERING, nullptr,
+		&assembly);
+
+	D3DWriteBlobToFile(assembly.Get(), nameToLoad.c_str(), 1);
+
 	return newCS;
 }
 
@@ -162,6 +175,8 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(mesh, XMMatrixIdentity(), mat, name);
 
 	globalEntities.push_back(newEnt);
+
+	SortEntitiesByMaterial();
 
 	return newEnt;
 }
@@ -364,25 +379,25 @@ void AssetManager::InitializeMaterials() {
 					  L"BlankAlbedo.png",
 					  L"blank_normals.png",
 					  L"bronze_metal.png",
-					  L"GenericRoughness100.png");
+					  L"GenericRoughness0.png");
 
 	CreatePBRMaterial(std::string("reflective"),
 					  L"BlankAlbedo.png",
 					  L"blank_normals.png",
 					  L"wood_metal.png",
-					  L"GenericRoughness100.png");
+					  L"GenericRoughness0.png");
 
 	CreatePBRMaterial(std::string("reflectiveRough"),
 					  L"BlankAlbedo.png",
 					  L"blank_normals.png",
 					  L"wood_metal.png",
-					  L"GenericRoughness50.png");
+					  L"GenericRoughness100.png");
 
 	CreatePBRMaterial(std::string("reflectiveRoughMetal"),
 					  L"BlankAlbedo.png",
 					  L"blank_normals.png",
 					  L"bronze_metal.png",
-					  L"GenericRoughness50.png");
+					  L"GenericRoughness100.png");
 
 	//Make PBR materials
 	CreatePBRMaterial(std::string("bronzeMat"),
@@ -813,6 +828,30 @@ std::shared_ptr<GameEntity> AssetManager::GetTerrainAtID(int id) {
 
 std::shared_ptr<Sky> AssetManager::GetSkyAtID(int id) {
 	return this->skies[id];
+}
+
+std::shared_ptr<Material> AssetManager::GetMaterialAtID(int id) {
+	return this->globalMaterials[id];
+}
+
+std::shared_ptr<Mesh> AssetManager::GetMeshAtID(int id) {
+	return this->globalMeshes[id];
+}
+
+std::shared_ptr<SimpleVertexShader> AssetManager::GetVertexShaderAtID(int id) {
+	return this->vertexShaders[id];
+}
+
+std::shared_ptr<SimplePixelShader> AssetManager::GetPixelShaderAtID(int id) {
+	return this->pixelShaders[id];
+}
+
+std::shared_ptr<SimpleComputeShader> AssetManager::GetComputeShaderAtID(int id) {
+	return this->computeShaders[id];
+}
+
+std::shared_ptr<GameEntity> AssetManager::GetGameEntityByID(int id) {
+	return this->globalEntities[id];
 }
 
 #pragma endregion
@@ -1567,7 +1606,7 @@ int AssetManager::GetMaterialIDByName(std::string name) {
 
 #pragma endregion
 
-#pragma inlines
+#pragma region inlines
 
 inline std::wstring AssetManager::ConvertToWide(const std::string& as)
 {
@@ -1579,3 +1618,23 @@ inline std::wstring AssetManager::ConvertToWide(const std::string& as)
 }
 
 #pragma endregion
+
+#pragma region assetSetInternals
+
+void AssetManager::SetGameEntityMesh(std::shared_ptr<GameEntity> entity, std::shared_ptr<Mesh> newMesh) {
+	entity->SetMesh(newMesh);
+	//SortEntitiesByMaterial();
+}
+
+void AssetManager::SetGameEntityMaterial(std::shared_ptr<GameEntity> entity, std::shared_ptr<Material> newMaterial) {
+	entity->SetMaterial(newMaterial);
+	SortEntitiesByMaterial();
+}
+
+#pragma endregion
+
+void AssetManager::SortEntitiesByMaterial() {
+	std::sort(this->globalEntities.begin(), this->globalEntities.end(), [](const auto& e1, const auto& e2) {
+		return e1->GetMaterial() < e2->GetMaterial();
+	});
+}
