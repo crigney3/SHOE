@@ -34,6 +34,10 @@ public:
 	DirectX::XMFLOAT4X4 GetWorldMatrix();
 	DirectX::XMFLOAT3 GetForward();
 
+	DirectX::XMFLOAT3 GetXAxis();
+	DirectX::XMFLOAT3 GetYAxis();
+	DirectX::XMFLOAT3 GetZAxis();
+
 	void MoveAbsolute(float x, float y, float z);
 	void MoveRelative(float x, float y, float z); // Move along our "local" axes (respect rotation)
 	void Rotate(float pitch, float yaw, float roll);
