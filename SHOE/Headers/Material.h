@@ -28,6 +28,9 @@ private:
 	bool transparent;
 	bool refractive;
 
+	float indexOfRefraction;
+	float refractionScale;
+
 public:
 	Material(DirectX::XMFLOAT4 tint,
 			 std::shared_ptr<SimplePixelShader> pix,
@@ -64,6 +67,12 @@ public:
 
 	void SetRefractive(bool refractive);
 	bool GetRefractive();
+
+	void SetIndexOfRefraction(float index);
+	float GetIndexOfRefraction();
+
+	void SetRefractionScale(float scale);
+	float GetRefractionScale();
 
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();

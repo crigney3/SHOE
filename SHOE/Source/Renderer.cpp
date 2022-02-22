@@ -59,6 +59,7 @@ void Renderer::InitRenderTargetViews() {
 
 	// Initialize Depths as just a float texture
 	for (int i = 3; i < RTVTypes::RTV_TYPE_COUNT; i++) {
+		// Hacky fix for now
 		int texIndex;
 		if (i < 6) texIndex = i;
 		else texIndex = 5;
@@ -85,6 +86,11 @@ void Renderer::InitRenderTargetViews() {
 		device->CreateRenderTargetView(ssaoTexture2D[texIndex].Get(), &rtvDesc, renderTargetRTVs[i].GetAddressOf());
 
 		device->CreateShaderResourceView(ssaoTexture2D[texIndex].Get(), 0, renderTargetSRVs[i].GetAddressOf());
+	}
+
+	for (int i = 0; i < MISC_EFFECT_SRV_COUNT; i++) {
+		miscEffectDepthBuffers[i].Reset();
+		miscEffectSRVs[i].Reset();
 	}
 	
 	// SSAO needs a random 4x4 texture to work
@@ -143,6 +149,7 @@ void Renderer::InitRenderTargetViews() {
 		XMStoreFloat4(&ssaoOffsets[i], offset * acceleratedScale);
 	}
 
+	// Set up particle depth and blending
 	particleDepthState.Reset();
 	particleBlendAdditive.Reset();
 
@@ -162,13 +169,34 @@ void Renderer::InitRenderTargetViews() {
 	additiveBlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;  // 100% of destination alpha
 	additiveBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 	device->CreateBlendState(&additiveBlendDesc, particleBlendAdditive.GetAddressOf());
+
+	// Set up refraction silhouette depth buffer
+	refractionSilhouetteDepthState.Reset();
+	prePassDepthState.Reset();
+
+	D3D11_DEPTH_STENCIL_DESC rsDepthDesc = {};
+	rsDepthDesc.DepthEnable = true;
+	rsDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // No depth writing
+	rsDepthDesc.DepthFunc = D3D11_COMPARISON_LESS; // Get only the closest pixels
+	device->CreateDepthStencilState(&rsDepthDesc, refractionSilhouetteDepthState.GetAddressOf());
+
+	// Set up prepass depth buffer
+	D3D11_DEPTH_STENCIL_DESC prePassDepthDesc = {};
+	prePassDepthDesc.DepthEnable = true;
+	prePassDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // No depth writing - unsure whether to keep this here
+	prePassDepthDesc.DepthFunc = D3D11_COMPARISON_LESS; // Get only the closest pixels
+	device->CreateDepthStencilState(&prePassDepthDesc, prePassDepthState.GetAddressOf());
+
+	InitShadows();
 }
 
 void Renderer::InitShadows() {
     //Set up buffers and data for shadows
 	shadowSize = 2048;
-	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> shadowDepthView;
-	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> envShadowDepthView;
+
+	shadowRasterizer.Reset();
+	shadowSampler.Reset();
+	this->VSShadow.reset();
 
 	this->VSShadow = globalAssets.GetVertexShaderByName("ShadowVS");
 
@@ -185,31 +213,68 @@ void Renderer::InitShadows() {
 	shadowDesc.SampleDesc.Quality = 0;
 	shadowDesc.Usage = D3D11_USAGE_DEFAULT;
 
+	D3D11_TEXTURE2D_DESC miscDepthDesc = {};
+	miscDepthDesc.Width = windowWidth;
+	miscDepthDesc.Height = windowHeight;
+	miscDepthDesc.ArraySize = 1;
+	miscDepthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+	miscDepthDesc.CPUAccessFlags = 0;
+	miscDepthDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+	miscDepthDesc.MipLevels = 1;
+	miscDepthDesc.MiscFlags = 0;
+	miscDepthDesc.SampleDesc.Count = 1;
+	miscDepthDesc.SampleDesc.Quality = 0;
+	miscDepthDesc.Usage = D3D11_USAGE_DEFAULT;
+
 	ID3D11Texture2D* shadowTexture;
 	device->CreateTexture2D(&shadowDesc, 0, &shadowTexture);
 
 	ID3D11Texture2D* envShadowTexture;
 	device->CreateTexture2D(&shadowDesc, 0, &envShadowTexture);
 
+	ID3D11Texture2D* silhouetteTexture;
+	device->CreateTexture2D(&miscDepthDesc, 0, &silhouetteTexture);
+
+	ID3D11Texture2D* transparentPrePassTexture;
+	device->CreateTexture2D(&miscDepthDesc, 0, &transparentPrePassTexture);
+
+	ID3D11Texture2D* prePassTexture;
+	device->CreateTexture2D(&miscDepthDesc, 0, &prePassTexture);
+
 	D3D11_DEPTH_STENCIL_VIEW_DESC shadowDSDesc = {};
 	shadowDSDesc.Format = DXGI_FORMAT_D32_FLOAT;
 	shadowDSDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	shadowDSDesc.Texture2D.MipSlice = 0;
-	device->CreateDepthStencilView(shadowTexture, &shadowDSDesc, shadowDepthView.GetAddressOf());
+	device->CreateDepthStencilView(shadowTexture, &shadowDSDesc, miscEffectDepthBuffers[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].GetAddressOf());
 
-	device->CreateDepthStencilView(envShadowTexture, &shadowDSDesc, envShadowDepthView.GetAddressOf());
+	device->CreateDepthStencilView(envShadowTexture, &shadowDSDesc, miscEffectDepthBuffers[MiscEffectSRVTypes::ENV_SHADOW].GetAddressOf());
+
+	device->CreateDepthStencilView(silhouetteTexture, &shadowDSDesc, miscEffectDepthBuffers[MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS].GetAddressOf());
+
+	device->CreateDepthStencilView(transparentPrePassTexture, &shadowDSDesc, miscEffectDepthBuffers[MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS].GetAddressOf());
+
+	device->CreateDepthStencilView(prePassTexture, &shadowDSDesc, miscEffectDepthBuffers[MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS].GetAddressOf());
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
 	srvDesc.Texture2D.MostDetailedMip = 0;
-	device->CreateShaderResourceView(shadowTexture, &srvDesc, shadowSRV.GetAddressOf());
+	device->CreateShaderResourceView(shadowTexture, &srvDesc, miscEffectSRVs[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].GetAddressOf());
 
-	device->CreateShaderResourceView(envShadowTexture, &srvDesc, envShadowSRV.GetAddressOf());
+	device->CreateShaderResourceView(envShadowTexture, &srvDesc, miscEffectSRVs[MiscEffectSRVTypes::ENV_SHADOW].GetAddressOf());
+
+	device->CreateShaderResourceView(silhouetteTexture, &srvDesc, miscEffectSRVs[MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS].GetAddressOf());
+
+	device->CreateShaderResourceView(transparentPrePassTexture, &srvDesc, miscEffectSRVs[MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS].GetAddressOf());
+
+	device->CreateShaderResourceView(prePassTexture, &srvDesc, miscEffectSRVs[MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS].GetAddressOf());
 
 	shadowTexture->Release();
 	envShadowTexture->Release();
+	silhouetteTexture->Release();
+	transparentPrePassTexture->Release();
+	prePassTexture->Release();
 
 	D3D11_SAMPLER_DESC shadowSampDesc = {};
 	shadowSampDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR; // This is the important change from regular Sampler Desc
@@ -231,9 +296,6 @@ void Renderer::InitShadows() {
 	shadowRastDesc.DepthBiasClamp = 0.0f;
 	shadowRastDesc.SlopeScaledDepthBias = 10.0f;
 	device->CreateRasterizerState(&shadowRastDesc, &shadowRasterizer);
-
-	shadowDepthBuffers.push_back(shadowDepthView);
-	shadowDepthBuffers.push_back(envShadowDepthView);
 }
 
 void Renderer::PreResize() {
@@ -323,10 +385,63 @@ void Renderer::DrawPointLights()
 
 }
 
+void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type) {
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> miscEffectDepth;
+	miscEffectDepth = miscEffectDepthBuffers[type];
 
-void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferIndex) {
+	context->OMSetRenderTargets(0, 0, miscEffectDepth.Get());
+
+	context->ClearDepthStencilView(miscEffectDepth.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+	context->RSSetState(0); // Unclear if this should be a custom rasterizer state
+
+	D3D11_VIEWPORT vp = {};
+	vp.TopLeftX = 0;
+	vp.TopLeftY = 0;
+	vp.Width = (float)windowWidth;
+	vp.Height = (float)windowHeight;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
+	context->RSSetViewports(1, &vp);
+
+	context->PSSetShader(0, 0, 0);
+	VSShadow->SetShader();
+
+	VSShadow->SetMatrix4x4("view", sourceCam->GetViewMatrix());
+	VSShadow->SetMatrix4x4("projection", sourceCam->GetProjectionMatrix());
+
+	std::vector<std::shared_ptr<GameEntity>>::iterator it;
+
+	for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
+		// Standard depth pre-pass
+		VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
+
+		VSShadow->CopyAllBufferData();
+
+		//globalAssets.globalEntities[i]->Draw(context, cam, nullptr, nullptr);
+		UINT stride = sizeof(Vertex);
+		UINT offset = 0;
+		context->IASetVertexBuffers(0, 1, it->get()->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(it->get()->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+		context->DrawIndexed(
+			it->get()->GetMesh()->GetIndexCount(),
+			0,
+			0);
+	}
+
+	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), miscEffectDepthBuffers[type].Get());
+
+	vp.Width = (float)windowWidth;
+	vp.Height = (float)windowHeight;
+	context->RSSetViewports(1, &vp);
+
+	//context->RSSetState(0);
+}
+
+void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTypes type) {
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> shadowDepth;
-	shadowDepth = shadowDepthBuffers[depthBufferIndex];
+	shadowDepth = miscEffectDepthBuffers[type];
 
 	context->OMSetRenderTargets(0, 0, shadowDepth.Get());
 
@@ -352,6 +467,7 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferI
 	std::vector<std::shared_ptr<GameEntity>>::iterator it;
 
 	for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
+		// This is similar to what I'd need for any depth pre-pass
 		VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
 
 		VSShadow->CopyAllBufferData();
@@ -400,7 +516,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	// This fills in all renderTargets used before post-processing
 	// Includes Colors, Ambient, Normals, and Depths
 	const int numTargets = 4;
-	ID3D11RenderTargetView* renderTargets[numTargets] = {};
+	static ID3D11RenderTargetView* renderTargets[numTargets] = {};
 	for (int i = 0; i < numTargets; i++) {
 		renderTargets[i] = renderTargetRTVs[i].Get();
 	}
@@ -513,9 +629,9 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 			if (itMatPtr->GetNormalMap() != nullptr) {
 				currentPS->SetShaderResourceView("textureNormal", itMatPtr->GetNormalMap().Get());
 			}
-			currentPS->SetShaderResourceView("shadowMap", shadowSRV.Get());
+			currentPS->SetShaderResourceView("shadowMap", miscEffectSRVs[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].Get());
 			currentPS->SetSamplerState("shadowState", shadowSampler.Get());
-			currentPS->SetShaderResourceView("envShadowMap", envShadowSRV.Get());
+			currentPS->SetShaderResourceView("envShadowMap", miscEffectSRVs[MiscEffectSRVTypes::ENV_SHADOW].Get());
 
 			if (this->currentSky->GetEnableDisable()) {
 				currentPS->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
@@ -556,11 +672,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
 		PSTerrain->SetFloat("uvMultNear", 50.0f);
 		PSTerrain->SetFloat("uvMultFar", 150.0f);
-		PSTerrain->SetShaderResourceView("shadowMap", shadowSRV.Get());
+		PSTerrain->SetShaderResourceView("shadowMap", miscEffectSRVs[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].Get());
 		PSTerrain->SetShaderResourceView("blendMap", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMap.Get());
 		PSTerrain->SetSamplerState("shadowState", shadowSampler.Get());
 		PSTerrain->SetSamplerState("clampSampler", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[0].GetClampSamplerState().Get());
-		PSTerrain->SetShaderResourceView("envShadowMap", envShadowSRV.Get());
+		PSTerrain->SetShaderResourceView("envShadowMap", miscEffectSRVs[MiscEffectSRVTypes::ENV_SHADOW].Get());
 
 		for (int i = 0; i < globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials.size(); i++) {
 			std::string a = "texture" + std::to_string(i + 1) + "Albedo";
@@ -720,4 +836,8 @@ void Renderer::SetActiveSky(std::shared_ptr<Sky> sky) {
 
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetRenderTargetSRV(RTVTypes type) {
 	return renderTargetSRVs[type];
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetMiscEffectSRV(MiscEffectSRVTypes type) {
+	return miscEffectSRVs[type];
 }

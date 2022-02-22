@@ -78,7 +78,7 @@ std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::stri
 
 	computeShaders.push_back(newCS);
 
-	Microsoft::WRL::ComPtr<ID3DBlob> assembly;
+	/*Microsoft::WRL::ComPtr<ID3DBlob> assembly;
 	Microsoft::WRL::ComPtr<ID3DBlob> binary;
 
 	binary = newCS->GetShaderBlob();
@@ -89,7 +89,7 @@ std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::stri
 		D3D_DISASM_ENABLE_INSTRUCTION_NUMBERING, nullptr,
 		&assembly);
 
-	D3DWriteBlobToFile(assembly.Get(), nameToLoad.c_str(), 1);
+	D3DWriteBlobToFile(assembly.Get(), nameToLoad.c_str(), 1);*/
 
 	return newCS;
 }
@@ -459,6 +459,18 @@ void AssetManager::InitializeMaterials() {
 					  L"wood_normals.png",
 					  L"wood_metal.png",
 					  L"wood_roughness.png");
+
+	CreatePBRMaterial(std::string("transparentScratchMat"),
+					  L"scratched_albedo.png",
+					  L"scratched_normals.png",
+					  L"scratched_metal.png",
+					  L"scratched_roughness.png")->SetTransparent(true);
+
+	CreatePBRMaterial(std::string("refractiveScratchMat"),
+					  L"scratched_albedo.png",
+					  L"scratched_normals.png",
+					  L"scratched_metal.png",
+					  L"scratched_roughness.png")->SetRefractive(true);
 }
 
 void AssetManager::InitializeMeshes() {

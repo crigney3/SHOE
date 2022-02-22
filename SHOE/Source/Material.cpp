@@ -26,6 +26,10 @@ Material::Material(DirectX::XMFLOAT4 tint,
 	this->name = name;
 	this->transparent = transparent;
 	this->refractive = refractive;
+
+	// For now, these are only set by the Setter functions
+	this->indexOfRefraction = 0.5f;
+	this->refractionScale = 0.1f;
 }
 
 Material::~Material() {
@@ -108,6 +112,22 @@ void Material::SetRefractive(bool refractive) {
 
 bool Material::GetRefractive() {
 	return this->refractive;
+}
+
+void Material::SetIndexOfRefraction(float index) {
+	this->indexOfRefraction = index;
+}
+
+float Material::GetIndexOfRefraction() {
+	return this->indexOfRefraction;
+}
+
+void Material::SetRefractionScale(float scale) {
+	this->refractionScale = scale;
+}
+
+float Material::GetRefractionScale() {
+	return this->refractionScale;
 }
 
 void Material::SetEnableDisable(bool value) {

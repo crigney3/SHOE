@@ -119,10 +119,6 @@ void Game::Init()
 										  swapChain,
 										  backBufferRTV,
 										  depthStencilView);
-
-
-	
-	renderer->InitShadows();
 }
 
 void Game::RenderUI(float deltaTime) {
@@ -554,22 +550,36 @@ void Game::RenderUI(float deltaTime) {
 	if (rtvWindowEnabled) {
 		ImGui::Begin("Multiple Render Target Viewer");
 
-		ImGui::Text("Color Without Ambient");
-		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_NO_AMBIENT).Get(), ImVec2(500, 300));
-		ImGui::Text("Ambient Color");
-		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_AMBIENT).Get(), ImVec2(500, 300));
-		ImGui::Text("Normals");
-		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::NORMALS).Get(), ImVec2(500, 300));
-		ImGui::Text("Depths");
-		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::DEPTHS).Get(), ImVec2(500, 300));
-		ImGui::Text("SSAO");
-		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
-		ImGui::Text("SSAO Post Blur");
-		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
-		ImGui::Text("Refraction Silhouette");
-		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
-		ImGui::Text("Pre-Transparency Composite");
-		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
+		if (ImGui::CollapsingHeader("MRT Effects")) {
+			ImGui::Text("Color Without Ambient");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_NO_AMBIENT).Get(), ImVec2(500, 300));
+			ImGui::Text("Ambient Color");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_AMBIENT).Get(), ImVec2(500, 300));
+			ImGui::Text("Normals");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::NORMALS).Get(), ImVec2(500, 300));
+			ImGui::Text("Depths");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Text("SSAO");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
+			ImGui::Text("SSAO Post Blur");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
+		}
+
+		if (ImGui::CollapsingHeader("Shadow Depth Views")) {
+			ImGui::Text("Environmental Shadows");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::ENV_SHADOW).Get(), ImVec2(500, 300));
+			ImGui::Text("Flashlight Shadows");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::FLASHLIGHT_SHADOW).Get(), ImVec2(500, 300));
+		}
+
+		if (ImGui::CollapsingHeader("Depth Prepass Views")) {
+			ImGui::Text("Refraction Silhouette Depths");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Text("Transparency Depth Prepass");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Text("Render Depth Prepass (used for optimization)");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+		}
 
 		ImGui::End();
 	}
@@ -631,7 +641,7 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::End();
 	}
 
-	// TODO: Add skybox menu
+	// TODO: Add Material Edit menu
 
 	// Display a menu at the top
 	if (ImGui::BeginMainMenuBar()) {
@@ -864,10 +874,10 @@ void Game::Draw(float deltaTime, float totalTime)
 {
 	//Render shadows before anything else
 	if (flashMenuToggle) {
-		renderer->RenderShadows(flashShadowCamera, 0);
+		renderer->RenderShadows(flashShadowCamera, MiscEffectSRVTypes::FLASHLIGHT_SHADOW);
 	}
 
-	renderer->RenderShadows(mainShadowCamera, 1);
+	renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
 
 	renderer->Draw(mainCamera, totalTime);
 }

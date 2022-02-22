@@ -28,6 +28,17 @@ enum RTVTypes
     RTV_TYPE_COUNT
 };
 
+enum MiscEffectSRVTypes
+{
+    FLASHLIGHT_SHADOW,
+    ENV_SHADOW,
+    REFRACTION_SILHOUETTE_DEPTHS,
+    TRANSPARENT_PREPASS_DEPTHS,
+    RENDER_PREPASS_DEPTHS,
+
+    MISC_EFFECT_SRV_COUNT
+};
+
 // These need to match the expected per-frame/object/material vertex shader data
 struct VSPerFrameData
 {
@@ -80,9 +91,8 @@ private:
 
     //components for shadows
     int shadowSize;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shadowSRV;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> envShadowSRV;
-    std::vector< Microsoft::WRL::ComPtr<ID3D11DepthStencilView>> shadowDepthBuffers;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> miscEffectSRVs[MiscEffectSRVTypes::MISC_EFFECT_SRV_COUNT];
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilView> miscEffectDepthBuffers[MiscEffectSRVTypes::MISC_EFFECT_SRV_COUNT];
     Microsoft::WRL::ComPtr<ID3D11SamplerState> shadowSampler;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> shadowRasterizer;
     std::shared_ptr<SimpleVertexShader> VSShadow;
@@ -104,10 +114,16 @@ private:
     const int emptyRTV = 0;
 
     // Regardless of RTV count, SSAO needs 6 textures
-    Microsoft::WRL::ComPtr<ID3D11Texture2D>             ssaoTexture2D[6];
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> ssaoTexture2D[6];
 
     unsigned int windowHeight;
     unsigned int windowWidth;
+
+    // Refraction data
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> refractionSilhouetteDepthState;
+
+    // Depth pre-pass data
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> prePassDepthState;
 
     //Camera pointer
     std::shared_ptr<Camera> mainCamera;
@@ -139,6 +155,7 @@ public:
     void PreResize();
 
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(RTVTypes type);
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMiscEffectSRV(MiscEffectSRVTypes type);
 
     void DrawPointLights();
     void Draw(std::shared_ptr<Camera> camera, float totalTime);
@@ -146,5 +163,6 @@ public:
     void SetActiveSky(std::shared_ptr<Sky> sky);
 
     void InitShadows();
-    void RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferIndex);
+    void RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTypes type);
+    void RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type);
 };
