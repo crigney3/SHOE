@@ -674,6 +674,7 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("SSAOBlurPS", L"PSOcclusionBlur.cso");
 	CreatePixelShader("SSAOCombinePS", L"PSOcclusionCombine.cso");
 	CreatePixelShader("ParticlesPS", L"PSParticles.cso");
+	CreatePixelShader("TextureSamplePS", L"PSTextureSample.cso");
 
 	// Make compute shaders
 	CreateComputeShader("ParticleMoveCS", L"CSParticleFlow.cso");

@@ -25,6 +25,9 @@ private:
 	bool enabled;
 	std::string name;
 
+	bool transparent;
+	bool refractive;
+
 public:
 	Material(DirectX::XMFLOAT4 tint,
 			 std::shared_ptr<SimplePixelShader> pix,
@@ -35,7 +38,9 @@ public:
 			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
 			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
 			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
-			 std::string name = "material");
+			 std::string name = "material",
+			 bool transparent = false,
+			 bool refractive = false);
 	~Material();
 
 	DirectX::XMFLOAT4 GetTint();
@@ -53,6 +58,12 @@ public:
 	void SetTiling(float uv);
 
 	std::string GetName();
+
+	void SetTransparent(bool transparent);
+	bool GetTransparent();
+
+	void SetRefractive(bool refractive);
+	bool GetRefractive();
 
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();

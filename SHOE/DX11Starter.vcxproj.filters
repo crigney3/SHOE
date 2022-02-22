@@ -194,6 +194,9 @@
     <FxCompile Include="Shaders\ComputeShaders\CSInitDeadList.hlsl">
       <Filter>Shaders\ComputeShaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\PixelShaders\PSTextureSample.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IMGUI\Source\imgui.cpp">

@@ -551,22 +551,25 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::End();
 	}
 
-	// TODO: Make MRT menu toggleable
 	if (rtvWindowEnabled) {
 		ImGui::Begin("Multiple Render Target Viewer");
 
 		ImGui::Text("Color Without Ambient");
-		ImGui::Image(renderer->GetRenderTargetSRV(0).Get(), ImVec2(500, 300));
+		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_NO_AMBIENT).Get(), ImVec2(500, 300));
 		ImGui::Text("Ambient Color");
-		ImGui::Image(renderer->GetRenderTargetSRV(1).Get(), ImVec2(500, 300));
+		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_AMBIENT).Get(), ImVec2(500, 300));
 		ImGui::Text("Normals");
-		ImGui::Image(renderer->GetRenderTargetSRV(2).Get(), ImVec2(500, 300));
+		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::NORMALS).Get(), ImVec2(500, 300));
 		ImGui::Text("Depths");
-		ImGui::Image(renderer->GetRenderTargetSRV(3).Get(), ImVec2(500, 300));
+		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::DEPTHS).Get(), ImVec2(500, 300));
 		ImGui::Text("SSAO");
-		ImGui::Image(renderer->GetRenderTargetSRV(4).Get(), ImVec2(500, 300));
+		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
 		ImGui::Text("SSAO Post Blur");
-		ImGui::Image(renderer->GetRenderTargetSRV(5).Get(), ImVec2(500, 300));
+		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
+		ImGui::Text("Refraction Silhouette");
+		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
+		ImGui::Text("Pre-Transparency Composite");
+		ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
 
 		ImGui::End();
 	}

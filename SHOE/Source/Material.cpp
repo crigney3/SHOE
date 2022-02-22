@@ -9,11 +9,12 @@ Material::Material(DirectX::XMFLOAT4 tint,
 				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap, 
 				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap, 
 				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
-				   std::string name) {
+				   std::string name,
+				   bool transparent,
+				   bool refractive) {
 	this->colorTint = tint;
 	this->pixShader = pix;
 	this->vertShader = vert;
-	//this->specularExponent = shininess;
 	this->texture = texture;
 	this->textureState = textureState;
 	this->normalMap = normalMap;
@@ -23,6 +24,8 @@ Material::Material(DirectX::XMFLOAT4 tint,
 	this->clampState = clampState;
 	this->enabled = true;
 	this->name = name;
+	this->transparent = transparent;
+	this->refractive = refractive;
 }
 
 Material::~Material() {
@@ -83,6 +86,28 @@ void Material::SetTiling(float uv) {
 
 Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetClampSamplerState() {
 	return this->clampState;
+}
+
+void Material::SetTransparent(bool transparent) {
+	// If this is turning off transparency, disable refraction as well
+	if (!transparent) this->refractive = false;
+	this->transparent = transparent;
+}
+
+bool Material::GetTransparent() {
+	return this->transparent;
+}
+
+void Material::SetRefractive(bool refractive) {
+	this->refractive = refractive;
+
+	// If this material is refractive, we can assume it should
+	// also be transparent.
+	this->transparent = true;
+}
+
+bool Material::GetRefractive() {
+	return this->refractive;
 }
 
 void Material::SetEnableDisable(bool value) {

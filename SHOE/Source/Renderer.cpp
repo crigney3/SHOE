@@ -34,8 +34,8 @@ Renderer::~Renderer(){
 void Renderer::InitRenderTargetViews() {
 	for (int i = 0; i < 3; i++) {
 		ssaoTexture2D[i].Reset();
-		ssaoRTVs[i].Reset();
-		ssaoSRV[i].Reset();
+		renderTargetRTVs[i].Reset();
+		renderTargetSRVs[i].Reset();
 
 		D3D11_TEXTURE2D_DESC basicTexDesc = {};
 		basicTexDesc.Width = windowWidth;
@@ -52,16 +52,20 @@ void Renderer::InitRenderTargetViews() {
 		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 		rtvDesc.Texture2D.MipSlice = 0;
 		rtvDesc.Format = basicTexDesc.Format;
-		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, ssaoRTVs[i].GetAddressOf());
+		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, renderTargetRTVs[i].GetAddressOf());
 
-		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, ssaoSRV[i].GetAddressOf());
+		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, renderTargetSRVs[i].GetAddressOf());
 	}
 
 	// Initialize Depths as just a float texture
-	for (int i = 3; i < 6; i++) {
-		ssaoTexture2D[i].Reset();
-		ssaoRTVs[i].Reset();
-		ssaoSRV[i].Reset();
+	for (int i = 3; i < RTVTypes::RTV_TYPE_COUNT; i++) {
+		int texIndex;
+		if (i < 6) texIndex = i;
+		else texIndex = 5;
+
+		ssaoTexture2D[texIndex].Reset();
+		renderTargetRTVs[i].Reset();
+		renderTargetSRVs[i].Reset();
 
 		D3D11_TEXTURE2D_DESC basicTexDesc = {};
 		basicTexDesc.Width = windowWidth;
@@ -72,15 +76,15 @@ void Renderer::InitRenderTargetViews() {
 		basicTexDesc.MipLevels = 1;
 		basicTexDesc.MiscFlags = 0;
 		basicTexDesc.SampleDesc.Count = 1;
-		device->CreateTexture2D(&basicTexDesc, 0, &ssaoTexture2D[i]);
+		device->CreateTexture2D(&basicTexDesc, 0, &ssaoTexture2D[texIndex]);
 
 		D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
 		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 		rtvDesc.Texture2D.MipSlice = 0;
 		rtvDesc.Format = basicTexDesc.Format;
-		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, ssaoRTVs[i].GetAddressOf());
+		device->CreateRenderTargetView(ssaoTexture2D[texIndex].Get(), &rtvDesc, renderTargetRTVs[i].GetAddressOf());
 
-		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, ssaoSRV[i].GetAddressOf());
+		device->CreateShaderResourceView(ssaoTexture2D[texIndex].Get(), 0, renderTargetSRVs[i].GetAddressOf());
 	}
 	
 	// SSAO needs a random 4x4 texture to work
@@ -376,7 +380,7 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferI
 void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	// Background color (Cornflower Blue in this case) for clearing
-	const float color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	const float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 	// Clear the render target and depth buffer (erases what's on the screen)
 	//  - Do this ONCE PER FRAME
@@ -387,15 +391,18 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
 		1.0f,
 		0);
-	for (int i = 0; i < 6; i++) {
-		context->ClearRenderTargetView(ssaoRTVs[i].Get(), color);
+	for (int i = 0; i < RTVTypes::RTV_TYPE_COUNT; i++) {
+		context->ClearRenderTargetView(renderTargetRTVs[i].Get(), color);
 	}
 	const float depths[4] = { 1,0,0,0 };
-	context->ClearRenderTargetView(ssaoRTVs[3].Get(), depths);
+	context->ClearRenderTargetView(renderTargetRTVs[RTVTypes::DEPTHS].Get(), depths);
 
-	ID3D11RenderTargetView* renderTargets[4] = {};
-	for (int i = 0; i < 4; i++) {
-		renderTargets[i] = ssaoRTVs[i].Get();
+	// This fills in all renderTargets used before post-processing
+	// Includes Colors, Ambient, Normals, and Depths
+	const int numTargets = 4;
+	ID3D11RenderTargetView* renderTargets[numTargets] = {};
+	for (int i = 0; i < numTargets; i++) {
+		renderTargets[i] = renderTargetRTVs[i].Get();
 	}
 	context->OMSetRenderTargets(4, renderTargets, depthBufferDSV.Get());
 
@@ -429,6 +436,12 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	//    have different geometry.
 	std::vector<std::shared_ptr<GameEntity>>::iterator it;
 
+	// Track these to skip and render last
+	// Includes refractive entities, since those will
+	// always be transparent
+	// Find a way to write to memory less on this step
+	std::vector<GameEntity*> transparentEntities;
+
 	// Material-Sort Rendering:
 	// We can assume the list is sorted by this step.
 	// To potentially save operations, track a current Material and Mesh
@@ -445,6 +458,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
 		if (!it->get()->GetEnableDisable()) continue;
+
+		if (it->get()->GetMaterial()->GetTransparent()) {
+			transparentEntities.push_back(it->get());
+			continue;
+		}
 
 		std::shared_ptr<Material> itMatPtr = it->get()->GetMaterial();
 		std::shared_ptr<Mesh> itMeshPtr = it->get()->GetMesh();
@@ -576,7 +594,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	// SSAO Rendering
 	// First step is the initial SSAO render pass
-	renderTargets[0] = ssaoRTVs[4].Get();
+	renderTargets[0] = renderTargetRTVs[RTVTypes::SSAO_RAW].Get();
 	renderTargets[1] = 0;
 	renderTargets[2] = 0;
 	renderTargets[3] = 0;
@@ -600,34 +618,67 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	ssaoPS->SetFloat2("randomTextureScreenScale", XMFLOAT2(windowWidth / 4.0f, windowHeight / 4.0f));
 	ssaoPS->CopyAllBufferData();
 
-	ssaoPS->SetShaderResourceView("normals", ssaoSRV[2].Get());
-	ssaoPS->SetShaderResourceView("depths", ssaoSRV[3].Get());
+	ssaoPS->SetShaderResourceView("normals", renderTargetSRVs[RTVTypes::NORMALS].Get());
+	ssaoPS->SetShaderResourceView("depths", renderTargetSRVs[RTVTypes::DEPTHS].Get());
 	ssaoPS->SetShaderResourceView("random", ssaoRandomSRV.Get());
 
 	context->Draw(3, 0);
 
-	renderTargets[0] = ssaoRTVs[5].Get();
+	renderTargets[0] = renderTargetRTVs[RTVTypes::SSAO_BLUR].Get();
 	context->OMSetRenderTargets(1, renderTargets, 0);
 
 	std::shared_ptr<SimplePixelShader> ssaoBlurPS = globalAssets.GetPixelShaderByName("SSAOBlurPS");
 	ssaoBlurPS->SetShader();
-	ssaoBlurPS->SetShaderResourceView("SSAO", ssaoSRV[4].Get());
+	ssaoBlurPS->SetShaderResourceView("SSAO", renderTargetSRVs[RTVTypes::SSAO_RAW].Get());
 	ssaoBlurPS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
 	ssaoBlurPS->CopyAllBufferData();
 	context->Draw(3, 0);
 
-	// Combine all results
-	renderTargets[0] = backBufferRTV.Get();
-	context->OMSetRenderTargets(1, renderTargets, 0);
+	
 
-	std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
-	ssaoCombinePS->SetShader();
-	ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", ssaoSRV[0].Get());
-	ssaoCombinePS->SetShaderResourceView("ambient", ssaoSRV[1].Get());
-	ssaoCombinePS->SetShaderResourceView("SSAOBlur", ssaoSRV[5].Get());
-	//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
-	ssaoCombinePS->CopyAllBufferData();
-	context->Draw(3, 0);
+	// Refractive and Transparent objects are drawn here
+	// This uses refraction silhouette techniques, as well as
+	// the depth pre-pass from earlier in Draw
+
+	if (!transparentEntities.empty())
+	{
+		// Combine all results into the Composite buffer
+		renderTargets[0] = renderTargetRTVs[RTVTypes::COMPOSITE].Get();
+		context->OMSetRenderTargets(1, renderTargets, 0);
+
+		std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
+		ssaoCombinePS->SetShader();
+		ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", renderTargetSRVs[RTVTypes::COLORS_NO_AMBIENT].Get());
+		ssaoCombinePS->SetShaderResourceView("ambient", renderTargetSRVs[RTVTypes::COLORS_AMBIENT].Get());
+		ssaoCombinePS->SetShaderResourceView("SSAOBlur", renderTargetSRVs[RTVTypes::SSAO_BLUR].Get());
+		//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
+		ssaoCombinePS->CopyAllBufferData();
+		context->Draw(3, 0);
+
+		// For the refraction merge, we need to store the composite
+		// to a buffer that can be read by the GPU
+		renderTargets[0] = backBufferRTV.Get();
+		context->OMSetRenderTargets(1, renderTargets, 0);
+		std::shared_ptr<SimplePixelShader> ps = globalAssets.GetPixelShaderByName("TextureSamplePS");
+		ps->SetShader();
+		ps->SetShaderResourceView("Pixels", renderTargetSRVs[RTVTypes::COMPOSITE].Get());
+		context->Draw(3, 0);
+	}
+	else {
+		// Combine all results, and since there's nothing transparent,
+		// move onto presenting
+		renderTargets[0] = backBufferRTV.Get();
+		context->OMSetRenderTargets(1, renderTargets, 0);
+
+		std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
+		ssaoCombinePS->SetShader();
+		ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", renderTargetSRVs[RTVTypes::COLORS_NO_AMBIENT].Get());
+		ssaoCombinePS->SetShaderResourceView("ambient", renderTargetSRVs[RTVTypes::COLORS_AMBIENT].Get());
+		ssaoCombinePS->SetShaderResourceView("SSAOBlur", renderTargetSRVs[RTVTypes::SSAO_BLUR].Get());
+		//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
+		ssaoCombinePS->CopyAllBufferData();
+		context->Draw(3, 0);
+	}
 
 	// Draw the point light
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
@@ -667,6 +718,6 @@ void Renderer::SetActiveSky(std::shared_ptr<Sky> sky) {
     this->currentSky = sky;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetRenderTargetSRV(int index) {
-	return ssaoSRV[index];
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetRenderTargetSRV(RTVTypes type) {
+	return renderTargetSRVs[type];
 }

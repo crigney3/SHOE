@@ -3,6 +3,31 @@
 
 #define MAX_LIGHTS 64
 
+// Effects that require multiple render target views
+// are stored in the following order:
+// 0 - Color minus ambient
+// 1 - Only ambient
+// 2 - Only normals
+// 3 - Only depths
+// 4 - Results of SSAO
+// 5 - SSAO with blur fix
+// 6 - Refraction Silhouette Render
+// 7 - Render of pre-transparency composite
+// 8 - Count: always the last one, tracks size
+enum RTVTypes 
+{
+    COLORS_NO_AMBIENT,
+    COLORS_AMBIENT,
+    NORMALS,
+    DEPTHS,
+    SSAO_RAW,
+    SSAO_BLUR,
+    REFRACTION_SILHOUETTE,
+    COMPOSITE,
+
+    RTV_TYPE_COUNT
+};
+
 // These need to match the expected per-frame/object/material vertex shader data
 struct VSPerFrameData
 {
@@ -69,23 +94,17 @@ private:
     Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive;
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> particleDepthState;
 
-    // SSAO and MRT render target views
-    // Stored in the following order:
-    // 0 - Color minus ambient
-    // 1 - Only ambient
-    // 2 - Only normals
-    // 3 - Only depths
-    // 4 - Results of SSAO
-    // 5 - SSAO with blur fix
-    Microsoft::WRL::ComPtr<ID3D11RenderTargetView>      ssaoRTVs[6];
-    Microsoft::WRL::ComPtr<ID3D11Texture2D>             ssaoTexture2D[6];
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>    ssaoSRV[6];
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView>      renderTargetRTVs[RTVTypes::RTV_TYPE_COUNT];
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>    renderTargetSRVs[RTVTypes::RTV_TYPE_COUNT];
 
     // Ambient Occlusion data
     DirectX::XMFLOAT4 ssaoOffsets[64];
     const float ssaoRadius = 1.5f;
     const int ssaoSamples = 64;
     const int emptyRTV = 0;
+
+    // Regardless of RTV count, SSAO needs 6 textures
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>             ssaoTexture2D[6];
 
     unsigned int windowHeight;
     unsigned int windowWidth;
@@ -119,7 +138,7 @@ public:
     );
     void PreResize();
 
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(int index);
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(RTVTypes type);
 
     void DrawPointLights();
     void Draw(std::shared_ptr<Camera> camera, float totalTime);
