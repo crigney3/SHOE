@@ -13,6 +13,7 @@ private:
 	float uvTiling;
 	DirectX::XMFLOAT4 colorTint;
 	std::shared_ptr<SimplePixelShader> pixShader;
+	std::shared_ptr<SimplePixelShader> refractivePixShader;
 	std::shared_ptr<SimpleVertexShader> vertShader;
 	//float specularExponent;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture;
@@ -73,6 +74,12 @@ public:
 
 	void SetRefractionScale(float scale);
 	float GetRefractionScale();
+
+	void SetPixelShader(std::shared_ptr<SimplePixelShader> pix);
+	void SetVertexShader(std::shared_ptr<SimpleVertexShader> vert);
+
+	void SetRefractivePixelShader(std::shared_ptr<SimplePixelShader> refractPix);
+	std::shared_ptr<SimplePixelShader> GetRefractivePixelShader();
 
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();

@@ -17,6 +17,7 @@ private:
 	int indices;
 	int materialIndex;
 	bool enabled;
+	bool needsDepthPrePass;
 	std::string name;
 public:
 	//Load mesh from manual array
@@ -36,6 +37,9 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexBuffer();
 	Microsoft::WRL::ComPtr<ID3D11Buffer> GetIndexBuffer();
 	int GetIndexCount();
+
+	void SetDepthPrePass(bool prePass);
+	bool GetDepthPrePass();
 
 	std::string GetName();
 

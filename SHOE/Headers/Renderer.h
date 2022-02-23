@@ -116,11 +116,16 @@ private:
     // Regardless of RTV count, SSAO needs 6 textures
     Microsoft::WRL::ComPtr<ID3D11Texture2D> ssaoTexture2D[6];
 
+    // Composite and Silhouette also need textures
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> compositeTexture;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> silhouetteTexture;
+
     unsigned int windowHeight;
     unsigned int windowWidth;
 
     // Refraction data
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> refractionSilhouetteDepthState;
+    std::vector<std::shared_ptr<GameEntity>> transparentEntities;
 
     // Depth pre-pass data
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> prePassDepthState;

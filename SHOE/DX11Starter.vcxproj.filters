@@ -197,6 +197,9 @@
     <FxCompile Include="Shaders\PixelShaders\PSTextureSample.hlsl">
       <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\PixelShaders\PSRefractive.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IMGUI\Source\imgui.cpp">

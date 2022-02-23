@@ -327,7 +327,7 @@ std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
 void AssetManager::InitializeGameEntities() {
 	globalEntities = std::vector<std::shared_ptr<GameEntity>>();
 
-	//Show example renders
+	// Show example renders
 	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("bronzeMat"), "Bronze Cube");
 	CreateGameEntity(GetMeshByName("Cylinder"), GetMaterialByName("floorMat"), "Stone Cylinder");
 	CreateGameEntity(GetMeshByName("Helix"), GetMaterialByName("floorMat"), "Floor Helix");
@@ -338,11 +338,17 @@ void AssetManager::InitializeGameEntities() {
 	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("largePaintMat"), "Large Paint Rect");
 	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("largeCobbleMat"), "Large Cobble Rect");
 
-	//Reflective objects
+	// Reflective objects
 	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveMetal"), "Shiny Metal Sphere");
 	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveRoughMetal"), "Rough Metal Sphere");
 	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveRough"), "Shiny Rough Sphere");
 	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflective"), "Shiny Sphere");
+
+	// Refractive Objects
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractiveScratchMat"), "Refractive Sphere");
+	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("refractiveScratchMat"), "Refractive Torus");
+	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveScratchMat"), "Refractive Cube");
+	CreateGameEntity(GetMeshByName("Helix"), GetMaterialByName("refractiveScratchMat"), "Refractive Helix");
 
 	GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.7f, +0.0f, +0.0f);
 	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-0.7f, +0.0f, +0.0f);
@@ -361,6 +367,11 @@ void AssetManager::InitializeGameEntities() {
 	GetGameEntityByName("Rough Metal Sphere")->GetTransform()->SetPosition(+5.0f, +1.0f, 0.0f);
 	GetGameEntityByName("Shiny Sphere")->GetTransform()->SetPosition(+4.0f, 0.0f, 0.0f);
 	GetGameEntityByName("Shiny Rough Sphere")->GetTransform()->SetPosition(+5.0f, 0.0f, 0.0f);
+
+	GetGameEntityByName("Refractive Sphere")->GetTransform()->SetPosition(+4.0f, +1.0f, -1.0f);
+	GetGameEntityByName("Refractive Torus")->GetTransform()->SetPosition(+4.0f, +1.0f, -1.0f);
+	GetGameEntityByName("Refractive Cube")->GetTransform()->SetPosition(+4.0f, +1.0f, -1.0f);
+	GetGameEntityByName("Refractive Helix")->GetTransform()->SetPosition(+4.0f, +1.0f, -1.0f);
 
 	//Set up some parenting examples
 	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
@@ -460,17 +471,18 @@ void AssetManager::InitializeMaterials() {
 					  L"wood_metal.png",
 					  L"wood_roughness.png");
 
-	CreatePBRMaterial(std::string("transparentScratchMat"),
+	/*CreatePBRMaterial(std::string("transparentScratchMat"),
 					  L"scratched_albedo.png",
 					  L"scratched_normals.png",
 					  L"scratched_metal.png",
-					  L"scratched_roughness.png")->SetTransparent(true);
+					  L"scratched_roughness.png")->SetTransparent(true);*/
 
 	CreatePBRMaterial(std::string("refractiveScratchMat"),
 					  L"scratched_albedo.png",
 					  L"scratched_normals.png",
 					  L"scratched_metal.png",
 					  L"scratched_roughness.png")->SetRefractive(true);
+	GetMaterialByName("refractiveScratchMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 }
 
 void AssetManager::InitializeMeshes() {
@@ -687,6 +699,7 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("SSAOCombinePS", L"PSOcclusionCombine.cso");
 	CreatePixelShader("ParticlesPS", L"PSParticles.cso");
 	CreatePixelShader("TextureSamplePS", L"PSTextureSample.cso");
+	CreatePixelShader("RefractivePS", L"PSRefractive.cso");
 
 	// Make compute shaders
 	CreateComputeShader("ParticleMoveCS", L"CSParticleFlow.cso");

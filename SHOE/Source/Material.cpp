@@ -30,6 +30,7 @@ Material::Material(DirectX::XMFLOAT4 tint,
 	// For now, these are only set by the Setter functions
 	this->indexOfRefraction = 0.5f;
 	this->refractionScale = 0.1f;
+	this->refractivePixShader = NULL;
 }
 
 Material::~Material() {
@@ -128,6 +129,22 @@ void Material::SetRefractionScale(float scale) {
 
 float Material::GetRefractionScale() {
 	return this->refractionScale;
+}
+
+void Material::SetPixelShader(std::shared_ptr<SimplePixelShader> pix) {
+	this->pixShader = pix;
+}
+
+void Material::SetVertexShader(std::shared_ptr<SimpleVertexShader> vert) {
+	this->vertShader = vert;
+}
+
+void Material::SetRefractivePixelShader(std::shared_ptr<SimplePixelShader> refractPix) {
+	this->refractivePixShader = refractPix;
+}
+
+std::shared_ptr<SimplePixelShader> Material::GetRefractivePixelShader() {
+	return this->refractivePixShader;
 }
 
 void Material::SetEnableDisable(bool value) {

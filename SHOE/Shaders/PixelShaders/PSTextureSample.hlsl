@@ -7,9 +7,9 @@ struct VertexToPixelTextureSample
 };
 
 Texture2D Pixels			: register(t0);
-SamplerState BasicSampler	:register(s0);
+SamplerState BasicSampler	: register(s0);
 
 float4 main(VertexToPixelTextureSample input) : SV_TARGET
 {
-	return Pixels.Sample(BasicSampler, input.uv);
+	return float4(Pixels.Sample(BasicSampler, input.uv).rgb, 1);
 }

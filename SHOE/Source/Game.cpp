@@ -308,7 +308,7 @@ void Game::RenderUI(float deltaTime) {
 
 			ImGui::Text(nameBuf);
 			if (ImGui::BeginListBox("MaterialList")) {
-				for (int i = 0; i < globalAssets.GetMaterialArraySize() - 1; i++) {
+				for (int i = 0; i < globalAssets.GetMaterialArraySize(); i++) {
 					const bool is_selected = (materialIndex == i);
 					if (ImGui::Selectable(globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
 						materialIndex = i;
@@ -343,7 +343,7 @@ void Game::RenderUI(float deltaTime) {
 
 			ImGui::Text(nameBuf);
 			if (ImGui::BeginListBox("MeshList")) {
-				for (int i = 0; i < globalAssets.GetMeshArraySize() - 1; i++) {
+				for (int i = 0; i < globalAssets.GetMeshArraySize(); i++) {
 					const bool is_selected = (meshIndex == i);
 					if (ImGui::Selectable(globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
 						meshIndex = i;
@@ -563,6 +563,8 @@ void Game::RenderUI(float deltaTime) {
 			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
 			ImGui::Text("SSAO Post Blur");
 			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
+			ImGui::Text("Composite");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
 		}
 
 		if (ImGui::CollapsingHeader("Shadow Depth Views")) {
@@ -574,7 +576,7 @@ void Game::RenderUI(float deltaTime) {
 
 		if (ImGui::CollapsingHeader("Depth Prepass Views")) {
 			ImGui::Text("Refraction Silhouette Depths");
-			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
 			ImGui::Text("Transparency Depth Prepass");
 			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
 			ImGui::Text("Render Depth Prepass (used for optimization)");
@@ -878,6 +880,8 @@ void Game::Draw(float deltaTime, float totalTime)
 	}
 
 	renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
+
+	//renderer->RenderDepths(mainCamera, MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS);
 
 	renderer->Draw(mainCamera, totalTime);
 }
