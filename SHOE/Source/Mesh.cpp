@@ -10,6 +10,7 @@ Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCo
 	this->materialIndex = -1;
 	this->enabled = true;
 	this->name = name;
+	this->needsDepthPrePass = false;
 	CalculateTangents(vertexArray, vertices, indices, indexCount);
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
@@ -19,6 +20,7 @@ Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCo
 	this->materialIndex = associatedMaterialIndex;
 	this->enabled = true;
 	this->name = name;
+	this->needsDepthPrePass = false;
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
 }
@@ -26,6 +28,7 @@ Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCo
 Mesh::Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
 	this->materialIndex = -1;
 	this->name = name;
+	this->needsDepthPrePass = false;
 	// Author: Chris Cascioli
 	// Purpose: Basic .OBJ 3D model loading, supporting positions, uvs and normals
 	// 
@@ -387,4 +390,12 @@ bool Mesh::GetEnableDisable() {
 
 std::string Mesh::GetName() {
 	return this->name;
+}
+
+void Mesh::SetDepthPrePass(bool prePass) {
+	this->needsDepthPrePass = prePass;
+}
+
+bool Mesh::GetDepthPrePass() {
+	return this->needsDepthPrePass;
 }

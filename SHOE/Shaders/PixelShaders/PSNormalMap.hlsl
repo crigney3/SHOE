@@ -7,6 +7,7 @@ Texture2D textureMetal					: register(t3);
 Texture2D shadowMap						: register(t4);
 Texture2D envShadowMap					: register(t5);
 
+// IBL Textures
 Texture2D brdfLookUpMap					: register(t6);
 TextureCube irradianceIBLMap			: register(t7);
 TextureCube specularIBLMap				: register(t8);

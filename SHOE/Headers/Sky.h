@@ -31,6 +31,7 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetIrradianceCubeMap();
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetConvolvedSpecularCubeMap();
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetBRDFLookupTexture();
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetSkyTexture();
 	int GetIBLMipLevelCount();
 
 	std::string GetName();

@@ -34,8 +34,8 @@ Renderer::~Renderer(){
 void Renderer::InitRenderTargetViews() {
 	for (int i = 0; i < 3; i++) {
 		ssaoTexture2D[i].Reset();
-		ssaoRTVs[i].Reset();
-		ssaoSRV[i].Reset();
+		renderTargetRTVs[i].Reset();
+		renderTargetSRVs[i].Reset();
 
 		D3D11_TEXTURE2D_DESC basicTexDesc = {};
 		basicTexDesc.Width = windowWidth;
@@ -52,16 +52,16 @@ void Renderer::InitRenderTargetViews() {
 		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 		rtvDesc.Texture2D.MipSlice = 0;
 		rtvDesc.Format = basicTexDesc.Format;
-		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, ssaoRTVs[i].GetAddressOf());
+		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, renderTargetRTVs[i].GetAddressOf());
 
-		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, ssaoSRV[i].GetAddressOf());
+		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, renderTargetSRVs[i].GetAddressOf());
 	}
 
 	// Initialize Depths as just a float texture
 	for (int i = 3; i < 6; i++) {
 		ssaoTexture2D[i].Reset();
-		ssaoRTVs[i].Reset();
-		ssaoSRV[i].Reset();
+		renderTargetRTVs[i].Reset();
+		renderTargetSRVs[i].Reset();
 
 		D3D11_TEXTURE2D_DESC basicTexDesc = {};
 		basicTexDesc.Width = windowWidth;
@@ -78,10 +78,62 @@ void Renderer::InitRenderTargetViews() {
 		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 		rtvDesc.Texture2D.MipSlice = 0;
 		rtvDesc.Format = basicTexDesc.Format;
-		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, ssaoRTVs[i].GetAddressOf());
+		device->CreateRenderTargetView(ssaoTexture2D[i].Get(), &rtvDesc, renderTargetRTVs[i].GetAddressOf());
 
-		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, ssaoSRV[i].GetAddressOf());
+		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, renderTargetSRVs[i].GetAddressOf());
 	}
+
+	compositeTexture.Reset();
+	renderTargetRTVs[RTVTypes::COMPOSITE].Reset();
+	renderTargetSRVs[RTVTypes::COMPOSITE].Reset();
+	D3D11_TEXTURE2D_DESC compositeTexDesc = {};
+	compositeTexDesc.Width = windowWidth;
+	compositeTexDesc.Height = windowHeight;
+	compositeTexDesc.ArraySize = 1;
+	compositeTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	compositeTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	compositeTexDesc.MipLevels = 1;
+	compositeTexDesc.MiscFlags = 0;
+	compositeTexDesc.SampleDesc.Count = 1;
+	device->CreateTexture2D(&compositeTexDesc, 0, compositeTexture.GetAddressOf());
+
+	D3D11_RENDER_TARGET_VIEW_DESC compositeRTVDesc = {};
+	compositeRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	compositeRTVDesc.Texture2D.MipSlice = 0;
+	compositeRTVDesc.Format = compositeTexDesc.Format;
+	device->CreateRenderTargetView(compositeTexture.Get(), &compositeRTVDesc, renderTargetRTVs[RTVTypes::COMPOSITE].GetAddressOf());
+
+	device->CreateShaderResourceView(compositeTexture.Get(), 0, renderTargetSRVs[RTVTypes::COMPOSITE].GetAddressOf());
+
+	silhouetteTexture.Reset();
+	renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].Reset();
+	renderTargetSRVs[RTVTypes::REFRACTION_SILHOUETTE].Reset();
+	D3D11_TEXTURE2D_DESC silhouetteTexDesc = {};
+	silhouetteTexDesc.Width = windowWidth;
+	silhouetteTexDesc.Height = windowHeight;
+	silhouetteTexDesc.ArraySize = 1;
+	silhouetteTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	silhouetteTexDesc.Format = DXGI_FORMAT_R8_UNORM;
+	silhouetteTexDesc.MipLevels = 1;
+	silhouetteTexDesc.MiscFlags = 0;
+	silhouetteTexDesc.SampleDesc.Count = 1;
+	device->CreateTexture2D(&silhouetteTexDesc, 0, silhouetteTexture.GetAddressOf());
+
+	D3D11_RENDER_TARGET_VIEW_DESC silhouetteRTVDesc = {};
+	silhouetteRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	silhouetteRTVDesc.Texture2D.MipSlice = 0;
+	silhouetteRTVDesc.Format = silhouetteTexDesc.Format;
+	device->CreateRenderTargetView(silhouetteTexture.Get(), &silhouetteRTVDesc, renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].GetAddressOf());
+
+	device->CreateShaderResourceView(silhouetteTexture.Get(), 0, renderTargetSRVs[RTVTypes::REFRACTION_SILHOUETTE].GetAddressOf());
+
+
+	for (int i = 0; i < MISC_EFFECT_SRV_COUNT; i++) {
+		miscEffectDepthBuffers[i].Reset();
+		miscEffectSRVs[i].Reset();
+	}
+
+	transparentEntities = std::vector<std::shared_ptr<GameEntity>>();
 	
 	// SSAO needs a random 4x4 texture to work
 	const int textureSize = 4;
@@ -139,6 +191,7 @@ void Renderer::InitRenderTargetViews() {
 		XMStoreFloat4(&ssaoOffsets[i], offset * acceleratedScale);
 	}
 
+	// Set up particle depth and blending
 	particleDepthState.Reset();
 	particleBlendAdditive.Reset();
 
@@ -158,13 +211,34 @@ void Renderer::InitRenderTargetViews() {
 	additiveBlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;  // 100% of destination alpha
 	additiveBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 	device->CreateBlendState(&additiveBlendDesc, particleBlendAdditive.GetAddressOf());
+
+	// Set up refraction silhouette depth buffer
+	refractionSilhouetteDepthState.Reset();
+	prePassDepthState.Reset();
+
+	D3D11_DEPTH_STENCIL_DESC rsDepthDesc = {};
+	rsDepthDesc.DepthEnable = true;
+	rsDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // No depth writing
+	rsDepthDesc.DepthFunc = D3D11_COMPARISON_LESS; // Get only the closest pixels
+	device->CreateDepthStencilState(&rsDepthDesc, refractionSilhouetteDepthState.GetAddressOf());
+
+	// Set up prepass depth buffer
+	D3D11_DEPTH_STENCIL_DESC prePassDepthDesc = {};
+	prePassDepthDesc.DepthEnable = true;
+	prePassDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // No depth writing - unsure whether to keep this here
+	prePassDepthDesc.DepthFunc = D3D11_COMPARISON_LESS; // Get only the closest pixels
+	device->CreateDepthStencilState(&prePassDepthDesc, prePassDepthState.GetAddressOf());
+
+	InitShadows();
 }
 
 void Renderer::InitShadows() {
     //Set up buffers and data for shadows
 	shadowSize = 2048;
-	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> shadowDepthView;
-	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> envShadowDepthView;
+
+	shadowRasterizer.Reset();
+	shadowSampler.Reset();
+	this->VSShadow.reset();
 
 	this->VSShadow = globalAssets.GetVertexShaderByName("ShadowVS");
 
@@ -181,31 +255,68 @@ void Renderer::InitShadows() {
 	shadowDesc.SampleDesc.Quality = 0;
 	shadowDesc.Usage = D3D11_USAGE_DEFAULT;
 
+	D3D11_TEXTURE2D_DESC miscDepthDesc = {};
+	miscDepthDesc.Width = windowWidth;
+	miscDepthDesc.Height = windowHeight;
+	miscDepthDesc.ArraySize = 1;
+	miscDepthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+	miscDepthDesc.CPUAccessFlags = 0;
+	miscDepthDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+	miscDepthDesc.MipLevels = 1;
+	miscDepthDesc.MiscFlags = 0;
+	miscDepthDesc.SampleDesc.Count = 1;
+	miscDepthDesc.SampleDesc.Quality = 0;
+	miscDepthDesc.Usage = D3D11_USAGE_DEFAULT;
+
 	ID3D11Texture2D* shadowTexture;
 	device->CreateTexture2D(&shadowDesc, 0, &shadowTexture);
 
 	ID3D11Texture2D* envShadowTexture;
 	device->CreateTexture2D(&shadowDesc, 0, &envShadowTexture);
 
+	ID3D11Texture2D* silhouetteTexture;
+	device->CreateTexture2D(&miscDepthDesc, 0, &silhouetteTexture);
+
+	ID3D11Texture2D* transparentPrePassTexture;
+	device->CreateTexture2D(&miscDepthDesc, 0, &transparentPrePassTexture);
+
+	ID3D11Texture2D* prePassTexture;
+	device->CreateTexture2D(&miscDepthDesc, 0, &prePassTexture);
+
 	D3D11_DEPTH_STENCIL_VIEW_DESC shadowDSDesc = {};
 	shadowDSDesc.Format = DXGI_FORMAT_D32_FLOAT;
 	shadowDSDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	shadowDSDesc.Texture2D.MipSlice = 0;
-	device->CreateDepthStencilView(shadowTexture, &shadowDSDesc, shadowDepthView.GetAddressOf());
+	device->CreateDepthStencilView(shadowTexture, &shadowDSDesc, miscEffectDepthBuffers[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].GetAddressOf());
 
-	device->CreateDepthStencilView(envShadowTexture, &shadowDSDesc, envShadowDepthView.GetAddressOf());
+	device->CreateDepthStencilView(envShadowTexture, &shadowDSDesc, miscEffectDepthBuffers[MiscEffectSRVTypes::ENV_SHADOW].GetAddressOf());
+
+	device->CreateDepthStencilView(silhouetteTexture, &shadowDSDesc, miscEffectDepthBuffers[MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS].GetAddressOf());
+
+	device->CreateDepthStencilView(transparentPrePassTexture, &shadowDSDesc, miscEffectDepthBuffers[MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS].GetAddressOf());
+
+	device->CreateDepthStencilView(prePassTexture, &shadowDSDesc, miscEffectDepthBuffers[MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS].GetAddressOf());
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
 	srvDesc.Texture2D.MostDetailedMip = 0;
-	device->CreateShaderResourceView(shadowTexture, &srvDesc, shadowSRV.GetAddressOf());
+	device->CreateShaderResourceView(shadowTexture, &srvDesc, miscEffectSRVs[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].GetAddressOf());
 
-	device->CreateShaderResourceView(envShadowTexture, &srvDesc, envShadowSRV.GetAddressOf());
+	device->CreateShaderResourceView(envShadowTexture, &srvDesc, miscEffectSRVs[MiscEffectSRVTypes::ENV_SHADOW].GetAddressOf());
+
+	device->CreateShaderResourceView(silhouetteTexture, &srvDesc, miscEffectSRVs[MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS].GetAddressOf());
+
+	device->CreateShaderResourceView(transparentPrePassTexture, &srvDesc, miscEffectSRVs[MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS].GetAddressOf());
+
+	device->CreateShaderResourceView(prePassTexture, &srvDesc, miscEffectSRVs[MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS].GetAddressOf());
 
 	shadowTexture->Release();
 	envShadowTexture->Release();
+	silhouetteTexture->Release();
+	transparentPrePassTexture->Release();
+	prePassTexture->Release();
 
 	D3D11_SAMPLER_DESC shadowSampDesc = {};
 	shadowSampDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR; // This is the important change from regular Sampler Desc
@@ -227,9 +338,6 @@ void Renderer::InitShadows() {
 	shadowRastDesc.DepthBiasClamp = 0.0f;
 	shadowRastDesc.SlopeScaledDepthBias = 10.0f;
 	device->CreateRasterizerState(&shadowRastDesc, &shadowRasterizer);
-
-	shadowDepthBuffers.push_back(shadowDepthView);
-	shadowDepthBuffers.push_back(envShadowDepthView);
 }
 
 void Renderer::PreResize() {
@@ -319,10 +427,112 @@ void Renderer::DrawPointLights()
 
 }
 
+void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type) {
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> miscEffectDepth;
+	miscEffectDepth = miscEffectDepthBuffers[type];
 
-void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferIndex) {
+	context->RSSetState(0); // Unclear if this should be a custom rasterizer state
+
+	D3D11_VIEWPORT vp = {};
+	vp.TopLeftX = 0;
+	vp.TopLeftY = 0;
+	vp.Width = (float)windowWidth;
+	vp.Height = (float)windowHeight;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
+	context->RSSetViewports(1, &vp);
+
+	VSShadow->SetShader();
+
+	VSShadow->SetMatrix4x4("view", sourceCam->GetViewMatrix());
+	VSShadow->SetMatrix4x4("projection", sourceCam->GetProjectionMatrix());
+
+	if (type == MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS) {
+		std::shared_ptr<SimplePixelShader> solidColorPS = globalAssets.GetPixelShaderByName("SolidColorPS");
+
+		context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].GetAddressOf(), depthBufferDSV.Get());
+
+		//context->ClearDepthStencilView(miscEffectDepth.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+		context->OMSetDepthStencilState(refractionSilhouetteDepthState.Get(), 0);
+
+		std::vector<std::shared_ptr<GameEntity>>::iterator it;
+
+		for (it = transparentEntities.begin(); it != transparentEntities.end(); it++) {
+			if (!it->get()->GetEnableDisable()) continue;
+
+			// Store the old material's pixel shader
+			/*std::shared_ptr<Material> mat = it->get()->GetMaterial();
+			std::shared_ptr<SimplePixelShader> prevPS = mat->GetPixShader();
+			mat->SetPixelShader(solidColorPS);*/
+
+			// Standard depth pre-pass
+			VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
+
+			VSShadow->CopyAllBufferData();
+
+			solidColorPS->SetShader();
+			solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
+			solidColorPS->CopyAllBufferData();
+
+			//globalAssets.globalEntities[i]->Draw(context, cam, nullptr, nullptr);
+			UINT stride = sizeof(Vertex);
+			UINT offset = 0;
+			context->IASetVertexBuffers(0, 1, it->get()->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(it->get()->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+			context->DrawIndexed(
+				it->get()->GetMesh()->GetIndexCount(),
+				0,
+				0);
+
+			//mat->SetPixelShader(prevPS);
+		}
+	}
+	else {
+		context->OMSetRenderTargets(0, 0, miscEffectDepth.Get());
+
+		context->ClearDepthStencilView(miscEffectDepth.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+		context->PSSetShader(0, 0, 0);
+
+		std::vector<std::shared_ptr<GameEntity>>::iterator it;
+
+		for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
+			if (!it->get()->GetEnableDisable()) continue;
+
+			// Standard depth pre-pass
+			VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
+
+			VSShadow->CopyAllBufferData();
+
+			//globalAssets.globalEntities[i]->Draw(context, cam, nullptr, nullptr);
+			UINT stride = sizeof(Vertex);
+			UINT offset = 0;
+			context->IASetVertexBuffers(0, 1, it->get()->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(it->get()->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+			context->DrawIndexed(
+				it->get()->GetMesh()->GetIndexCount(),
+				0,
+				0);
+		}
+	}
+
+	context->OMSetDepthStencilState(0, 0);
+
+	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+
+	vp.Width = (float)windowWidth;
+	vp.Height = (float)windowHeight;
+	context->RSSetViewports(1, &vp);
+
+	//context->RSSetState(0);
+}
+
+void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTypes type) {
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> shadowDepth;
-	shadowDepth = shadowDepthBuffers[depthBufferIndex];
+	shadowDepth = miscEffectDepthBuffers[type];
 
 	context->OMSetRenderTargets(0, 0, shadowDepth.Get());
 
@@ -348,6 +558,9 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferI
 	std::vector<std::shared_ptr<GameEntity>>::iterator it;
 
 	for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
+		if (!it->get()->GetEnableDisable() | it->get()->GetMaterial()->GetTransparent()) continue;
+
+		// This is similar to what I'd need for any depth pre-pass
 		VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
 
 		VSShadow->CopyAllBufferData();
@@ -376,7 +589,7 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, int depthBufferI
 void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	// Background color (Cornflower Blue in this case) for clearing
-	const float color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	const float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 	// Clear the render target and depth buffer (erases what's on the screen)
 	//  - Do this ONCE PER FRAME
@@ -387,15 +600,18 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
 		1.0f,
 		0);
-	for (int i = 0; i < 6; i++) {
-		context->ClearRenderTargetView(ssaoRTVs[i].Get(), color);
+	for (int i = 0; i < RTVTypes::RTV_TYPE_COUNT; i++) {
+		context->ClearRenderTargetView(renderTargetRTVs[i].Get(), color);
 	}
 	const float depths[4] = { 1,0,0,0 };
-	context->ClearRenderTargetView(ssaoRTVs[3].Get(), depths);
+	context->ClearRenderTargetView(renderTargetRTVs[RTVTypes::DEPTHS].Get(), depths);
 
-	ID3D11RenderTargetView* renderTargets[4] = {};
-	for (int i = 0; i < 4; i++) {
-		renderTargets[i] = ssaoRTVs[i].Get();
+	// This fills in all renderTargets used before post-processing
+	// Includes Colors, Ambient, Normals, and Depths
+	const int numTargets = 4;
+	static ID3D11RenderTargetView* renderTargets[numTargets] = {};
+	for (int i = 0; i < numTargets; i++) {
+		renderTargets[i] = renderTargetRTVs[i].Get();
 	}
 	context->OMSetRenderTargets(4, renderTargets, depthBufferDSV.Get());
 
@@ -429,6 +645,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	//    have different geometry.
 	std::vector<std::shared_ptr<GameEntity>>::iterator it;
 
+	// Track these to skip and render last
+	// Includes refractive entities, since those will
+	// always be transparent
+	transparentEntities.clear();
+
 	// Material-Sort Rendering:
 	// We can assume the list is sorted by this step.
 	// To potentially save operations, track a current Material and Mesh
@@ -443,8 +664,17 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	Material* currentMaterial = 0;
 	Mesh* currentMesh = 0;
 
+	// TODO : Change to auto instead of iterator
 	for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
 		if (!it->get()->GetEnableDisable()) continue;
+
+		if (it->get()->GetMaterial()->GetTransparent()) {
+			// Iterator is being difficult about returning a smart pointer
+			// Using distance to get around this
+			// It's cursed, I know
+			transparentEntities.push_back(globalAssets.GetGameEntityByID(std::distance(globalAssets.GetActiveGameEntities()->begin(), it)));
+			continue;
+		}
 
 		std::shared_ptr<Material> itMatPtr = it->get()->GetMaterial();
 		std::shared_ptr<Mesh> itMeshPtr = it->get()->GetMesh();
@@ -495,9 +725,9 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 			if (itMatPtr->GetNormalMap() != nullptr) {
 				currentPS->SetShaderResourceView("textureNormal", itMatPtr->GetNormalMap().Get());
 			}
-			currentPS->SetShaderResourceView("shadowMap", shadowSRV.Get());
+			currentPS->SetShaderResourceView("shadowMap", miscEffectSRVs[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].Get());
 			currentPS->SetSamplerState("shadowState", shadowSampler.Get());
-			currentPS->SetShaderResourceView("envShadowMap", envShadowSRV.Get());
+			currentPS->SetShaderResourceView("envShadowMap", miscEffectSRVs[MiscEffectSRVTypes::ENV_SHADOW].Get());
 
 			if (this->currentSky->GetEnableDisable()) {
 				currentPS->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
@@ -538,11 +768,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
 		PSTerrain->SetFloat("uvMultNear", 50.0f);
 		PSTerrain->SetFloat("uvMultFar", 150.0f);
-		PSTerrain->SetShaderResourceView("shadowMap", shadowSRV.Get());
+		PSTerrain->SetShaderResourceView("shadowMap", miscEffectSRVs[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].Get());
 		PSTerrain->SetShaderResourceView("blendMap", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMap.Get());
 		PSTerrain->SetSamplerState("shadowState", shadowSampler.Get());
 		PSTerrain->SetSamplerState("clampSampler", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[0].GetClampSamplerState().Get());
-		PSTerrain->SetShaderResourceView("envShadowMap", envShadowSRV.Get());
+		PSTerrain->SetShaderResourceView("envShadowMap", miscEffectSRVs[MiscEffectSRVTypes::ENV_SHADOW].Get());
 
 		for (int i = 0; i < globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials.size(); i++) {
 			std::string a = "texture" + std::to_string(i + 1) + "Albedo";
@@ -576,7 +806,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	// SSAO Rendering
 	// First step is the initial SSAO render pass
-	renderTargets[0] = ssaoRTVs[4].Get();
+	renderTargets[0] = renderTargetRTVs[RTVTypes::SSAO_RAW].Get();
 	renderTargets[1] = 0;
 	renderTargets[2] = 0;
 	renderTargets[3] = 0;
@@ -600,34 +830,142 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	ssaoPS->SetFloat2("randomTextureScreenScale", XMFLOAT2(windowWidth / 4.0f, windowHeight / 4.0f));
 	ssaoPS->CopyAllBufferData();
 
-	ssaoPS->SetShaderResourceView("normals", ssaoSRV[2].Get());
-	ssaoPS->SetShaderResourceView("depths", ssaoSRV[3].Get());
+	ssaoPS->SetShaderResourceView("normals", renderTargetSRVs[RTVTypes::NORMALS].Get());
+	ssaoPS->SetShaderResourceView("depths", renderTargetSRVs[RTVTypes::DEPTHS].Get());
 	ssaoPS->SetShaderResourceView("random", ssaoRandomSRV.Get());
 
 	context->Draw(3, 0);
 
-	renderTargets[0] = ssaoRTVs[5].Get();
+	renderTargets[0] = renderTargetRTVs[RTVTypes::SSAO_BLUR].Get();
 	context->OMSetRenderTargets(1, renderTargets, 0);
 
 	std::shared_ptr<SimplePixelShader> ssaoBlurPS = globalAssets.GetPixelShaderByName("SSAOBlurPS");
 	ssaoBlurPS->SetShader();
-	ssaoBlurPS->SetShaderResourceView("SSAO", ssaoSRV[4].Get());
+	ssaoBlurPS->SetShaderResourceView("SSAO", renderTargetSRVs[RTVTypes::SSAO_RAW].Get());
 	ssaoBlurPS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
 	ssaoBlurPS->CopyAllBufferData();
 	context->Draw(3, 0);
 
-	// Combine all results
-	renderTargets[0] = backBufferRTV.Get();
-	context->OMSetRenderTargets(1, renderTargets, 0);
+	// Refractive and Transparent objects are drawn here
+	// This uses refraction silhouette techniques, as well as
+	// the depth pre-pass from earlier in Draw
 
-	std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
-	ssaoCombinePS->SetShader();
-	ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", ssaoSRV[0].Get());
-	ssaoCombinePS->SetShaderResourceView("ambient", ssaoSRV[1].Get());
-	ssaoCombinePS->SetShaderResourceView("SSAOBlur", ssaoSRV[5].Get());
-	//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
-	ssaoCombinePS->CopyAllBufferData();
-	context->Draw(3, 0);
+	if (!transparentEntities.empty())
+	{
+		// Combine all results into the Composite buffer
+		renderTargets[0] = renderTargetRTVs[RTVTypes::COMPOSITE].Get();
+		context->OMSetRenderTargets(1, renderTargets, 0);
+
+		std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
+		ssaoCombinePS->SetShader();
+		ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", renderTargetSRVs[RTVTypes::COLORS_NO_AMBIENT].Get());
+		ssaoCombinePS->SetShaderResourceView("ambient", renderTargetSRVs[RTVTypes::COLORS_AMBIENT].Get());
+		ssaoCombinePS->SetShaderResourceView("SSAOBlur", renderTargetSRVs[RTVTypes::SSAO_BLUR].Get());
+		//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
+		ssaoCombinePS->CopyAllBufferData();
+		context->Draw(3, 0);
+
+		// For the refraction merge, we need to store the composite
+		// to a buffer that can be read by the GPU
+		renderTargets[0] = backBufferRTV.Get();
+		context->OMSetRenderTargets(1, renderTargets, 0);
+		std::shared_ptr<SimplePixelShader> ps = globalAssets.GetPixelShaderByName("TextureSamplePS");
+		ps->SetShader();
+		ps->SetShaderResourceView("Pixels", renderTargetSRVs[RTVTypes::COMPOSITE].Get());
+		ps->SetSamplerState("BasicSampler", transparentEntities[0]->GetMaterial()->GetSamplerState());
+		context->Draw(3, 0);
+
+		// First, create the refraction silhouette
+		RenderDepths(mainCamera, MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS);
+
+		// Then loop through and draw refractive objects
+		renderTargets[0] = backBufferRTV.Get();
+		context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
+
+		// Currently, all refractive shaders are the same, so this is fine
+		std::shared_ptr<SimplePixelShader> refractivePS = transparentEntities[0]->GetMaterial()->GetRefractivePixelShader();
+		refractivePS->SetShader();
+
+		refractivePS->SetFloat2("screenSize", XMFLOAT2((float)windowWidth, (float)windowHeight));
+		refractivePS->SetMatrix4x4("viewMatrix", mainCamera->GetViewMatrix());
+		refractivePS->SetMatrix4x4("projMatrix", mainCamera->GetProjectionMatrix());
+		refractivePS->SetFloat3("cameraPos", mainCamera->GetTransform()->GetPosition());
+
+		refractivePS->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
+		refractivePS->SetData("lightCount", &lightCount, sizeof(unsigned int));
+
+		/*if (this->currentSky->GetEnableDisable()) {
+			refractivePS->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
+			refractivePS->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
+			refractivePS->SetShaderResourceView("brdfLookUpMap", currentSky->GetBRDFLookupTexture().Get());
+			refractivePS->SetShaderResourceView("specularIBLMap", currentSky->GetConvolvedSpecularCubeMap().Get());
+		}*/
+
+		refractivePS->SetShaderResourceView("environmentMap", currentSky->GetSkyTexture().Get());
+
+		refractivePS->SetShaderResourceView("screenPixels", renderTargetSRVs[RTVTypes::COMPOSITE].Get());
+		refractivePS->SetShaderResourceView("refractionSilhouette", renderTargetSRVs[RTVTypes::REFRACTION_SILHOUETTE].Get());
+
+		//refractivePS->SetShaderResourceView("ssaoBlur", renderTargetSRVs[RTVTypes::SSAO_BLUR].Get());
+
+		refractivePS->CopyBufferData("PerFrame");
+
+		std::shared_ptr<SimpleVertexShader> refractiveVS = transparentEntities[0]->GetMaterial()->GetVertShader();
+
+		refractiveVS->SetShader();
+
+		refractiveVS->SetMatrix4x4("view", cam->GetViewMatrix());
+		refractiveVS->SetMatrix4x4("projection", cam->GetProjectionMatrix());
+		refractiveVS->SetMatrix4x4("lightView", flashShadowCamera->GetViewMatrix());
+		refractiveVS->SetMatrix4x4("lightProjection", flashShadowCamera->GetProjectionMatrix());
+
+		refractiveVS->SetMatrix4x4("envLightView", mainShadowCamera->GetViewMatrix());
+		refractiveVS->SetMatrix4x4("envLightProjection", mainShadowCamera->GetProjectionMatrix());
+
+		refractiveVS->CopyBufferData("PerFrame");
+
+		for (auto ge : transparentEntities) {
+			refractiveVS->SetFloat4("colorTint", ge->GetMaterial()->GetTint());
+
+			refractiveVS->CopyBufferData("PerMaterial");
+
+			refractiveVS->SetMatrix4x4("world", ge->GetTransform()->GetWorldMatrix());
+
+			refractiveVS->CopyBufferData("PerObject");
+
+			refractivePS->SetFloat("uvMult", ge->GetMaterial()->GetTiling());
+			refractivePS->SetFloat("indexOfRefraction", ge->GetMaterial()->GetIndexOfRefraction());
+			refractivePS->SetFloat("refractionScale", ge->GetMaterial()->GetRefractionScale());
+
+			refractivePS->CopyBufferData("PerMaterial");
+
+			refractivePS->SetShaderResourceView("textureNormal", ge->GetMaterial()->GetNormalMap());
+			refractivePS->SetShaderResourceView("textureRoughness", ge->GetMaterial()->GetRoughMap());
+			refractivePS->SetShaderResourceView("textureMetal", ge->GetMaterial()->GetMetalMap());
+
+			UINT stride = sizeof(Vertex);
+			UINT offset = 0;
+			context->IASetVertexBuffers(0, 1, ge->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(ge->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+			context->DrawIndexed(ge->GetMesh()->GetIndexCount(), 0, 0);
+		}
+	}
+	else {
+		// Combine all results, and since there's nothing transparent,
+		// move onto presenting
+		renderTargets[0] = backBufferRTV.Get();
+		context->OMSetRenderTargets(1, renderTargets, 0);
+
+		std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
+		ssaoCombinePS->SetShader();
+		ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", renderTargetSRVs[RTVTypes::COLORS_NO_AMBIENT].Get());
+		ssaoCombinePS->SetShaderResourceView("ambient", renderTargetSRVs[RTVTypes::COLORS_AMBIENT].Get());
+		ssaoCombinePS->SetShaderResourceView("SSAOBlur", renderTargetSRVs[RTVTypes::SSAO_BLUR].Get());
+		//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
+		ssaoCombinePS->CopyAllBufferData();
+		context->Draw(3, 0);
+	}
 
 	// Draw the point light
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
@@ -667,6 +1005,10 @@ void Renderer::SetActiveSky(std::shared_ptr<Sky> sky) {
     this->currentSky = sky;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetRenderTargetSRV(int index) {
-	return ssaoSRV[index];
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetRenderTargetSRV(RTVTypes type) {
+	return renderTargetSRVs[type];
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetMiscEffectSRV(MiscEffectSRVTypes type) {
+	return miscEffectSRVs[type];
 }

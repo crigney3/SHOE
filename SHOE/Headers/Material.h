@@ -13,6 +13,7 @@ private:
 	float uvTiling;
 	DirectX::XMFLOAT4 colorTint;
 	std::shared_ptr<SimplePixelShader> pixShader;
+	std::shared_ptr<SimplePixelShader> refractivePixShader;
 	std::shared_ptr<SimpleVertexShader> vertShader;
 	//float specularExponent;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture;
@@ -25,6 +26,12 @@ private:
 	bool enabled;
 	std::string name;
 
+	bool transparent;
+	bool refractive;
+
+	float indexOfRefraction;
+	float refractionScale;
+
 public:
 	Material(DirectX::XMFLOAT4 tint,
 			 std::shared_ptr<SimplePixelShader> pix,
@@ -35,7 +42,9 @@ public:
 			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
 			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
 			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
-			 std::string name = "material");
+			 std::string name = "material",
+			 bool transparent = false,
+			 bool refractive = false);
 	~Material();
 
 	DirectX::XMFLOAT4 GetTint();
@@ -53,6 +62,24 @@ public:
 	void SetTiling(float uv);
 
 	std::string GetName();
+
+	void SetTransparent(bool transparent);
+	bool GetTransparent();
+
+	void SetRefractive(bool refractive);
+	bool GetRefractive();
+
+	void SetIndexOfRefraction(float index);
+	float GetIndexOfRefraction();
+
+	void SetRefractionScale(float scale);
+	float GetRefractionScale();
+
+	void SetPixelShader(std::shared_ptr<SimplePixelShader> pix);
+	void SetVertexShader(std::shared_ptr<SimpleVertexShader> vert);
+
+	void SetRefractivePixelShader(std::shared_ptr<SimplePixelShader> refractPix);
+	std::shared_ptr<SimplePixelShader> GetRefractivePixelShader();
 
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();

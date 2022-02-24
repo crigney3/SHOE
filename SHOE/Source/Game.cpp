@@ -119,10 +119,6 @@ void Game::Init()
 										  swapChain,
 										  backBufferRTV,
 										  depthStencilView);
-
-
-	
-	renderer->InitShadows();
 }
 
 void Game::RenderUI(float deltaTime) {
@@ -253,7 +249,7 @@ void Game::RenderUI(float deltaTime) {
 		lightEnabled ? currentLight->enabled = 1.0f : currentLight->enabled = 0.0f;
 
 		ImGui::ColorEdit3("Color ", &currentLight->color.x);
-		ImGui::DragFloat("Intensity ", &currentLight->intensity, 1, 10.0f, 200.0f);
+		ImGui::DragFloat("Intensity ", &currentLight->intensity, 0.1f, 0.01f, 1.0f);
 		ImGui::DragFloat("Range ", &currentLight->range, 1, 5.0f, 20.0f);
 		ImGui::End();
 	}
@@ -312,7 +308,7 @@ void Game::RenderUI(float deltaTime) {
 
 			ImGui::Text(nameBuf);
 			if (ImGui::BeginListBox("MaterialList")) {
-				for (int i = 0; i < globalAssets.GetMaterialArraySize() - 1; i++) {
+				for (int i = 0; i < globalAssets.GetMaterialArraySize(); i++) {
 					const bool is_selected = (materialIndex == i);
 					if (ImGui::Selectable(globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
 						materialIndex = i;
@@ -347,7 +343,7 @@ void Game::RenderUI(float deltaTime) {
 
 			ImGui::Text(nameBuf);
 			if (ImGui::BeginListBox("MeshList")) {
-				for (int i = 0; i < globalAssets.GetMeshArraySize() - 1; i++) {
+				for (int i = 0; i < globalAssets.GetMeshArraySize(); i++) {
 					const bool is_selected = (meshIndex == i);
 					if (ImGui::Selectable(globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
 						meshIndex = i;
@@ -551,22 +547,41 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::End();
 	}
 
-	// TODO: Make MRT menu toggleable
 	if (rtvWindowEnabled) {
 		ImGui::Begin("Multiple Render Target Viewer");
 
-		ImGui::Text("Color Without Ambient");
-		ImGui::Image(renderer->GetRenderTargetSRV(0).Get(), ImVec2(500, 300));
-		ImGui::Text("Ambient Color");
-		ImGui::Image(renderer->GetRenderTargetSRV(1).Get(), ImVec2(500, 300));
-		ImGui::Text("Normals");
-		ImGui::Image(renderer->GetRenderTargetSRV(2).Get(), ImVec2(500, 300));
-		ImGui::Text("Depths");
-		ImGui::Image(renderer->GetRenderTargetSRV(3).Get(), ImVec2(500, 300));
-		ImGui::Text("SSAO");
-		ImGui::Image(renderer->GetRenderTargetSRV(4).Get(), ImVec2(500, 300));
-		ImGui::Text("SSAO Post Blur");
-		ImGui::Image(renderer->GetRenderTargetSRV(5).Get(), ImVec2(500, 300));
+		if (ImGui::CollapsingHeader("MRT Effects")) {
+			ImGui::Text("Color Without Ambient");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_NO_AMBIENT).Get(), ImVec2(500, 300));
+			ImGui::Text("Ambient Color");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_AMBIENT).Get(), ImVec2(500, 300));
+			ImGui::Text("Normals");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::NORMALS).Get(), ImVec2(500, 300));
+			ImGui::Text("Depths");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Text("SSAO");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
+			ImGui::Text("SSAO Post Blur");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
+			ImGui::Text("Composite");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
+		}
+
+		if (ImGui::CollapsingHeader("Shadow Depth Views")) {
+			ImGui::Text("Environmental Shadows");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::ENV_SHADOW).Get(), ImVec2(500, 300));
+			ImGui::Text("Flashlight Shadows");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::FLASHLIGHT_SHADOW).Get(), ImVec2(500, 300));
+		}
+
+		if (ImGui::CollapsingHeader("Depth Prepass Views")) {
+			ImGui::Text("Refraction Silhouette Depths");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
+			ImGui::Text("Transparency Depth Prepass");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Text("Render Depth Prepass (used for optimization)");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+		}
 
 		ImGui::End();
 	}
@@ -628,7 +643,7 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::End();
 	}
 
-	// TODO: Add skybox menu
+	// TODO: Add Material Edit menu
 
 	// Display a menu at the top
 	if (ImGui::BeginMainMenuBar()) {
@@ -861,10 +876,12 @@ void Game::Draw(float deltaTime, float totalTime)
 {
 	//Render shadows before anything else
 	if (flashMenuToggle) {
-		renderer->RenderShadows(flashShadowCamera, 0);
+		renderer->RenderShadows(flashShadowCamera, MiscEffectSRVTypes::FLASHLIGHT_SHADOW);
 	}
 
-	renderer->RenderShadows(mainShadowCamera, 1);
+	renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
+
+	//renderer->RenderDepths(mainCamera, MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS);
 
 	renderer->Draw(mainCamera, totalTime);
 }
