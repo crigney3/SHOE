@@ -345,10 +345,10 @@ void AssetManager::InitializeGameEntities() {
 	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflective"), "Shiny Sphere");
 
 	// Refractive Objects
-	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractiveScratchMat"), "Refractive Sphere");
-	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("refractiveScratchMat"), "Refractive Torus");
-	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveScratchMat"), "Refractive Cube");
-	CreateGameEntity(GetMeshByName("Helix"), GetMaterialByName("refractiveScratchMat"), "Refractive Helix");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractivePaintMat"), "Refractive Sphere");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractiveWoodMat"), "Refractive Torus");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractiveRoughMat"), "Refractive Cube");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractiveBronzeMat"), "Refractive Helix");
 
 	GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.7f, +0.0f, +0.0f);
 	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-0.7f, +0.0f, +0.0f);
@@ -477,13 +477,34 @@ void AssetManager::InitializeMaterials() {
 					  L"scratched_metal.png",
 					  L"scratched_roughness.png")->SetTransparent(true);*/
 
-	CreatePBRMaterial(std::string("refractiveScratchMat"),
+	CreatePBRMaterial(std::string("refractivePaintMat"),
 					  L"paint_albedo.png",
 					  L"paint_normals.png",
 					  L"paint_metal.png",
 					  L"paint_roughness.png")->SetRefractive(true);
-	GetMaterialByName("refractiveScratchMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
-	GetMaterialByName("refractiveScratchMat")->SetTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	GetMaterialByName("refractivePaintMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+
+	CreatePBRMaterial(std::string("refractiveWoodMat"),
+					  L"wood_albedo.png",
+					  L"wood_normals.png",
+					  L"wood_metal.png",
+					  L"wood_roughness.png")->SetTransparent(true);
+	GetMaterialByName("refractiveWoodMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+
+	CreatePBRMaterial(std::string("refractiveRoughMat"),
+					  L"rough_albedo.png",
+					  L"rough_normals.png",
+					  L"rough_metal.png",
+					  L"rough_roughness.png")->SetRefractive(true);
+	GetMaterialByName("refractiveRoughMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+
+	CreatePBRMaterial(std::string("refractiveBronzeMat"),
+					  L"bronze_albedo.png",
+					  L"bronze_normals.png",
+					  L"bronze_metal.png",
+					  L"bronze_roughness.png")->SetRefractive(true);
+	GetMaterialByName("refractiveBronzeMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+	//GetMaterialByName("refractiveScratchMat")->SetTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 void AssetManager::InitializeMeshes() {

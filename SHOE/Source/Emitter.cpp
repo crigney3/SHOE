@@ -39,7 +39,9 @@ Emitter::Emitter(int maxParticles,
 
 	this->additiveBlend = additiveBlendState;
 
-	Initialize(this->maxParticles);
+	// Set up a function to calculate if this emitter will overflow its buffer
+	// Then recalculate maxParticles if it will
+	SetMaxParticles(this->maxParticles);
 }
 
 Emitter::~Emitter() {
@@ -108,7 +110,7 @@ bool Emitter::GetEnableDisable() {
 }
 
 void Emitter::SetMaxParticles(int maxParticles) {
-	if (this->maxParticles != maxParticles) {
+	if (this->maxParticles != maxParticles | this->maxParticles == NULL) {
 		// SRV handle release and wipe
 		sortListSRV.Reset();
 		drawListSRV.Reset();

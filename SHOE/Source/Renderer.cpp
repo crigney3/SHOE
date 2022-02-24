@@ -865,6 +865,26 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		ssaoCombinePS->CopyAllBufferData();
 		context->Draw(3, 0);
 
+		// Draw the point lights
+		context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::COMPOSITE].GetAddressOf(), depthBufferDSV.Get());
+		DrawPointLights();
+
+		renderTargets[0] = renderTargetRTVs[RTVTypes::COMPOSITE].Get();
+		context->OMSetRenderTargets(1, renderTargets, 0);
+
+		context->OMSetDepthStencilState(particleDepthState.Get(), 0);
+
+		for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
+			if (!globalAssets.GetEmitterAtID(i)->GetEnableDisable()) continue;
+			globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime, particleBlendAdditive);
+		}
+
+		context->OMSetBlendState(0, 0, 0xFFFFFFFF);
+
+		fullscreenVS->SetShader();
+
+		context->OMSetDepthStencilState(0, 0);
+
 		// For the refraction merge, we need to store the composite
 		// to a buffer that can be read by the GPU
 		renderTargets[0] = backBufferRTV.Get();
@@ -936,6 +956,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 			refractivePS->SetFloat("uvMult", ge->GetMaterial()->GetTiling());
 			refractivePS->SetFloat("indexOfRefraction", ge->GetMaterial()->GetIndexOfRefraction());
 			refractivePS->SetFloat("refractionScale", ge->GetMaterial()->GetRefractionScale());
+			refractivePS->SetFloat("isRefractive", ge->GetMaterial()->GetRefractive());
 
 			refractivePS->CopyBufferData("PerMaterial");
 
@@ -965,20 +986,20 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
 		ssaoCombinePS->CopyAllBufferData();
 		context->Draw(3, 0);
-	}
 
-	// Draw the point light
-	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
-	DrawPointLights();
+		// Draw the point light
+		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+		DrawPointLights();
 
-	renderTargets[0] = backBufferRTV.Get();
-	context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
-	
-	context->OMSetDepthStencilState(particleDepthState.Get(), 0);
+		renderTargets[0] = backBufferRTV.Get();
+		context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
 
-	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
-		if (!globalAssets.GetEmitterAtID(i)->GetEnableDisable()) continue;
-		globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime, particleBlendAdditive);
+		context->OMSetDepthStencilState(particleDepthState.Get(), 0);
+
+		for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
+			if (!globalAssets.GetEmitterAtID(i)->GetEnableDisable()) continue;
+			globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime, particleBlendAdditive);
+		}
 	}
 
 	context->OMSetBlendState(0, 0, 0xFFFFFFFF);
