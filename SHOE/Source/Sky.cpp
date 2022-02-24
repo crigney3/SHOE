@@ -342,6 +342,10 @@ void Sky::IBLCreateBRDFLookUpTexture() {
 	context->RSSetViewports(1, &prevVP);
 }
 
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Sky::GetSkyTexture() {
+	return this->textureSRV;
+}
+
 void Sky::SetEnableDisable(bool value) {
 	this->enabled = value;
 }

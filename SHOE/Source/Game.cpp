@@ -249,7 +249,7 @@ void Game::RenderUI(float deltaTime) {
 		lightEnabled ? currentLight->enabled = 1.0f : currentLight->enabled = 0.0f;
 
 		ImGui::ColorEdit3("Color ", &currentLight->color.x);
-		ImGui::DragFloat("Intensity ", &currentLight->intensity, 1, 10.0f, 200.0f);
+		ImGui::DragFloat("Intensity ", &currentLight->intensity, 0.1f, 0.01f, 1.0f);
 		ImGui::DragFloat("Range ", &currentLight->range, 1, 5.0f, 20.0f);
 		ImGui::End();
 	}

@@ -891,6 +891,23 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		refractivePS->SetMatrix4x4("projMatrix", mainCamera->GetProjectionMatrix());
 		refractivePS->SetFloat3("cameraPos", mainCamera->GetTransform()->GetPosition());
 
+		refractivePS->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
+		refractivePS->SetData("lightCount", &lightCount, sizeof(unsigned int));
+
+		/*if (this->currentSky->GetEnableDisable()) {
+			refractivePS->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
+			refractivePS->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
+			refractivePS->SetShaderResourceView("brdfLookUpMap", currentSky->GetBRDFLookupTexture().Get());
+			refractivePS->SetShaderResourceView("specularIBLMap", currentSky->GetConvolvedSpecularCubeMap().Get());
+		}*/
+
+		refractivePS->SetShaderResourceView("environmentMap", currentSky->GetSkyTexture().Get());
+
+		refractivePS->SetShaderResourceView("screenPixels", renderTargetSRVs[RTVTypes::COMPOSITE].Get());
+		refractivePS->SetShaderResourceView("refractionSilhouette", renderTargetSRVs[RTVTypes::REFRACTION_SILHOUETTE].Get());
+
+		//refractivePS->SetShaderResourceView("ssaoBlur", renderTargetSRVs[RTVTypes::SSAO_BLUR].Get());
+
 		refractivePS->CopyBufferData("PerFrame");
 
 		std::shared_ptr<SimpleVertexShader> refractiveVS = transparentEntities[0]->GetMaterial()->GetVertShader();
@@ -922,9 +939,9 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 			refractivePS->CopyBufferData("PerMaterial");
 
-			refractivePS->SetShaderResourceView("screenPixels", renderTargetSRVs[RTVTypes::COMPOSITE].Get());
-			refractivePS->SetShaderResourceView("refractionSilhouette", renderTargetSRVs[RTVTypes::REFRACTION_SILHOUETTE].Get());
 			refractivePS->SetShaderResourceView("textureNormal", ge->GetMaterial()->GetNormalMap());
+			refractivePS->SetShaderResourceView("textureRoughness", ge->GetMaterial()->GetRoughMap());
+			refractivePS->SetShaderResourceView("textureMetal", ge->GetMaterial()->GetMetalMap());
 
 			UINT stride = sizeof(Vertex);
 			UINT offset = 0;
