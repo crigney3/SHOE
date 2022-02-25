@@ -3,31 +3,41 @@
 using namespace DirectX;
 
 Renderer::Renderer(
-        unsigned int windowHeight,
-        unsigned int windowWidth,
-        Microsoft::WRL::ComPtr<ID3D11Device> device,
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
-        Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain,
-        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
-        Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV) 
+	unsigned int windowHeight,
+	unsigned int windowWidth,
+	Microsoft::WRL::ComPtr<ID3D11Device> device,
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
+	Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain,
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV)
 {
 	this->currentSky = globalAssets.currentSky;
-    this->windowHeight = windowHeight;
-    this->windowWidth = windowWidth;
-    this->device = device;
-    this->context = context;
-    this->swapChain = swapChain;
-    this->backBufferRTV = backBufferRTV;
-    this->depthBufferDSV = depthBufferDSV;
+	this->windowHeight = windowHeight;
+	this->windowWidth = windowWidth;
+	this->device = device;
+	this->context = context;
+	this->swapChain = swapChain;
+	this->backBufferRTV = backBufferRTV;
+	this->depthBufferDSV = depthBufferDSV;
 	this->ambientColor = DirectX::XMFLOAT3(0.05f, 0.05f, 0.1f);
 	this->mainCamera = globalAssets.GetCameraByName("mainCamera");
 	this->mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
 	this->flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
+	//create and store the RS State for drawing colliders
+	D3D11_RASTERIZER_DESC colliderRSdesc = {};
+	colliderRSdesc.FillMode = D3D11_FILL_WIREFRAME;
+	colliderRSdesc.CullMode = D3D11_CULL_NONE;
+	colliderRSdesc.DepthClipEnable = true;
+	colliderRSdesc.DepthBias = 100;
+	colliderRSdesc.DepthBiasClamp = 0.0f;
+	colliderRSdesc.SlopeScaledDepthBias = 10.0f;
+	device->CreateRasterizerState(&colliderRSdesc, &colliderRasterizer);
+
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
 
-Renderer::~Renderer(){
+Renderer::~Renderer() {
 
 }
 
@@ -196,8 +206,8 @@ void Renderer::InitRenderTargetViews() {
 	particleBlendAdditive.Reset();
 
 	D3D11_DEPTH_STENCIL_DESC particleDepthDesc = {};
-	particleDepthDesc.DepthEnable = true; 
-	particleDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; 
+	particleDepthDesc.DepthEnable = true;
+	particleDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 	particleDepthDesc.DepthFunc = D3D11_COMPARISON_LESS;
 	device->CreateDepthStencilState(&particleDepthDesc, particleDepthState.GetAddressOf());
 
@@ -233,7 +243,7 @@ void Renderer::InitRenderTargetViews() {
 }
 
 void Renderer::InitShadows() {
-    //Set up buffers and data for shadows
+	//Set up buffers and data for shadows
 	shadowSize = 2048;
 
 	shadowRasterizer.Reset();
@@ -334,7 +344,7 @@ void Renderer::InitShadows() {
 	shadowRastDesc.FillMode = D3D11_FILL_SOLID;
 	shadowRastDesc.CullMode = D3D11_CULL_BACK;
 	shadowRastDesc.DepthClipEnable = true;
-	shadowRastDesc.DepthBias = 100; 
+	shadowRastDesc.DepthBias = 100;
 	shadowRastDesc.DepthBiasClamp = 0.0f;
 	shadowRastDesc.SlopeScaledDepthBias = 10.0f;
 	device->CreateRasterizerState(&shadowRastDesc, &shadowRasterizer);
@@ -346,10 +356,10 @@ void Renderer::PreResize() {
 }
 
 void Renderer::PostResize(unsigned int windowHeight,
-        unsigned int windowWidth,
-        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
-        Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
-    ) 
+	unsigned int windowWidth,
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
+)
 {
 	this->windowHeight = windowHeight;
 	this->windowWidth = windowWidth;
@@ -570,8 +580,8 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTyp
 
 		context->DrawIndexed(
 			it->get()->GetMesh()->GetIndexCount(),
-			0,     
-			0);    
+			0,
+			0);
 	}
 
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
@@ -759,6 +769,46 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		}
 	}
 
+#pragma region Drawing Colliders
+	context->RSSetState(colliderRasterizer.Get());
+	std::vector<Collider> ts = *CollisionManager::GetTriggerboxes();
+	for (int i = 0; i < CollisionManager::GetTriggerboxes()->size(); i++)
+	{
+		Collider t = ts[i];
+		BoundingOrientedBox obb = t.GetOrientedBoundingBox();
+		std::shared_ptr<Mesh> msh = globalAssets.GetMeshByName("Cube");
+		std::shared_ptr<Material> mat = globalAssets.GetMaterialByName("bronzeMat");
+		XMFLOAT4X4 wm4x4 = t.GetTransform()->GetWorldMatrix();
+
+		XMMATRIX trans = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
+		XMMATRIX scale = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
+
+		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
+		XMMATRIX rotation = XMMatrixRotationQuaternion(rot);
+		XMMATRIX world = scale * rotation * trans;
+
+		GameEntity e = GameEntity(msh, world, mat);
+		e.Draw(context, cam, flashShadowCamera, mainShadowCamera);
+	}
+	std::vector<Collider> cs = *CollisionManager::GetColliders();
+	for (int i = 0; i < CollisionManager::GetTriggerboxes()->size(); i++)
+	{
+		Collider c = cs[i];
+		BoundingOrientedBox obb = c.GetOrientedBoundingBox();
+		std::shared_ptr<Mesh> msh = globalAssets.GetMeshByName("Cube");
+		std::shared_ptr<Material> mat = globalAssets.GetMaterialByName("bronzeMat");
+
+		XMMATRIX trans = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
+		XMMATRIX scale = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
+		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
+		XMMATRIX rotation = XMMatrixRotationQuaternion(rot);
+		XMMATRIX world = scale * rotation * trans;
+		GameEntity e = GameEntity(msh, world, mat);
+		e.Draw(context, cam, flashShadowCamera, mainShadowCamera);
+	}
+	context->RSSetState(0);
+#pragma endregion
+
 	//Now deal with rendering the terrain, PS data first
 	std::shared_ptr<GameEntity> terrainEntity = globalAssets.GetTerrainByName("Main Terrain");
 	if (terrainEntity->GetEnableDisable()) {
@@ -802,7 +852,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	if (this->currentSky->GetEnableDisable()) {
 		this->currentSky->Draw(context, cam);
 	}
-    
+
 	std::shared_ptr<SimpleVertexShader> fullscreenVS = globalAssets.GetVertexShaderByName("FullscreenVS");
 	fullscreenVS->SetShader();
 
@@ -993,8 +1043,10 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
 		DrawPointLights();
 
-		renderTargets[0] = backBufferRTV.Get();
-		context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
+	renderTargets[0] = backBufferRTV.Get();
+	context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
+
+	context->OMSetDepthStencilState(particleDepthState.Get(), 0);
 
 		context->OMSetDepthStencilState(particleDepthState.Get(), 0);
 
@@ -1025,7 +1077,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 }
 
 void Renderer::SetActiveSky(std::shared_ptr<Sky> sky) {
-    this->currentSky = sky;
+	this->currentSky = sky;
 }
 
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetRenderTargetSRV(RTVTypes type) {

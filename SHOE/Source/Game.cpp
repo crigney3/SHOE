@@ -1,4 +1,5 @@
 #include "../Headers/Game.h"
+#include "../Headers/CollisionManager.h"
 
 // Needed for a helper function to read compiled shader files from the hard drive
 #pragma comment(lib, "d3dcompiler.lib")
@@ -93,6 +94,14 @@ void Game::Init()
 	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
 	Entities = globalAssets.GetActiveGameEntities();
+	std::shared_ptr<GameEntity> e = globalAssets.GetGameEntityByName("Shiny Rough Sphere");
+	std::shared_ptr<GameEntity> e2 = globalAssets.GetGameEntityByName("Scratched Sphere");
+
+	Collider c1 = Collider(e);
+	c1.SetExtents(XMFLOAT3(2, 2, 2));
+	CollisionManager::GetTriggerboxes()->push_back(c1);
+	CollisionManager::GetColliders()->push_back(Collider(e2));
+
 
 	statsEnabled = true;
 	movingEnabled = true;
@@ -863,6 +872,9 @@ void Game::Update(float deltaTime, float totalTime)
 	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
 		globalAssets.GetEmitterAtID(i)->Update(deltaTime, totalTime);
 	}
+
+
+	CollisionManager::Update();
 
 	// Flickering is currently broken
 	/*if (flickeringEnabled) {

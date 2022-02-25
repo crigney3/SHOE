@@ -1,5 +1,6 @@
 #include "GameEntity.h"
 #include "AssetManager.h"
+#include "CollisionManager.h"
 
 #define MAX_LIGHTS 64
 
@@ -96,6 +97,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11SamplerState> shadowSampler;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> shadowRasterizer;
     std::shared_ptr<SimpleVertexShader> VSShadow;
+
+    //components for colliders
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> colliderRasterizer;
 
     // Offset and random values for SSAO blur and texture
     Microsoft::WRL::ComPtr<ID3D11Texture2D> ssaoRandomTex;
