@@ -174,4 +174,5 @@ public:
     void InitShadows();
     void RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTypes type);
     void RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type);
+    void RenderColliders(std::shared_ptr<Camera> cam);
 };

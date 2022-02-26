@@ -593,6 +593,54 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTyp
 	context->RSSetState(0);
 }
 
+void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
+{
+	//Draw a wireframe
+	context->RSSetState(colliderRasterizer.Get());
+
+	//Draw things listed as Triggerbox
+	std::vector<Collider> ts = *CollisionManager::GetTriggerboxes();
+	for (int i = 0; i < CollisionManager::GetTriggerboxes()->size(); i++)
+	{
+		Collider t = ts[i];
+		BoundingOrientedBox obb = t.GetOrientedBoundingBox();
+		std::shared_ptr<Mesh> msh = globalAssets.GetMeshByName("Cube");
+		std::shared_ptr<Material> mat = globalAssets.GetMaterialByName("bronzeMat");
+		XMFLOAT4X4 wm4x4 = t.GetTransform()->GetWorldMatrix();
+
+		XMMATRIX trans = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
+		XMMATRIX scale = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
+
+		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
+		XMMATRIX rotation = XMMatrixRotationQuaternion(rot);
+		XMMATRIX world = scale * rotation * trans;
+
+		GameEntity e = GameEntity(msh, world, mat);
+		e.Draw(context, cam, flashShadowCamera, mainShadowCamera);
+	}
+
+	// Draw things listed as colliders (not triggers)
+	std::vector<Collider> cs = *CollisionManager::GetColliders();
+	for (int i = 0; i < CollisionManager::GetTriggerboxes()->size(); i++)
+	{
+		Collider c = cs[i];
+		BoundingOrientedBox obb = c.GetOrientedBoundingBox();
+		std::shared_ptr<Mesh> msh = globalAssets.GetMeshByName("Cube");
+		std::shared_ptr<Material> mat = globalAssets.GetMaterialByName("bronzeMat");
+
+		XMMATRIX trans = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
+		XMMATRIX scale = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
+		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
+		XMMATRIX rotation = XMMatrixRotationQuaternion(rot);
+		XMMATRIX world = scale * rotation * trans;
+		GameEntity e = GameEntity(msh, world, mat);
+		e.Draw(context, cam, flashShadowCamera, mainShadowCamera);
+	}
+
+	// Put the RS State back to normal (/non wireframe)
+	context->RSSetState(0);
+}
+
 void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	// Background color (Cornflower Blue in this case) for clearing
@@ -769,45 +817,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		}
 	}
 
-#pragma region Drawing Colliders
-	context->RSSetState(colliderRasterizer.Get());
-	std::vector<Collider> ts = *CollisionManager::GetTriggerboxes();
-	for (int i = 0; i < CollisionManager::GetTriggerboxes()->size(); i++)
-	{
-		Collider t = ts[i];
-		BoundingOrientedBox obb = t.GetOrientedBoundingBox();
-		std::shared_ptr<Mesh> msh = globalAssets.GetMeshByName("Cube");
-		std::shared_ptr<Material> mat = globalAssets.GetMaterialByName("bronzeMat");
-		XMFLOAT4X4 wm4x4 = t.GetTransform()->GetWorldMatrix();
-
-		XMMATRIX trans = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
-		XMMATRIX scale = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
-
-		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
-		XMMATRIX rotation = XMMatrixRotationQuaternion(rot);
-		XMMATRIX world = scale * rotation * trans;
-
-		GameEntity e = GameEntity(msh, world, mat);
-		e.Draw(context, cam, flashShadowCamera, mainShadowCamera);
-	}
-	std::vector<Collider> cs = *CollisionManager::GetColliders();
-	for (int i = 0; i < CollisionManager::GetTriggerboxes()->size(); i++)
-	{
-		Collider c = cs[i];
-		BoundingOrientedBox obb = c.GetOrientedBoundingBox();
-		std::shared_ptr<Mesh> msh = globalAssets.GetMeshByName("Cube");
-		std::shared_ptr<Material> mat = globalAssets.GetMaterialByName("bronzeMat");
-
-		XMMATRIX trans = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
-		XMMATRIX scale = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
-		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
-		XMMATRIX rotation = XMMatrixRotationQuaternion(rot);
-		XMMATRIX world = scale * rotation * trans;
-		GameEntity e = GameEntity(msh, world, mat);
-		e.Draw(context, cam, flashShadowCamera, mainShadowCamera);
-	}
-	context->RSSetState(0);
-#pragma endregion
+	RenderColliders(cam);
 
 	//Now deal with rendering the terrain, PS data first
 	std::shared_ptr<GameEntity> terrainEntity = globalAssets.GetTerrainByName("Main Terrain");
