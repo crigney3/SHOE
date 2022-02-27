@@ -15,6 +15,7 @@ public:
 	static void Free(std::shared_ptr<IComponent> component);
 	static int GetActiveCount();
 	static std::vector<std::shared_ptr<T>> GetAll();
+	static std::vector<std::shared_ptr<T>> GetAllEnabled();
 
 private:
 	static std::vector<std::shared_ptr<T>> allocated;
@@ -81,4 +82,21 @@ template<typename T>
 std::vector<std::shared_ptr<T>> ComponentPool<T>::GetAll()
 {
 	return allocated;
+}
+
+/**
+ * \brief Returns a vector of all currently bound and enabled components in the pool
+ */
+template<typename T>
+std::vector<std::shared_ptr<T>> ComponentPool<T>::GetAllEnabled()
+{
+	std::vector<std::shared_ptr<T>> enabled = std::vector<std::shared_ptr<T>>();
+	for(int i = 0; i < allocated.size(); i++)
+	{
+		if(allocated[i]->IsEnabled())
+		{
+			enabled.emplace_back(allocated[i]);
+		}
+	}
+	return enabled;
 }

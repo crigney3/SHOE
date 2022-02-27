@@ -31,7 +31,7 @@ public:
 	~GameEntity();
 
 	void Initialize();
-	void Update();
+	void Update(float deltaTime, float totalTime);
 	void OnCollisionEnter(std::shared_ptr<GameEntity> other);
 	void OnTriggerEnter(std::shared_ptr<GameEntity> other);
 
@@ -52,22 +52,35 @@ public:
 	//Component stuff
 	template <typename T>
 	std::shared_ptr<T> AddComponent();
+	template <> std::shared_ptr<Transform> AddComponent();
+
 	template <typename T>
 	bool RemoveComponent();
+	template <> bool RemoveComponent<Transform>();
+
 	template <typename T>
 	std::shared_ptr<T> GetComponent();
+	template <> std::shared_ptr<Transform> GetComponent();
+
 	template <typename T>
 	std::vector<std::shared_ptr<T>> GetComponents();
+	template <> std::vector<std::shared_ptr<Transform>> GetComponents();
+
 	template <typename T>
 	std::shared_ptr<T> GetComponentInChildren();
 	template <typename T>
 	std::vector<std::shared_ptr<T>> GetComponentsInChildren();
-
+	
 	void Release();
 
 	friend class AssetManager;
 };
 
+/**
+ * \brief Adds a component of the given type to the entity
+ * \tparam T Type of component to add
+ * \return The newly attached component
+ */
 template<typename T>
 std::shared_ptr<T> GameEntity::AddComponent()
 {
@@ -76,6 +89,11 @@ std::shared_ptr<T> GameEntity::AddComponent()
 	return component;
 }
 
+/**
+ * \brief Frees and removes the first component of the given type
+ * \tparam T Type of component to remove
+ * \return Whether the component was successfully removed
+ */
 template<typename T>
 bool GameEntity::RemoveComponent()
 {
@@ -92,6 +110,11 @@ bool GameEntity::RemoveComponent()
 	return false;
 }
 
+/**
+ * \brief Gets the first component of a given type on this entity
+ * \tparam T Type of component to get
+ * \return A reference to the component, or nullptr if none are found
+ */
 template<typename T>
 std::shared_ptr<T> GameEntity::GetComponent()
 {
@@ -102,6 +125,11 @@ std::shared_ptr<T> GameEntity::GetComponent()
 	return nullptr;
 }
 
+/**
+ * \brief Gets all components of a given type on this entity
+ * \tparam T Type of components to get
+ * \return A list of references to the components
+ */
 template<typename T>
 std::vector<std::shared_ptr<T>> GameEntity::GetComponents()
 {
@@ -114,6 +142,11 @@ std::vector<std::shared_ptr<T>> GameEntity::GetComponents()
 	return components;
 }
 
+/**
+ * \brief Gets the first component of a given type on this entity or its children
+ * \tparam T Type of component to get
+ * \return A reference to the component, or nullptr if none are found
+ */
 template<typename T>
 std::shared_ptr<T> GameEntity::GetComponentInChildren()
 {
@@ -131,6 +164,11 @@ std::shared_ptr<T> GameEntity::GetComponentInChildren()
 	return std::shared_ptr<T>();
 }
 
+/**
+ * \brief Gets all components of a given type on this entity or its children
+ * \tparam T Type of components to get
+ * \return A list of references to the components
+ */
 template<typename T>
 std::vector<std::shared_ptr<T>> GameEntity::GetComponentsInChildren()
 {

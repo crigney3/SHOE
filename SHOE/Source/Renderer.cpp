@@ -678,7 +678,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 		std::shared_ptr<Material> itMatPtr = it->get()->GetMaterial();
 		std::shared_ptr<Mesh> itMeshPtr = it->get()->GetMesh();
-		Transform* itTransPtr = it->get()->GetTransform();
+		std::shared_ptr<Transform> itTransPtr = it->get()->GetTransform();
 
 		if (currentMaterial != itMatPtr.get())
 		{

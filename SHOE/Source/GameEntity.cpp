@@ -1,5 +1,9 @@
 #include "../Headers/GameEntity.h"
 
+/**
+ * \brief Updates children and attached components with whether the object's parent is enabled
+ * \param active Whether this entity's parent is considered enabled
+ */
 void GameEntity::UpdateHierarchyIsEnabled(bool active)
 {
 	for (std::shared_ptr<ComponentPacket> packet : componentList)
@@ -24,21 +28,32 @@ GameEntity::GameEntity(std::shared_ptr<Mesh> mesh, DirectX::XMMATRIX worldIn, st
 GameEntity::~GameEntity() {
 }
 
+/**
+ * \brief Delays attaching the transform until the self-reference can be made
+ * To be called after instantiation
+ */
 void GameEntity::Initialize()
 {
-	this->transform = AddComponent<Transform>();
+	this->transform = ComponentManager::Instantiate<Transform>(shared_from_this(), this->GetHierarchyIsEnabled());
 }
 
-void GameEntity::Update()
+/**
+ * \brief Updates all attached components
+ */
+void GameEntity::Update(float deltaTime, float totalTime)
 {
 	if (GetEnableDisable()) {
 		for (std::shared_ptr<ComponentPacket> packet : componentList) {
 			if (packet->component->IsEnabled())
-				packet->component->Update();
+				packet->component->Update(deltaTime, totalTime);
 		}
 	}
 }
 
+/**
+ * \brief Called on entering a collision with another GameEntity with a collider attached
+ * \param other Entity collided with
+ */
 void GameEntity::OnCollisionEnter(std::shared_ptr<GameEntity> other)
 {
 	if (GetEnableDisable()) {
@@ -49,6 +64,10 @@ void GameEntity::OnCollisionEnter(std::shared_ptr<GameEntity> other)
 	}
 }
 
+/**
+ * \brief Called on entering another GameEntity's trigger box
+ * \param other Entity collided with
+ */
 void GameEntity::OnTriggerEnter(std::shared_ptr<GameEntity> other)
 {
 	if (GetEnableDisable()) {
@@ -138,6 +157,50 @@ void GameEntity::DrawFromVerts(Microsoft::WRL::ComPtr<ID3D11DeviceContext> conte
 		0);    // Offset to add to each index when looking up vertices
 }
 
+/**
+ * \brief Special case for transform, cannot have multiple transforms
+ * \return This entity's transform
+ */
+template <>
+std::shared_ptr<Transform> GameEntity::AddComponent<Transform>()
+{
+	//Does nothing, cannot have multiple transforms
+	return transform;
+}
+
+/**
+ * \brief Special case for transform, does nothing since the transform has the same lifetime as the entity
+ * \return False
+ */
+template <>
+bool GameEntity::RemoveComponent<Transform>()
+{
+	return false;
+}
+
+/**
+ * \brief Special case for transform
+ * \return This entity's transform
+ */
+template <>
+std::shared_ptr<Transform> GameEntity::GetComponent<Transform>()
+{
+	return transform;
+}
+
+/**
+ * \brief Special case for transform
+ * \return This entity's transform
+ */
+template <>
+std::vector<std::shared_ptr<Transform>> GameEntity::GetComponents<Transform>()
+{
+	return std::vector<std::shared_ptr<Transform>> { transform };
+}
+
+/**
+ * \brief Frees all of the stored objects in the entity so it can be safely destroyed
+ */
 void GameEntity::Release()
 {
 	for(std::shared_ptr<GameEntity> child : transform->GetChildrenAsGameEntities())
@@ -148,6 +211,7 @@ void GameEntity::Release()
 		packet->component->OnDestroy();
 		packet->deallocator(packet->component);
 	}
+	ComponentManager::Free<Transform>(transform);
 }
 
 std::string GameEntity::GetName() {
