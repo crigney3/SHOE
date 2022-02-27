@@ -7,7 +7,7 @@ class IComponent
 {
 public:
 	virtual void Start();
-	virtual void Update();
+	virtual void Update(float deltaTime, float totalTime);
 	virtual void OnDestroy();
 	virtual void OnCollisionEnter(std::shared_ptr<GameEntity> other);
 	virtual void OnTriggerEnter(std::shared_ptr<GameEntity> other);
