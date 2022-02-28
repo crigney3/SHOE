@@ -3,6 +3,7 @@
 // Needed for a helper function to read compiled shader files from the hard drive
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3dcompiler.h>
+#include "..\Headers\ComponentManager.h"
 
 #pragma warning( disable : 26495)
 
@@ -52,7 +53,7 @@ Game::~Game()
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
-
+	
 	delete& Input::GetInstance();
 	delete& AssetManager::GetInstance();
 	delete& AudioHandler::GetInstance();
@@ -479,8 +480,8 @@ void Game::RenderUI(float deltaTime) {
 			ImGuiTreeNodeFlags_DefaultOpen |
 			ImGuiTreeNodeFlags_FramePadding)) {
 			for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
-				if (Entities->at(i)->GetTransform()->GetParent() == NULL) {
-					RenderChildObjectsInUI(Entities->at(i).get());
+				if (Entities->at(i)->GetTransform()->GetParent() == nullptr) {
+					RenderChildObjectsInUI(Entities->at(i));
 				}
 			}
 
@@ -703,14 +704,14 @@ void Game::RenderUI(float deltaTime) {
 	}
 }
 
-void Game::RenderChildObjectsInUI(GameEntity* entity) {
+void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 	std::string nodeName = entity->GetName();
 	if (ImGui::TreeNodeEx(nodeName.c_str(), 
 		ImGuiTreeNodeFlags_DefaultOpen |
 		ImGuiTreeNodeFlags_FramePadding)) {
 		int childCount = entity->GetTransform()->GetChildCount();
 		if (childCount > 0) {
-			std::vector<GameEntity*> children = entity->GetTransform()->GetChildrenAsGameEntities();
+			std::vector<std::shared_ptr<GameEntity>> children = entity->GetTransform()->GetChildrenAsGameEntities();
 			for (int i = 0; i < childCount; i++) {
 				RenderChildObjectsInUI(children[i]);
 			}
@@ -735,7 +736,7 @@ void Game::RenderChildObjectsInUI(GameEntity* entity) {
 				// Re-render children list
 				for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
 					if (Entities->at(i)->GetTransform()->GetParent() == NULL) {
-						RenderChildObjectsInUI(Entities->at(i).get());
+						RenderChildObjectsInUI(Entities->at(i));
 					}
 				}
 			}
@@ -831,6 +832,11 @@ void Game::Update(float deltaTime, float totalTime)
 
 	// Quit if the escape key is pressed
 	if (input.TestKeyAction(KeyActions::QuitGame)) Quit();
+
+	for(std::shared_ptr<GameEntity> entity : *globalAssets.GetActiveGameEntities())
+	{
+		entity->Update(deltaTime, totalTime);
+	}
 
 	if (movingEnabled) {
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+2.0f, -(float)sin(totalTime), +0.0f);

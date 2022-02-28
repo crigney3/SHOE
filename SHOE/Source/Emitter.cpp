@@ -1,4 +1,5 @@
 #include "../Headers/Emitter.h"
+#include "..\Headers\ComponentManager.h"
 
 Emitter::Emitter(int maxParticles,
 				 float particleLifeTime,
@@ -30,7 +31,8 @@ Emitter::Emitter(int maxParticles,
 	this->name = name;
 	this->enabled = false;
 
-	this->transform = Transform(DirectX::XMMatrixIdentity(), position);
+	this->transform = ComponentManager::Instantiate<Transform>(nullptr, true);
+	this->transform->SetPosition(position);
 
 	this->colorTint = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	this->scale = 0.0f;
@@ -443,7 +445,7 @@ void Emitter::EmitParticle(float currentTime, int emitCount) {
 	particleEmitComputeShader->SetUnorderedAccessView("deadList", this->deadListUAV);
 	//particleEmitComputeShader->SetUnorderedAccessView("sortList", this->sortListUAV);
 
-	particleEmitComputeShader->SetFloat3("startPos", this->transform.GetPosition());
+	particleEmitComputeShader->SetFloat3("startPos", this->transform->GetPosition());
 	//particleEmitComputeShader->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
 	particleEmitComputeShader->SetFloat("emitTime", currentTime);
 	particleEmitComputeShader->SetInt("maxParticles", this->maxParticles);

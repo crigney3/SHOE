@@ -40,6 +40,12 @@
     <Filter Include="Source Files\IMGUI-Source">
       <UniqueIdentifier>{51f652ae-a3c1-4e99-87b5-30cc4274e769}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\SHOE-Source\Components">
+      <UniqueIdentifier>{b07139f7-a6b5-4571-920d-4baa8e5f9197}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\SHOE-Headers\Components">
+      <UniqueIdentifier>{1b441970-5c02-418f-a367-b081ce6b0db6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Headers\AssetManager.h">
@@ -81,9 +87,6 @@
     <ClInclude Include="Headers\Sky.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Transform.h">
-      <Filter>Header Files\SHOE-Headers</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\Vertex.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
@@ -119,6 +122,21 @@
     </ClInclude>
     <ClInclude Include="Headers\Keybind.h">
       <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\ComponentManager.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\ComponentPacket.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\ComponentPool.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Transform.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\IComponent.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -259,9 +277,6 @@
     <ClCompile Include="Source\Sky.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Transform.cpp">
-      <Filter>Source Files\SHOE-Source</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Emitter.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
@@ -269,7 +284,13 @@
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\Keybind.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\IComponent.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Transform.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

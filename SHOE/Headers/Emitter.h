@@ -72,7 +72,7 @@ private:
 	std::string name;
 	bool enabled;
 
-	Transform transform;
+	std::shared_ptr<Transform> transform;
 
 	unsigned int* indices;
 
