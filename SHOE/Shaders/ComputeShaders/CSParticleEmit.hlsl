@@ -13,6 +13,7 @@ cbuffer ExternalData : register(b0)
 	int emitCount;
 }
 
+// Try locking this and flow to make sure they don't run at the same time
 [numthreads(32, 1, 1)]
 void main(uint3 threadID : SV_DispatchThreadID)
 {

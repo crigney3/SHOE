@@ -17,8 +17,15 @@
 #include <locale>
 #include <codecvt>
 #include "AudioHandler.h"
+#include <thread>
+#include <mutex>
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
+
+struct LoadingNotifications {
+	std::string category;
+	std::string object;
+};
 
 class AssetManager
 {
@@ -103,16 +110,31 @@ private:
 	std::vector<std::shared_ptr<Emitter>> globalParticleEmitters;
 	std::vector<FMOD::Sound*> globalSounds;
 
+	// Most recently loaded object from category
+	LoadingNotifications loaded;
+	// Readiness indicators for threads
+	
+	
+
 public:
 	~AssetManager();
 
 	Microsoft::WRL::ComPtr<ID3D11Device> GetDevice();
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> GetContext();
 
-	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context);
+	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock);
 
 	// Called whenever a material changes, or when a GameEntity is added
 	void SortEntitiesByMaterial();
+
+	bool isLoading;
+	bool singleLoadComplete;
+	std::string GetLastLoadedCategory();
+	std::string GetLastLoadedObject();
+	bool GetIsLoading();
+	bool GetSingleLoadComplete();
+	void SetIsLoading(bool isLoading);
+	void SetSingleLoadComplete(bool loadComplete);
 
 	// Methods to create new assets
 

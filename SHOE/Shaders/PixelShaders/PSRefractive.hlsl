@@ -33,6 +33,8 @@ cbuffer PerMaterial : register(b1)
 	float uvMult;
 	float indexOfRefraction;
 	float refractionScale;
+	// If this is false, the material is just transparent
+	bool isRefractive;
 }
 
 // Fresnel term - Schlick approx.
@@ -94,38 +96,42 @@ float4 main(VertexToPixelNormal input) : SV_TARGET
 	// Credit for most of this to Chris Cascioli
 	// The actual screen UV and refraction offset UV
 	float2 screenUV = input.position.xy / screenSize;
-	float2 offsetUV = float2(0, 0);
+	float2 refractedUV = float2(0, 0);
 
-	// Turns out the refract function is evil. Time to make my own
-	// float3 refrDir = refract(viewToCam, input.normal, indexOfRefraction);
+	if (isRefractive) {
+		// Turns out the refract function is evil. Time to make my own
+		// float3 refrDir = refract(viewToCam, input.normal, indexOfRefraction);
 
-	offsetUV = textureNormal.Sample(sampleState, input.uv).xy * 2 - 1;
-	offsetUV.y *= -1; // UV's are upside down compared to world space
+		float2 offsetUV = textureNormal.Sample(sampleState, input.uv).xy * 2 - 1;
+		offsetUV.y *= -1; // UV's are upside down compared to world space
 
-	float2 refractedUV = screenUV + offsetUV * refractionScale;
+		refractedUV = screenUV + offsetUV * refractionScale;
 
-	// Maybe stick to just specularity, then use roughness/metalness for "frosted glass" style
-	// Ignore SSAO
-	// The more rough, the more diffuse instead of refract? Maybe just indirect diffuse
+		// Maybe stick to just specularity, then use roughness/metalness for "frosted glass" style
+		// Ignore SSAO
+		// The more rough, the more diffuse instead of refract? Maybe just indirect diffuse
 
-	// Result may not be physically accurate
-	/*float3 indirectDiffuse = IndirectDiffuse(irradianceIBLMap, sampleState, input.normal);
-	float3 indirectSpecular = IndirectSpecular(specularIBLMap,
-											   specIBLTotalMipLevels,
-											   brdfLookUpMap,
-											   clampSampler,
-											   viewRefl,
-											   NdotV,
-											   roughness.r,
-											   specularColor);
-
-	float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse, indirectSpecular, metal.r) * input.surfaceColor.rgb;*/
-
-	float silhouette = refractionSilhouette.Sample(clampSampler, refractedUV).r;
-	if (silhouette < 0.5f)
-	{
-		// Invalid spot for the offset so default to THIS pixel's UV for the "refraction"
+		float silhouette = refractionSilhouette.Sample(clampSampler, refractedUV).r;
+		if (silhouette < 0.9f)
+		{
+			// Invalid spot for the offset so default to THIS pixel's UV for the "refraction"
+			refractedUV = screenUV;
+		}
+	}
+	else {
+		// Transparency only so default to this pixel's UV
 		refractedUV = screenUV;
+	}
+	
+
+	float3 specularity = float3(0, 0, 0);
+
+	for (uint i = 0; i < lightCount; i++) {
+		if (lights[i].enabled) {
+			float3 toLight = normalize(-lights[i].direction);
+
+			specularity += MicrofacetBRDF(input.normal, toLight, viewToCam, roughness, metal, specularColor);
+		}
 	}
 
 	float3 output = pow(screenPixels.Sample(clampSampler, refractedUV).rgb, 2.2f);
@@ -133,9 +139,9 @@ float4 main(VertexToPixelNormal input) : SV_TARGET
 	// Skybox reflections
 	float3 envSample = environmentMap.Sample(sampleState, viewRefl).rgb;
 
-	float fresnel = SimplerFresnel(NdotV, metal);
+	float fresnel = SimplerFresnel(NdotV, 0.04f);
 	output = lerp(output, envSample, fresnel);
 
 	// Get the color at the (now verified) offset UV
-	return float4(pow(output, 1.0f / 2.2f), 1); // *input.surfaceColor;
+	return float4(pow(output + specularity, 1.0f / 2.2f), 1); // *input.surfaceColor;
 }

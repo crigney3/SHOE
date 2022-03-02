@@ -56,7 +56,7 @@ PS_Output main(VertexToPixelNormal input)
 	float3 B = cross(T, N);
 	float3x3 TBN = float3x3(T, B, N);
 
-	input.normal = mul(unpackedNormal, TBN);
+	input.normal = normalize(mul(unpackedNormal, TBN));
 
 	float3 albedoColor = textureAlbedo.Sample(sampleState, input.uv).rgb;
 

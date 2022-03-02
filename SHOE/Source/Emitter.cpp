@@ -41,11 +41,14 @@ Emitter::Emitter(int maxParticles,
 
 	this->additiveBlend = additiveBlendState;
 
+	// Set up a function to calculate if this emitter will overflow its buffer
+	// Then recalculate maxParticles if it will
 	Initialize(this->maxParticles);
 }
 
 Emitter::~Emitter() {
-	
+	transform->OnDestroy();
+	ComponentManager::Free<Transform>(transform);
 }
 
 void Emitter::SetColorTint(DirectX::XMFLOAT4 color) {

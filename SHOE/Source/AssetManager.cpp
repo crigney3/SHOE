@@ -9,14 +9,47 @@ AssetManager::~AssetManager() {
 	// Everything should be smart-pointer managed
 	// Except sounds
 	globalSounds.clear();
+
+	// And components
+	for (auto ge : globalEntities) {
+		ge->Release();
+	}
+
+	for (auto te : globalTerrainEntities) {
+		te->Release();
+	}
 }
 
-void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context) {
+void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock) {
+	HRESULT hr = CoInitialize(NULL);
+
+	/*GUID assetID;
+	hr = CoCreateGuid(&assetID);
+
+	hr = CreateClassMoniker(assetID, &assetMoniker);
+
+	if (hr != S_OK) {
+		return;
+	}
+
+	HANDLE hDoneLoading = ::CreateEvent(NULL, FALSE, FALSE, NULL);
+
+	hr = BindMoniker(assetMoniker, 0, IID_AsyncIUnknown, (void**)&notifications);*/
+
 	dxInstance = DXCore::DXCoreInstance;
 	this->context = context;
 	this->device = device;
 
 	InitializeShaders();
+
+	/*loaded.category = std::string("Shaders");
+	loaded.object = std::string("All");
+	SetSingleLoadComplete(true);
+	threadNotifier->notify_all();
+
+	std::unique_lock<std::mutex> lock(*threadLock);
+	threadNotifier->wait(lock, [&] {return singleLoadComplete == 0; });*/
+
 	InitializeCameras();
 	InitializeLights();
 	InitializeMaterials();
@@ -26,6 +59,30 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	InitializeSkies();
 	InitializeEmitters();
 	InitializeAudio();
+}
+
+bool AssetManager::GetSingleLoadComplete() {
+	return this->singleLoadComplete;
+}
+
+bool AssetManager::GetIsLoading() {
+	return this->isLoading;
+}
+
+std::string AssetManager::GetLastLoadedCategory() {
+	return this->loaded.category;
+}
+
+std::string AssetManager::GetLastLoadedObject() {
+	return this->loaded.object;
+}
+
+void AssetManager::SetIsLoading(bool isLoading) {
+	this->isLoading = isLoading;
+}
+
+void AssetManager::SetSingleLoadComplete(bool loadComplete) {
+	this->singleLoadComplete = loadComplete;
 }
 #pragma endregion
 
@@ -347,10 +404,10 @@ void AssetManager::InitializeGameEntities() {
 	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflective"), "Shiny Sphere");
 
 	// Refractive Objects
-	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractiveScratchMat"), "Refractive Sphere");
-	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("refractiveScratchMat"), "Refractive Torus");
-	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveScratchMat"), "Refractive Cube");
-	CreateGameEntity(GetMeshByName("Helix"), GetMaterialByName("refractiveScratchMat"), "Refractive Helix");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractivePaintMat"), "Refractive Sphere");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractiveWoodMat"), "Refractive Sphere 2");
+	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveRoughMat"), "Refractive Cube");
+	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("refractiveBronzeMat"), "Refractive Torus");
 
 	GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.7f, +0.0f, +0.0f);
 	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-0.7f, +0.0f, +0.0f);
@@ -371,9 +428,9 @@ void AssetManager::InitializeGameEntities() {
 	GetGameEntityByName("Shiny Rough Sphere")->GetTransform()->SetPosition(+5.0f, 0.0f, 0.0f);
 
 	GetGameEntityByName("Refractive Sphere")->GetTransform()->SetPosition(+4.0f, +1.0f, -1.0f);
-	GetGameEntityByName("Refractive Torus")->GetTransform()->SetPosition(+5.0f, +1.0f, -1.0f);
+	GetGameEntityByName("Refractive Sphere 2")->GetTransform()->SetPosition(+5.0f, +1.0f, -1.0f);
 	GetGameEntityByName("Refractive Cube")->GetTransform()->SetPosition(+4.0f, +0.0f, -1.0f);
-	GetGameEntityByName("Refractive Helix")->GetTransform()->SetPosition(+5.0f, +0.0f, -1.0f);
+	GetGameEntityByName("Refractive Torus")->GetTransform()->SetPosition(+5.0f, +0.0f, -1.0f);
 
 	//Set up some parenting examples
 	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
@@ -479,13 +536,34 @@ void AssetManager::InitializeMaterials() {
 					  L"scratched_metal.png",
 					  L"scratched_roughness.png")->SetTransparent(true);*/
 
-	CreatePBRMaterial(std::string("refractiveScratchMat"),
+	CreatePBRMaterial(std::string("refractivePaintMat"),
 					  L"paint_albedo.png",
 					  L"paint_normals.png",
 					  L"paint_metal.png",
 					  L"paint_roughness.png")->SetRefractive(true);
-	GetMaterialByName("refractiveScratchMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
-	GetMaterialByName("refractiveScratchMat")->SetTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	GetMaterialByName("refractivePaintMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+
+	CreatePBRMaterial(std::string("refractiveWoodMat"),
+					  L"wood_albedo.png",
+					  L"wood_normals.png",
+					  L"wood_metal.png",
+					  L"wood_roughness.png")->SetTransparent(true);
+	GetMaterialByName("refractiveWoodMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+
+	CreatePBRMaterial(std::string("refractiveRoughMat"),
+					  L"rough_albedo.png",
+					  L"rough_normals.png",
+					  L"rough_metal.png",
+					  L"rough_roughness.png")->SetRefractive(true);
+	GetMaterialByName("refractiveRoughMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+
+	CreatePBRMaterial(std::string("refractiveBronzeMat"),
+					  L"bronze_albedo.png",
+					  L"bronze_normals.png",
+					  L"bronze_metal.png",
+					  L"bronze_roughness.png")->SetRefractive(true);
+	GetMaterialByName("refractiveBronzeMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+	//GetMaterialByName("refractiveScratchMat")->SetTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 void AssetManager::InitializeMeshes() {

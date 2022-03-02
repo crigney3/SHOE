@@ -14,6 +14,10 @@
 #include "Renderer.h"
 #include "AssetManager.h"
 #include "Emitter.h"
+#include <thread>
+#include <chrono>
+#include "SpriteBatch.h"
+#include "SpriteFont.h"
 
 class Game 
 	: public DXCore
@@ -29,6 +33,9 @@ public:
 	void OnResize();
 	void Update(float deltaTime, float totalTime);
 	void Draw(float deltaTime, float totalTime);
+
+	// Loading screen info
+	void DrawLoadingScreen();
 
 private:
 	// Asset Manager instance
@@ -56,8 +63,6 @@ private:
 	bool hasFlickered;
 	void Flashlight();
 	void FlickeringCheck();
-
-	// Loading helper methods
 	
 	// Note the usage of ComPtr below
 	//  - This is a smart pointer for objects that abide by the
@@ -77,6 +82,12 @@ private:
 	bool rtvWindowEnabled;
 	bool soundWindowEnabled;
 	bool camWindowEnabled;
+
+	// Loading screen info
+	std::condition_variable* notification;
+	std::mutex* loadingMutex;
+	DirectX::SpriteBatch* loadingSpriteBatch;
+	DirectX::SpriteFont* loadingFont;
 
 	// Transfer these to static locals
 	// Then add helper functions for setting them?
