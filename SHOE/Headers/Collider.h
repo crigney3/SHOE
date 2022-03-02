@@ -8,7 +8,8 @@
 class Collider
 {
 public:
-	Collider(std::shared_ptr<GameEntity> _owner);
+	Collider();
+	void Start() override;
 
 	std::shared_ptr<GameEntity> GetOwner();
 	void SetOwner(std::shared_ptr<GameEntity> _newOwner);

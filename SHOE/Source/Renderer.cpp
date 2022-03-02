@@ -595,48 +595,61 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTyp
 
 void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 {
-	//Draw a wireframe
+	// Get what shaders we're using
+	const std::shared_ptr<SimpleVertexShader> collidersVS = globalAssets.GetVertexShaderByName("BasicVS");
+	const std::shared_ptr<SimplePixelShader> collidersPS = globalAssets.GetPixelShaderByName("SolidColorPS");
+
+	// Set the shaders to be used
+	collidersVS->SetShader();
+	collidersPS->SetShader();
+
+	// Set up vertex shader
+	collidersVS->SetMatrix4x4("view", globalAssets.GetCameraByName("mainCamera")->GetViewMatrix());
+	collidersVS->SetMatrix4x4("projection", globalAssets.GetCameraByName("mainCamera")->GetProjectionMatrix());
+
+	//Draw in wireframe mode
 	context->RSSetState(colliderRasterizer.Get());
 
-	//Draw things listed as Triggerbox
-	std::vector<Collider> ts = *CollisionManager::GetTriggerboxes();
-	for (int i = 0; i < CollisionManager::GetTriggerboxes()->size(); i++)
+	// Grab the list of colliders
+	const std::vector<std::shared_ptr<Collider>> colliders = CollisionManager::GetAllColliders();
+
+	for (int i = 0; i < colliders.size(); i++)
 	{
-		Collider t = ts[i];
-		BoundingOrientedBox obb = t.GetOrientedBoundingBox();
-		std::shared_ptr<Mesh> msh = globalAssets.GetMeshByName("Cube");
-		std::shared_ptr<Material> mat = globalAssets.GetMaterialByName("bronzeMat");
-		XMFLOAT4X4 wm4x4 = t.GetTransform()->GetWorldMatrix();
+		// Easy access to what we're working with this loop
+		std::shared_ptr<Collider> c = colliders[i];
+		BoundingOrientedBox obb = c->GetOrientedBoundingBox();
+		std::shared_ptr<Transform> transform = c->GetTransform();
 
-		XMMATRIX trans = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
-		XMMATRIX scale = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
+		// Convert & store as float4x4s
+		XMFLOAT4X4 world = transform->GetWorldMatrix();
+		XMMATRIX worldMat = XMLoadFloat4x4(&world);
+		XMFLOAT4X4 worldInvTrans;
 
-		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
-		XMMATRIX rotation = XMMatrixRotationQuaternion(rot);
-		XMMATRIX world = scale * rotation * trans;
+		XMStoreFloat4x4(&worldInvTrans, XMMatrixInverse(0, XMMatrixTranspose(worldMat)));
 
-		GameEntity e = GameEntity(msh, world, mat);
-		e.Draw(context, cam, flashShadowCamera, mainShadowCamera);
+		// Set up the world matrix for this light
+		collidersVS->SetMatrix4x4("world", world);
+		collidersVS->SetMatrix4x4("worldInverseTranspose", worldInvTrans);
+
+		// Set up the pixel shader data
+		DirectX::XMFLOAT3 finalColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		collidersPS->SetFloat3("Color", finalColor);
+
+		// Copy data
+		collidersVS->CopyAllBufferData();
+		collidersPS->CopyAllBufferData();
+
+		// Draw
+		UINT stride = sizeof(Vertex);
+		UINT offset = 0;
+		context->IASetVertexBuffers(0, 1, globalAssets.GetMeshByName("Cube")->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(globalAssets.GetMeshByName("Cube")->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+		context->DrawIndexed(
+			globalAssets.GetMeshByName("Cube")->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+			0,     // Offset to the first index we want to use
+			0);    // Offset to add to each index when looking up vertices
 	}
-
-	// Draw things listed as colliders (not triggers)
-	std::vector<Collider> cs = *CollisionManager::GetColliders();
-	for (int i = 0; i < CollisionManager::GetTriggerboxes()->size(); i++)
-	{
-		Collider c = cs[i];
-		BoundingOrientedBox obb = c.GetOrientedBoundingBox();
-		std::shared_ptr<Mesh> msh = globalAssets.GetMeshByName("Cube");
-		std::shared_ptr<Material> mat = globalAssets.GetMaterialByName("bronzeMat");
-
-		XMMATRIX trans = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
-		XMMATRIX scale = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
-		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
-		XMMATRIX rotation = XMMatrixRotationQuaternion(rot);
-		XMMATRIX world = scale * rotation * trans;
-		GameEntity e = GameEntity(msh, world, mat);
-		e.Draw(context, cam, flashShadowCamera, mainShadowCamera);
-	}
-
 	// Put the RS State back to normal (/non wireframe)
 	context->RSSetState(0);
 }
@@ -817,7 +830,13 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		}
 	}
 
+
+
+
 	RenderColliders(cam);
+
+
+
 
 	//Now deal with rendering the terrain, PS data first
 	std::shared_ptr<GameEntity> terrainEntity = globalAssets.GetTerrainByName("Main Terrain");

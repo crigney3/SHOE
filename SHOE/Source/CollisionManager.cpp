@@ -2,14 +2,31 @@
 
 using namespace DirectX;
 
-//
-std::vector<Collider> CollisionManager::triggerboxes_;
-std::vector<Collider> CollisionManager::colliders_;
+// forward declaration for static
+std::vector<std::shared_ptr<Collider>> CollisionManager::allColliders_;
+std::vector<std::shared_ptr<Collider>> CollisionManager::markedAsTriggerboxes_;
+std::vector<std::shared_ptr<Collider>> CollisionManager::markedAsColliders_;
 
 CollisionManager::CollisionManager()
 {
-	triggerboxes_ = std::vector<Collider>();
-	colliders_ = std::vector<Collider>();
+	markedAsTriggerboxes_ = std::vector<std::shared_ptr<Collider>>();
+	markedAsColliders_ = std::vector<std::shared_ptr<Collider>>();
+}
+
+
+std::vector<std::shared_ptr<Collider>> CollisionManager::GetAllColliders()
+{
+	return allColliders_;
+}
+
+std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsTriggerboxes()
+{
+	return markedAsTriggerboxes_;
+}
+
+std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsColliders()
+{
+	return markedAsColliders_;
 }
 
 void CollisionManager::Update()
@@ -18,22 +35,18 @@ void CollisionManager::Update()
 	CheckColliderCollisions();
 }
 
-std::vector<Collider>* CollisionManager::GetTriggerboxes()
+void CollisionManager::AddColliderToManager(Collider c_)
 {
-	return &triggerboxes_;
-}
-
-std::vector<Collider>* CollisionManager::GetColliders()
-{
-	return &colliders_;
+	std::shared_ptr<Collider> c = std::make_shared<Collider>(c_);
+	allColliders_.push_back(c);
 }
 
 void CollisionManager::CheckTriggerCollisions()
 {
-	for (auto& t : triggerboxes_)
+	for (auto& t : markedAsTriggerboxes_)
 	{
-		DirectX::BoundingOrientedBox tOBB = t.GetOrientedBoundingBox();
-		for (auto& c : colliders_)
+		DirectX::BoundingOrientedBox tOBB = t.get()->GetOrientedBoundingBox();
+		for (auto& c : markedAsColliders_)
 		{
 			BoundingOrientedBox cOBB = c.GetOrientedBoundingBox();
 			if (tOBB.Intersects(cOBB))

@@ -1,25 +1,33 @@
 #include "..\Headers\Collider.h"
 
 #include "..\Headers\GameEntity.h"
+#include "../Headers/CollisionManager.h"
 
 using namespace DirectX;
 
-Collider::Collider(std::shared_ptr<GameEntity> _owner)
-    :
-    isEnabled_(true),
-    isTrigger_(false),
-    isVisible_(false)
+Collider::Collider()
 {
-    owner_ = _owner;
+
+}
+
+void Collider::Start()
+{
+    isEnabled_ = true;
+    isTrigger_ = false;
+    isVisible_ = false;
+
+    owner_ = GetGameEntity();
     transform_ = owner_->GetTransform();
 
-    //Need to make the OOB with a quaternion as XMFLOAT4
+    //Need to make the OBB with a quaternion as XMFLOAT4
     XMFLOAT3 pyr = transform_->GetPitchYawRoll();
     XMMATRIX mtrx = DirectX::XMMatrixRotationRollPitchYaw(pyr.x, pyr.y, pyr.z);
     XMVECTOR quat = XMQuaternionRotationMatrix(mtrx);
     XMFLOAT4 quatF;
     XMStoreFloat4(&quatF, quat);
     obb_ = BoundingOrientedBox(transform_->GetPosition(), transform_->GetScale(), quatF);
+
+    CollisionManager::AddColliderToManager(*this);
 }
 
 #pragma region Getters/Setters
