@@ -49,36 +49,15 @@ void Collider::SetPosition(DirectX::XMFLOAT3 _newPos) { transform_->SetPosition(
 BoundingOrientedBox Collider::GetOrientedBoundingBox() { return obb_; }
 
 XMFLOAT3 Collider::GetExtents() { return transform_->GetScale(); }
-void Collider::SetExtents(DirectX::XMFLOAT3 _newExtents) { transform_->SetScale(_newExtents); }
-void Collider::SetXExtent(float _x)
-{
-    XMFLOAT3 old = transform_->GetScale();
-    XMFLOAT3 newE = XMFLOAT3(_x, old.y, old.z);
-
-    //transform_->SetScale(newE);
-	obb_.Extents.x = _x;
-}
-void Collider::SetYExtent(float _y)
-{
-    XMFLOAT3 old = transform_->GetScale();
-    XMFLOAT3 newE = XMFLOAT3(old.x, _y, old.z);
-
-    //transform_->SetScale(newE);
-    obb_.Extents.y = _y;
-}
-void Collider::SetZExtent(float _z)
-{
-    XMFLOAT3 old = transform_->GetScale();
-    XMFLOAT3 newE = XMFLOAT3(old.x, old.y, _z);
-
-    //transform_->SetScale(newE);
-    obb_.Extents.z = _z;
-}
+void Collider::SetExtents(DirectX::XMFLOAT3 _newExtents) { obb_.Extents = _newExtents; }
+void Collider::SetXExtent(float _x) { obb_.Extents.x = _x;}
+void Collider::SetYExtent(float _y) { obb_.Extents.y = _y; }
+void Collider::SetZExtent(float _z) { obb_.Extents.z = _z; }
 
 //TODO: fix these to mess with the Transform not OBB
-void Collider::SetWidth(float _width)   {} //{ obb_.Extents.x = _width / 2.0f; }
-void Collider::SetHeight(float _height) {} //{ obb_.Extents.y = _height / 2.0f; }
-void Collider::SetDepth(float _depth)   {} //{ obb_.Extents.x = _depth / 2.0f; }
+void Collider::SetWidth(float _width)   { obb_.Extents.x = _width / 2.0f; }
+void Collider::SetHeight(float _height) { obb_.Extents.y = _height / 2.0f; }
+void Collider::SetDepth(float _depth)   { obb_.Extents.x = _depth / 2.0f; }
 
 bool Collider::GetTriggerStatus()       { return isTrigger_; }
 bool Collider::GetVisibilityStatus()    { return isVisible_; }
@@ -100,10 +79,14 @@ void Collider::Update()
     
     // Make sure OBB sticks to Transform
     obb_.Center = transform_->GetPosition();
+
+    // DON'T DO THIS. DO NOT DO THIS or the object will scale. NO
+    // ----------------------------------------------------------------------
     // Remember Extents are a radius but a scale is like a diameter
-    XMFLOAT3 halfWidth = transform_->GetScale();
-    halfWidth = XMFLOAT3(halfWidth.x / 2, halfWidth.y / 2, halfWidth.z / 2);
-    obb_.Extents = halfWidth;
+    //XMFLOAT3 halfWidth = transform_->GetScale();
+    //halfWidth = XMFLOAT3(halfWidth.x / 2, halfWidth.y / 2, halfWidth.z / 2);
+    //obb_.Extents = halfWidth;
+    //------------------------------------------------------------------------
     //Need to make the OBB with a quaternion as XMFLOAT4
     XMFLOAT3 pyr = transform_->GetPitchYawRoll();
     XMMATRIX mtrx = DirectX::XMMatrixRotationRollPitchYaw(pyr.x, pyr.y, pyr.z);

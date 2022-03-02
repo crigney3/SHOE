@@ -653,7 +653,11 @@ void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 		collidersVS->SetMatrix4x4("worldInverseTranspose", worldInvTrans);
 
 		// Set up the pixel shader data
-		DirectX::XMFLOAT3 finalColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		XMFLOAT3 finalColor = XMFLOAT3(0.0f, 1.0f, 1.0f);
+		if (c->GetTriggerStatus())
+		{
+			finalColor = XMFLOAT3(1.0f, 1.0f, 0.0f);
+		}
 		collidersPS->SetFloat3("Color", finalColor);
 
 		// Copy data

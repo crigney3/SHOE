@@ -37,6 +37,24 @@ void CollisionManager::Update()
 	}
 	CheckTriggerCollisions();
 	CheckColliderCollisions();
+	//for (int i = 0; i < allColliders_.size(); i++)
+	//{
+	//	std::shared_ptr<Collider> a = allColliders_[i];
+	//	for (int j = 0; j < allColliders_.size(); j++)
+	//	{
+	//		std::shared_ptr<Collider> b = allColliders_[j];
+	//
+	//		// Skip if about to check against self
+	//		if (b == a)
+	//			continue;
+	//
+	//		// TODO: Somehow need to check for collisions while avoiding dupes 
+	//		if (!a->GetTriggerStatus() && b->GetTriggerStatus())
+	//		{
+	//			
+	//		}
+	//	}
+	//}
 }
 
 void CollisionManager::AddColliderToManager(Collider c_)
