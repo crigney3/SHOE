@@ -26,7 +26,56 @@ GameEntity::GameEntity(std::shared_ptr<Mesh> mesh, DirectX::XMMATRIX worldIn, st
 }
 
 GameEntity::~GameEntity() {
+}
 
+/**
+ * \brief Delays attaching the transform until the self-reference can be made
+ * To be called after instantiation
+ */
+void GameEntity::Initialize()
+{
+	this->transform = ComponentManager::Instantiate<Transform>(shared_from_this(), this->GetHierarchyIsEnabled());
+}
+
+/**
+ * \brief Updates all attached components
+ */
+void GameEntity::Update(float deltaTime, float totalTime)
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->Update(deltaTime, totalTime);
+		}
+	}
+}
+
+/**
+ * \brief Called on entering a collision with another GameEntity with a collider attached
+ * \param other Entity collided with
+ */
+void GameEntity::OnCollisionEnter(std::shared_ptr<GameEntity> other)
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->OnCollisionEnter(other);
+		}
+	}
+}
+
+/**
+ * \brief Called on entering another GameEntity's trigger box
+ * \param other Entity collided with
+ */
+void GameEntity::OnTriggerEnter(std::shared_ptr<GameEntity> other)
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->OnTriggerEnter(other);
+		}
+	}
 }
 
 /**
