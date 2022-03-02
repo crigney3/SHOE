@@ -99,15 +99,13 @@ float4 main(VertexToPixelNormal input) : SV_TARGET
 	float2 refractedUV = float2(0, 0);
 
 	if (isRefractive) {
-		float2 offsetUV = float2(0, 0);
-
 		// Turns out the refract function is evil. Time to make my own
 		// float3 refrDir = refract(viewToCam, input.normal, indexOfRefraction);
 
-		offsetUV = textureNormal.Sample(sampleState, input.uv).xy * 2 - 1;
+		float2 offsetUV = textureNormal.Sample(sampleState, input.uv).xy * 2 - 1;
 		offsetUV.y *= -1; // UV's are upside down compared to world space
 
-		float2 refractedUV = screenUV + offsetUV * refractionScale;
+		refractedUV = screenUV + offsetUV * refractionScale;
 
 		// Maybe stick to just specularity, then use roughness/metalness for "frosted glass" style
 		// Ignore SSAO

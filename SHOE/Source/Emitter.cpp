@@ -43,11 +43,12 @@ Emitter::Emitter(int maxParticles,
 
 	// Set up a function to calculate if this emitter will overflow its buffer
 	// Then recalculate maxParticles if it will
-	SetMaxParticles(this->maxParticles);
+	Initialize(this->maxParticles);
 }
 
 Emitter::~Emitter() {
-	
+	transform->OnDestroy();
+	ComponentManager::Free<Transform>(transform);
 }
 
 void Emitter::SetColorTint(DirectX::XMFLOAT4 color) {
@@ -112,7 +113,7 @@ bool Emitter::GetEnableDisable() {
 }
 
 void Emitter::SetMaxParticles(int maxParticles) {
-	if (this->maxParticles != maxParticles | this->maxParticles == NULL) {
+	if (this->maxParticles != maxParticles) {
 		// SRV handle release and wipe
 		sortListSRV.Reset();
 		drawListSRV.Reset();

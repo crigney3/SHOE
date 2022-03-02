@@ -26,6 +26,7 @@ GameEntity::GameEntity(std::shared_ptr<Mesh> mesh, DirectX::XMMATRIX worldIn, st
 }
 
 GameEntity::~GameEntity() {
+
 }
 
 /**
@@ -203,10 +204,10 @@ std::vector<std::shared_ptr<Transform>> GameEntity::GetComponents<Transform>()
  */
 void GameEntity::Release()
 {
-	for(std::shared_ptr<GameEntity> child : transform->GetChildrenAsGameEntities())
+	/*for(std::shared_ptr<GameEntity> child : transform->GetChildrenAsGameEntities())
 	{
 		child->GetTransform()->SetParent(nullptr);
-	}
+	}*/
 	for (std::shared_ptr<ComponentPacket> packet : componentList) {
 		packet->component->OnDestroy();
 		packet->deallocator(packet->component);
