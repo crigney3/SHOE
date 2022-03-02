@@ -10,6 +10,7 @@ class Collider
 public:
 	Collider();
 	void Start() override;
+	void Update();
 
 	std::shared_ptr<GameEntity> GetOwner();
 	void SetOwner(std::shared_ptr<GameEntity> _newOwner);
@@ -36,8 +37,8 @@ public:
 	void SetVisibilityStatus(bool _isVisible);
 	void SetEnabledStatus(bool _isEnabled);
 
-	void OnTriggerEnter(GameEntity& _other);
-	void OnCollisionEnter(GameEntity& _other);
+	void OnCollisionEnter(std::shared_ptr<GameEntity> other) override;
+	void OnTriggerEnter(std::shared_ptr<GameEntity> other) override;
 
 private:
 	std::shared_ptr<GameEntity> owner_;
@@ -48,4 +49,3 @@ private:
 	bool isTrigger_;
 	bool isVisible_;
 };
-

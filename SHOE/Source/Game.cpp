@@ -94,14 +94,18 @@ void Game::Init()
 	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
 	Entities = globalAssets.GetActiveGameEntities();
-	std::shared_ptr<GameEntity> e = globalAssets.GetGameEntityByName("Floor Helix");
-	std::shared_ptr<GameEntity> e2 = globalAssets.GetGameEntityByName("Bronze Cube");
+	std::shared_ptr<GameEntity> e = globalAssets.GetGameEntityByName("Bronze Cube");
+	std::shared_ptr<GameEntity> e2 = globalAssets.GetGameEntityByName("Scratched Sphere");
+	std::shared_ptr<GameEntity> e3 = globalAssets.GetGameEntityByName("Rough Torus");
+	std::shared_ptr<GameEntity> e4 = globalAssets.GetGameEntityByName("Floor Helix");
 
 	std::shared_ptr<Collider> c1 = e->AddComponent<Collider>();
-	c1->SetExtents(XMFLOAT3(2, 2, 2));
+	//c1->SetExtents(XMFLOAT3(2, 2, 2));
 	c1->SetTriggerStatus(true);
 
 	std::shared_ptr<Collider> c2 = e2->AddComponent<Collider>();
+	std::shared_ptr<Collider> c3 = e3->AddComponent<Collider>();
+	std::shared_ptr<Collider> c4 = e4->AddComponent<Collider>();
 
 	statsEnabled = true;
 	movingEnabled = true;

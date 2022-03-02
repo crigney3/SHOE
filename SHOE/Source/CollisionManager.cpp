@@ -31,6 +31,10 @@ std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsColliders()
 
 void CollisionManager::Update()
 {
+	for (auto& c : allColliders_)
+	{
+		c->Update();
+	}
 	CheckTriggerCollisions();
 	CheckColliderCollisions();
 }
