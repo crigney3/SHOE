@@ -138,6 +138,12 @@
     <ClInclude Include="Headers\IComponent.h">
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\MeshRenderer.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\ParticleSystem.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\PixelShaders\IBLBrdfLookUpTablePS.hlsl">
@@ -290,6 +296,12 @@
       <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
     <ClCompile Include="Source\Transform.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MeshRenderer.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ParticleSystem.cpp">
       <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
   </ItemGroup>

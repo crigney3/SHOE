@@ -175,6 +175,8 @@
     <ClInclude Include="Headers\Lights.h" />
     <ClInclude Include="Headers\Material.h" />
     <ClInclude Include="Headers\Mesh.h" />
+    <ClInclude Include="Headers\MeshRenderer.h" />
+    <ClInclude Include="Headers\ParticleSystem.h" />
     <ClInclude Include="Headers\Renderer.h" />
     <ClInclude Include="Headers\SimpleShader.h" />
     <ClInclude Include="Headers\Sky.h" />
@@ -368,6 +370,8 @@
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\Material.cpp" />
     <ClCompile Include="Source\Mesh.cpp" />
+    <ClCompile Include="Source\MeshRenderer.cpp" />
+    <ClCompile Include="Source\ParticleSystem.cpp" />
     <ClCompile Include="Source\Renderer.cpp" />
     <ClCompile Include="Source\SimpleShader.cpp" />
     <ClCompile Include="Source\Sky.cpp" />
