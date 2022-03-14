@@ -68,8 +68,8 @@ Game::~Game()
 // --------------------------------------------------------
 void Game::Init()
 {
-	/*loadingMutex = new std::mutex();
-	notification = new std::condition_variable();*/
+	loadingMutex = new std::mutex();
+	notification = new std::condition_variable();
 
 	// Set up the multithreading for the loading screen
 	globalAssets.SetIsLoading(true);
@@ -80,18 +80,18 @@ void Game::Init()
 	loadingFont = new SpriteFont(device.Get(), DXCoreInstance->GetFullPathTo_Wide(L"../../../Assets/Fonts/Arial.spritefont").c_str());
 
 	// Acquire thread components
-	//std::thread loadingThread = std::thread( [this] { globalAssets.Initialize(device, context, notification, loadingMutex); });
-	//std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(); });
+	std::thread loadingThread = std::thread( [this] { globalAssets.Initialize(device, context, notification, loadingMutex); });
+	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(); });
 
-	DrawLoadingScreen();
+	//DrawLoadingScreen();
 
 	//loadingThread.join();
 	//screenThread.join();
 
 	// Initialize everything from gameobjects to skies
-	globalAssets.Initialize(device, context, notification, loadingMutex);
 
-	//screenThread.join();
+	screenThread.join();
+	loadingThread.join();
 
 	globalAssets.SetIsLoading(false);
 
@@ -906,65 +906,65 @@ void Game::Update(float deltaTime, float totalTime)
 }
 
 void Game::DrawLoadingScreen() {
-//	while (globalAssets.GetIsLoading()) {
-//		std::unique_lock<std::mutex> lock(*loadingMutex);
-//		using time = std::chrono::duration<int, std::milli>;
-//		if (notification->wait_for(lock, time(100), [&] {return globalAssets.singleLoadComplete; })) {
-//			// Super generic draw code for now
-//			// Background color (Cornflower Blue in this case) for clearing
-//			const float color[4] = { 0.4f, 0.6f, 0.75f, 0.0f };
-//
-//			context->ClearRenderTargetView(backBufferRTV.Get(), color);
-//			context->ClearDepthStencilView(
-//				depthStencilView.Get(),
-//				D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
-//				1.0f,
-//				0);
-//
-//			/*context->VSSetShader(vertexShader.Get(), 0, 0);
-//			context->PSSetShader(pixelShader.Get(), 0, 0);*/
-//
-//			//context->IASetInputLayout(inputLayout.Get());
-//
-//			swapChain->Present(0, 0);
-//
-//			context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthStencilView.Get());
-//		}
-//		else {
-//#if defined(DEBUG) || defined(_DEBUG)
-//			printf("Took too long to load. \n");
-//#endif
-//		}	
-//
-//		globalAssets.SetSingleLoadComplete(false);
-//		lock.unlock();
-//		notification->notify_all();
-//	}
+	while (globalAssets.GetIsLoading()) {
+		std::unique_lock<std::mutex> lock(*loadingMutex);
+		using time = std::chrono::duration<int, std::milli>;
+		if (notification->wait_for(lock, time(3000), [&] {return globalAssets.GetSingleLoadComplete(); })) {
+			// Super generic draw code for now
+			// Background color (Cornflower Blue in this case) for clearing
+			const float color[4] = { 0.4f, 0.6f, 0.75f, 0.0f };
+
+			std::string loadedCategoryString = "Loading " + globalAssets.GetLastLoadedCategory();
+			std::string loadedObjectString;
+
+			if (globalAssets.GetLoadingException()) {
+				try {
+					std::rethrow_exception(globalAssets.GetLoadingException());
+				}
+				catch (const std::exception& e) {
+					loadedObjectString = "Last Object: " + globalAssets.GetLastLoadedObject() + " Failed to Load!Error is printed to DBG console.";
+#if defined(DEBUG) || defined(_DEBUG)
+					printf(e.what());
+#endif
+				}
+			}
+			else {
+				loadedObjectString = "Last Object Loaded: " + globalAssets.GetLastLoadedObject();
+			}
+
+			context->ClearRenderTargetView(backBufferRTV.Get(), color);
+			context->ClearDepthStencilView(
+				depthStencilView.Get(),
+				D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+				1.0f,
+				0);
+
+			loadingSpriteBatch->Begin();
+
+			loadingFont->DrawString(loadingSpriteBatch, loadedCategoryString.c_str(), DirectX::XMFLOAT2(width / 2, height / 2), DirectX::Colors::White);
+			loadingFont->DrawString(loadingSpriteBatch, loadedObjectString.c_str(), DirectX::XMFLOAT2(width / 2, height / 4), DirectX::Colors::White);
+			//loadingFont->DrawString(loadingSpriteBatch, "Yes this is supposed to be more complex of a loading screen, I couldn't get the threads to stop fighting", DirectX::XMFLOAT2(width / 4, (height / 2) + 40), DirectX::Colors::White);
+
+			loadingSpriteBatch->End();
+
+			swapChain->Present(0, 0);
+
+			context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthStencilView.Get());
+		}
+		else {
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("Took too long to load. \n");
+#endif
+		}	
+
+		globalAssets.SetSingleLoadComplete(false);
+		lock.unlock();
+		notification->notify_all();
+	}
 
 	// For now, use a generic loading screen
 
-	// Super generic draw code for now
-	// Background color (Cornflower Blue in this case) for clearing
-	const float color[4] = { 0.4f, 0.6f, 0.75f, 0.0f };
-
-	context->ClearRenderTargetView(backBufferRTV.Get(), color);
-	context->ClearDepthStencilView(
-		depthStencilView.Get(),
-		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
-		1.0f,
-		0);
-
-	loadingSpriteBatch->Begin();
-
-	loadingFont->DrawString(loadingSpriteBatch, "Loading...", DirectX::XMFLOAT2(width / 2, height / 2), DirectX::Colors::White);
-	loadingFont->DrawString(loadingSpriteBatch, "SHOE", DirectX::XMFLOAT2(width / 2, height / 4), DirectX::Colors::White);
-	loadingFont->DrawString(loadingSpriteBatch, "Yes this is supposed to be more complex of a loading screen, I couldn't get the threads to stop fighting", DirectX::XMFLOAT2(width / 4, (height / 2) + 40), DirectX::Colors::White);
-
-	loadingSpriteBatch->End();
-
-	swapChain->Present(0, 0);
-
-	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthStencilView.Get());
+	
 }
 
 // --------------------------------------------------------

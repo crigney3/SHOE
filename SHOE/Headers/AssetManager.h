@@ -19,12 +19,14 @@
 #include "AudioHandler.h"
 #include <thread>
 #include <mutex>
+#include <exception>
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 
 struct LoadingNotifications {
 	std::string category;
 	std::string object;
+	std::exception_ptr errorCode;
 };
 
 class AssetManager
@@ -110,11 +112,15 @@ private:
 	std::vector<std::shared_ptr<Emitter>> globalParticleEmitters;
 	std::vector<FMOD::Sound*> globalSounds;
 
+	std::condition_variable* threadNotifier;
+	std::mutex* threadLock;
+
 	// Most recently loaded object from category
 	LoadingNotifications loaded;
-	// Readiness indicators for threads
-	
-	
+	// Helper functions for threads
+	void SetLoadedAndWait(std::string category, std::string object, std::exception_ptr error = NULL);
+	bool isLoading;
+	bool singleLoadComplete;
 
 public:
 	~AssetManager();
@@ -127,10 +133,9 @@ public:
 	// Called whenever a material changes, or when a GameEntity is added
 	void SortEntitiesByMaterial();
 
-	bool isLoading;
-	bool singleLoadComplete;
 	std::string GetLastLoadedCategory();
 	std::string GetLastLoadedObject();
+	std::exception_ptr GetLoadingException();
 	bool GetIsLoading();
 	bool GetSingleLoadComplete();
 	void SetIsLoading(bool isLoading);
