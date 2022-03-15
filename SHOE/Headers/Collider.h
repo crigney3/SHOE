@@ -5,7 +5,7 @@
 #include <memory>
 #include "DirectXCollision.h"
 
-class Collider
+class Collider : public IComponent, public std::enable_shared_from_this<Collider>
 {
 public:
 	Collider();

@@ -1,9 +1,9 @@
 ﻿#include "..\Headers\CollisionManager.h"
+#include "..\Headers\ComponentManager.h"
 
 using namespace DirectX;
 
 // forward declaration for static
-std::vector<std::shared_ptr<Collider>> CollisionManager::allColliders_;
 std::vector<std::shared_ptr<Collider>> CollisionManager::markedAsTriggerboxes_;
 std::vector<std::shared_ptr<Collider>> CollisionManager::markedAsColliders_;
 
@@ -11,12 +11,6 @@ CollisionManager::CollisionManager()
 {
 	markedAsTriggerboxes_ = std::vector<std::shared_ptr<Collider>>();
 	markedAsColliders_ = std::vector<std::shared_ptr<Collider>>();
-}
-
-
-std::vector<std::shared_ptr<Collider>> CollisionManager::GetAllColliders()
-{
-	return allColliders_;
 }
 
 std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsTriggerboxes()
@@ -31,7 +25,7 @@ std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsColliders()
 
 void CollisionManager::Update()
 {
-	for (auto& c : allColliders_)
+	for (auto& c : ComponentManager::GetAllEnabled<Collider>())
 	{
 		c->Update();
 	}
@@ -57,10 +51,17 @@ void CollisionManager::Update()
 	//}
 }
 
-void CollisionManager::AddColliderToManager(Collider c_)
+/**
+ * \brief Adds a collider shared_ptr to main list and appropriate subset (collider or triggerbox) list
+ * \param c_ collider to add
+ */
+void CollisionManager::AddColliderToManager(std::shared_ptr<Collider> c_)
 {
-	std::shared_ptr<Collider> c = std::make_shared<Collider>(c_);
-	allColliders_.push_back(c);
+	// add it to the appropriate subset
+	if (c_->GetTriggerStatus() == true)
+		markedAsTriggerboxes_.push_back(c_);
+	else
+		markedAsColliders_.push_back(c_);
 }
 
 void CollisionManager::CheckTriggerCollisions()

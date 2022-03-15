@@ -611,7 +611,7 @@ void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 	context->RSSetState(colliderRasterizer.Get());
 
 	// Grab the list of colliders
-	const std::vector<std::shared_ptr<Collider>> colliders = CollisionManager::GetAllColliders();
+	const std::vector<std::shared_ptr<Collider>> colliders = ComponentManager::GetAllEnabled<Collider>();
 
 	for (int i = 0; i < colliders.size(); i++)
 	{
@@ -653,7 +653,8 @@ void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 		collidersVS->SetMatrix4x4("worldInverseTranspose", worldInvTrans);
 
 		// Set up the pixel shader data
-		XMFLOAT3 finalColor = XMFLOAT3(0.0f, 1.0f, 1.0f);
+		XMFLOAT3 finalColor = XMFLOAT3(0.5f, 1.0f, 1.0f);
+		// drawing colliders and triggerboxes as different colors
 		if (c->GetTriggerStatus())
 		{
 			finalColor = XMFLOAT3(1.0f, 1.0f, 0.0f);

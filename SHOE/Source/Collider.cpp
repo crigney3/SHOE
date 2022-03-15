@@ -34,7 +34,7 @@ void Collider::Start()
     obb_ = BoundingOrientedBox(transform_->GetPosition(), halfWidth, quatF);
 
     // Track it
-    CollisionManager::AddColliderToManager(*this);
+    CollisionManager::AddColliderToManager(shared_from_this());
 }
 
 

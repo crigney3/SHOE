@@ -101,20 +101,15 @@ void Game::Init()
 	std::shared_ptr<GameEntity> e5 = globalAssets.GetGameEntityByName("Shiny Rough Sphere");
 	//TODO: the wood sphere will become a child of the spinning stuff if you disable and enable it via IMGUI....
 
-	std::shared_ptr<Collider> c1 = e->AddComponent<Collider>();
 
+	std::shared_ptr<Collider> c1 = e->AddComponent<Collider>();
 	std::shared_ptr<Collider> c2 = e2->AddComponent<Collider>();
 	std::shared_ptr<Collider> c3 = e3->AddComponent<Collider>();
 	std::shared_ptr<Collider> c4 = e4->AddComponent<Collider>();
 	std::shared_ptr<Collider> c5 = e5->AddComponent<Collider>();
-
-	CollisionManager::GetMarkedAsColliders().push_back(c1);
-	CollisionManager::GetMarkedAsColliders().push_back(c2);
-	CollisionManager::GetMarkedAsColliders().push_back(c3);
-	CollisionManager::GetMarkedAsColliders().push_back(c4);
 	c5->SetExtents(XMFLOAT3(2, 2, 2));
-	c5->SetTriggerStatus(true); //TODO: WHY IS THIS NOT SETTING IT? Like it is, but it's not sticking......
-	CollisionManager::GetMarkedAsTriggerboxes().push_back(c5);
+	c5->SetTriggerStatus(true);
+
 
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(this->hWnd);
