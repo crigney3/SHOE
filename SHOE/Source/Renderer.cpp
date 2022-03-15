@@ -734,7 +734,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	perFramePS->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
 	perFramePS->SetData("lightCount", &lightCount, sizeof(lightCount));
-	perFramePS->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
+	perFramePS->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 	if (this->currentSky->GetEnableDisable()) {
 		perFramePS->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
 	}
@@ -872,7 +872,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		PSTerrain->SetShader();
 		PSTerrain->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
 		PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
-		PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
+		PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 		PSTerrain->SetFloat("uvMultNear", 50.0f);
 		PSTerrain->SetFloat("uvMultFar", 150.0f);
 		PSTerrain->SetShaderResourceView("shadowMap", miscEffectSRVs[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].Get());
@@ -1016,7 +1016,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		refractivePS->SetFloat2("screenSize", XMFLOAT2((float)windowWidth, (float)windowHeight));
 		refractivePS->SetMatrix4x4("viewMatrix", mainCamera->GetViewMatrix());
 		refractivePS->SetMatrix4x4("projMatrix", mainCamera->GetProjectionMatrix());
-		refractivePS->SetFloat3("cameraPos", mainCamera->GetTransform()->GetPosition());
+		refractivePS->SetFloat3("cameraPos", mainCamera->GetTransform()->GetLocalPosition());
 
 		refractivePS->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
 		refractivePS->SetData("lightCount", &lightCount, sizeof(unsigned int));

@@ -92,7 +92,7 @@ void Camera::UpdateViewMatrix()
 	XMVECTOR forwardDirection = 
 		XMVector3Rotate(XMVectorSet(0, 0, 1, 0), XMQuaternionRotationRollPitchYawFromVector(XMLoadFloat3(&pitchYawRollValues)));
 
-	XMFLOAT3 position = transform->GetPosition();
+	XMFLOAT3 position = transform->GetLocalPosition();
 	XMMATRIX view = XMMatrixLookToLH(XMLoadFloat3(&position), forwardDirection,	XMVectorSet(0, 1, 0, 0));	
 
 	XMStoreFloat4x4(&vMatrix, view);

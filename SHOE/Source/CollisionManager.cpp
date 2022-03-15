@@ -53,15 +53,15 @@ void CollisionManager::Update()
 
 /**
  * \brief Adds a collider shared_ptr to main list and appropriate subset (collider or triggerbox) list
- * \param c_ collider to add
+ * \param _c collider to add
  */
-void CollisionManager::AddColliderToManager(std::shared_ptr<Collider> c_)
+void CollisionManager::AddColliderToManager(std::shared_ptr<Collider> _c)
 {
 	// add it to the appropriate subset
-	if (c_->GetTriggerStatus() == true)
-		markedAsTriggerboxes_.push_back(c_);
+	if (_c->GetTriggerStatus() == true)
+		markedAsTriggerboxes_.push_back(_c);
 	else
-		markedAsColliders_.push_back(c_);
+		markedAsColliders_.push_back(_c);
 }
 
 void CollisionManager::CheckTriggerCollisions()

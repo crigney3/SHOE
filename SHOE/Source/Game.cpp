@@ -107,8 +107,8 @@ void Game::Init()
 	std::shared_ptr<Collider> c3 = e3->AddComponent<Collider>();
 	std::shared_ptr<Collider> c4 = e4->AddComponent<Collider>();
 	std::shared_ptr<Collider> c5 = e5->AddComponent<Collider>();
-	c5->SetExtents(XMFLOAT3(2, 2, 2));
-	c5->SetTriggerStatus(true);
+	//c5->SetExtents(XMFLOAT3(2, 2, 2));
+	c4->SetTriggerStatus(true);
 
 
 	// Initialize the input manager with the window's handle
@@ -314,9 +314,9 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::Checkbox("Enabled: ", &entityEnabled);
 		currentEntity->SetEnableDisable(entityEnabled);
 
-		UIPositionEdit = currentEntity->GetTransform()->GetPosition();
+		UIPositionEdit = currentEntity->GetTransform()->GetLocalPosition();
 		UIRotationEdit = currentEntity->GetTransform()->GetPitchYawRoll();
-		UIScaleEdit = currentEntity->GetTransform()->GetScale();
+		UIScaleEdit = currentEntity->GetTransform()->GetLocalScale();
 		
 		ImGui::DragFloat3("Position ", &UIPositionEdit.x, 0.5f);
 		ImGui::DragFloat3("Rotation ", &UIRotationEdit.x, 0.5f, 0, 360);
@@ -561,9 +561,9 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::Checkbox("Enabled ", &entityEnabled);
 		currentEntity->SetEnableDisable(entityEnabled);
 
-		UIPositionEdit = currentEntity->GetTransform()->GetPosition();
+		UIPositionEdit = currentEntity->GetTransform()->GetLocalPosition();
 		UIRotationEdit = currentEntity->GetTransform()->GetPitchYawRoll();
-		UIScaleEdit = currentEntity->GetTransform()->GetScale();
+		UIScaleEdit = currentEntity->GetTransform()->GetLocalScale();
 
 		ImGui::DragFloat3("Position ", &UIPositionEdit.x, 0.5f);
 		ImGui::DragFloat3("Rotation ", &UIRotationEdit.x, 0.5f, 0, 360);
@@ -813,7 +813,7 @@ void Game::Flashlight() {
 	}
 
 	if (flashMenuToggle) {
-		XMFLOAT3 camPos = mainCamera->GetTransform()->GetPosition();
+		XMFLOAT3 camPos = mainCamera->GetTransform()->GetLocalPosition();
 		flashlight->position = XMFLOAT3(camPos.x + 0.5f, camPos.y, camPos.z + 0.5f);
 		flashlight->direction = mainCamera->GetTransform()->GetForward();
 		flashShadowCamera->GetTransform()->SetPosition(flashlight->position.x, flashlight->position.y, flashlight->position.z);

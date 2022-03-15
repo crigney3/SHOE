@@ -12,6 +12,47 @@ void Transform::Start() {
 	this->children.clear();
 }
 
+void Transform::UpdateWorldInfo()
+{
+	if (!this->isDirty) return;
+
+	// - World Matrix - //
+	{
+		XMMATRIX trans = XMMatrixTranslation(this->pos.x, this->pos.y, this->pos.z);
+		XMMATRIX scale = XMMatrixScaling(this->scale.x, this->scale.y, this->scale.z);
+		XMMATRIX rotation = XMMatrixRotationRollPitchYaw(this->rotQuat.x, this->rotQuat.y, this->rotQuat.z);
+
+		XMMATRIX world = scale * rotation * trans;
+
+		if (parent != nullptr)
+		{
+			XMFLOAT4X4 parentWorld = parent->GetWorldMatrix();
+			world = XMMatrixMultiply(world, XMLoadFloat4x4(&parentWorld));
+		}
+
+		// Store in field
+		XMStoreFloat4x4(&this->worldMatrix, world);
+	}
+
+	// - Global Position & Scale - //
+	if (parent != nullptr)
+	{
+		XMFLOAT3 pGPos = parent->GetGlobalPosition();
+		XMFLOAT3 pGScale = parent->GetGlobalScale();
+		XMVECTOR pGPosVec = XMLoadFloat3(&pGPos);
+		XMVECTOR pGScaleVec = XMLoadFloat3(&pGScale);
+		XMVECTOR posVec = XMLoadFloat3(&this->pos);
+		XMVECTOR sclVec = XMLoadFloat3(&this->scale);
+
+		// Store in field
+		XMStoreFloat3(&worldPos, posVec * pGScaleVec + pGPosVec);
+		XMStoreFloat3(&worldScale, sclVec * pGScaleVec);
+	}
+
+	// Reset the bool
+	this->isDirty = false;
+}
+
 void Transform::SetPosition(float x, float y, float z) {
 	isDirty = true;
 	this->pos = XMFLOAT3(x, y, z);
@@ -42,35 +83,41 @@ void Transform::SetScale(XMFLOAT3 scale) {
 	this->scale = scale;
 }
 
-XMFLOAT3 Transform::GetPosition() {
+XMFLOAT3 Transform::GetLocalPosition() {
 	return this->pos;
+}
+
+DirectX::XMFLOAT3 Transform::GetGlobalPosition()
+{
+	// Make sure world info is updated if necessary
+	if (this->isDirty) UpdateWorldInfo();
+
+	if (parent == nullptr) return this->pos;
+	return worldPos;
 }
 
 XMFLOAT3 Transform::GetPitchYawRoll() {
 	return XMFLOAT3(this->rotQuat.x, this->rotQuat.y, this->rotQuat.z);
 }
 
-XMFLOAT3 Transform::GetScale() {
+XMFLOAT3 Transform::GetLocalScale() {
 	return this->scale;
 }
 
-XMFLOAT4X4 Transform::GetWorldMatrix() {
-	if (this->isDirty) {
-		XMMATRIX trans = XMMatrixTranslation(this->pos.x, this->pos.y, this->pos.z);
-		XMMATRIX scale = XMMatrixScaling(this->scale.x, this->scale.y, this->scale.z);
-		XMMATRIX rotation = XMMatrixRotationRollPitchYaw(this->rotQuat.x, this->rotQuat.y, this->rotQuat.z);
+DirectX::XMFLOAT3 Transform::GetGlobalScale()
+{
+	// Make sure world info is updated if necessary
+	if (this->isDirty) UpdateWorldInfo();
 
-		XMMATRIX world = scale * rotation * trans;
+	if (parent == nullptr) return scale;
+	return worldScale;
+}
 
-		if (parent != NULL) {
-			XMFLOAT4X4 parentWorld = parent->GetWorldMatrix();
-			world = XMMatrixMultiply(world, XMLoadFloat4x4(&parentWorld));
-		}
+XMFLOAT4X4 Transform::GetWorldMatrix()
+{
+	// Make sure world info is updated if necessary
+	if (this->isDirty) UpdateWorldInfo();
 
-		XMStoreFloat4x4(&this->worldMatrix, world);
-
-		this->isDirty = false;
-	}
 	return this->worldMatrix;
 }
 

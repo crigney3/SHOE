@@ -27,11 +27,11 @@ void Collider::Start()
     XMStoreFloat4(&quatF, quat);
 
     // Remember Extents are a radius but a scale is like a diameter
-    XMFLOAT3 halfWidth = transform_->GetScale();
+    XMFLOAT3 halfWidth = transform_->GetLocalScale();
     halfWidth = XMFLOAT3(halfWidth.x / 2, halfWidth.y / 2, halfWidth.z / 2);
 
     // Create an Oriented Bounding Box with info from the Transform
-    obb_ = BoundingOrientedBox(transform_->GetPosition(), halfWidth, quatF);
+    obb_ = BoundingOrientedBox(transform_->GetLocalPosition(), halfWidth, quatF);
 
     // Track it
     CollisionManager::AddColliderToManager(shared_from_this());
@@ -48,7 +48,7 @@ std::shared_ptr<Transform> Collider::GetTransform() { return transform_; }
 void Collider::SetPosition(DirectX::XMFLOAT3 _newPos) { transform_->SetPosition(_newPos); }
 BoundingOrientedBox Collider::GetOrientedBoundingBox() { return obb_; }
 
-XMFLOAT3 Collider::GetExtents() { return transform_->GetScale(); }
+XMFLOAT3 Collider::GetExtents() { return transform_->GetLocalScale(); }
 void Collider::SetExtents(DirectX::XMFLOAT3 _newExtents) { obb_.Extents = _newExtents; }
 void Collider::SetXExtent(float _x) { obb_.Extents.x = _x;}
 void Collider::SetYExtent(float _y) { obb_.Extents.y = _y; }
@@ -78,7 +78,7 @@ void Collider::Update()
     XMFLOAT4X4 wrld = transform_->GetWorldMatrix();
     
     // Make sure OBB sticks to Transform
-    obb_.Center = transform_->GetPosition();
+    obb_.Center = transform_->GetGlobalPosition();
 
     // DON'T DO THIS. DO NOT DO THIS or the object will scale. NO
     // ----------------------------------------------------------------------
