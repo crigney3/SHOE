@@ -228,19 +228,30 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 	return newMat;
 }
 
-std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name) {
-	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(mesh, XMMatrixIdentity(), mat, name);
+std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
+{
+	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(XMMatrixIdentity(), name);
 	newEnt->Initialize();
 
 	globalEntities.push_back(newEnt);
 
-	SortEntitiesByMaterial();
+	return newEnt;
+}
+
+std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name) {
+	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(XMMatrixIdentity(), name);
+	newEnt->Initialize();
+	std::shared_ptr<MeshRenderer> renderer = newEnt->AddComponent<MeshRenderer>();
+	renderer->SetMesh(mesh);
+	renderer->SetMaterial(mat);
+
+	globalEntities.push_back(newEnt);
 
 	return newEnt;
 }
 
 std::shared_ptr<GameEntity> AssetManager::CreateTerrainEntity(std::shared_ptr<Mesh> mesh, std::string name) {
-	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(mesh, XMMatrixIdentity(), nullptr, name);
+	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(XMMatrixIdentity(), name);
 	newEnt->Initialize();
 
 	globalTerrainEntities.push_back(newEnt);
@@ -716,6 +727,7 @@ void AssetManager::InitializeTerrainMaterials() {
 
 	//Load terrain and add a blend map
 	std::shared_ptr<Mesh> mainTerrain = LoadTerrain(dxInstance->GetFullPathTo("../../../Assets/HeightMaps/valley.raw16").c_str(), 512, 512, 25.0f);
+	globalMeshes.push_back(mainTerrain);
 	std::shared_ptr<TerrainMats> mainTerrainMaterials = std::make_shared<TerrainMats>();
 	mainTerrainMaterials->blendMaterials = std::vector<Material>();
 	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/blendMap.png").c_str(), nullptr, &mainTerrainMaterials->blendMap);
@@ -880,10 +892,6 @@ size_t AssetManager::GetTerrainEntityArraySize() {
 	return this->globalTerrainEntities.size();
 }
 
-size_t AssetManager::GetEmitterArraySize() {
-	return this->globalParticleEmitters.size();
-}
-
 size_t AssetManager::GetSoundArraySize() {
 	return this->globalSounds.size();
 }
@@ -911,10 +919,6 @@ Light* AssetManager::GetFlashlight() {
 
 Light* AssetManager::GetLightAtID(int id) {
 	return this->globalLights[id].get();
-}
-
-std::shared_ptr<Emitter> AssetManager::GetEmitterAtID(int id) {
-	return this->globalParticleEmitters[id];
 }
 
 FMOD::Sound* AssetManager::GetSoundAtID(int id) {
@@ -1101,7 +1105,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 	}
 
 	//Mesh handles tangents
-	finalTerrain = std::make_shared<Mesh>(vertices.data(), numVertices, indices.data(), numIndices, device);
+	finalTerrain = std::make_shared<Mesh>(vertices.data(), numVertices, indices.data(), numIndices, device, "TerrainMesh");
 
 	return finalTerrain;
 }
@@ -1503,15 +1507,6 @@ std::shared_ptr<GameEntity> AssetManager::GetGameEntityByName(std::string name) 
 	return nullptr;
 }
 
-std::shared_ptr<Emitter> AssetManager::GetEmitterByName(std::string name) {
-	for (int i = 0; i < globalParticleEmitters.size(); i++) {
-		if (globalParticleEmitters[i]->GetName() == name) {
-			return globalParticleEmitters[i];
-		}
-	}
-	return nullptr;
-}
-
 std::shared_ptr<Sky> AssetManager::GetSkyByName(std::string name) {
 	for (int i = 0; i < skies.size(); i++) {
 		if (skies[i]->GetName() == name) {
@@ -1723,23 +1718,3 @@ inline std::wstring AssetManager::ConvertToWide(const std::string& as)
 }
 
 #pragma endregion
-
-#pragma region assetSetInternals
-
-void AssetManager::SetGameEntityMesh(std::shared_ptr<GameEntity> entity, std::shared_ptr<Mesh> newMesh) {
-	entity->SetMesh(newMesh);
-	//SortEntitiesByMaterial();
-}
-
-void AssetManager::SetGameEntityMaterial(std::shared_ptr<GameEntity> entity, std::shared_ptr<Material> newMaterial) {
-	entity->SetMaterial(newMaterial);
-	SortEntitiesByMaterial();
-}
-
-#pragma endregion
-
-void AssetManager::SortEntitiesByMaterial() {
-	std::sort(this->globalEntities.begin(), this->globalEntities.end(), [](const auto& e1, const auto& e2) {
-		return e1->GetMaterial() < e2->GetMaterial();
-	});
-}

@@ -1,5 +1,6 @@
 #include "../Headers/Renderer.h"
 #include "../Headers/MeshRenderer.h"
+#include "../Headers/ParticleSystem.h"
 
 using namespace DirectX;
 
@@ -770,7 +771,31 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 		PSTerrain->CopyAllBufferData();
 
-		terrainEntity->DrawFromVerts(context, VSTerrain, cam, flashShadowCamera, mainShadowCamera);
+		VSTerrain->SetShader();
+
+		VSTerrain->SetFloat4("colorTint", DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+		VSTerrain->SetMatrix4x4("world", terrainEntity->GetTransform()->GetWorldMatrix());
+		VSTerrain->SetMatrix4x4("view", cam->GetViewMatrix());
+		VSTerrain->SetMatrix4x4("projection", cam->GetProjectionMatrix());
+		VSTerrain->SetMatrix4x4("lightView", flashShadowCamera->GetViewMatrix());
+		VSTerrain->SetMatrix4x4("lightProjection", flashShadowCamera->GetProjectionMatrix());
+
+		VSTerrain->SetMatrix4x4("envLightView", mainShadowCamera->GetViewMatrix());
+		VSTerrain->SetMatrix4x4("envLightProjection", mainShadowCamera->GetProjectionMatrix());
+
+		VSTerrain->CopyAllBufferData();
+
+		std::shared_ptr<Mesh> terrainMesh = globalAssets.GetMeshByName("TerrainMesh");
+
+		UINT stride = sizeof(Vertex);
+		UINT offset = 0;
+		context->IASetVertexBuffers(0, 1, terrainMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(terrainMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+		context->DrawIndexed(
+			terrainMesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+			0,     // Offset to the first index we want to use
+			0);    // Offset to add to each index when looking up vertices
 	}
 
 	if (this->currentSky->GetEnableDisable()) {
@@ -857,8 +882,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	context->OMSetDepthStencilState(particleDepthState.Get(), 0);
 
-	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
-		if (!globalAssets.GetEmitterAtID(i)->GetEnableDisable()) continue;
+	//Render all of the emitters
+	std::vector<std::shared_ptr<ParticleSystem>> emitters = ComponentManager::GetAll<ParticleSystem>();
+
+	for (std::shared_ptr<ParticleSystem> emitter : emitters) {
+		if (!emitter->IsEnabled()) continue;
 		globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime, particleBlendAdditive);
 	}
 

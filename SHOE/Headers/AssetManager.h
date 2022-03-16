@@ -107,7 +107,6 @@ private:
 	std::vector<std::shared_ptr<Light>> globalLights;
 	std::vector<std::shared_ptr<TerrainMats>> globalTerrainMaterials;
 	std::vector<std::shared_ptr<GameEntity>> globalTerrainEntities;
-	std::vector<std::shared_ptr<Emitter>> globalParticleEmitters;
 	std::vector<FMOD::Sound*> globalSounds;
 
 	// Most recently loaded object from category
@@ -124,9 +123,6 @@ public:
 
 	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock);
 
-	// Called whenever a material changes, or when a GameEntity is added
-	void SortEntitiesByMaterial();
-
 	bool isLoading;
 	bool singleLoadComplete;
 	std::string GetLastLoadedCategory();
@@ -138,6 +134,7 @@ public:
 
 	// Methods to create new assets
 
+	std::shared_ptr<GameEntity> CreateGameEntity(std::string name = "GameEntity");
 	std::shared_ptr<GameEntity> CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name = "GameEntity");
 	std::shared_ptr<Sky> CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, std::string name);
 	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::wstring nameToLoad);
@@ -184,8 +181,6 @@ public:
 	void RemoveTerrainMaterial(int id);
 	void RemoveLight(std::string name);
 	void RemoveLight(int id);
-	void RemoveEmitter(std::string name);
-	void RemoveEmitter(int id);
 
 	// Methods to disable and enable assets for rendering
 	// Currently not implemented except for lights
@@ -223,7 +218,6 @@ public:
 	std::shared_ptr<GameEntity> GetTerrainByName(std::string name);
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
 	std::shared_ptr<TerrainMats> GetTerrainMaterialByName(std::string name);
-	std::shared_ptr<Emitter> GetEmitterByName(std::string name);
 	std::shared_ptr<Light> GetLightByName(std::string name);
 	FMOD::Sound* GetSoundByName();
 
@@ -253,7 +247,6 @@ public:
 	size_t GetLightArraySize();
 	size_t GetTerrainMaterialArraySize();
 	size_t GetTerrainEntityArraySize();
-	size_t GetEmitterArraySize();
 	size_t GetSoundArraySize();
 	Light* GetLightArray();
 	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
@@ -261,7 +254,6 @@ public:
 	Light* GetFlashlight();
 
 	Light* GetLightAtID(int id);
-	std::shared_ptr<Emitter> GetEmitterAtID(int id);
 	FMOD::Sound* GetSoundAtID(int id);
 	std::shared_ptr<Camera> GetCameraAtID(int id);
 	std::shared_ptr<Material> GetMaterialAtID(int id);
@@ -272,10 +264,6 @@ public:
 	std::shared_ptr<GameEntity> GetTerrainAtID(int id);
 	std::shared_ptr<GameEntity> GetGameEntityByID(int id);
 	std::shared_ptr<Sky> GetSkyAtID(int id);
-
-	// Asset internals set functions
-	void SetGameEntityMesh(std::shared_ptr<GameEntity> entity, std::shared_ptr<Mesh> newMesh);
-	void SetGameEntityMaterial(std::shared_ptr<GameEntity> entity, std::shared_ptr<Material> newMaterial);
 
 	inline std::wstring ConvertToWide(const std::string& as);
 
