@@ -328,68 +328,68 @@ void Game::RenderUI(float deltaTime) {
 		currentEntity->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
 		currentEntity->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
 
-		// Material changes
-		if (ImGui::CollapsingHeader("Material Swapping")) {
-			static int materialIndex = 0;
+		//// Material changes
+		//if (ImGui::CollapsingHeader("Material Swapping")) {
+		//	static int materialIndex = 0;
 
-			std::string nameBuffer;
-			static char nameBuf[64] = "";
-			nameBuffer = currentEntity->GetMaterial()->GetName();
-			strcpy_s(nameBuf, nameBuffer.c_str());
+		//	std::string nameBuffer;
+		//	static char nameBuf[64] = "";
+		//	nameBuffer = currentEntity->GetMaterial()->GetName();
+		//	strcpy_s(nameBuf, nameBuffer.c_str());
 
-			ImGui::Text(nameBuf);
-			if (ImGui::BeginListBox("MaterialList")) {
-				for (int i = 0; i < globalAssets.GetMaterialArraySize(); i++) {
-					const bool is_selected = (materialIndex == i);
-					if (ImGui::Selectable(globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
-						materialIndex = i;
-					}
+		//	ImGui::Text(nameBuf);
+		//	if (ImGui::BeginListBox("MaterialList")) {
+		//		for (int i = 0; i < globalAssets.GetMaterialArraySize(); i++) {
+		//			const bool is_selected = (materialIndex == i);
+		//			if (ImGui::Selectable(globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
+		//				materialIndex = i;
+		//			}
 
-					if (is_selected) ImGui::SetItemDefaultFocus();
-				}
+		//			if (is_selected) ImGui::SetItemDefaultFocus();
+		//		}
 
-				ImGui::EndListBox();
-			}
+		//		ImGui::EndListBox();
+		//	}
 
-			/*ImGui::LabelText("Switch to Selected Material: ", 0);
-			ImGui::SameLine();*/
-			if (ImGui::Button("Swap")) {
-				globalAssets.SetGameEntityMaterial(currentEntity, globalAssets.GetMaterialAtID(materialIndex));
+		//	/*ImGui::LabelText("Switch to Selected Material: ", 0);
+		//	ImGui::SameLine();*/
+		//	if (ImGui::Button("Swap")) {
+		//		globalAssets.SetGameEntityMaterial(currentEntity, globalAssets.GetMaterialAtID(materialIndex));
 
-				// If a swap happens, the list will be resorted, so we need to
-				// change the UI index.
+		//		// If a swap happens, the list will be resorted, so we need to
+		//		// change the UI index.
 
-				entityUIIndex = globalAssets.GetGameEntityIDByName(currentEntity->GetName());
-			}
-		}
+		//		entityUIIndex = globalAssets.GetGameEntityIDByName(currentEntity->GetName());
+		//	}
+		//}
 
-		// Mesh Swapping
-		if (ImGui::CollapsingHeader("Mesh Swapping")) {
-			static int meshIndex = 0;
+		//// Mesh Swapping
+		//if (ImGui::CollapsingHeader("Mesh Swapping")) {
+		//	static int meshIndex = 0;
 
-			std::string nameBuffer;
-			static char nameBuf[64] = "";
-			nameBuffer = currentEntity->GetMesh()->GetName();
-			strcpy_s(nameBuf, nameBuffer.c_str());
+		//	std::string nameBuffer;
+		//	static char nameBuf[64] = "";
+		//	nameBuffer = currentEntity->GetMesh()->GetName();
+		//	strcpy_s(nameBuf, nameBuffer.c_str());
 
-			ImGui::Text(nameBuf);
-			if (ImGui::BeginListBox("MeshList")) {
-				for (int i = 0; i < globalAssets.GetMeshArraySize(); i++) {
-					const bool is_selected = (meshIndex == i);
-					if (ImGui::Selectable(globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
-						meshIndex = i;
-					}
+		//	ImGui::Text(nameBuf);
+		//	if (ImGui::BeginListBox("MeshList")) {
+		//		for (int i = 0; i < globalAssets.GetMeshArraySize(); i++) {
+		//			const bool is_selected = (meshIndex == i);
+		//			if (ImGui::Selectable(globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
+		//				meshIndex = i;
+		//			}
 
-					if (is_selected) ImGui::SetItemDefaultFocus();
-				}
+		//			if (is_selected) ImGui::SetItemDefaultFocus();
+		//		}
 
-				ImGui::EndListBox();
-			}
+		//		ImGui::EndListBox();
+		//	}
 
-			/*ImGui::LabelText("Switch to Selected Mesh: ", 0);
-			ImGui::SameLine();*/
-			if (ImGui::Button("Swap")) globalAssets.SetGameEntityMesh(currentEntity, globalAssets.GetMeshAtID(meshIndex));
-		}
+		//	/*ImGui::LabelText("Switch to Selected Mesh: ", 0);
+		//	ImGui::SameLine();*/
+		//	if (ImGui::Button("Swap")) globalAssets.SetGameEntityMesh(currentEntity, globalAssets.GetMeshAtID(meshIndex));
+		//}
 
 		ImGui::End();
 	}

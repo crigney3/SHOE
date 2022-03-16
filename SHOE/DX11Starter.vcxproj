@@ -360,6 +360,7 @@
     <ClCompile Include="Source\AssetManager.cpp" />
     <ClCompile Include="Source\AudioHandler.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
+    <ClCompile Include="Source\ComponentPool.cpp" />
     <ClCompile Include="Source\DXCore.cpp" />
     <ClCompile Include="Source\Emitter.cpp" />
     <ClCompile Include="Source\Game.cpp" />

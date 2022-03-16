@@ -304,6 +304,9 @@
     <ClCompile Include="Source\ParticleSystem.cpp">
       <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
+    <ClCompile Include="Source\ComponentPool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

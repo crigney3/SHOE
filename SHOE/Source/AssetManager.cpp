@@ -804,10 +804,6 @@ void AssetManager::InitializeEmitters() {
 	// This was terrifying. Take graphics ideas from Jimmy Digrazia at your own peril.
 	/*CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);
 	GetEmitterByName("emojiParticles")->SetColorTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f));*/
-
-	for (int i = 0; i < globalParticleEmitters.size(); i++) {
-		globalParticleEmitters[i]->SetDestination(DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f));
-	}
 }
 
 void AssetManager::InitializeAudio() {

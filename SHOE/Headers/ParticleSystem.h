@@ -4,11 +4,23 @@
 #include "Vertex.h"
 #include "Camera.h"
 
+#define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
+#define RandomIntRange(min, max) (int)rand() / RAND_MAX * (max - min) + min
+
 class ParticleSystem : public IComponent
 {
 public:
+	static void SetDefaults(
+		std::shared_ptr<SimplePixelShader> particlePixelShader,
+		std::shared_ptr<SimpleVertexShader> particleVertexShader,
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
+		Microsoft::WRL::ComPtr<ID3D11Device> device,
+		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context
+	);
+
 	void Start() override;
 	void Update(float deltaTime, float totalTime) override;
+	void OnDestroy() override;
 
 	void SetColorTint(DirectX::XMFLOAT4 color);
 	DirectX::XMFLOAT4 GetColorTint();
@@ -41,6 +53,12 @@ public:
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleDataSRV;
 private:
+	static std::shared_ptr<SimplePixelShader> defaultParticlePixelShader;
+	static std::shared_ptr<SimpleVertexShader> defaultParticleVertexShader;
+	static Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> defaultParticleTextureSRV;
+	static Microsoft::WRL::ComPtr<ID3D11Device> defaultDevice;
+	static Microsoft::WRL::ComPtr<ID3D11DeviceContext> defaultContext;
+
 	void Initialize(int maxParticles);
 	void EmitParticle(float currentTime, int emitCount);
 
@@ -83,3 +101,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
 };
+
+std::shared_ptr<SimplePixelShader> ParticleSystem::defaultParticlePixelShader = nullptr;
+std::shared_ptr<SimpleVertexShader> ParticleSystem::defaultParticleVertexShader = nullptr;
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::defaultParticleTextureSRV = nullptr;
+Microsoft::WRL::ComPtr<ID3D11Device> ParticleSystem::defaultDevice = nullptr;
+Microsoft::WRL::ComPtr<ID3D11DeviceContext> ParticleSystem::defaultContext = nullptr;

@@ -16,10 +16,8 @@ void GameEntity::UpdateHierarchyIsEnabled(bool active)
 	}
 }
 
-GameEntity::GameEntity(std::shared_ptr<Mesh> mesh, DirectX::XMMATRIX worldIn, std::shared_ptr<Material> mat, std::string name) {
-	this->mesh = mesh;
+GameEntity::GameEntity(DirectX::XMMATRIX worldIn, std::string name) {
 	this->componentList = std::vector<std::shared_ptr<ComponentPacket>>();
-	this->mat = mat;
 	this->name = name;
 	this->enabled = true;
 	this->hierarchyIsEnabled = true;
@@ -78,24 +76,8 @@ void GameEntity::OnTriggerEnter(std::shared_ptr<GameEntity> other)
 	}
 }
 
-std::shared_ptr<Mesh> GameEntity::GetMesh() {
-	return this->mesh;
-}
-
 std::shared_ptr<Transform> GameEntity::GetTransform() {
 	return transform;
-}
-
-std::shared_ptr<Material> GameEntity::GetMaterial() {
-	return this->mat;
-}
-
-void GameEntity::SetMaterial(std::shared_ptr<Material> newMaterial) {
-	this->mat = newMaterial;
-}
-
-void GameEntity::SetMesh(std::shared_ptr<Mesh> newMesh) {
-	this->mesh = newMesh;
 }
 
 void GameEntity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<Camera> cam, std::shared_ptr<Camera> shadowCam1, std::shared_ptr<Camera> shadowCam2) {

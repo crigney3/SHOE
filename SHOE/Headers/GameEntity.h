@@ -13,31 +13,24 @@ class GameEntity : public std::enable_shared_from_this<GameEntity>
 {
 private:
 	std::shared_ptr<Transform> transform;
-	std::shared_ptr<Mesh> mesh;
-	std::shared_ptr<Material> mat;
 	std::string name;
 	bool enabled;
 	bool hierarchyIsEnabled;
-
-	void SetMaterial(std::shared_ptr<Material> newMaterial);
-	void SetMesh(std::shared_ptr<Mesh> newMesh);
 
 	std::vector<std::shared_ptr<ComponentPacket>> componentList;
 
 	void UpdateHierarchyIsEnabled(bool active);
 
 public:
-	GameEntity(std::shared_ptr<Mesh> mesh, DirectX::XMMATRIX worldIn, std::shared_ptr<Material> mat, std::string name);
+	GameEntity(DirectX::XMMATRIX worldIn, std::string name);
 	~GameEntity();
 
 	void Initialize();
 	void Update(float deltaTime, float totalTime);
 	void OnCollisionEnter(std::shared_ptr<GameEntity> other);
 	void OnTriggerEnter(std::shared_ptr<GameEntity> other);
-
-	std::shared_ptr<Mesh> GetMesh();
+	
 	std::shared_ptr<Transform> GetTransform();
-	std::shared_ptr<Material> GetMaterial();
 
 	std::string GetName();
 	void SetName(std::string Name);
@@ -45,9 +38,6 @@ public:
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();
 	bool GetHierarchyIsEnabled();
-
-	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<Camera> cam, std::shared_ptr<Camera> shadowCam1, std::shared_ptr<Camera> shadowCam2);
-	void DrawFromVerts(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<SimpleVertexShader> vs, std::shared_ptr<Camera> cam, std::shared_ptr<Camera> shadowCam1, std::shared_ptr<Camera> shadowCam2);
 
 	//Component stuff
 	template <typename T>

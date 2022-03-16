@@ -1,24 +1,25 @@
 #include "../Headers/Renderer.h"
+#include "../Headers/MeshRenderer.h"
 
 using namespace DirectX;
 
 Renderer::Renderer(
-        unsigned int windowHeight,
-        unsigned int windowWidth,
-        Microsoft::WRL::ComPtr<ID3D11Device> device,
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
-        Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain,
-        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
-        Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV) 
+	unsigned int windowHeight,
+	unsigned int windowWidth,
+	Microsoft::WRL::ComPtr<ID3D11Device> device,
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
+	Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain,
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV)
 {
 	this->currentSky = globalAssets.currentSky;
-    this->windowHeight = windowHeight;
-    this->windowWidth = windowWidth;
-    this->device = device;
-    this->context = context;
-    this->swapChain = swapChain;
-    this->backBufferRTV = backBufferRTV;
-    this->depthBufferDSV = depthBufferDSV;
+	this->windowHeight = windowHeight;
+	this->windowWidth = windowWidth;
+	this->device = device;
+	this->context = context;
+	this->swapChain = swapChain;
+	this->backBufferRTV = backBufferRTV;
+	this->depthBufferDSV = depthBufferDSV;
 	this->ambientColor = DirectX::XMFLOAT3(0.05f, 0.05f, 0.1f);
 	this->mainCamera = globalAssets.GetCameraByName("mainCamera");
 	this->mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
@@ -27,7 +28,7 @@ Renderer::Renderer(
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
 
-Renderer::~Renderer(){
+Renderer::~Renderer() {
 
 }
 
@@ -133,8 +134,6 @@ void Renderer::InitRenderTargetViews() {
 		miscEffectSRVs[i].Reset();
 	}
 
-	transparentEntities = std::vector<std::shared_ptr<GameEntity>>();
-	
 	// SSAO needs a random 4x4 texture to work
 	const int textureSize = 4;
 	const int totalPixels = textureSize * textureSize;
@@ -196,8 +195,8 @@ void Renderer::InitRenderTargetViews() {
 	particleBlendAdditive.Reset();
 
 	D3D11_DEPTH_STENCIL_DESC particleDepthDesc = {};
-	particleDepthDesc.DepthEnable = true; 
-	particleDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; 
+	particleDepthDesc.DepthEnable = true;
+	particleDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 	particleDepthDesc.DepthFunc = D3D11_COMPARISON_LESS;
 	device->CreateDepthStencilState(&particleDepthDesc, particleDepthState.GetAddressOf());
 
@@ -233,7 +232,7 @@ void Renderer::InitRenderTargetViews() {
 }
 
 void Renderer::InitShadows() {
-    //Set up buffers and data for shadows
+	//Set up buffers and data for shadows
 	shadowSize = 2048;
 
 	shadowRasterizer.Reset();
@@ -334,7 +333,7 @@ void Renderer::InitShadows() {
 	shadowRastDesc.FillMode = D3D11_FILL_SOLID;
 	shadowRastDesc.CullMode = D3D11_CULL_BACK;
 	shadowRastDesc.DepthClipEnable = true;
-	shadowRastDesc.DepthBias = 100; 
+	shadowRastDesc.DepthBias = 100;
 	shadowRastDesc.DepthBiasClamp = 0.0f;
 	shadowRastDesc.SlopeScaledDepthBias = 10.0f;
 	device->CreateRasterizerState(&shadowRastDesc, &shadowRasterizer);
@@ -346,10 +345,10 @@ void Renderer::PreResize() {
 }
 
 void Renderer::PostResize(unsigned int windowHeight,
-        unsigned int windowWidth,
-        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
-        Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
-    ) 
+	unsigned int windowWidth,
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
+)
 {
 	this->windowHeight = windowHeight;
 	this->windowWidth = windowWidth;
@@ -447,6 +446,8 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 	VSShadow->SetMatrix4x4("view", sourceCam->GetViewMatrix());
 	VSShadow->SetMatrix4x4("projection", sourceCam->GetProjectionMatrix());
 
+	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAllEnabled<MeshRenderer>();
+
 	if (type == MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS) {
 		std::shared_ptr<SimplePixelShader> solidColorPS = globalAssets.GetPixelShaderByName("SolidColorPS");
 
@@ -456,10 +457,8 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 
 		context->OMSetDepthStencilState(refractionSilhouetteDepthState.Get(), 0);
 
-		std::vector<std::shared_ptr<GameEntity>>::iterator it;
-
-		for (it = transparentEntities.begin(); it != transparentEntities.end(); it++) {
-			if (!it->get()->GetEnableDisable()) continue;
+		for (int i = 0; i < activeMeshes.size(); i++) {
+			if (!activeMeshes[i]->GetMaterial()->GetTransparent()) continue;
 
 			// Store the old material's pixel shader
 			/*std::shared_ptr<Material> mat = it->get()->GetMaterial();
@@ -467,7 +466,7 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 			mat->SetPixelShader(solidColorPS);*/
 
 			// Standard depth pre-pass
-			VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
+			VSShadow->SetMatrix4x4("world", activeMeshes[i]->GetGameEntity()->GetTransform()->GetWorldMatrix());
 
 			VSShadow->CopyAllBufferData();
 
@@ -478,11 +477,11 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 			//globalAssets.globalEntities[i]->Draw(context, cam, nullptr, nullptr);
 			UINT stride = sizeof(Vertex);
 			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, it->get()->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(it->get()->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			context->IASetVertexBuffers(0, 1, activeMeshes[i]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(activeMeshes[i]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 			context->DrawIndexed(
-				it->get()->GetMesh()->GetIndexCount(),
+				activeMeshes[i]->GetMesh()->GetIndexCount(),
 				0,
 				0);
 
@@ -496,24 +495,22 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 
 		context->PSSetShader(0, 0, 0);
 
-		std::vector<std::shared_ptr<GameEntity>>::iterator it;
-
-		for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
-			if (!it->get()->GetEnableDisable()) continue;
+		for (int i = 0; i < activeMeshes.size(); i++) {
+			if (!activeMeshes[i]->GetMaterial()->GetTransparent()) continue;
 
 			// Standard depth pre-pass
-			VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
+			VSShadow->SetMatrix4x4("world", activeMeshes[i]->GetGameEntity()->GetTransform()->GetWorldMatrix());
 
 			VSShadow->CopyAllBufferData();
 
 			//globalAssets.globalEntities[i]->Draw(context, cam, nullptr, nullptr);
 			UINT stride = sizeof(Vertex);
 			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, it->get()->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(it->get()->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			context->IASetVertexBuffers(0, 1, activeMeshes[i]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(activeMeshes[i]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 			context->DrawIndexed(
-				it->get()->GetMesh()->GetIndexCount(),
+				activeMeshes[i]->GetMesh()->GetIndexCount(),
 				0,
 				0);
 		}
@@ -531,8 +528,7 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 }
 
 void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTypes type) {
-	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> shadowDepth;
-	shadowDepth = miscEffectDepthBuffers[type];
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> shadowDepth = miscEffectDepthBuffers[type];
 
 	context->OMSetRenderTargets(0, 0, shadowDepth.Get());
 
@@ -555,26 +551,26 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTyp
 	VSShadow->SetMatrix4x4("view", shadowCam->GetViewMatrix());
 	VSShadow->SetMatrix4x4("projection", shadowCam->GetProjectionMatrix());
 
-	std::vector<std::shared_ptr<GameEntity>>::iterator it;
+	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAllEnabled<MeshRenderer>();
 
-	for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
-		if (!it->get()->GetEnableDisable() | it->get()->GetMaterial()->GetTransparent()) continue;
+	for (int i = 0; i < activeMeshes.size(); i++) {
+		//Ignores transparent meshes
+		if (activeMeshes[i]->GetMaterial()->GetTransparent()) break;
 
 		// This is similar to what I'd need for any depth pre-pass
-		VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
+		VSShadow->SetMatrix4x4("world", activeMeshes[i]->GetGameEntity()->GetTransform()->GetWorldMatrix());
 
 		VSShadow->CopyAllBufferData();
-
-		//globalAssets.globalEntities[i]->Draw(context, cam, nullptr, nullptr);
+		
 		UINT stride = sizeof(Vertex);
 		UINT offset = 0;
-		context->IASetVertexBuffers(0, 1, it->get()->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-		context->IASetIndexBuffer(it->get()->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+		context->IASetVertexBuffers(0, 1, activeMeshes[i]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(activeMeshes[i]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 		context->DrawIndexed(
-			it->get()->GetMesh()->GetIndexCount(),
-			0,     
-			0);    
+			activeMeshes[i]->GetMesh()->GetIndexCount(),
+			0,
+			0);
 	}
 
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
@@ -640,18 +636,9 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		perFramePS->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
 	}
 
-	// Set buffers in the input assembler
-	//  - Do this ONCE PER OBJECT you're drawing, since each object might
-	//    have different geometry.
-	std::vector<std::shared_ptr<GameEntity>>::iterator it;
-
-	// Track these to skip and render last
-	// Includes refractive entities, since those will
-	// always be transparent
-	transparentEntities.clear();
+	int meshIt = 0;
 
 	// Material-Sort Rendering:
-	// We can assume the list is sorted by this step.
 	// To potentially save operations, track a current Material and Mesh
 	// A note that this list is NOT sorted by mesh - current Mesh
 	// is tracked on the chance of saving a cycle if two+ concurrent
@@ -664,23 +651,12 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	Material* currentMaterial = 0;
 	Mesh* currentMesh = 0;
 
-	// TODO : Change to auto instead of iterator
-	for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
-		if (!it->get()->GetEnableDisable()) continue;
+	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAllEnabled<MeshRenderer>();
 
-		if (it->get()->GetMaterial()->GetTransparent()) {
-			// Iterator is being difficult about returning a smart pointer
-			// Using distance to get around this
-			// It's cursed, I know
-			transparentEntities.push_back(globalAssets.GetGameEntityByID(std::distance(globalAssets.GetActiveGameEntities()->begin(), it)));
-			continue;
-		}
-
-		std::shared_ptr<Material> itMatPtr = it->get()->GetMaterial();
-		std::shared_ptr<Mesh> itMeshPtr = it->get()->GetMesh();
-		std::shared_ptr<Transform> itTransPtr = it->get()->GetTransform();
-
-		if (currentMaterial != itMatPtr.get())
+	for (meshIt = 0; meshIt < activeMeshes.size() && !activeMeshes[meshIt]->GetMaterial()->GetTransparent(); meshIt++)
+	{
+		//If the material needs to be swapped
+		if (activeMeshes[meshIt]->GetMaterial().get() != currentMaterial)
 		{
 			// Eventual improvement:
 			// Move all VS and PS "Set" calls into Material
@@ -688,7 +664,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 			// With shadows, it would also require passing in a lot of data
 			// And handling edge cases like main camera swaps
 
-			currentMaterial = itMatPtr.get();
+			currentMaterial = activeMeshes[meshIt]->GetMaterial().get();
 
 			if (currentVS != currentMaterial->GetVertShader().get()) {
 				// Set new Shader and copy per-frame data
@@ -712,18 +688,18 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 			currentVS->CopyBufferData("PerMaterial");
 
 			// Per-Material PS Data
-			currentPS->SetFloat("uvMult", itMatPtr->GetTiling());
+			currentPS->SetFloat("uvMult", currentMaterial->GetTiling());
 
 			currentPS->CopyBufferData("PerMaterial");
 
 			// Set textures and samplers
-			currentPS->SetSamplerState("sampleState", itMatPtr->GetSamplerState().Get());
-			currentPS->SetSamplerState("clampSampler", itMatPtr->GetClampSamplerState().Get());
-			currentPS->SetShaderResourceView("textureAlbedo", itMatPtr->GetTexture().Get());
-			currentPS->SetShaderResourceView("textureRough", itMatPtr->GetRoughMap().Get());
-			currentPS->SetShaderResourceView("textureMetal", itMatPtr->GetMetalMap().Get());
-			if (itMatPtr->GetNormalMap() != nullptr) {
-				currentPS->SetShaderResourceView("textureNormal", itMatPtr->GetNormalMap().Get());
+			currentPS->SetSamplerState("sampleState", currentMaterial->GetSamplerState().Get());
+			currentPS->SetSamplerState("clampSampler", currentMaterial->GetClampSamplerState().Get());
+			currentPS->SetShaderResourceView("textureAlbedo", currentMaterial->GetTexture().Get());
+			currentPS->SetShaderResourceView("textureRough", currentMaterial->GetRoughMap().Get());
+			currentPS->SetShaderResourceView("textureMetal", currentMaterial->GetMetalMap().Get());
+			if (currentMaterial->GetNormalMap() != nullptr) {
+				currentPS->SetShaderResourceView("textureNormal", currentMaterial->GetNormalMap().Get());
 			}
 			currentPS->SetShaderResourceView("shadowMap", miscEffectSRVs[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].Get());
 			currentPS->SetSamplerState("shadowState", shadowSampler.Get());
@@ -736,24 +712,24 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 			}
 		}
 
-		if (currentMesh != itMeshPtr.get()) {
-			currentMesh = itMeshPtr.get();
+		if (currentMesh != activeMeshes[meshIt]->GetMesh().get()) {
+			currentMesh = activeMeshes[meshIt]->GetMesh().get();
 
 			UINT stride = sizeof(Vertex);
 			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, itMeshPtr->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(itMeshPtr->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			context->IASetVertexBuffers(0, 1, currentMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(currentMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		}
 
 		if (currentVS != 0) {
 			// Per-Object data
-			currentVS->SetMatrix4x4("world", itTransPtr->GetWorldMatrix());
+			currentVS->SetMatrix4x4("world", activeMeshes[meshIt]->GetGameEntity()->GetTransform()->GetWorldMatrix());
 
 			currentVS->CopyBufferData("PerObject");
 		}
 
 		if (currentMesh != 0) {
-			context->DrawIndexed(itMeshPtr->GetIndexCount(), 0, 0);
+			context->DrawIndexed(currentMesh->GetIndexCount(), 0, 0);
 		}
 	}
 
@@ -800,7 +776,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	if (this->currentSky->GetEnableDisable()) {
 		this->currentSky->Draw(context, cam);
 	}
-    
+
 	std::shared_ptr<SimpleVertexShader> fullscreenVS = globalAssets.GetVertexShaderByName("FullscreenVS");
 	fullscreenVS->SetShader();
 
@@ -846,39 +822,48 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	ssaoBlurPS->CopyAllBufferData();
 	context->Draw(3, 0);
 
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> currentRTV = nullptr;
+
 	// Refractive and Transparent objects are drawn here
 	// This uses refraction silhouette techniques, as well as
 	// the depth pre-pass from earlier in Draw
-
-	if (!transparentEntities.empty())
+	if (meshIt < activeMeshes.size())
 	{
-		// Combine all results into the Composite buffer
-		renderTargets[0] = renderTargetRTVs[RTVTypes::COMPOSITE].Get();
-		context->OMSetRenderTargets(1, renderTargets, 0);
+		currentRTV = renderTargetRTVs[RTVTypes::COMPOSITE];
+	}
+	else
+	{
+		currentRTV = backBufferRTV;
+	}
 
-		std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
-		ssaoCombinePS->SetShader();
-		ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", renderTargetSRVs[RTVTypes::COLORS_NO_AMBIENT].Get());
-		ssaoCombinePS->SetShaderResourceView("ambient", renderTargetSRVs[RTVTypes::COLORS_AMBIENT].Get());
-		ssaoCombinePS->SetShaderResourceView("SSAOBlur", renderTargetSRVs[RTVTypes::SSAO_BLUR].Get());
-		//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
-		ssaoCombinePS->CopyAllBufferData();
-		context->Draw(3, 0);
+	renderTargets[0] = currentRTV.Get();
+	context->OMSetRenderTargets(1, renderTargets, 0);
 
-		// Draw the point lights
-		context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::COMPOSITE].GetAddressOf(), depthBufferDSV.Get());
-		DrawPointLights();
+	// Combine all results into the Composite buffer
+	std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
+	ssaoCombinePS->SetShader();
+	ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", renderTargetSRVs[RTVTypes::COLORS_NO_AMBIENT].Get());
+	ssaoCombinePS->SetShaderResourceView("ambient", renderTargetSRVs[RTVTypes::COLORS_AMBIENT].Get());
+	ssaoCombinePS->SetShaderResourceView("SSAOBlur", renderTargetSRVs[RTVTypes::SSAO_BLUR].Get());
+	//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
+	ssaoCombinePS->CopyAllBufferData();
+	context->Draw(3, 0);
 
-		renderTargets[0] = renderTargetRTVs[RTVTypes::COMPOSITE].Get();
-		context->OMSetRenderTargets(1, renderTargets, 0);
+	// Draw the point light
+	context->OMSetRenderTargets(1, currentRTV.GetAddressOf(), depthBufferDSV.Get());
+	DrawPointLights();
 
-		context->OMSetDepthStencilState(particleDepthState.Get(), 0);
+	context->OMSetRenderTargets(1, renderTargets, (meshIt < activeMeshes.size()) ? depthBufferDSV.Get() : 0);
 
-		for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
-			if (!globalAssets.GetEmitterAtID(i)->GetEnableDisable()) continue;
-			globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime, particleBlendAdditive);
-		}
+	context->OMSetDepthStencilState(particleDepthState.Get(), 0);
 
+	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
+		if (!globalAssets.GetEmitterAtID(i)->GetEnableDisable()) continue;
+		globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime, particleBlendAdditive);
+	}
+
+	if (meshIt < activeMeshes.size())
+	{
 		context->OMSetBlendState(0, 0, 0xFFFFFFFF);
 
 		fullscreenVS->SetShader();
@@ -892,7 +877,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		std::shared_ptr<SimplePixelShader> ps = globalAssets.GetPixelShaderByName("TextureSamplePS");
 		ps->SetShader();
 		ps->SetShaderResourceView("Pixels", renderTargetSRVs[RTVTypes::COMPOSITE].Get());
-		ps->SetSamplerState("BasicSampler", transparentEntities[0]->GetMaterial()->GetSamplerState());
+		ps->SetSamplerState("BasicSampler", activeMeshes[meshIt]->GetMaterial()->GetSamplerState());
 		context->Draw(3, 0);
 
 		// First, create the refraction silhouette
@@ -903,7 +888,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
 
 		// Currently, all refractive shaders are the same, so this is fine
-		std::shared_ptr<SimplePixelShader> refractivePS = transparentEntities[0]->GetMaterial()->GetRefractivePixelShader();
+		std::shared_ptr<SimplePixelShader> refractivePS = activeMeshes[meshIt]->GetMaterial()->GetRefractivePixelShader();
 		refractivePS->SetShader();
 
 		refractivePS->SetFloat2("screenSize", XMFLOAT2((float)windowWidth, (float)windowHeight));
@@ -914,23 +899,14 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		refractivePS->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
 		refractivePS->SetData("lightCount", &lightCount, sizeof(unsigned int));
 
-		/*if (this->currentSky->GetEnableDisable()) {
-			refractivePS->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
-			refractivePS->SetShaderResourceView("irradianceIBLMap", currentSky->GetIrradianceCubeMap().Get());
-			refractivePS->SetShaderResourceView("brdfLookUpMap", currentSky->GetBRDFLookupTexture().Get());
-			refractivePS->SetShaderResourceView("specularIBLMap", currentSky->GetConvolvedSpecularCubeMap().Get());
-		}*/
-
 		refractivePS->SetShaderResourceView("environmentMap", currentSky->GetSkyTexture().Get());
 
 		refractivePS->SetShaderResourceView("screenPixels", renderTargetSRVs[RTVTypes::COMPOSITE].Get());
 		refractivePS->SetShaderResourceView("refractionSilhouette", renderTargetSRVs[RTVTypes::REFRACTION_SILHOUETTE].Get());
 
-		//refractivePS->SetShaderResourceView("ssaoBlur", renderTargetSRVs[RTVTypes::SSAO_BLUR].Get());
-
 		refractivePS->CopyBufferData("PerFrame");
 
-		std::shared_ptr<SimpleVertexShader> refractiveVS = transparentEntities[0]->GetMaterial()->GetVertShader();
+		std::shared_ptr<SimpleVertexShader> refractiveVS = activeMeshes[meshIt]->GetMaterial()->GetVertShader();
 
 		refractiveVS->SetShader();
 
@@ -944,61 +920,32 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 		refractiveVS->CopyBufferData("PerFrame");
 
-		for (auto ge : transparentEntities) {
-			refractiveVS->SetFloat4("colorTint", ge->GetMaterial()->GetTint());
+		for (meshIt = meshIt; meshIt < activeMeshes.size(); meshIt++) {
+			refractiveVS->SetFloat4("colorTint", activeMeshes[meshIt]->GetMaterial()->GetTint());
 
 			refractiveVS->CopyBufferData("PerMaterial");
 
-			refractiveVS->SetMatrix4x4("world", ge->GetTransform()->GetWorldMatrix());
+			refractiveVS->SetMatrix4x4("world", activeMeshes[meshIt]->GetGameEntity()->GetTransform()->GetWorldMatrix());
 
 			refractiveVS->CopyBufferData("PerObject");
 
-			refractivePS->SetFloat("uvMult", ge->GetMaterial()->GetTiling());
-			refractivePS->SetFloat("indexOfRefraction", ge->GetMaterial()->GetIndexOfRefraction());
-			refractivePS->SetFloat("refractionScale", ge->GetMaterial()->GetRefractionScale());
-			refractivePS->SetFloat("isRefractive", ge->GetMaterial()->GetRefractive());
+			refractivePS->SetFloat("uvMult", activeMeshes[meshIt]->GetMaterial()->GetTiling());
+			refractivePS->SetFloat("indexOfRefraction", activeMeshes[meshIt]->GetMaterial()->GetIndexOfRefraction());
+			refractivePS->SetFloat("refractionScale", activeMeshes[meshIt]->GetMaterial()->GetRefractionScale());
+			refractivePS->SetFloat("isRefractive", activeMeshes[meshIt]->GetMaterial()->GetRefractive());
 
 			refractivePS->CopyBufferData("PerMaterial");
 
-			refractivePS->SetShaderResourceView("textureNormal", ge->GetMaterial()->GetNormalMap());
-			refractivePS->SetShaderResourceView("textureRoughness", ge->GetMaterial()->GetRoughMap());
-			refractivePS->SetShaderResourceView("textureMetal", ge->GetMaterial()->GetMetalMap());
+			refractivePS->SetShaderResourceView("textureNormal", activeMeshes[meshIt]->GetMaterial()->GetNormalMap());
+			refractivePS->SetShaderResourceView("textureRoughness", activeMeshes[meshIt]->GetMaterial()->GetRoughMap());
+			refractivePS->SetShaderResourceView("textureMetal", activeMeshes[meshIt]->GetMaterial()->GetMetalMap());
 
 			UINT stride = sizeof(Vertex);
 			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, ge->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(ge->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			context->IASetVertexBuffers(0, 1, activeMeshes[meshIt]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(activeMeshes[meshIt]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
-			context->DrawIndexed(ge->GetMesh()->GetIndexCount(), 0, 0);
-		}
-	}
-	else {
-		// Combine all results, and since there's nothing transparent,
-		// move onto presenting
-		renderTargets[0] = backBufferRTV.Get();
-		context->OMSetRenderTargets(1, renderTargets, 0);
-
-		std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
-		ssaoCombinePS->SetShader();
-		ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", renderTargetSRVs[RTVTypes::COLORS_NO_AMBIENT].Get());
-		ssaoCombinePS->SetShaderResourceView("ambient", renderTargetSRVs[RTVTypes::COLORS_AMBIENT].Get());
-		ssaoCombinePS->SetShaderResourceView("SSAOBlur", renderTargetSRVs[RTVTypes::SSAO_BLUR].Get());
-		//ssaoCombinePS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
-		ssaoCombinePS->CopyAllBufferData();
-		context->Draw(3, 0);
-
-		// Draw the point light
-		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
-		DrawPointLights();
-
-		renderTargets[0] = backBufferRTV.Get();
-		context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
-
-		context->OMSetDepthStencilState(particleDepthState.Get(), 0);
-
-		for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
-			if (!globalAssets.GetEmitterAtID(i)->GetEnableDisable()) continue;
-			globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime, particleBlendAdditive);
+			context->DrawIndexed(activeMeshes[meshIt]->GetMesh()->GetIndexCount(), 0, 0);
 		}
 	}
 
@@ -1023,7 +970,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 }
 
 void Renderer::SetActiveSky(std::shared_ptr<Sky> sky) {
-    this->currentSky = sky;
+	this->currentSky = sky;
 }
 
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetRenderTargetSRV(RTVTypes type) {

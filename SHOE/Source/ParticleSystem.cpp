@@ -133,28 +133,38 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetDrawListSRV(
 	return this->drawListSRV;
 }
 
+void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixelShader, std::shared_ptr<SimpleVertexShader> particleVertexShader, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV, Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context)
+{
+	defaultParticlePixelShader = particlePixelShader;
+	defaultParticleVertexShader = particleVertexShader;
+	defaultParticleTextureSRV = particleTextureSRV;
+	defaultDevice = device;
+	defaultContext = context;
+}
+
 void ParticleSystem::Start()
 {
-	this->maxParticles = maxParticles;
-	this->particlesPerSecond = particlesPerSecond;
-	this->particleLifetime = particleLifeTime;
+	this->maxParticles = 20;
+	this->particlesPerSecond = 1.0f;
+	this->particleLifetime = 3.0f;
 	this->secondsPerEmission = 1.0f / particlesPerSecond;
 
 	this->timeSinceEmit = 0.0f;
 
-	this->particlePixelShader = particlePixelShader;
-	this->particleVertexShader = particleVertexShader;
-	this->particleTextureSRV = particleTextureSRV;
+	this->particlePixelShader = defaultParticlePixelShader;
+	this->particleVertexShader = defaultParticleVertexShader;
+	this->particleTextureSRV = defaultParticleTextureSRV;
 
-	this->device = device;
-	this->context = context;
+	this->device = defaultDevice;
+	this->context = defaultContext;
 
 	this->colorTint = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	this->scale = 0.0f;
+	this->scale = 1.0f;
 	this->speed = 1.0f;
 	this->destination = DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f);
 
-	this->additiveBlend = additiveBlendState;
+	this->additiveBlend = true;
+	this->isMultiParticle = true;
 
 	// Set up a function to calculate if this emitter will overflow its buffer
 	// Then recalculate maxParticles if it will
@@ -195,6 +205,11 @@ void ParticleSystem::Update(float deltaTime, float totalTime) {
 	particleSimComputeShader->DispatchByThreads(this->maxParticles, 1, 1);
 
 	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+}
+
+void ParticleSystem::OnDestroy()
+{
+
 }
 
 void ParticleSystem::Initialize(int maxParticles) 

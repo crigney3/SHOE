@@ -3,7 +3,7 @@
 #include <queue>
 
 #include "GameEntity.fwd.h"
-#include "IComponent.h"
+#include "MeshRenderer.h"
 
 constexpr auto POOL_SIZE = 30;
 
@@ -12,6 +12,7 @@ class ComponentPool
 {
 public:
 	static std::shared_ptr<T> Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
+	static template <> std::shared_ptr<MeshRenderer> Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
 	static void Free(std::shared_ptr<IComponent> component);
 	static int GetActiveCount();
 	static std::vector<std::shared_ptr<T>> GetAll();
