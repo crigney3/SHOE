@@ -13,7 +13,6 @@
 #include "Input.h"
 #include "Renderer.h"
 #include "AssetManager.h"
-#include "Emitter.h"
 #include <thread>
 #include <chrono>
 #include "SpriteBatch.h"

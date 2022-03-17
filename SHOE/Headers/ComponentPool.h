@@ -12,7 +12,6 @@ class ComponentPool
 {
 public:
 	static std::shared_ptr<T> Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
-	static template <> std::shared_ptr<MeshRenderer> Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
 	static void Free(std::shared_ptr<IComponent> component);
 	static int GetActiveCount();
 	static std::vector<std::shared_ptr<T>> GetAll();
@@ -22,6 +21,8 @@ private:
 	static std::vector<std::shared_ptr<T>> allocated;
 	static std::queue<std::shared_ptr<T>> unallocated;
 };
+
+template <> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
 
 template<typename T>
 std::vector<std::shared_ptr<T>> ComponentPool<T>::allocated =

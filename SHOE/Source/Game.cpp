@@ -395,101 +395,101 @@ void Game::RenderUI(float deltaTime) {
 	}
 
 	// Particle Menu
-	if (particleWindowEnabled) {
-		ImGui::Begin("Particle Editor");
+	//if (particleWindowEnabled) {
+	//	ImGui::Begin("Particle Editor");
 
-		std::shared_ptr<Emitter> currentEmitter = globalAssets.GetEmitterAtID(emitterUIIndex);
+	//	std::shared_ptr<Emitter> currentEmitter = globalAssets.GetEmitterAtID(emitterUIIndex);
 
-		std::string indexStr = currentEmitter->GetName();
-		std::string node = "Editing Particle Emitter " + indexStr;
-		ImGui::Text(node.c_str());
+	//	std::string indexStr = currentEmitter->GetName();
+	//	std::string node = "Editing Particle Emitter " + indexStr;
+	//	ImGui::Text(node.c_str());
 
-		if (ImGui::ArrowButton("Previous Emitter", ImGuiDir_Left)) {
-			emitterUIIndex--;
-			if (emitterUIIndex < 0) {
-				emitterUIIndex = globalAssets.GetEmitterArraySize() - 1;
-			}
-		};
-		ImGui::SameLine();
+	//	if (ImGui::ArrowButton("Previous Emitter", ImGuiDir_Left)) {
+	//		emitterUIIndex--;
+	//		if (emitterUIIndex < 0) {
+	//			emitterUIIndex = globalAssets.GetEmitterArraySize() - 1;
+	//		}
+	//	};
+	//	ImGui::SameLine();
 
-		if (ImGui::ArrowButton("Next Emitter", ImGuiDir_Right)) {
-			emitterUIIndex++;
-			if (emitterUIIndex > globalAssets.GetEmitterArraySize() - 1) {
-				emitterUIIndex = 0;
-			}
-		};
+	//	if (ImGui::ArrowButton("Next Emitter", ImGuiDir_Right)) {
+	//		emitterUIIndex++;
+	//		if (emitterUIIndex > globalAssets.GetEmitterArraySize() - 1) {
+	//			emitterUIIndex = 0;
+	//		}
+	//	};
 
-		std::string nameBuffer;
-		static char nameBuf[64] = "";
-		nameBuffer = currentEmitter->GetName();
-		strcpy_s(nameBuf, nameBuffer.c_str());
-		ImGui::InputText("Rename Emitter ", nameBuf, sizeof(nameBuffer));
+	//	std::string nameBuffer;
+	//	static char nameBuf[64] = "";
+	//	nameBuffer = currentEmitter->GetName();
+	//	strcpy_s(nameBuf, nameBuffer.c_str());
+	//	ImGui::InputText("Rename Emitter ", nameBuf, sizeof(nameBuffer));
 
-		currentEmitter->SetName(nameBuf);
+	//	currentEmitter->SetName(nameBuf);
 
-		bool emitterEnabled = currentEmitter->GetEnableDisable();
-		ImGui::Checkbox("Enabled ", &emitterEnabled);
-		currentEmitter->SetEnableDisable(emitterEnabled);
+	//	bool emitterEnabled = currentEmitter->GetEnableDisable();
+	//	ImGui::Checkbox("Enabled ", &emitterEnabled);
+	//	currentEmitter->SetEnableDisable(emitterEnabled);
 
-		DirectX::XMFLOAT4 currentTint = currentEmitter->GetColorTint();
-		ImGui::ColorEdit3("Color ", &currentTint.x);
-		currentEmitter->SetColorTint(currentTint);
+	//	DirectX::XMFLOAT4 currentTint = currentEmitter->GetColorTint();
+	//	ImGui::ColorEdit3("Color ", &currentTint.x);
+	//	currentEmitter->SetColorTint(currentTint);
 
-		bool blendState = currentEmitter->GetBlendState();
-		ImGui::Checkbox("Blend State ", &blendState);
-		ImGui::SameLine();
-		if (blendState) {
-			ImGui::Text("Blend state is additive.");
-		}
-		else {
-			ImGui::Text("Blend state is not additive.");
-		}
-		currentEmitter->SetBlendState(blendState);
+	//	bool blendState = currentEmitter->GetBlendState();
+	//	ImGui::Checkbox("Blend State ", &blendState);
+	//	ImGui::SameLine();
+	//	if (blendState) {
+	//		ImGui::Text("Blend state is additive.");
+	//	}
+	//	else {
+	//		ImGui::Text("Blend state is not additive.");
+	//	}
+	//	currentEmitter->SetBlendState(blendState);
 
-		float scale = currentEmitter->GetScale();
-		ImGui::SliderFloat("Scale with age ", &scale, 0.0f, 2.0f);
-		currentEmitter->SetScale(scale);
+	//	float scale = currentEmitter->GetScale();
+	//	ImGui::SliderFloat("Scale with age ", &scale, 0.0f, 2.0f);
+	//	currentEmitter->SetScale(scale);
 
-		float particlesPerSecond = currentEmitter->GetParticlesPerSecond();
-		ImGui::SliderFloat("Particles per Second ", &particlesPerSecond, 0.1f, 20.0f);
-		ImGui::SameLine();
-		ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
-		currentEmitter->SetParticlesPerSecond(particlesPerSecond);
+	//	float particlesPerSecond = currentEmitter->GetParticlesPerSecond();
+	//	ImGui::SliderFloat("Particles per Second ", &particlesPerSecond, 0.1f, 20.0f);
+	//	ImGui::SameLine();
+	//	ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
+	//	currentEmitter->SetParticlesPerSecond(particlesPerSecond);
 
-		float particlesLifetime = currentEmitter->GetParticleLifetime();
-		ImGui::SliderFloat("Particles Lifetime ", &particlesLifetime, 0.1f, 20.0f);
-		ImGui::SameLine();
-		ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
-		currentEmitter->SetParticleLifetime(particlesLifetime);
+	//	float particlesLifetime = currentEmitter->GetParticleLifetime();
+	//	ImGui::SliderFloat("Particles Lifetime ", &particlesLifetime, 0.1f, 20.0f);
+	//	ImGui::SameLine();
+	//	ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
+	//	currentEmitter->SetParticleLifetime(particlesLifetime);
 
-		float speed = currentEmitter->GetSpeed();
-		ImGui::SliderFloat("Particle Speed ", &speed, 0.1f, 5.0f);
-		currentEmitter->SetSpeed(speed);
+	//	float speed = currentEmitter->GetSpeed();
+	//	ImGui::SliderFloat("Particle Speed ", &speed, 0.1f, 5.0f);
+	//	currentEmitter->SetSpeed(speed);
 
-		DirectX::XMFLOAT3 destination = currentEmitter->GetDestination();
-		ImGui::InputFloat3("Particles Move Towards ", &destination.x);
-		currentEmitter->SetDestination(destination);
+	//	DirectX::XMFLOAT3 destination = currentEmitter->GetDestination();
+	//	ImGui::InputFloat3("Particles Move Towards ", &destination.x);
+	//	currentEmitter->SetDestination(destination);
 
-		int maxParticles = currentEmitter->GetMaxParticles();
-		ImGui::InputInt("Max Particles ", &maxParticles);
-		currentEmitter->SetMaxParticles(maxParticles);
+	//	int maxParticles = currentEmitter->GetMaxParticles();
+	//	ImGui::InputInt("Max Particles ", &maxParticles);
+	//	currentEmitter->SetMaxParticles(maxParticles);
 
-		/*if (ImGui::CollapsingHeader("Particle Data ")) {
-			ImGui::Text("Sort List - Cannot be Edited live, Shader Only: ");
-			if (ImGui::BeginListBox("SortList")) {
-				DirectX::XMFLOAT2* list = (DirectX::XMFLOAT2*)currentEmitter->GetSortListSRV().Get();
-				for (int i = 0; i < maxParticles; i++) {
-					std::string listItem = "##Value at " + i;
-					listItem += ": ";
-					listItem += list[i].x;
-					ImGui::Text(listItem.c_str());
-				}
-				ImGui::EndListBox();
-			}
-		}*/
+	//	/*if (ImGui::CollapsingHeader("Particle Data ")) {
+	//		ImGui::Text("Sort List - Cannot be Edited live, Shader Only: ");
+	//		if (ImGui::BeginListBox("SortList")) {
+	//			DirectX::XMFLOAT2* list = (DirectX::XMFLOAT2*)currentEmitter->GetSortListSRV().Get();
+	//			for (int i = 0; i < maxParticles; i++) {
+	//				std::string listItem = "##Value at " + i;
+	//				listItem += ": ";
+	//				listItem += list[i].x;
+	//				ImGui::Text(listItem.c_str());
+	//			}
+	//			ImGui::EndListBox();
+	//		}
+	//	}*/
 
-		ImGui::End();
-	}
+	//	ImGui::End();
+	//}
 
 	if (soundWindowEnabled) {
 		ImGui::Begin("Sound Menu");
@@ -880,10 +880,6 @@ void Game::Update(float deltaTime, float totalTime)
 
 	Flashlight();
 	RenderSky();
-
-	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
-		globalAssets.GetEmitterAtID(i)->Update(deltaTime, totalTime);
-	}
 
 	// Flickering is currently broken
 	/*if (flickeringEnabled) {

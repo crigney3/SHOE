@@ -1,8 +1,9 @@
 #pragma once
+
+#include "Camera.h"
 #include "IComponent.h"
 #include "DXCore.h"
 #include "Vertex.h"
-#include "Camera.h"
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 #define RandomIntRange(min, max) (int)rand() / RAND_MAX * (max - min) + min
@@ -22,6 +23,10 @@ public:
 	void Update(float deltaTime, float totalTime) override;
 	void OnDestroy() override;
 
+	void Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive);
+
+	void SetParticleTextureSRV(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV);
+
 	void SetColorTint(DirectX::XMFLOAT4 color);
 	DirectX::XMFLOAT4 GetColorTint();
 
@@ -30,6 +35,9 @@ public:
 
 	void SetBlendState(bool AdditiveOrNot);
 	bool GetBlendState();
+
+	void SetIsMultiParticle(bool isMultiParticle);
+	bool IsMultiParticle();
 
 	void SetParticlesPerSecond(float particlesPerSecond);
 	float GetParticlesPerSecond();

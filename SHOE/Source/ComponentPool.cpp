@@ -1,7 +1,6 @@
 #include "../Headers/ComponentPool.h"
 
-template <>
-std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiate(std::shared_ptr<GameEntity> gameEntity,
+template<> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiate(std::shared_ptr<GameEntity> gameEntity,
 	bool hierarchyIsEnabled)
 {
 	//Allocates a new pool if there is no available components

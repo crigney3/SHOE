@@ -165,7 +165,6 @@
     <ClInclude Include="Headers\ComponentPacket.h" />
     <ClInclude Include="Headers\ComponentPool.h" />
     <ClInclude Include="Headers\DXCore.h" />
-    <ClInclude Include="Headers\Emitter.h" />
     <ClInclude Include="Headers\Game.h" />
     <ClInclude Include="Headers\GameEntity.fwd.h" />
     <ClInclude Include="Headers\GameEntity.h" />
@@ -362,7 +361,6 @@
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\ComponentPool.cpp" />
     <ClCompile Include="Source\DXCore.cpp" />
-    <ClCompile Include="Source\Emitter.cpp" />
     <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\GameEntity.cpp" />
     <ClCompile Include="Source\IComponent.cpp" />

@@ -887,7 +887,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	for (std::shared_ptr<ParticleSystem> emitter : emitters) {
 		if (!emitter->IsEnabled()) continue;
-		globalAssets.GetEmitterAtID(i)->Draw(mainCamera, totalTime, particleBlendAdditive);
+		emitter->Draw(mainCamera, totalTime, particleBlendAdditive);
 	}
 
 	if (meshIt < activeMeshes.size())

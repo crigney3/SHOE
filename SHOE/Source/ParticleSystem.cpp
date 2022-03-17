@@ -29,6 +29,16 @@ bool ParticleSystem::GetBlendState() {
 	return this->additiveBlend;
 }
 
+void ParticleSystem::SetIsMultiParticle(bool isMultiParticle)
+{
+	this->isMultiParticle = isMultiParticle;
+}
+
+bool ParticleSystem::IsMultiParticle()
+{
+	return isMultiParticle;
+}
+
 void ParticleSystem::SetParticlesPerSecond(float particlesPerSecond) {
 	this->particlesPerSecond = particlesPerSecond;
 	this->secondsPerEmission = 1.0f / particlesPerSecond;
@@ -159,7 +169,7 @@ void ParticleSystem::Start()
 	this->context = defaultContext;
 
 	this->colorTint = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	this->scale = 1.0f;
+	this->scale = 0.0f;
 	this->speed = 1.0f;
 	this->destination = DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f);
 
@@ -210,6 +220,59 @@ void ParticleSystem::Update(float deltaTime, float totalTime) {
 void ParticleSystem::OnDestroy()
 {
 
+}
+
+void ParticleSystem::Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive)
+{
+	ID3D11UnorderedAccessView* none[8] = {};
+	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+
+	particleCopyComputeShader->SetShader();
+
+	particleCopyComputeShader->SetUnorderedAccessView("sortList", this->sortListUAV);
+	particleCopyComputeShader->SetUnorderedAccessView("argsList", this->argsListUAV);
+
+	particleCopyComputeShader->DispatchByThreads(1, 1, 1);
+
+	if (additiveBlend) {
+		context->OMSetBlendState(particleBlendAdditive.Get(), 0, 0xFFFFFFFF);
+	}
+	else {
+		context->OMSetBlendState(0, 0, 0xFFFFFFFF);
+	}
+
+	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+
+	UINT stride = 0;
+	UINT offset = 0;
+	ID3D11Buffer* emptyBuffer = 0;
+	context->IASetVertexBuffers(0, 1, &emptyBuffer, &stride, &offset);
+	context->IASetIndexBuffer(inBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+
+	particleVertexShader->SetShader();
+	particlePixelShader->SetShader();
+
+	context->VSSetShaderResources(0, 1, this->drawListSRV.GetAddressOf());
+	context->VSSetShaderResources(1, 1, this->sortListSRV.GetAddressOf());
+	particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV);
+
+	particleVertexShader->SetMatrix4x4("view", cam->GetViewMatrix());
+	particleVertexShader->SetMatrix4x4("projection", cam->GetProjectionMatrix());
+	particleVertexShader->SetFloat("currentTime", currentTime);
+	particleVertexShader->SetFloat("scale", this->scale);
+	particleVertexShader->CopyAllBufferData();
+	particlePixelShader->SetFloat4("colorTint", this->colorTint);
+	particlePixelShader->CopyAllBufferData();
+
+	context->DrawIndexedInstancedIndirect(argsBuffer.Get(), 0);
+
+	ID3D11ShaderResourceView* noneLarge[16] = {};
+	context->VSSetShaderResources(0, 16, noneLarge);
+}
+
+void ParticleSystem::SetParticleTextureSRV(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV)
+{
+	this->particleTextureSRV = particleTextureSRV;
 }
 
 void ParticleSystem::Initialize(int maxParticles) 

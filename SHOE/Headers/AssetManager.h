@@ -4,6 +4,7 @@
 #include "Sky.h"
 #include "SimpleShader.h"
 #include "GameEntity.h"
+#include "ParticleSystem.h"
 #include "WICTextureLoader.h"
 #include <assimp/Importer.hpp>
 #include <assimp/types.h>
@@ -12,7 +13,6 @@
 #include <map>
 #include <random>
 #include "DXCore.h"
-#include "Emitter.h"
 #include "experimental\filesystem"
 #include <locale>
 #include <codecvt>
@@ -84,6 +84,7 @@ private:
 	void CreateComplexGeometry();
 	void ProcessComplexModel(aiNode* node, const aiScene* scene);
 	std::shared_ptr<Mesh> ProcessComplexMesh(aiMesh* mesh, const aiScene* scene);
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::wstring textureNameToLoad, bool isMultiParticle);
 
 	void InitializeMeshes();
 	void InitializeMaterials();
@@ -148,12 +149,14 @@ public:
 											    std::wstring metalnessNameToLoad,
 											    std::wstring roughnessNameToLoad);
 	std::shared_ptr<GameEntity> CreateTerrainEntity(std::shared_ptr<Mesh> mesh, std::string name = "Terrain");
-	std::shared_ptr<Emitter> CreateParticleEmitter(int maxParticles,
+	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
+													std::wstring textureNameToLoad,
+													bool isMultiParticle);
+	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
+												   std::wstring textureNameToLoad,
+												   int maxParticles,
 												   float particleLifeTime,
 												   float particlesPerSecond,
-												   DirectX::XMFLOAT3 position, 
-												   std::wstring textureNameToLoad,
-												   std::string name,
 												   bool isMultiParticle = false,
 												   bool additiveBlendState = true);
 	FMOD::Sound* CreateSound(std::string filePath,
@@ -184,26 +187,14 @@ public:
 
 	// Methods to disable and enable assets for rendering
 	// Currently not implemented except for lights
-
-	void EnableDisableGameEntity(std::string name, bool value);
-	void EnableDisableGameEntity(int id, bool value);
+	
 	void EnableDisableSky(std::string name, bool value);
 	void EnableDisableSky(int id, bool value);
-	/*void EnableDisableVertexShader(std::string name, bool value);
-	void EnableDisableVertexShader(int id, bool value);
-	void EnableDisablePixelShader(std::string name, bool value);
-	void EnableDisablePixelShader(int id, bool value);*/
-	void EnableDisableMesh(std::string name, bool value);
-	void EnableDisableMesh(int id, bool value);
 	void EnableDisableCamera(std::string name, bool value);
 	void EnableDisableCamera(int id, bool value);
 	void EnableDisableTerrain(std::string name, bool value);
 	void EnableDisableTerrain(int id, bool value);
-	void EnableDisableMaterial(std::string name, bool value);
-	void EnableDisableMaterial(int id, bool value);
-	/*void EnableDisableTerrainMaterial(std::string name, bool value);
-	void EnableDisableTerrainMaterial(int id, bool value);
-	void EnableDisableLight(std::string name, bool value);*/
+	//void EnableDisableLight(std::string name, bool value);
 	void EnableDisableLight(int id, bool value);
 
 	// Asset search-by-name methods

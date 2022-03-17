@@ -239,13 +239,11 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 }
 
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name) {
-	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(XMMatrixIdentity(), name);
-	newEnt->Initialize();
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+
 	std::shared_ptr<MeshRenderer> renderer = newEnt->AddComponent<MeshRenderer>();
 	renderer->SetMesh(mesh);
 	renderer->SetMaterial(mat);
-
-	globalEntities.push_back(newEnt);
 
 	return newEnt;
 }
@@ -280,114 +278,37 @@ std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11Shader
 	return newSky;
 }
 
-std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
-															 float particleLifeTime,
-															 float particlesPerSecond,
-															 DirectX::XMFLOAT3 position, 
-															 std::wstring textureNameToLoad,
-															 std::string name,
-															 bool isMultiParticle,
-															 bool additiveBlendState) {
-	std::shared_ptr<Emitter> newEmitter;
-
-	std::wstring assetPathString = L"../../../Assets/Particles/";
-
-	if (isMultiParticle) {
-		// Load all particle textures in a specific subfolder
-		std::string assets = "../../../Assets/Particles/";
-		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-		std::string subfolderPath = converter.to_bytes(textureNameToLoad);
-		
-		std::vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>> textures;
-		int i = 0;
-		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(dxInstance->GetFullPathTo(assets + subfolderPath))) {
-			textures.push_back(nullptr);
-			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
-			std::wstring path = ConvertToWide(p.path().string().c_str());
-
-			CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), (ID3D11Resource**)textures[i].GetAddressOf(), nullptr);
-
-			i++;
-		}
-
-		D3D11_TEXTURE2D_DESC faceDesc = {};
-		textures[0]->GetDesc(&faceDesc);
-
-		D3D11_TEXTURE2D_DESC multiTextureDesc = {};
-		multiTextureDesc.ArraySize = (int)textures.size();
-		multiTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		multiTextureDesc.CPUAccessFlags = 0;
-		multiTextureDesc.Format = faceDesc.Format;
-		multiTextureDesc.Width = faceDesc.Width;
-		multiTextureDesc.Height = faceDesc.Height;
-		multiTextureDesc.MipLevels = 1;
-		multiTextureDesc.Usage = D3D11_USAGE_DEFAULT;
-		multiTextureDesc.SampleDesc.Count = 1;
-		multiTextureDesc.SampleDesc.Quality = 0;
-
-		ID3D11Texture2D* outputTexture;
-		device->CreateTexture2D(&multiTextureDesc, 0, &outputTexture);
-
-		for (int i = 0; i < (int)textures.size(); i++) {
-			unsigned int subresource = D3D11CalcSubresource(0, i, 1);
-
-			if (textures[i] != nullptr) {
-				context->CopySubresourceRegion(outputTexture, subresource, 0, 0, 0, (ID3D11Resource*)textures[i].Get(), 0, 0);
-			}
-		}
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Format = multiTextureDesc.Format;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-		srvDesc.Texture2DArray.MipLevels = 1;
-		srvDesc.Texture2DArray.ArraySize = (int)textures.size();
-
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureArraySRV;
-		device->CreateShaderResourceView(outputTexture, &srvDesc, textureArraySRV.GetAddressOf());
-
-		outputTexture->Release();
-
-		newEmitter = std::make_shared<Emitter>(maxParticles,
-											   particleLifeTime,
-											   particlesPerSecond,
-											   position,
-											   GetPixelShaderByName("ParticlesPS"),
-											   GetVertexShaderByName("ParticlesVS"),
-											   textureArraySRV,
-											   device,
-											   context,
-											   name,
-											   isMultiParticle,
-											   additiveBlendState);
-	}
-	else {
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
-
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + textureNameToLoad).c_str(), nullptr, &albedo);
-
-		newEmitter = std::make_shared<Emitter>(maxParticles,
-											   particleLifeTime,
-											   particlesPerSecond,
-											   position,
-											   GetPixelShaderByName("ParticlesPS"),
-											   GetVertexShaderByName("ParticlesVS"),
-											   albedo,
-											   device,
-											   context,
-											   name,
-											   isMultiParticle,
-											   additiveBlendState);
-	}
-
-	newEmitter->SetMainCamera(GetCameraByName("mainCamera"));
+std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string name,
+	std::wstring textureNameToLoad,
+	bool isMultiParticle)
+{
+	std::shared_ptr<GameEntity> emitterEntity = CreateGameEntity(name);
+	std::shared_ptr<ParticleSystem> newEmitter = emitterEntity->AddComponent<ParticleSystem>();
+	
+	newEmitter->SetIsMultiParticle(isMultiParticle);
+	newEmitter->SetParticleTextureSRV(LoadParticleTexture(textureNameToLoad, isMultiParticle));
 
 	// Set all the compute shaders here
-	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleEmitCS"), (ParticleComputeShaderType)0);
-	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleMoveCS"), (ParticleComputeShaderType)1);
-	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleCopyCS"), (ParticleComputeShaderType)2);
-	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleInitDeadCS"), (ParticleComputeShaderType)3);
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleEmitCS"), Emit);
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleMoveCS"), Simulate);
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleCopyCS"), Copy);
+	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleInitDeadCS"), DeadListInit);
 
-	globalParticleEmitters.push_back(newEmitter);
+	return newEmitter;
+}
+
+std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string name,
+															 std::wstring textureNameToLoad,
+															 int maxParticles,
+															 float particleLifeTime,
+															 float particlesPerSecond,
+															 bool isMultiParticle,
+															 bool additiveBlendState) {
+	std::shared_ptr<ParticleSystem> newEmitter = CreateParticleEmitter(name, textureNameToLoad, isMultiParticle);
+	newEmitter->SetMaxParticles(maxParticles);
+	newEmitter->SetParticleLifetime(particleLifeTime);
+	newEmitter->SetParticlesPerSecond(particlesPerSecond);
+	newEmitter->SetBlendState(additiveBlendState);
 
 	return newEmitter;
 }
@@ -395,6 +316,9 @@ std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
 
 #pragma region initAssets
 void AssetManager::InitializeGameEntities() {
+	//Initializes default values for components
+	MeshRenderer::SetDefaults(GetMeshByName("Cube"), GetMaterialByName("largeCobbleMat"));
+
 	globalEntities = std::vector<std::shared_ptr<GameEntity>>();
 
 	// Show example renders
@@ -802,16 +726,31 @@ void AssetManager::InitializeShaders() {
 }
 
 void AssetManager::InitializeEmitters() {
-	CreateParticleEmitter(20, 1.0f, 1.0f, DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f), L"Smoke/smoke_01.png", "basicParticle");
-	CreateParticleEmitter(20, 1.0f, 3.0f, DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), L"Smoke/", "basicParticles", true);
-	GetEmitterByName("basicParticles")->SetScale(1.0f);
-	CreateParticleEmitter(10, 2.0f, 5.0f, DirectX::XMFLOAT3(-1.0f, 0.0f, 0.0f), L"Flame/", "flameParticles", true);
-	GetEmitterByName("flameParticles")->SetColorTint(DirectX::XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
-	CreateParticleEmitter(300, 2.0f, 80.0f, DirectX::XMFLOAT3(-2.0f, 0.0f, 0.0f), L"Star/", "starParticles", true);
-	CreateParticleEmitter(300, 2.0f, 80.0f, DirectX::XMFLOAT3(-3.0f, 0.0f, 0.0f), L"Star/star_08.png", "starParticle");
-	GetEmitterByName("starParticles")->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
-	GetEmitterByName("starParticle")->SetScale(0.75f);
-	GetEmitterByName("starParticle")->SetColorTint(DirectX::XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+	ParticleSystem::SetDefaults(
+		GetPixelShaderByName("ParticlesPS"),
+		GetVertexShaderByName("ParticlesVS"),
+		LoadParticleTexture(L"Smoke/", true),
+		device,
+		context);
+
+	std::shared_ptr<ParticleSystem> basicEmitter = CreateParticleEmitter("basicParticle", L"Smoke/smoke_01.png", 20, 1.0f, 1.0f);
+	basicEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(1.0f, 0.0f, 0.0f));
+
+	std::shared_ptr<ParticleSystem> basicMultiEmitter = CreateParticleEmitter("basicParticles", L"Smoke/", true);
+	basicMultiEmitter->SetScale(1.0f);
+
+	std::shared_ptr<ParticleSystem> flameEmitter = CreateParticleEmitter("flameParticles", L"Flame/", 10, 2.0f, 5.0f, true);
+	flameEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-1.0f, 0.0f, 0.0f));
+	flameEmitter->SetColorTint(XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
+
+	std::shared_ptr<ParticleSystem> starMultiEmitter = CreateParticleEmitter("starParticles", L"Star/", 300, 2.0f, 80.0f, true);
+	starMultiEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-2.0f, 0.0f, 0.0f));
+	starMultiEmitter->SetColorTint(XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+
+	std::shared_ptr<ParticleSystem> starEmitter = CreateParticleEmitter("starParticle", L"Star/star_08.png", 300, 2.0f, 80.0f);
+	starEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-3.0f, 0.0f, 0.0f));
+	starEmitter->SetColorTint(XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+	starEmitter->SetScale(0.75f);
 
 	// This was terrifying. Take graphics ideas from Jimmy Digrazia at your own peril.
 	/*CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);
@@ -1192,6 +1131,72 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::CreateCubemap(
 	// Send back the SRV, which is what we need for our shaders
 	return cubeSRV;
 }
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTexture(std::wstring textureNameToLoad, bool isMultiParticle)
+{
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;
+
+	if (isMultiParticle) {
+		// Load all particle textures in a specific subfolder
+		std::string assets = "../../../Assets/Particles/";
+		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+		std::string subfolderPath = converter.to_bytes(textureNameToLoad);
+
+		std::vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>> textures;
+		int i = 0;
+		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(dxInstance->GetFullPathTo(assets + subfolderPath))) {
+			textures.push_back(nullptr);
+			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
+			std::wstring path = ConvertToWide(p.path().string().c_str());
+
+			CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), (ID3D11Resource**)textures[i].GetAddressOf(), nullptr);
+
+			i++;
+		}
+
+		D3D11_TEXTURE2D_DESC faceDesc = {};
+		textures[0]->GetDesc(&faceDesc);
+
+		D3D11_TEXTURE2D_DESC multiTextureDesc = {};
+		multiTextureDesc.ArraySize = (int)textures.size();
+		multiTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		multiTextureDesc.CPUAccessFlags = 0;
+		multiTextureDesc.Format = faceDesc.Format;
+		multiTextureDesc.Width = faceDesc.Width;
+		multiTextureDesc.Height = faceDesc.Height;
+		multiTextureDesc.MipLevels = 1;
+		multiTextureDesc.Usage = D3D11_USAGE_DEFAULT;
+		multiTextureDesc.SampleDesc.Count = 1;
+		multiTextureDesc.SampleDesc.Quality = 0;
+
+		ID3D11Texture2D* outputTexture;
+		device->CreateTexture2D(&multiTextureDesc, 0, &outputTexture);
+
+		for (int i = 0; i < (int)textures.size(); i++) {
+			unsigned int subresource = D3D11CalcSubresource(0, i, 1);
+
+			if (textures[i] != nullptr) {
+				context->CopySubresourceRegion(outputTexture, subresource, 0, 0, 0, (ID3D11Resource*)textures[i].Get(), 0, 0);
+			}
+		}
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = multiTextureDesc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		srvDesc.Texture2DArray.MipLevels = 1;
+		srvDesc.Texture2DArray.ArraySize = (int)textures.size();
+
+		device->CreateShaderResourceView(outputTexture, &srvDesc, particleTextureSRV.GetAddressOf());
+
+		outputTexture->Release();
+	}
+	else {
+		std::wstring assetPathString = L"../../../Assets/Particles/";
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + textureNameToLoad).c_str(), nullptr, &particleTextureSRV);
+	}
+
+	return particleTextureSRV;
+}
 #pragma endregion
 
 #pragma region complexModels
@@ -1406,47 +1411,12 @@ void AssetManager::RemoveLight(int id) {
 // out of the rendering pipeline
 //
 
-void AssetManager::EnableDisableGameEntity(std::string name, bool value) {
-	GetGameEntityByName(name)->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisableGameEntity(int id, bool value) {
-	globalEntities[id]->SetEnableDisable(value);
-}
-
 void AssetManager::EnableDisableSky(std::string name, bool value) {
 	GetSkyByName(name)->SetEnableDisable(value);
 }
 
 void AssetManager::EnableDisableSky(int id, bool value) {
 	skies[id]->SetEnableDisable(value);
-}
-
-// Could cause problems to implement.
-// Replacing disabled shader with a basic one is valid,
-// but out of scope for now.
-//void AssetManager::EnableDisableVertexShader(std::string name, bool value) {
-//	GetVertexShaderByName(name)->SetEnableDisable(value);
-//}
-//
-//void AssetManager::EnableDisableVertexShader(int id, bool value) {
-//	vertexShaders[id]->SetEnableDisable(value);
-//}
-//
-//void AssetManager::EnableDisablePixelShader(std::string name, bool value) {
-//	GetPixelShaderByName(name)->SetEnableDisable(value);
-//}
-//
-//void AssetManager::EnableDisablePixelShader(int id, bool value) {
-//	pixelShaders[id]->SetEnableDisable(value);
-//}
-
-void AssetManager::EnableDisableMesh(std::string name, bool value) {
-	GetMeshByName(name)->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisableMesh(int id, bool value) {
-	globalMeshes[id]->SetEnableDisable(value);
 }
 
 void AssetManager::EnableDisableCamera(std::string name, bool value) {
@@ -1464,23 +1434,6 @@ void AssetManager::EnableDisableTerrain(std::string name, bool value) {
 void AssetManager::EnableDisableTerrain(int id, bool value) {
 	globalTerrainEntities[id]->SetEnableDisable(value);
 }
-
-void AssetManager::EnableDisableMaterial(std::string name, bool value) {
-	GetMaterialByName(name)->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisableMaterial(int id, bool value) {
-	globalMaterials[id]->SetEnableDisable(value);
-}
-
-// Currently unimplementable given structs instead of class
-//void AssetManager::EnableDisableTerrainMaterial(std::string name, bool value) {
-//	GetTerrainMaterialByName(name)->SetEnableDisable(value);
-//}
-//
-//void AssetManager::EnableDisableTerrainMaterial(int id, bool value) {
-//	globalTerrainMaterials[id]->SetEnableDisable(value);
-//}
 
 // See GetLightIDByName
 //void AssetManager::EnableDisableLight(std::string name, bool value) {
