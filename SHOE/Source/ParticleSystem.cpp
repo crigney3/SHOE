@@ -1,6 +1,12 @@
 #include "../Headers/ParticleSystem.h"
 #include "../Headers/GameEntity.h"
 
+std::shared_ptr<SimplePixelShader> ParticleSystem::defaultParticlePixelShader = nullptr;
+std::shared_ptr<SimpleVertexShader> ParticleSystem::defaultParticleVertexShader = nullptr;
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::defaultParticleTextureSRV = nullptr;
+Microsoft::WRL::ComPtr<ID3D11Device> ParticleSystem::defaultDevice = nullptr;
+Microsoft::WRL::ComPtr<ID3D11DeviceContext> ParticleSystem::defaultContext = nullptr;
+
 void ParticleSystem::SetColorTint(DirectX::XMFLOAT4 color) {
 	this->colorTint = color;
 }

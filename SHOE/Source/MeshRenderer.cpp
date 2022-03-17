@@ -1,5 +1,8 @@
 #include "../Headers/MeshRenderer.h"
 
+std::shared_ptr<Mesh> MeshRenderer::defaultMesh = nullptr;
+std::shared_ptr<Material> MeshRenderer::defaultMat = nullptr;
+
 void MeshRenderer::SetDefaults(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat)
 {
 	defaultMesh = mesh;

@@ -22,6 +22,3 @@ private:
 	std::shared_ptr<Mesh> mesh;
 	std::shared_ptr<Material> mat;
 };
-
-std::shared_ptr<Mesh> MeshRenderer::defaultMesh = nullptr;
-std::shared_ptr<Material> MeshRenderer::defaultMat = nullptr;

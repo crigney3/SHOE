@@ -109,9 +109,3 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
 };
-
-std::shared_ptr<SimplePixelShader> ParticleSystem::defaultParticlePixelShader = nullptr;
-std::shared_ptr<SimpleVertexShader> ParticleSystem::defaultParticleVertexShader = nullptr;
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::defaultParticleTextureSRV = nullptr;
-Microsoft::WRL::ComPtr<ID3D11Device> ParticleSystem::defaultDevice = nullptr;
-Microsoft::WRL::ComPtr<ID3D11DeviceContext> ParticleSystem::defaultContext = nullptr;
