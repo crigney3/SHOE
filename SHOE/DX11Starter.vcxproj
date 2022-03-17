@@ -179,6 +179,7 @@
     <ClInclude Include="Headers\Renderer.h" />
     <ClInclude Include="Headers\SimpleShader.h" />
     <ClInclude Include="Headers\Sky.h" />
+    <ClInclude Include="Headers\Terrain.h" />
     <ClInclude Include="Headers\Transform.h" />
     <ClInclude Include="Headers\Vertex.h" />
     <ClInclude Include="IMGUI\Headers\imconfig.h" />

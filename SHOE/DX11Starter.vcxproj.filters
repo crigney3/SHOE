@@ -141,6 +141,9 @@
     <ClInclude Include="Headers\ParticleSystem.h">
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\Terrain.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\PixelShaders\IBLBrdfLookUpTablePS.hlsl">

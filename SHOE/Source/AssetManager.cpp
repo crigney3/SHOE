@@ -14,10 +14,6 @@ AssetManager::~AssetManager() {
 	for (auto ge : globalEntities) {
 		ge->Release();
 	}
-
-	for (auto te : globalTerrainEntities) {
-		te->Release();
-	}
 }
 
 void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock) {
@@ -248,13 +244,9 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 	return newEnt;
 }
 
-std::shared_ptr<GameEntity> AssetManager::CreateTerrainEntity(std::shared_ptr<Mesh> mesh, std::string name) {
-	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(XMMatrixIdentity(), name);
-	newEnt->Initialize();
-
-	globalTerrainEntities.push_back(newEnt);
-
-	return newEnt;
+std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::string name) {
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	return newEnt->AddComponent<Terrain>();
 }
 
 std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, std::string name) {
@@ -355,7 +347,6 @@ void AssetManager::InitializeGameEntities() {
 	GetGameEntityByName("Large Cobble Rect")->GetTransform()->SetScale(+10.0f, +10.0f, +0.2f);
 	GetGameEntityByName("Large Cobble Rect")->GetTransform()->SetPosition(+0.0f, -5.0f, +0.0f);
 	GetGameEntityByName("Large Cobble Rect")->GetTransform()->Rotate(45.0f, 0.0f, 0.0f);
-	GetTerrainByName("Main Terrain")->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
 
 	GetGameEntityByName("Shiny Metal Sphere")->GetTransform()->SetPosition(+4.0f, +1.0f, 0.0f);
 	GetGameEntityByName("Rough Metal Sphere")->GetTransform()->SetPosition(+5.0f, +1.0f, 0.0f);
@@ -614,7 +605,6 @@ void AssetManager::InitializeLights() {
 }
 
 void AssetManager::InitializeTerrainMaterials() {
-	globalTerrainEntities = std::vector<std::shared_ptr<GameEntity>>();
 	globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMats>>();
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogAlbedo;
@@ -665,7 +655,8 @@ void AssetManager::InitializeTerrainMaterials() {
 
 	mainTerrainMaterials->name = std::string("Forest TMaterial");
 
-	CreateTerrainEntity(mainTerrain, "Main Terrain");
+	std::shared_ptr<Terrain> terrainEntity = CreateTerrainEntity("Main Terrain");
+	terrainEntity->GetGameEntity()->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
 	globalTerrainMaterials.push_back(mainTerrainMaterials);
 }
 
@@ -827,10 +818,6 @@ size_t AssetManager::GetTerrainMaterialArraySize() {
 	return this->globalTerrainMaterials.size();
 }
 
-size_t AssetManager::GetTerrainEntityArraySize() {
-	return this->globalTerrainEntities.size();
-}
-
 size_t AssetManager::GetSoundArraySize() {
 	return this->globalSounds.size();
 }
@@ -866,10 +853,6 @@ FMOD::Sound* AssetManager::GetSoundAtID(int id) {
 
 std::shared_ptr<Camera> AssetManager::GetCameraAtID(int id) {
 	return this->globalCameras[id];
-}
-
-std::shared_ptr<GameEntity> AssetManager::GetTerrainAtID(int id) {
-	return this->globalTerrainEntities[id];
 }
 
 std::shared_ptr<Sky> AssetManager::GetSkyAtID(int id) {
@@ -1370,14 +1353,6 @@ void AssetManager::RemoveCamera(int id) {
 	globalCameras.erase(globalCameras.begin() + id);
 }
 
-void AssetManager::RemoveTerrain(std::string name) {
-	globalTerrainEntities.erase(globalTerrainEntities.begin() + GetTerrainIDByName(name));
-}
-
-void AssetManager::RemoveTerrain(int id) {
-	globalTerrainEntities.erase(globalTerrainEntities.begin() + id);
-}
-
 void AssetManager::RemoveMaterial(std::string name) {
 	globalMaterials.erase(globalMaterials.begin() + GetMaterialIDByName(name));
 }
@@ -1425,14 +1400,6 @@ void AssetManager::EnableDisableCamera(std::string name, bool value) {
 
 void AssetManager::EnableDisableCamera(int id, bool value) {
 	globalCameras[id]->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisableTerrain(std::string name, bool value) {
-	GetTerrainByName(name)->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisableTerrain(int id, bool value) {
-	globalTerrainEntities[id]->SetEnableDisable(value);
 }
 
 // See GetLightIDByName
@@ -1509,15 +1476,6 @@ std::shared_ptr<Camera> AssetManager::GetCameraByName(std::string name) {
 	for (int i = 0; i < globalCameras.size(); i++) {
 		if (globalCameras[i]->GetName() == name) {
 			return globalCameras[i];
-		}
-	}
-	return nullptr;
-}
-
-std::shared_ptr<GameEntity> AssetManager::GetTerrainByName(std::string name) {
-	for (int i = 0; i < globalTerrainEntities.size(); i++) {
-		if (globalTerrainEntities[i]->GetName() == name) {
-			return globalTerrainEntities[i];
 		}
 	}
 	return nullptr;
@@ -1606,15 +1564,6 @@ int AssetManager::GetMeshIDByName(std::string name) {
 int AssetManager::GetCameraIDByName(std::string name) {
 	for (int i = 0; i < globalCameras.size(); i++) {
 		if (globalCameras[i]->GetName() == name) {
-			return i;
-		}
-	}
-	return -1;
-}
-
-int AssetManager::GetTerrainIDByName(std::string name) {
-	for (int i = 0; i < globalTerrainEntities.size(); i++) {
-		if (globalTerrainEntities[i]->GetName() == name) {
 			return i;
 		}
 	}

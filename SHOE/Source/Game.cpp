@@ -529,54 +529,17 @@ void Game::RenderUI(float deltaTime) {
 			ImGui::TreePop();
 		}
 	}
-
+	/*
 	if (terrainWindowEnabled) {
 		// Display the debug UI for terrain
 		ImGui::Begin("Terrain Editor");
-
-		std::shared_ptr<GameEntity> currentEntity = globalAssets.GetTerrainAtID(terrainUIIndex);
-		std::string indexStr = std::to_string(entityUIIndex) + " - " + currentEntity->GetName();
-		std::string node = "Editing Terrain " + indexStr;
-		ImGui::Text(node.c_str());
-
-		if (ImGui::ArrowButton("Previous Object", ImGuiDir_Left)) {
-			terrainUIIndex--;
-			if (terrainUIIndex < 0) terrainUIIndex = globalAssets.GetTerrainEntityArraySize() - 1;
-		};
-		ImGui::SameLine();
-
-		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
-			terrainUIIndex++;
-			if (terrainUIIndex > globalAssets.GetTerrainEntityArraySize() - 1) terrainUIIndex = 0;
-		};
-
-		std::string nameBuffer;
-		static char nameBuf[64] = "";
-		nameBuffer = currentEntity->GetName();
-		strcpy_s(nameBuf, nameBuffer.c_str());
-		ImGui::InputText("Rename Terrain", nameBuf, sizeof(nameBuffer));
-
-		// Like camera, terrain is currently fetched by name, so this is disabled.
-		// currentEntity->SetName(nameBuf);
 
 		bool entityEnabled = currentEntity->GetEnableDisable();
 		ImGui::Checkbox("Enabled ", &entityEnabled);
 		currentEntity->SetEnableDisable(entityEnabled);
 
-		UIPositionEdit = currentEntity->GetTransform()->GetPosition();
-		UIRotationEdit = currentEntity->GetTransform()->GetPitchYawRoll();
-		UIScaleEdit = currentEntity->GetTransform()->GetScale();
-
-		ImGui::DragFloat3("Position ", &UIPositionEdit.x, 0.5f);
-		ImGui::DragFloat3("Rotation ", &UIRotationEdit.x, 0.5f, 0, 360);
-		ImGui::InputFloat3("Scale ", &UIScaleEdit.x);
-
-		currentEntity->GetTransform()->SetPosition(UIPositionEdit.x, UIPositionEdit.y, UIPositionEdit.z);
-		currentEntity->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
-		currentEntity->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
-
 		ImGui::End();
-	}
+	}*/
 
 	if (rtvWindowEnabled) {
 		ImGui::Begin("Multiple Render Target Viewer");

@@ -1,7 +1,9 @@
 #pragma once
+
 #include "IComponent.h"
 #include "Mesh.h"
 #include "Material.h"
+
 class MeshRenderer : public IComponent
 {
 public:

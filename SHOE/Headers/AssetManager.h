@@ -5,6 +5,7 @@
 #include "SimpleShader.h"
 #include "GameEntity.h"
 #include "ParticleSystem.h"
+#include "Terrain.h"
 #include "WICTextureLoader.h"
 #include <assimp/Importer.hpp>
 #include <assimp/types.h>
@@ -107,7 +108,6 @@ private:
 	std::vector<std::shared_ptr<GameEntity>> globalEntities;
 	std::vector<std::shared_ptr<Light>> globalLights;
 	std::vector<std::shared_ptr<TerrainMats>> globalTerrainMaterials;
-	std::vector<std::shared_ptr<GameEntity>> globalTerrainEntities;
 	std::vector<FMOD::Sound*> globalSounds;
 
 	// Most recently loaded object from category
@@ -148,7 +148,7 @@ public:
 											    std::wstring normalNameToLoad,
 											    std::wstring metalnessNameToLoad,
 											    std::wstring roughnessNameToLoad);
-	std::shared_ptr<GameEntity> CreateTerrainEntity(std::shared_ptr<Mesh> mesh, std::string name = "Terrain");
+	std::shared_ptr<Terrain> CreateTerrainEntity(std::string name = "Terrain");
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
 													std::wstring textureNameToLoad,
 													bool isMultiParticle);
@@ -176,8 +176,6 @@ public:
 	void RemoveMesh(int id);
 	void RemoveCamera(std::string name);
 	void RemoveCamera(int id);
-	void RemoveTerrain(std::string name);
-	void RemoveTerrain(int id);
 	void RemoveMaterial(std::string name);
 	void RemoveMaterial(int id);
 	void RemoveTerrainMaterial(std::string name);
@@ -192,8 +190,6 @@ public:
 	void EnableDisableSky(int id, bool value);
 	void EnableDisableCamera(std::string name, bool value);
 	void EnableDisableCamera(int id, bool value);
-	void EnableDisableTerrain(std::string name, bool value);
-	void EnableDisableTerrain(int id, bool value);
 	//void EnableDisableLight(std::string name, bool value);
 	void EnableDisableLight(int id, bool value);
 
@@ -206,7 +202,6 @@ public:
 	std::shared_ptr<SimpleComputeShader> GetComputeShaderByName(std::string name);
 	std::shared_ptr<Mesh> GetMeshByName(std::string name);
 	std::shared_ptr<Camera> GetCameraByName(std::string name);
-	std::shared_ptr<GameEntity> GetTerrainByName(std::string name);
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
 	std::shared_ptr<TerrainMats> GetTerrainMaterialByName(std::string name);
 	std::shared_ptr<Light> GetLightByName(std::string name);
@@ -219,7 +214,6 @@ public:
 	int GetComputeShaderIDByName(std::string name);
 	int GetMeshIDByName(std::string name);
 	int GetCameraIDByName(std::string name);
-	int GetTerrainIDByName(std::string name);
 	int GetMaterialIDByName(std::string name);
 	/*int GetTerrainMaterialIDByName(std::string name);
 	int GetLightIDByName(std::string name);*/
@@ -237,7 +231,6 @@ public:
 	size_t GetGameEntityArraySize();
 	size_t GetLightArraySize();
 	size_t GetTerrainMaterialArraySize();
-	size_t GetTerrainEntityArraySize();
 	size_t GetSoundArraySize();
 	Light* GetLightArray();
 	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
@@ -252,7 +245,6 @@ public:
 	std::shared_ptr<SimpleVertexShader> GetVertexShaderAtID(int id);
 	std::shared_ptr<SimplePixelShader> GetPixelShaderAtID(int id);
 	std::shared_ptr<SimpleComputeShader> GetComputeShaderAtID(int id);
-	std::shared_ptr<GameEntity> GetTerrainAtID(int id);
 	std::shared_ptr<GameEntity> GetGameEntityByID(int id);
 	std::shared_ptr<Sky> GetSkyAtID(int id);
 
