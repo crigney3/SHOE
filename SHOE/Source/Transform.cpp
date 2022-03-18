@@ -55,21 +55,25 @@ void Transform::UpdateWorldInfo()
 
 void Transform::SetPosition(float x, float y, float z) {
 	isDirty = true;
+	//MarkChildTransformsDirty(); //JACOB
 	this->pos = XMFLOAT3(x, y, z);
 }
 
 void Transform::SetPosition(XMFLOAT3 pos) {
 	isDirty = true;
+	//MarkChildTransformsDirty();
 	this->pos = pos;
 }
 
 void Transform::SetRotation(float pitch, float yaw, float roll) {
 	isDirty = true;
+	MarkChildTransformsDirty();
 	this->rotQuat = XMFLOAT4(pitch, yaw, roll, +0.0f);
 }
 
 void Transform::SetRotation(XMFLOAT3 rot) {
 	isDirty = true;
+	MarkChildTransformsDirty();
 	this->rotQuat = XMFLOAT4(rot.x, rot.y, rot.z, +0.0f);
 }
 
