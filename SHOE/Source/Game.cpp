@@ -58,7 +58,6 @@ Game::~Game()
 	delete& AssetManager::GetInstance();
 	delete& AudioHandler::GetInstance();
 
-	delete loadingFont;
 	delete loadingSpriteBatch;
 }
 
@@ -68,8 +67,8 @@ Game::~Game()
 // --------------------------------------------------------
 void Game::Init()
 {
-	/*loadingMutex = new std::mutex();
-	notification = new std::condition_variable();*/
+	loadingMutex = new std::mutex();
+	notification = new std::condition_variable();
 
 	// Set up the multithreading for the loading screen
 	globalAssets.SetIsLoading(true);
@@ -77,21 +76,15 @@ void Game::Init()
 	//std::lock_guard<std::mutex> lock(*loadingMutex);
 
 	loadingSpriteBatch = new SpriteBatch(context.Get());
-	loadingFont = new SpriteFont(device.Get(), DXCoreInstance->GetFullPathTo_Wide(L"../../../Assets/Fonts/Arial.spritefont").c_str());
 
-	// Acquire thread components
-	//std::thread loadingThread = std::thread( [this] { globalAssets.Initialize(device, context, notification, loadingMutex); });
-	//std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(); });
+	// Start the loading thread and the loading screen thread
+	std::thread loadingThread = std::thread( [this] { globalAssets.Initialize(device, context, notification, loadingMutex, hWnd); });
+	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(); });
 
-	DrawLoadingScreen();
-
-	//loadingThread.join();
-	//screenThread.join();
-
-	// Initialize everything from gameobjects to skies
-	globalAssets.Initialize(device, context, notification, loadingMutex);
-
-	//screenThread.join();
+	// Once they've stopped passing control back and forth, join them
+	// to the main thread
+	screenThread.join();
+	loadingThread.join();
 
 	globalAssets.SetIsLoading(false);
 
@@ -101,8 +94,6 @@ void Game::Init()
 
 	Entities = globalAssets.GetActiveGameEntities();
 
-	// Initialize the input manager with the window's handle
-	Input::GetInstance().Initialize(this->hWnd);
 	statsEnabled = true;
 	movingEnabled = true;
 	lightWindowEnabled = false;
@@ -118,7 +109,7 @@ void Game::Init()
 	emitterUIIndex = 0;
 	camUIIndex = 0;
 	terrainUIIndex = 0;
-	skyUIIndex = 1;
+	skyUIIndex = 0;
 
 	skies = globalAssets.GetSkyArray();
 
@@ -130,15 +121,6 @@ void Game::Init()
 	// Essentially: "What kind of shape should the GPU draw with our data?"
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	// Add ImGui components
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-
-	ImGui::StyleColorsDark();
-
-	ImGui_ImplWin32_Init(hWnd);
-	ImGui_ImplDX11_Init(device.Get(), context.Get());
-
 	//With everything initialized, start the renderer
 	renderer = std::make_unique<Renderer>(height,
 										  width,
@@ -147,9 +129,6 @@ void Game::Init()
 										  swapChain,
 										  backBufferRTV,
 										  depthStencilView);
-
-	/*delete loadingMutex;
-	delete notification;*/
 }
 
 void Game::RenderUI(float deltaTime) {
@@ -906,65 +885,79 @@ void Game::Update(float deltaTime, float totalTime)
 }
 
 void Game::DrawLoadingScreen() {
-//	while (globalAssets.GetIsLoading()) {
-//		std::unique_lock<std::mutex> lock(*loadingMutex);
-//		using time = std::chrono::duration<int, std::milli>;
-//		if (notification->wait_for(lock, time(100), [&] {return globalAssets.singleLoadComplete; })) {
-//			// Super generic draw code for now
-//			// Background color (Cornflower Blue in this case) for clearing
-//			const float color[4] = { 0.4f, 0.6f, 0.75f, 0.0f };
-//
-//			context->ClearRenderTargetView(backBufferRTV.Get(), color);
-//			context->ClearDepthStencilView(
-//				depthStencilView.Get(),
-//				D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
-//				1.0f,
-//				0);
-//
-//			/*context->VSSetShader(vertexShader.Get(), 0, 0);
-//			context->PSSetShader(pixelShader.Get(), 0, 0);*/
-//
-//			//context->IASetInputLayout(inputLayout.Get());
-//
-//			swapChain->Present(0, 0);
-//
-//			context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthStencilView.Get());
-//		}
-//		else {
-//#if defined(DEBUG) || defined(_DEBUG)
-//			printf("Took too long to load. \n");
-//#endif
-//		}	
-//
-//		globalAssets.SetSingleLoadComplete(false);
-//		lock.unlock();
-//		notification->notify_all();
-//	}
+	while (globalAssets.GetIsLoading()) {
+		std::unique_lock<std::mutex> lock(*loadingMutex);
+		using time = std::chrono::duration<int, std::milli>;
+		if (notification->wait_for(lock, time(3000), [&] {return globalAssets.GetSingleLoadComplete(); })) {
+			// Super generic draw code for now
+			// Background color (Cornflower Blue in this case) for clearing
+			const float color[4] = { 0.0f, 0.0f, 0.1f, 0.0f };
+
+			std::string loadedCategoryString = "Loading " + globalAssets.GetLastLoadedCategory();
+			std::string loadedObjectString;
+
+			if (globalAssets.GetLoadingException()) {
+				try {
+					std::rethrow_exception(globalAssets.GetLoadingException());
+				}
+				catch (const std::exception& e) {
+					loadedObjectString = "Last Object: " + globalAssets.GetLastLoadedObject() + " Failed to Load!Error is printed to DBG console.";
+#if defined(DEBUG) || defined(_DEBUG)
+					printf(e.what());
+#endif
+				}
+			}
+			else {
+				loadedObjectString = "Last Object Loaded: " + globalAssets.GetLastLoadedObject();
+			}
+
+			context->ClearRenderTargetView(backBufferRTV.Get(), color);
+			context->ClearDepthStencilView(
+				depthStencilView.Get(),
+				D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+				1.0f,
+				0);
+
+			// Get fonts
+			static std::shared_ptr<SpriteFont> titleFont = globalAssets.GetFontByName("Roboto-Bold-72pt");
+			static std::shared_ptr<SpriteFont> categoryFont = globalAssets.GetFontByName("SmoochSans-Bold");
+			static std::shared_ptr<SpriteFont> objectFont = globalAssets.GetFontByName("SmoochSans-Italic");
+
+			loadingSpriteBatch->Begin();
+
+			DirectX::XMFLOAT2 titleOrigin;
+			DirectX::XMFLOAT2 categoryOrigin;
+			DirectX::XMFLOAT2 objectOrigin;
+
+			// Certified conversion moment
+			DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString("SHOE") / 2.0f);
+			DirectX::XMStoreFloat2(&categoryOrigin, categoryFont->MeasureString(loadedCategoryString.c_str()) / 2.0f);
+			DirectX::XMStoreFloat2(&objectOrigin, objectFont->MeasureString(loadedObjectString.c_str()) / 2.0f);
+
+			titleFont->DrawString(loadingSpriteBatch, "SHOE", DirectX::XMFLOAT2(width / 2, height / 5), DirectX::Colors::Gold, 0.0f, titleOrigin);
+			categoryFont->DrawString(loadingSpriteBatch, loadedCategoryString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.5), DirectX::Colors::White, 0.0f, categoryOrigin);
+			objectFont->DrawString(loadingSpriteBatch, loadedObjectString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.2), DirectX::Colors::LightGray, 0.0f, objectOrigin);
+
+			loadingSpriteBatch->End();
+
+			swapChain->Present(0, 0);
+
+			context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthStencilView.Get());
+		}
+		else {
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("Took too long to load. \n");
+#endif
+		}	
+
+		globalAssets.SetSingleLoadComplete(false);
+		lock.unlock();
+		notification->notify_all();
+	}
 
 	// For now, use a generic loading screen
 
-	// Super generic draw code for now
-	// Background color (Cornflower Blue in this case) for clearing
-	const float color[4] = { 0.4f, 0.6f, 0.75f, 0.0f };
-
-	context->ClearRenderTargetView(backBufferRTV.Get(), color);
-	context->ClearDepthStencilView(
-		depthStencilView.Get(),
-		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
-		1.0f,
-		0);
-
-	loadingSpriteBatch->Begin();
-
-	loadingFont->DrawString(loadingSpriteBatch, "Loading...", DirectX::XMFLOAT2(width / 2, height / 2), DirectX::Colors::White);
-	loadingFont->DrawString(loadingSpriteBatch, "SHOE", DirectX::XMFLOAT2(width / 2, height / 4), DirectX::Colors::White);
-	loadingFont->DrawString(loadingSpriteBatch, "Yes this is supposed to be more complex of a loading screen, I couldn't get the threads to stop fighting", DirectX::XMFLOAT2(width / 4, (height / 2) + 40), DirectX::Colors::White);
-
-	loadingSpriteBatch->End();
-
-	swapChain->Present(0, 0);
-
-	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthStencilView.Get());
+	
 }
 
 // --------------------------------------------------------

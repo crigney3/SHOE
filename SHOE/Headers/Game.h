@@ -16,8 +16,6 @@
 #include "Emitter.h"
 #include <thread>
 #include <chrono>
-#include "SpriteBatch.h"
-#include "SpriteFont.h"
 
 class Game 
 	: public DXCore
