@@ -135,10 +135,12 @@ std::vector<std::shared_ptr<IComponent>> GameEntity::GetAllComponents()
  */
 void GameEntity::Release()
 {
-	/*for(std::shared_ptr<GameEntity> child : transform->GetChildrenAsGameEntities())
+	for(std::shared_ptr<GameEntity> child : transform->GetChildrenAsGameEntities())
 	{
-		child->GetTransform()->SetParent(nullptr);
-	}*/
+		if (child != NULL) {
+			child->GetTransform()->SetParent(nullptr);
+		}	
+	}
 	for (std::shared_ptr<ComponentPacket> packet : componentList) {
 		packet->component->OnDestroy();
 		packet->deallocator(packet->component);

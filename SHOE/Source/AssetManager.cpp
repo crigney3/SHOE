@@ -16,45 +16,40 @@ AssetManager::~AssetManager() {
 	}
 }
 
-void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock) {
+void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock, HWND hwnd) {
 	HRESULT hr = CoInitialize(NULL);
-
-	/*GUID assetID;
-	hr = CoCreateGuid(&assetID);
-
-	hr = CreateClassMoniker(assetID, &assetMoniker);
-
-	if (hr != S_OK) {
-		return;
-	}
-
-	HANDLE hDoneLoading = ::CreateEvent(NULL, FALSE, FALSE, NULL);
-
-	hr = BindMoniker(assetMoniker, 0, IID_AsyncIUnknown, (void**)&notifications);*/
 
 	dxInstance = DXCore::DXCoreInstance;
 	this->context = context;
 	this->device = device;
 
+	this->threadNotifier = threadNotifier;
+	this->threadLock = threadLock;
+
+	// This must occur before the loading screen starts
+	InitializeFonts();
+
+	// The rest signal the loading screen each time an object loads
 	InitializeShaders();
-
-	/*loaded.category = std::string("Shaders");
-	loaded.object = std::string("All");
-	SetSingleLoadComplete(true);
-	threadNotifier->notify_all();
-
-	std::unique_lock<std::mutex> lock(*threadLock);
-	threadNotifier->wait(lock, [&] {return singleLoadComplete == 0; });*/
-
 	InitializeCameras();
 	InitializeLights();
 	InitializeMaterials();
 	InitializeMeshes();
 	InitializeTerrainMaterials();
 	InitializeGameEntities();
-	InitializeSkies();
 	InitializeEmitters();
+	InitializeSkies();
 	InitializeAudio();
+	InitializeIMGUI(hwnd);
+
+	// Initialize the input manager with the window's handle
+	Input::GetInstance().Initialize(hwnd);
+
+	SetLoadedAndWait("Post-Initialization", "Preparing to render");
+
+	this->isLoading = false;
+	this->singleLoadComplete = true;
+	threadNotifier->notify_all();
 }
 
 bool AssetManager::GetSingleLoadComplete() {
@@ -73,6 +68,10 @@ std::string AssetManager::GetLastLoadedObject() {
 	return this->loaded.object;
 }
 
+std::exception_ptr AssetManager::GetLoadingException() {
+	return this->loaded.errorCode;
+}
+
 void AssetManager::SetIsLoading(bool isLoading) {
 	this->isLoading = isLoading;
 }
@@ -80,84 +79,160 @@ void AssetManager::SetIsLoading(bool isLoading) {
 void AssetManager::SetSingleLoadComplete(bool loadComplete) {
 	this->singleLoadComplete = loadComplete;
 }
+
+void AssetManager::SetLoadedAndWait(std::string category, std::string object, std::exception_ptr error) {
+	if (isLoading) {
+		loaded.category = category;
+		loaded.object = object;
+		if (error) {
+			loaded.errorCode = error;
+		}
+		SetSingleLoadComplete(true);
+		threadNotifier->notify_all();
+
+		std::unique_lock<std::mutex> lock(*threadLock);
+		threadNotifier->wait(lock, [&] {return singleLoadComplete == 0; });
+	}
+	else {
+		// This a new asset being loaded without a loading screen
+		return;
+	}
+}
 #pragma endregion
 
 #pragma region createAssets
 FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode) {
-	FMOD::Sound* sound;
-	std::string assetPath = "../../../Assets/Sounds/";
+	try
+	{
+		FMOD::Sound* sound;
+		std::string assetPath = "../../../Assets/Sounds/";
 
-	sound = audioInstance.LoadSound(dxInstance->GetFullPathTo(assetPath + path), mode);
+		sound = audioInstance.LoadSound(dxInstance->GetFullPathTo(assetPath + path), mode);
 
-	globalSounds.push_back(sound);
+		globalSounds.push_back(sound);
 
-	return sound;
+		SetLoadedAndWait("Sounds", path);
+
+		return sound;
+	}
+	catch (...) {
+		SetLoadedAndWait("Sounds", path, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFLOAT3 pos, float aspectRatio, int type) {
-	std::shared_ptr<Camera> newCam;
+	try {
+		std::shared_ptr<Camera> newCam;
 
-	newCam = std::make_shared<Camera>(pos, aspectRatio, type, id);
+		newCam = std::make_shared<Camera>(pos, aspectRatio, type, id);
 
-	this->globalCameras.push_back(newCam);
+		this->globalCameras.push_back(newCam);
 
-	return newCam;
+		SetLoadedAndWait("Cameras", id);
+
+		return newCam;
+	}
+	catch (...) {
+		SetLoadedAndWait("Camera", id, std::current_exception());
+
+		return NULL;
+	}
+	
 }
 
 std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::wstring nameToLoad) {
-	std::shared_ptr<SimpleVertexShader> newVS;
+	try {
+		std::shared_ptr<SimpleVertexShader> newVS;
 
-	newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
+		newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
 
-	vertexShaders.push_back(newVS);
+		vertexShaders.push_back(newVS);
 
-	return newVS;
+		SetLoadedAndWait("Vertex Shaders", id);
+
+		return newVS;
+	}
+	catch (...) {
+		SetLoadedAndWait("Vertex Shaders", id, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string id, std::wstring nameToLoad) {
-	std::shared_ptr<SimplePixelShader> newPS;
+	try {
+		std::shared_ptr<SimplePixelShader> newPS;
 
-	newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
+		newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
 
-	pixelShaders.push_back(newPS);
+		pixelShaders.push_back(newPS);
 
-	return newPS;
+		SetLoadedAndWait("Pixel Shaders", id);
+
+		return newPS;
+	}
+	catch (...) {
+		SetLoadedAndWait("Pixel Shaders", id, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::wstring nameToLoad) {
-	std::shared_ptr<SimpleComputeShader> newCS;
+	try {
+		std::shared_ptr<SimpleComputeShader> newCS;
 
-	newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
+		newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
 
-	computeShaders.push_back(newCS);
+		computeShaders.push_back(newCS);
 
-	/*Microsoft::WRL::ComPtr<ID3DBlob> assembly;
-	Microsoft::WRL::ComPtr<ID3DBlob> binary;
+		SetLoadedAndWait("Compute Shaders", id);
 
-	binary = newCS->GetShaderBlob();
+		// Prints the shader to a readable blob
+		/*Microsoft::WRL::ComPtr<ID3DBlob> assembly;
+		Microsoft::WRL::ComPtr<ID3DBlob> binary;
 
-	HRESULT hr = D3DDisassemble(
-		binary->GetBufferPointer(),
-		binary->GetBufferSize(),
-		D3D_DISASM_ENABLE_INSTRUCTION_NUMBERING, nullptr,
-		&assembly);
+		binary = newCS->GetShaderBlob();
 
-	D3DWriteBlobToFile(assembly.Get(), nameToLoad.c_str(), 1);*/
+		HRESULT hr = D3DDisassemble(
+			binary->GetBufferPointer(),
+			binary->GetBufferSize(),
+			D3D_DISASM_ENABLE_INSTRUCTION_NUMBERING, nullptr,
+			&assembly);
 
-	return newCS;
+		D3DWriteBlobToFile(assembly.Get(), nameToLoad.c_str(), 1);*/
+
+		return newCS;
+	}
+	catch (...) {
+		SetLoadedAndWait("Compute Shaders", id, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameToLoad) {
-	std::shared_ptr<Mesh> newMesh;
-	std::string assetPath;
+	try {
+		std::shared_ptr<Mesh> newMesh;
+		std::string assetPath;
 
-	assetPath = "../../../Assets/Models/";
+		assetPath = "../../../Assets/Models/";
 
-	newMesh = std::make_shared<Mesh>(dxInstance->GetFullPathTo(assetPath + nameToLoad).c_str(), device, id);
+		newMesh = std::make_shared<Mesh>(dxInstance->GetFullPathTo(assetPath + nameToLoad).c_str(), device, id);
 
-	globalMeshes.push_back(newMesh);
+		globalMeshes.push_back(newMesh);
 
-	return newMesh;
+		SetLoadedAndWait("Meshes", id);
+
+		return newMesh;
+	}
+	catch (...) {
+		SetLoadedAndWait("Mesh", id, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
@@ -165,128 +240,181 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 														  std::wstring normalNameToLoad,
 														  std::wstring metalnessNameToLoad,
 														  std::wstring roughnessNameToLoad) {
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
-	std::shared_ptr<Material> newMat;
-	std::wstring assetPathString;
+	try {
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
+		std::shared_ptr<Material> newMat;
+		std::wstring assetPathString;
 
-	//Create sampler state
-	D3D11_SAMPLER_DESC textureDesc;
-	textureDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	textureDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	textureDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	textureDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	textureDesc.MaxAnisotropy = 10;
-	textureDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	textureDesc.MipLODBias = 0;
-	textureDesc.MinLOD = 0;
+		//Create sampler state
+		D3D11_SAMPLER_DESC textureDesc;
+		textureDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		textureDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		textureDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		textureDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+		textureDesc.MaxAnisotropy = 10;
+		textureDesc.MaxLOD = D3D11_FLOAT32_MAX;
+		textureDesc.MipLODBias = 0;
+		textureDesc.MinLOD = 0;
 
-	device->CreateSamplerState(&textureDesc, &textureState);
+		device->CreateSamplerState(&textureDesc, &textureState);
 
-	//Create clamp sampler state
-	D3D11_SAMPLER_DESC clampDesc;
-	clampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	clampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	clampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	clampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	clampDesc.MaxAnisotropy = 10;
-	clampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	clampDesc.MipLODBias = 0;
-	clampDesc.MinLOD = 0;
+		//Create clamp sampler state
+		D3D11_SAMPLER_DESC clampDesc;
+		clampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+		clampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+		clampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		clampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+		clampDesc.MaxAnisotropy = 10;
+		clampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+		clampDesc.MipLODBias = 0;
+		clampDesc.MinLOD = 0;
 
-	device->CreateSamplerState(&clampDesc, &clampState);
+		device->CreateSamplerState(&clampDesc, &clampState);
 
-	std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
-	std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
+		std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
+		std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
 
-	assetPathString = L"../../../Assets/PBR/";
+		assetPathString = L"../../../Assets/PBR/";
 
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Albedo/" + albedoNameToLoad).c_str(), nullptr, &albedo);
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Normals/" + normalNameToLoad).c_str(), nullptr, &normals);
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Metalness/" + metalnessNameToLoad).c_str(), nullptr, &metalness);
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Roughness/" + roughnessNameToLoad).c_str(), nullptr, &roughness);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Albedo/" + albedoNameToLoad).c_str(), nullptr, &albedo);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Normals/" + normalNameToLoad).c_str(), nullptr, &normals);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Metalness/" + metalnessNameToLoad).c_str(), nullptr, &metalness);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Roughness/" + roughnessNameToLoad).c_str(), nullptr, &roughness);
 
-	newMat = std::make_shared<Material>(whiteTint, 
-										PSNormal, 
-										VSNormal,
-										albedo,
-										textureState,
-										clampState,
-										normals,
-										roughness,
-										metalness,
-										id);
+		newMat = std::make_shared<Material>(whiteTint,
+			PSNormal,
+			VSNormal,
+			albedo,
+			textureState,
+			clampState,
+			normals,
+			roughness,
+			metalness,
+			id);
 
-	globalMaterials.push_back(newMat);
+		globalMaterials.push_back(newMat);
 
-	return newMat;
+		SetLoadedAndWait("PBR Materials", id);
+
+		return newMat;
+	}
+	catch (...) {
+		SetLoadedAndWait("PBR Material", id, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 {
-	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(XMMatrixIdentity(), name);
-	newEnt->Initialize();
+	try {
+		std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(XMMatrixIdentity(), name);
+		newEnt->Initialize();
 
-	globalEntities.push_back(newEnt);
+		globalEntities.push_back(newEnt);
 
-	return newEnt;
+		SetLoadedAndWait("Game Entities", name);
+
+		return newEnt;
+	}
+	catch (...) {
+		SetLoadedAndWait("Game Entities", name, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name) {
-	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	try {
+		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
 
-	std::shared_ptr<MeshRenderer> renderer = newEnt->AddComponent<MeshRenderer>();
-	renderer->SetMesh(mesh);
-	renderer->SetMaterial(mat);
+		std::shared_ptr<MeshRenderer> renderer = newEnt->AddComponent<MeshRenderer>();
+		renderer->SetMesh(mesh);
+		renderer->SetMaterial(mat);
 
-	return newEnt;
+		SetLoadedAndWait("Game Entities", name + " Components");
+
+		return newEnt;
+	}
+	catch (...) {
+		SetLoadedAndWait("Game Entities", name + " Components", std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::string name) {
-	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-	return newEnt->AddComponent<Terrain>();
+	try {
+		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+
+		SetLoadedAndWait("Terrain Entities", name);
+
+		return newEnt->AddComponent<Terrain>();
+	}
+	catch (...) {
+		SetLoadedAndWait("Terrain Entities", name, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, std::string name) {
-	std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
+	try {
+		std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
 
-	std::vector<std::shared_ptr<SimplePixelShader>> importantSkyPixelShaders;
-	std::vector<std::shared_ptr<SimpleVertexShader>> importantSkyVertexShaders;
+		std::vector<std::shared_ptr<SimplePixelShader>> importantSkyPixelShaders;
+		std::vector<std::shared_ptr<SimpleVertexShader>> importantSkyVertexShaders;
 
-	importantSkyPixelShaders.push_back(GetPixelShaderByName("SkyPS"));
-	importantSkyPixelShaders.push_back(GetPixelShaderByName("IrradiancePS"));
-	importantSkyPixelShaders.push_back(GetPixelShaderByName("SpecularConvolutionPS"));
-	importantSkyPixelShaders.push_back(GetPixelShaderByName("BRDFLookupTablePS"));
+		importantSkyPixelShaders.push_back(GetPixelShaderByName("SkyPS"));
+		importantSkyPixelShaders.push_back(GetPixelShaderByName("IrradiancePS"));
+		importantSkyPixelShaders.push_back(GetPixelShaderByName("SpecularConvolutionPS"));
+		importantSkyPixelShaders.push_back(GetPixelShaderByName("BRDFLookupTablePS"));
 
-	importantSkyVertexShaders.push_back(GetVertexShaderByName("SkyVS"));
-	importantSkyVertexShaders.push_back(GetVertexShaderByName("FullscreenVS"));
+		importantSkyVertexShaders.push_back(GetVertexShaderByName("SkyVS"));
+		importantSkyVertexShaders.push_back(GetVertexShaderByName("FullscreenVS"));
 
-	std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, skyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
+		std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, skyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
 
-	skies.push_back(newSky);
+		skies.push_back(newSky);
 
-	return newSky;
+		SetLoadedAndWait("Skies", name);
+
+		return newSky;
+	}
+	catch (...) {
+		SetLoadedAndWait("Skies", name, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string name,
 	std::wstring textureNameToLoad,
 	bool isMultiParticle)
 {
-	std::shared_ptr<GameEntity> emitterEntity = CreateGameEntity(name);
-	std::shared_ptr<ParticleSystem> newEmitter = emitterEntity->AddComponent<ParticleSystem>();
-	
-	newEmitter->SetIsMultiParticle(isMultiParticle);
-	newEmitter->SetParticleTextureSRV(LoadParticleTexture(textureNameToLoad, isMultiParticle));
+	try {
+		std::shared_ptr<GameEntity> emitterEntity = CreateGameEntity(name);
+		std::shared_ptr<ParticleSystem> newEmitter = emitterEntity->AddComponent<ParticleSystem>();
 
-	// Set all the compute shaders here
-	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleEmitCS"), Emit);
-	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleMoveCS"), Simulate);
-	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleCopyCS"), Copy);
-	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleInitDeadCS"), DeadListInit);
+		newEmitter->SetIsMultiParticle(isMultiParticle);
+		newEmitter->SetParticleTextureSRV(LoadParticleTexture(textureNameToLoad, isMultiParticle));
 
-	return newEmitter;
+		// Set all the compute shaders here
+		newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleEmitCS"), Emit);
+		newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleMoveCS"), Simulate);
+		newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleCopyCS"), Copy);
+		newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleInitDeadCS"), DeadListInit);
+
+		return newEmitter;
+	}
+	catch (...) {
+		SetLoadedAndWait("Particle Emitter", name, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string name,
@@ -303,6 +431,27 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 	newEmitter->SetBlendState(additiveBlendState);
 
 	return newEmitter;
+}
+
+std::shared_ptr<SpriteFont> AssetManager::CreateSHOEFont(std::string name, std::wstring filePath, bool preInitializing) {
+	try {
+		std::wstring assetPath = L"../../../Assets/Fonts/";
+
+		std::shared_ptr<SpriteFont> newFont = std::make_shared<SpriteFont>(device.Get(), dxInstance->GetFullPathTo_Wide(assetPath + filePath).c_str());
+
+		globalFonts.emplace(name, newFont);
+
+		// If the loading screen fonts aren't loaded, don't trigger
+		// the loading screen.
+		if (!preInitializing) SetLoadedAndWait("Font", name);
+
+		return newFont;
+	}
+	catch (...) {
+		if (!preInitializing) SetLoadedAndWait("Font", name, std::current_exception());
+
+		return NULL;
+	}
 }
 #pragma endregion
 
@@ -336,6 +485,9 @@ void AssetManager::InitializeGameEntities() {
 	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveRoughMat"), "Refractive Cube");
 	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("refractiveBronzeMat"), "Refractive Torus");
 
+	std::shared_ptr<Terrain> terrainEntity = CreateTerrainEntity("Main Terrain");
+	terrainEntity->GetGameEntity()->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
+
 	GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.7f, +0.0f, +0.0f);
 	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-0.7f, +0.0f, +0.0f);
 	GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition(+0.0f, +0.7f, +0.0f);
@@ -363,9 +515,6 @@ void AssetManager::InitializeGameEntities() {
 	GetGameEntityByName("Rough Torus")->GetTransform()->SetParent(GetGameEntityByName("Paint Sphere")->GetTransform());
 	GetGameEntityByName("Floor Helix")->GetTransform()->SetParent(GetGameEntityByName("Rough Torus")->GetTransform());
 	GetGameEntityByName("Wood Sphere")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
-	
-	std::shared_ptr<Terrain> terrainEntity = CreateTerrainEntity("Main Terrain");
-	terrainEntity->GetGameEntity()->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
 
 	CreateComplexGeometry();
 }
@@ -498,6 +647,9 @@ void AssetManager::InitializeMaterials() {
 void AssetManager::InitializeMeshes() {
 	globalMeshes = std::vector<std::shared_ptr<Mesh>>();
 
+	// Test loading failure
+	CreateMesh("ExceptionTest", "InvalidPath");
+
 	CreateMesh("Cube", "cube.obj");
 	CreateMesh("Cylinder", "cylinder.obj");
 	CreateMesh("Helix", "helix.obj");
@@ -512,17 +664,18 @@ void AssetManager::InitializeSkies() {
 	std::shared_ptr<SimplePixelShader> PSSky = GetPixelShaderByName("SkyPS");
 	std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
 
-	//Skybox map pointers
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> spaceTexture;
+	// Skybox map pointers
+	// Temporarily, we only load 2 skies, as they take a while to load
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> spaceTexture;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> sunnyTexture;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mountainTexture;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> niagaraTexture;
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mountainTexture;
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> niagaraTexture;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> starTexture;
 
-	CreateDDSTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/SpaceCubeMap.dds").c_str(), nullptr, &spaceTexture);
+	//CreateDDSTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/SpaceCubeMap.dds").c_str(), nullptr, &spaceTexture);
 	CreateDDSTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/SunnyCubeMap.dds").c_str(), nullptr, &sunnyTexture);
 
-	mountainTexture = CreateCubemap(dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/right.jpg").c_str(),
+	/*mountainTexture = CreateCubemap(dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/right.jpg").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/left.jpg").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/up.jpg").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/down.jpg").c_str(),
@@ -533,7 +686,7 @@ void AssetManager::InitializeSkies() {
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/up.jpg").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/down.jpg").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/forward.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/back.jpg").c_str());
+		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/back.jpg").c_str());*/
 	starTexture = CreateCubemap(dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/right.png").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/left.png").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/up.png").c_str(),
@@ -541,124 +694,155 @@ void AssetManager::InitializeSkies() {
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/forward.png").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/back.png").c_str());
 
-	CreateSky(spaceTexture, "space");
+	//CreateSky(spaceTexture, "space");
 	CreateSky(sunnyTexture, "sunny");
-	CreateSky(mountainTexture, "mountain");
-	CreateSky(niagaraTexture, "niagara");
+	//CreateSky(mountainTexture, "mountain");
+	//CreateSky(niagaraTexture, "niagara");
 	CreateSky(starTexture, "stars");
 
 	currentSky = skies[0];
 }
 
 void AssetManager::InitializeLights() {
-	//Init lights list
-	globalLights = std::vector<std::shared_ptr<Light>>();
+	try {
+		//Init lights list
+		globalLights = std::vector<std::shared_ptr<Light>>();
 
-	//white light from the top left
-	std::shared_ptr<Light> mainLight = std::make_shared<Light>();
-	mainLight->type = 0.0f;
-	mainLight->enabled = true;
-	mainLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-	mainLight->intensity = 0.7f;
-	mainLight->direction = DirectX::XMFLOAT3(1, -1, 0);
-	mainLight->range = 100.0f;
+		//white light from the top left
+		std::shared_ptr<Light> mainLight = std::make_shared<Light>();
+		mainLight->type = 0.0f;
+		mainLight->enabled = true;
+		mainLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
+		mainLight->intensity = 0.7f;
+		mainLight->direction = DirectX::XMFLOAT3(1, -1, 0);
+		mainLight->range = 100.0f;
 
-	//white light from the back
-	std::shared_ptr<Light> backLight = std::make_shared<Light>();
-	backLight->type = 0.0f;
-	backLight->enabled = false;
-	backLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-	backLight->intensity = 1.0f;
-	backLight->direction = DirectX::XMFLOAT3(0, 0, -1);
-	backLight->range = 100.0f;
+		SetLoadedAndWait("Lights", "mainLight");
 
-	//red light on the bottom
-	std::shared_ptr<Light> bottomLight = std::make_shared<Light>();
-	bottomLight->type = 0.0f;
-	bottomLight->enabled = false;
-	bottomLight->color = DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f);
-	bottomLight->intensity = 1.0f;
-	bottomLight->direction = DirectX::XMFLOAT3(0, 1, 0);
-	bottomLight->range = 100.0f;
+		//white light from the back
+		std::shared_ptr<Light> backLight = std::make_shared<Light>();
+		backLight->type = 0.0f;
+		backLight->enabled = false;
+		backLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
+		backLight->intensity = 1.0f;
+		backLight->direction = DirectX::XMFLOAT3(0, 0, -1);
+		backLight->range = 100.0f;
 
-	//red pointlight in the center
-	std::shared_ptr<PointLight> centerLight = std::make_shared<PointLight>();
-	centerLight->type = 1.0f;
-	centerLight->enabled = true;
-	centerLight->color = DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f);
-	centerLight->intensity = 1.0f;
-	centerLight->position = DirectX::XMFLOAT3(0, 1.5f, 0);
-	centerLight->range = 2.0f;
+		SetLoadedAndWait("Lights", "backLight");
 
-	//flashlight attached to camera +.5z and x
-	std::shared_ptr<DirectionalLight> flashLight = std::make_shared<DirectionalLight>();
-	flashLight->type = 2.0f;
-	flashLight->enabled = false;
-	flashLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-	flashLight->intensity = 1.0f;
-	flashLight->direction = DirectX::XMFLOAT3(0, 0, -1);
-	flashLight->position = DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f);
-	flashLight->range = 10.0f;
+		//red light on the bottom
+		std::shared_ptr<Light> bottomLight = std::make_shared<Light>();
+		bottomLight->type = 0.0f;
+		bottomLight->enabled = false;
+		bottomLight->color = DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f);
+		bottomLight->intensity = 1.0f;
+		bottomLight->direction = DirectX::XMFLOAT3(0, 1, 0);
+		bottomLight->range = 100.0f;
 
-	globalLights.push_back(mainLight);
-	globalLights.push_back(backLight);
-	globalLights.push_back(bottomLight);
-	globalLights.push_back(centerLight);
-	globalLights.push_back(flashLight);
+		SetLoadedAndWait("Lights", "bottomLight");
+
+		//red pointlight in the center
+		std::shared_ptr<PointLight> centerLight = std::make_shared<PointLight>();
+		centerLight->type = 1.0f;
+		centerLight->enabled = true;
+		centerLight->color = DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f);
+		centerLight->intensity = 1.0f;
+		centerLight->position = DirectX::XMFLOAT3(0, 1.5f, 0);
+		centerLight->range = 2.0f;
+
+		SetLoadedAndWait("Lights", "centerLight");
+
+		//flashlight attached to camera +.5z and x
+		std::shared_ptr<DirectionalLight> flashLight = std::make_shared<DirectionalLight>();
+		flashLight->type = 2.0f;
+		flashLight->enabled = false;
+		flashLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
+		flashLight->intensity = 1.0f;
+		flashLight->direction = DirectX::XMFLOAT3(0, 0, -1);
+		flashLight->position = DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f);
+		flashLight->range = 10.0f;
+
+		SetLoadedAndWait("Lights", "flashLight");
+
+		globalLights.push_back(mainLight);
+		globalLights.push_back(backLight);
+		globalLights.push_back(bottomLight);
+		globalLights.push_back(centerLight);
+		globalLights.push_back(flashLight);
+	}
+	catch (...) {
+		SetLoadedAndWait("Lights", "Unknown Light", std::current_exception());
+
+		return;
+	}
 }
 
 void AssetManager::InitializeTerrainMaterials() {
-	globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMats>>();
+	try {
+		globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMats>>();
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogAlbedo;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestAlbedo;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyAlbedo;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogAlbedo;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestAlbedo;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyAlbedo;
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogMetal;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestMetal;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyMetal;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogMetal;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestMetal;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyMetal;
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogNormal;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestNormal;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyNormal;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogNormal;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestNormal;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyNormal;
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogRough;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestRough;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyRough;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogRough;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestRough;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyRough;
 
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Albedo/bog_albedo.png").c_str(), nullptr, &bogAlbedo);
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Albedo/forest_floor_albedo.png").c_str(), nullptr, &forestAlbedo);
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Albedo/rocky_dirt1-albedo.png").c_str(), nullptr, &rockyAlbedo);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Albedo/bog_albedo.png").c_str(), nullptr, &bogAlbedo);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Albedo/forest_floor_albedo.png").c_str(), nullptr, &forestAlbedo);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Albedo/rocky_dirt1-albedo.png").c_str(), nullptr, &rockyAlbedo);
 
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Metalness/wood_metal.png").c_str(), nullptr, &bogMetal); //These metal maps are blank, so just load the wood
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Metalness/wood_metal.png").c_str(), nullptr, &forestMetal); //Could maybe optimize loading times with memcpy
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Metalness/wood_metal.png").c_str(), nullptr, &rockyMetal);
+		SetLoadedAndWait("Terrain", "TerrainMatAlbedo");
 
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Normals/bog_normal-ogl.png").c_str(), nullptr, &bogNormal);
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Normals/forest_floor_Normal-ogl.png").c_str(), nullptr, &forestNormal);
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Normals/rocky_dirt1-normal-ogl.png").c_str(), nullptr, &rockyNormal);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Metalness/wood_metal.png").c_str(), nullptr, &bogMetal); //These metal maps are blank, so just load the wood
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Metalness/wood_metal.png").c_str(), nullptr, &forestMetal); //Could maybe optimize loading times with memcpy
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Metalness/wood_metal.png").c_str(), nullptr, &rockyMetal);
 
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Roughness/bog_roughness.png").c_str(), nullptr, &bogRough);
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Roughness/forest_floor_Roughness.png").c_str(), nullptr, &forestRough);
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Roughness/rocky_dirt1_Roughness.png").c_str(), nullptr, &rockyRough);
+		SetLoadedAndWait("Terrain", "TerrainMatMetal");
 
-	//Load terrain and add a blend map
-	std::shared_ptr<Mesh> mainTerrain = LoadTerrain(dxInstance->GetFullPathTo("../../../Assets/HeightMaps/valley.raw16").c_str(), 512, 512, 25.0f);
-	globalMeshes.push_back(mainTerrain);
-	std::shared_ptr<TerrainMats> mainTerrainMaterials = std::make_shared<TerrainMats>();
-	mainTerrainMaterials->blendMaterials = std::vector<Material>();
-	CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/blendMap.png").c_str(), nullptr, &mainTerrainMaterials->blendMap);
-	mainTerrainMaterials->blendMaterials.push_back(Material(whiteTint, nullptr, nullptr, forestAlbedo, textureState, clampState, forestNormal, forestRough, forestMetal));
-	mainTerrainMaterials->blendMaterials.push_back(Material(whiteTint, nullptr, nullptr, bogAlbedo, textureState, clampState, bogNormal, bogRough, bogMetal)); //Set these mats' shaders to null as they use the blend map shader
-	mainTerrainMaterials->blendMaterials.push_back(Material(whiteTint, nullptr, nullptr, rockyAlbedo, textureState, clampState, rockyNormal, rockyRough, rockyMetal));
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Normals/bog_normal-ogl.png").c_str(), nullptr, &bogNormal);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Normals/forest_floor_Normal-ogl.png").c_str(), nullptr, &forestNormal);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Normals/rocky_dirt1-normal-ogl.png").c_str(), nullptr, &rockyNormal);
 
-	//Set appropriate tiling
-	mainTerrainMaterials->blendMaterials[0].SetTiling(10.0f);
-	mainTerrainMaterials->blendMaterials[1].SetTiling(10.0f);
+		SetLoadedAndWait("Terrain", "TerrainMatNormal");
 
-	mainTerrainMaterials->name = std::string("Forest TMaterial");
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Roughness/bog_roughness.png").c_str(), nullptr, &bogRough);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Roughness/forest_floor_Roughness.png").c_str(), nullptr, &forestRough);
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Roughness/rocky_dirt1_Roughness.png").c_str(), nullptr, &rockyRough);
 
-	globalTerrainMaterials.push_back(mainTerrainMaterials);
+		//Load terrain and add a blend map
+		std::shared_ptr<Mesh> mainTerrain = LoadTerrain(dxInstance->GetFullPathTo("../../../Assets/HeightMaps/valley.raw16").c_str(), 512, 512, 25.0f);
+		globalMeshes.push_back(mainTerrain);
+		std::shared_ptr<TerrainMats> mainTerrainMaterials = std::make_shared<TerrainMats>();
+		mainTerrainMaterials->blendMaterials = std::vector<Material>();
+		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/blendMap.png").c_str(), nullptr, &mainTerrainMaterials->blendMap);
+		mainTerrainMaterials->blendMaterials.push_back(Material(whiteTint, nullptr, nullptr, forestAlbedo, textureState, clampState, forestNormal, forestRough, forestMetal));
+		mainTerrainMaterials->blendMaterials.push_back(Material(whiteTint, nullptr, nullptr, bogAlbedo, textureState, clampState, bogNormal, bogRough, bogMetal)); //Set these mats' shaders to null as they use the blend map shader
+		mainTerrainMaterials->blendMaterials.push_back(Material(whiteTint, nullptr, nullptr, rockyAlbedo, textureState, clampState, rockyNormal, rockyRough, rockyMetal));
+
+		//Set appropriate tiling
+		mainTerrainMaterials->blendMaterials[0].SetTiling(10.0f);
+		mainTerrainMaterials->blendMaterials[1].SetTiling(10.0f);
+		mainTerrainMaterials->name = std::string("Forest TMaterial");
+
+		globalTerrainMaterials.push_back(mainTerrainMaterials);
+
+		SetLoadedAndWait("Terrain", "MainTerrainMaterial");
+	}
+	catch (...) {
+		SetLoadedAndWait("Terrain Materials", "Unknown Terrain Material", std::current_exception());
+
+		return;
+	}
 }
 
 void AssetManager::InitializeCameras() {
@@ -666,7 +850,9 @@ void AssetManager::InitializeCameras() {
 
 	float aspectRatio = (float)(dxInstance->width / dxInstance->height);
 	CreateCamera("mainCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -5.5f), aspectRatio, 1);
+
 	CreateCamera("mainShadowCamera", DirectX::XMFLOAT3(0.0f, 10.0f, -5.5f), 1.0f, 0);
+
 	std::shared_ptr<Camera> fscTemp = CreateCamera("flashShadowCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -5.5f), 1.0f, 1);
 	fscTemp->GetTransform()->SetRotation(0, 0, 0);
 	fscTemp->UpdateViewMatrix();
@@ -768,6 +954,33 @@ void AssetManager::InitializeAudio() {
 	CreateSound("PianoNotes/pinkyfinger__piano-d.wav", FMOD_DEFAULT);
 	CreateSound("PianoNotes/pinkyfinger__piano-f.wav", FMOD_DEFAULT);
 	CreateSound("PianoNotes/pinkyfinger__piano-g.wav", FMOD_DEFAULT);
+}
+
+void AssetManager::InitializeFonts() {
+	globalFonts = std::map<std::string, std::shared_ptr<DirectX::SpriteFont>>();
+
+	CreateSHOEFont("Roboto-Bold-72pt", L"RobotoCondensed-Bold-72pt.spritefont", true);
+	CreateSHOEFont("SmoochSans-Bold", L"SmoochSans-Bold.spritefont", true);
+	CreateSHOEFont("SmoochSans-Italic", L"SmoochSans-Italic.spritefont", true);
+	CreateSHOEFont("Arial", L"Arial.spritefont");
+	CreateSHOEFont("Roboto-Bold", L"RobotoCondensed-Bold.spritefont");
+	CreateSHOEFont("Roboto-BoldItalic", L"RobotoCondensed-BoldItalic.spritefont");
+	CreateSHOEFont("Roboto-Italic", L"RobotoCondensed-Italic.spritefont");
+	CreateSHOEFont("Roboto-Regular", L"RobotoCondensed-Regular.spritefont");
+	CreateSHOEFont("SmoochSans-BoldItalic", L"SmoochSans-BoldItalic.spritefont");
+	CreateSHOEFont("SmoochSans-Regular", L"SmoochSans-Regular.spritefont");
+}
+
+void AssetManager::InitializeIMGUI(HWND hwnd) {
+	SetLoadedAndWait("UI", "Window Initialization");
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplWin32_Init(hwnd);
+	ImGui_ImplDX11_Init(device.Get(), context.Get());
 }
 #pragma endregion
 
@@ -1503,6 +1716,14 @@ std::shared_ptr<TerrainMats> AssetManager::GetTerrainMaterialByName(std::string 
 		}
 	}
 	return nullptr;
+}
+
+//
+// Dict return by key
+//
+
+std::shared_ptr<SpriteFont> AssetManager::GetFontByName(std::string name) {
+	return globalFonts[name];
 }
 
 // Unlikely to be implemented, see GetLightIdByName

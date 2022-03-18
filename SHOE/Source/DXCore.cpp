@@ -594,6 +594,28 @@ std::wstring DXCore::GetExePath_Wide()
 }
 
 
+// ---------------------------------------------------
+// Gets the internal total time. Should not be used for
+// game updates. Currently used during initialization
+// for debug purposes.
+// ---------------------------------------------------
+float DXCore::GetTotalTime() {
+	UpdateTimer();
+	return this->totalTime;
+}
+
+
+// ---------------------------------------------------
+// Gets the internal delta time. Should not be used for
+// game updates. Currently used during initialization
+// for debug purposes.
+// ---------------------------------------------------
+float DXCore::GetDeltaTime() {
+	UpdateTimer();
+	return this->deltaTime;
+}
+
+
 // ----------------------------------------------------
 //  Gets the full path to a given file.  NOTE: This does 
 //  NOT "find" the file, it simply concatenates the given
