@@ -19,7 +19,8 @@ private:
 	std::shared_ptr<Transform> parent;
 	std::vector<std::shared_ptr<Transform>> children = std::vector<std::shared_ptr<Transform>>();
 public:
-	void Start();
+	void Start() override;
+	void OnDestroy() override;
 	
 	void SetPosition(float x, float y, float z);
 	void SetPosition(DirectX::XMFLOAT3 pos);

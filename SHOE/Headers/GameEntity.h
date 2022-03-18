@@ -17,6 +17,7 @@ private:
 	bool enabled;
 	bool hierarchyIsEnabled;
 
+	std::vector<std::shared_ptr<IComponent>> rawComponentList;
 	std::vector<std::shared_ptr<ComponentPacket>> componentList;
 
 	void UpdateHierarchyIsEnabled(bool active);
@@ -60,6 +61,8 @@ public:
 	std::shared_ptr<T> GetComponentInChildren();
 	template <typename T>
 	std::vector<std::shared_ptr<T>> GetComponentsInChildren();
+
+	std::vector<std::shared_ptr<IComponent>> GetAllComponents();
 	
 	void Release();
 
@@ -76,6 +79,7 @@ std::shared_ptr<T> GameEntity::AddComponent()
 {
 	std::shared_ptr<T> component = ComponentManager::Instantiate<T>(shared_from_this(), this->GetHierarchyIsEnabled());
 	componentList.push_back(std::make_shared<ComponentPacket>(component, ComponentManager::Free<T>));
+	rawComponentList.push_back(component);
 	return component;
 }
 
@@ -94,6 +98,7 @@ bool GameEntity::RemoveComponent()
 			componentList[i]->component->OnDestroy();
 			componentList[i]->deallocator(componentList[i]->component);
 			componentList.erase(componentList.begin() + i);
+			rawComponentList.erase(rawComponentList.begin() + i);
 			return true;
 		}
 	}

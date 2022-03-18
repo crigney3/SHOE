@@ -12,6 +12,11 @@ void Transform::Start() {
 	this->children.clear();
 }
 
+void Transform::OnDestroy()
+{
+	parent = nullptr;
+}
+
 void Transform::SetPosition(float x, float y, float z) {
 	isDirty = true;
 	this->pos = XMFLOAT3(x, y, z);

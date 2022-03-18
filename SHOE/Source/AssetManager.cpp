@@ -363,6 +363,9 @@ void AssetManager::InitializeGameEntities() {
 	GetGameEntityByName("Rough Torus")->GetTransform()->SetParent(GetGameEntityByName("Paint Sphere")->GetTransform());
 	GetGameEntityByName("Floor Helix")->GetTransform()->SetParent(GetGameEntityByName("Rough Torus")->GetTransform());
 	GetGameEntityByName("Wood Sphere")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
+	
+	std::shared_ptr<Terrain> terrainEntity = CreateTerrainEntity("Main Terrain");
+	terrainEntity->GetGameEntity()->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
 
 	CreateComplexGeometry();
 }
@@ -655,8 +658,6 @@ void AssetManager::InitializeTerrainMaterials() {
 
 	mainTerrainMaterials->name = std::string("Forest TMaterial");
 
-	std::shared_ptr<Terrain> terrainEntity = CreateTerrainEntity("Main Terrain");
-	terrainEntity->GetGameEntity()->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
 	globalTerrainMaterials.push_back(mainTerrainMaterials);
 }
 
@@ -726,22 +727,27 @@ void AssetManager::InitializeEmitters() {
 
 	std::shared_ptr<ParticleSystem> basicEmitter = CreateParticleEmitter("basicParticle", L"Smoke/smoke_01.png", 20, 1.0f, 1.0f);
 	basicEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(1.0f, 0.0f, 0.0f));
+	basicEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> basicMultiEmitter = CreateParticleEmitter("basicParticles", L"Smoke/", true);
 	basicMultiEmitter->SetScale(1.0f);
+	basicMultiEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> flameEmitter = CreateParticleEmitter("flameParticles", L"Flame/", 10, 2.0f, 5.0f, true);
 	flameEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-1.0f, 0.0f, 0.0f));
 	flameEmitter->SetColorTint(XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
+	flameEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> starMultiEmitter = CreateParticleEmitter("starParticles", L"Star/", 300, 2.0f, 80.0f, true);
 	starMultiEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-2.0f, 0.0f, 0.0f));
 	starMultiEmitter->SetColorTint(XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
+	starMultiEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> starEmitter = CreateParticleEmitter("starParticle", L"Star/star_08.png", 300, 2.0f, 80.0f);
 	starEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-3.0f, 0.0f, 0.0f));
 	starEmitter->SetColorTint(XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
 	starEmitter->SetScale(0.75f);
+	starEmitter->SetEnabled(false);
 
 	// This was terrifying. Take graphics ideas from Jimmy Digrazia at your own peril.
 	/*CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);

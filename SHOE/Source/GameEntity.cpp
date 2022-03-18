@@ -6,6 +6,7 @@
  */
 void GameEntity::UpdateHierarchyIsEnabled(bool active)
 {
+	hierarchyIsEnabled = active;
 	for (std::shared_ptr<ComponentPacket> packet : componentList)
 	{
 		packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
@@ -122,6 +123,14 @@ std::vector<std::shared_ptr<Transform>> GameEntity::GetComponents<Transform>()
 }
 
 /**
+ * \brief Returns a list of all attached components
+ */
+std::vector<std::shared_ptr<IComponent>> GameEntity::GetAllComponents()
+{
+	return rawComponentList;
+}
+
+/**
  * \brief Frees all of the stored objects in the entity so it can be safely destroyed
  */
 void GameEntity::Release()
@@ -134,6 +143,7 @@ void GameEntity::Release()
 		packet->component->OnDestroy();
 		packet->deallocator(packet->component);
 	}
+	transform->OnDestroy();
 	ComponentManager::Free<Transform>(transform);
 }
 

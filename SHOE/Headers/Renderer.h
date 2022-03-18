@@ -1,4 +1,3 @@
-#include "GameEntity.h"
 #include "AssetManager.h"
 
 #define MAX_LIGHTS 64

@@ -41,8 +41,6 @@ private:
 	AssetManager& globalAssets = AssetManager::GetInstance();
 	AudioHandler& audioHandler = AudioHandler::GetInstance();
 
-	// Initialization helper methods
-
 	// Rendering helper methods
 	void RenderSky();
 	void RenderUI(float deltaTime);
@@ -73,10 +71,8 @@ private:
 	bool statsEnabled;
 	bool lightWindowEnabled;
 	bool objWindowEnabled;
-	bool particleWindowEnabled;
 	bool objHierarchyEnabled;
 	bool skyWindowEnabled;
-	bool terrainWindowEnabled;
 	bool movingEnabled;
 	bool rtvWindowEnabled;
 	bool soundWindowEnabled;
@@ -91,8 +87,6 @@ private:
 	// Transfer these to static locals
 	// Then add helper functions for setting them?
 	int entityUIIndex;
-	int terrainUIIndex;
-	int emitterUIIndex;
 	int camUIIndex;
 	int skyUIIndex;
 	std::vector<int> childIndices;
@@ -118,7 +112,6 @@ private:
 	std::shared_ptr<Material> rockyMat;
 
 	//Terrain pointers
-	std::shared_ptr<GameEntity> terrainEntity;
 	std::shared_ptr<Mesh> mainTerrain;
 	std::shared_ptr<TerrainMats> mainTerrainMaterials;
 
