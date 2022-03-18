@@ -58,7 +58,6 @@ Game::~Game()
 	delete& AssetManager::GetInstance();
 	delete& AudioHandler::GetInstance();
 
-	delete loadingFont;
 	delete loadingSpriteBatch;
 }
 
@@ -77,19 +76,13 @@ void Game::Init()
 	//std::lock_guard<std::mutex> lock(*loadingMutex);
 
 	loadingSpriteBatch = new SpriteBatch(context.Get());
-	loadingFont = new SpriteFont(device.Get(), DXCoreInstance->GetFullPathTo_Wide(L"../../../Assets/Fonts/Arial.spritefont").c_str());
 
-	// Acquire thread components
-	std::thread loadingThread = std::thread( [this] { globalAssets.Initialize(device, context, notification, loadingMutex); });
+	// Start the loading thread and the loading screen thread
+	std::thread loadingThread = std::thread( [this] { globalAssets.Initialize(device, context, notification, loadingMutex, hWnd); });
 	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(); });
 
-	//DrawLoadingScreen();
-
-	//loadingThread.join();
-	//screenThread.join();
-
-	// Initialize everything from gameobjects to skies
-
+	// Once they've stopped passing control back and forth, join them
+	// to the main thread
 	screenThread.join();
 	loadingThread.join();
 
@@ -101,8 +94,6 @@ void Game::Init()
 
 	Entities = globalAssets.GetActiveGameEntities();
 
-	// Initialize the input manager with the window's handle
-	Input::GetInstance().Initialize(this->hWnd);
 	statsEnabled = true;
 	movingEnabled = true;
 	lightWindowEnabled = false;
@@ -118,7 +109,7 @@ void Game::Init()
 	emitterUIIndex = 0;
 	camUIIndex = 0;
 	terrainUIIndex = 0;
-	skyUIIndex = 1;
+	skyUIIndex = 0;
 
 	skies = globalAssets.GetSkyArray();
 
@@ -130,15 +121,6 @@ void Game::Init()
 	// Essentially: "What kind of shape should the GPU draw with our data?"
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	// Add ImGui components
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-
-	ImGui::StyleColorsDark();
-
-	ImGui_ImplWin32_Init(hWnd);
-	ImGui_ImplDX11_Init(device.Get(), context.Get());
-
 	//With everything initialized, start the renderer
 	renderer = std::make_unique<Renderer>(height,
 										  width,
@@ -147,9 +129,6 @@ void Game::Init()
 										  swapChain,
 										  backBufferRTV,
 										  depthStencilView);
-
-	/*delete loadingMutex;
-	delete notification;*/
 }
 
 void Game::RenderUI(float deltaTime) {
@@ -912,7 +891,7 @@ void Game::DrawLoadingScreen() {
 		if (notification->wait_for(lock, time(3000), [&] {return globalAssets.GetSingleLoadComplete(); })) {
 			// Super generic draw code for now
 			// Background color (Cornflower Blue in this case) for clearing
-			const float color[4] = { 0.4f, 0.6f, 0.75f, 0.0f };
+			const float color[4] = { 0.0f, 0.0f, 0.1f, 0.0f };
 
 			std::string loadedCategoryString = "Loading " + globalAssets.GetLastLoadedCategory();
 			std::string loadedObjectString;
@@ -939,11 +918,25 @@ void Game::DrawLoadingScreen() {
 				1.0f,
 				0);
 
+			// Get fonts
+			static std::shared_ptr<SpriteFont> titleFont = globalAssets.GetFontByName("Roboto-Bold-72pt");
+			static std::shared_ptr<SpriteFont> categoryFont = globalAssets.GetFontByName("SmoochSans-Bold");
+			static std::shared_ptr<SpriteFont> objectFont = globalAssets.GetFontByName("SmoochSans-Italic");
+
 			loadingSpriteBatch->Begin();
 
-			loadingFont->DrawString(loadingSpriteBatch, loadedCategoryString.c_str(), DirectX::XMFLOAT2(width / 2, height / 2), DirectX::Colors::White);
-			loadingFont->DrawString(loadingSpriteBatch, loadedObjectString.c_str(), DirectX::XMFLOAT2(width / 2, height / 4), DirectX::Colors::White);
-			//loadingFont->DrawString(loadingSpriteBatch, "Yes this is supposed to be more complex of a loading screen, I couldn't get the threads to stop fighting", DirectX::XMFLOAT2(width / 4, (height / 2) + 40), DirectX::Colors::White);
+			DirectX::XMFLOAT2 titleOrigin;
+			DirectX::XMFLOAT2 categoryOrigin;
+			DirectX::XMFLOAT2 objectOrigin;
+
+			// Certified conversion moment
+			DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString("SHOE") / 2.0f);
+			DirectX::XMStoreFloat2(&categoryOrigin, categoryFont->MeasureString(loadedCategoryString.c_str()) / 2.0f);
+			DirectX::XMStoreFloat2(&objectOrigin, objectFont->MeasureString(loadedObjectString.c_str()) / 2.0f);
+
+			titleFont->DrawString(loadingSpriteBatch, "SHOE", DirectX::XMFLOAT2(width / 2, height / 5), DirectX::Colors::Gold, 0.0f, titleOrigin);
+			categoryFont->DrawString(loadingSpriteBatch, loadedCategoryString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.5), DirectX::Colors::White, 0.0f, categoryOrigin);
+			objectFont->DrawString(loadingSpriteBatch, loadedObjectString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.2), DirectX::Colors::LightGray, 0.0f, objectOrigin);
 
 			loadingSpriteBatch->End();
 

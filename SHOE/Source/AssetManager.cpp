@@ -20,21 +20,8 @@ AssetManager::~AssetManager() {
 	}
 }
 
-void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock) {
+void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock, HWND hwnd) {
 	HRESULT hr = CoInitialize(NULL);
-
-	/*GUID assetID;
-	hr = CoCreateGuid(&assetID);
-
-	hr = CreateClassMoniker(assetID, &assetMoniker);
-
-	if (hr != S_OK) {
-		return;
-	}
-
-	HANDLE hDoneLoading = ::CreateEvent(NULL, FALSE, FALSE, NULL);
-
-	hr = BindMoniker(assetMoniker, 0, IID_AsyncIUnknown, (void**)&notifications);*/
 
 	dxInstance = DXCore::DXCoreInstance;
 	this->context = context;
@@ -43,10 +30,11 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	this->threadNotifier = threadNotifier;
 	this->threadLock = threadLock;
 
+	// This must occur before the loading screen starts
+	InitializeFonts();
+
+	// The rest signal the loading screen each time an object loads
 	InitializeShaders();
-
-	//SetLoadedAndWait("Shaders", "All");
-
 	InitializeCameras();
 	InitializeLights();
 	InitializeMaterials();
@@ -56,6 +44,12 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	InitializeSkies();
 	InitializeEmitters();
 	InitializeAudio();
+	InitializeIMGUI(hwnd);
+
+	// Initialize the input manager with the window's handle
+	Input::GetInstance().Initialize(hwnd);
+
+	SetLoadedAndWait("Post-Initialization", "Preparing to render");
 
 	this->isLoading = false;
 }
@@ -123,7 +117,7 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode) {
 
 		return sound;
 	}
-	catch (const std::exception& e) {
+	catch (...) {
 		SetLoadedAndWait("Sounds", path, std::current_exception());
 
 		return NULL;
@@ -142,7 +136,7 @@ std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFL
 
 		return newCam;
 	}
-	catch (const std::exception& e) {
+	catch (...) {
 		SetLoadedAndWait("Camera", id, std::current_exception());
 
 		return NULL;
@@ -162,7 +156,7 @@ std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string
 
 		return newVS;
 	}
-	catch (const std::exception& e) {
+	catch (...) {
 		SetLoadedAndWait("Vertex Shaders", id, std::current_exception());
 
 		return NULL;
@@ -181,7 +175,7 @@ std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string i
 
 		return newPS;
 	}
-	catch (const std::exception& e) {
+	catch (...) {
 		SetLoadedAndWait("Pixel Shaders", id, std::current_exception());
 
 		return NULL;
@@ -214,7 +208,7 @@ std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::stri
 
 		return newCS;
 	}
-	catch (const std::exception& e) {
+	catch (...) {
 		SetLoadedAndWait("Compute Shaders", id, std::current_exception());
 
 		return NULL;
@@ -236,7 +230,7 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 
 		return newMesh;
 	}
-	catch (const std::exception& e) {
+	catch (...) {
 		SetLoadedAndWait("Mesh", id, std::current_exception());
 
 		return NULL;
@@ -309,7 +303,7 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 
 		return newMat;
 	}
-	catch (const std::exception& e) {
+	catch (...) {
 		SetLoadedAndWait("PBR Material", id, std::current_exception());
 
 		return NULL;
@@ -325,12 +319,12 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 
 		SortEntitiesByMaterial();
 
-		SetLoadedAndWait("Game Entity", name);
+		SetLoadedAndWait("Game Entities", name);
 
 		return newEnt;
 	}
-	catch (const std::exception& e) {
-		SetLoadedAndWait("Game Entity", name, std::current_exception());
+	catch (...) {
+		SetLoadedAndWait("Game Entities", name, std::current_exception());
 
 		return NULL;
 	}
@@ -347,7 +341,7 @@ std::shared_ptr<GameEntity> AssetManager::CreateTerrainEntity(std::shared_ptr<Me
 
 		return newEnt;
 	}
-	catch (const std::exception& e) {
+	catch (...) {
 		SetLoadedAndWait("Terrain", name, std::current_exception());
 
 		return NULL;
@@ -377,7 +371,7 @@ std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11Shader
 
 		return newSky;
 	}
-	catch (const std::exception& e) {
+	catch (...) {
 		SetLoadedAndWait("Skies", name, std::current_exception());
 
 		return NULL;
@@ -498,8 +492,29 @@ std::shared_ptr<Emitter> AssetManager::CreateParticleEmitter(int maxParticles,
 
 		return newEmitter;
 	}
-	catch (const std::exception& e) {
+	catch (...) {
 		SetLoadedAndWait("Particle Emitter", name, std::current_exception());
+
+		return NULL;
+	}
+}
+
+std::shared_ptr<SpriteFont> AssetManager::CreateSHOEFont(std::string name, std::wstring filePath, bool preInitializing) {
+	try {
+		std::wstring assetPath = L"../../../Assets/Fonts/";
+
+		std::shared_ptr<SpriteFont> newFont = std::make_shared<SpriteFont>(device.Get(), dxInstance->GetFullPathTo_Wide(assetPath + filePath).c_str());
+
+		globalFonts.emplace(name, newFont);
+
+		// If the loading screen fonts aren't loaded, don't trigger
+		// the loading screen.
+		if (!preInitializing) SetLoadedAndWait("Font", name);
+
+		return newFont;
+	}
+	catch (...) {
+		if(!preInitializing) SetLoadedAndWait("Font", name, std::current_exception());
 
 		return NULL;
 	}
@@ -710,17 +725,18 @@ void AssetManager::InitializeSkies() {
 	std::shared_ptr<SimplePixelShader> PSSky = GetPixelShaderByName("SkyPS");
 	std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
 
-	//Skybox map pointers
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> spaceTexture;
+	// Skybox map pointers
+	// Temporarily, we only load 2 skies, as they take a while to load
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> spaceTexture;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> sunnyTexture;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mountainTexture;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> niagaraTexture;
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mountainTexture;
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> niagaraTexture;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> starTexture;
 
-	CreateDDSTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/SpaceCubeMap.dds").c_str(), nullptr, &spaceTexture);
+	//CreateDDSTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/SpaceCubeMap.dds").c_str(), nullptr, &spaceTexture);
 	CreateDDSTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/SunnyCubeMap.dds").c_str(), nullptr, &sunnyTexture);
 
-	mountainTexture = CreateCubemap(dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/right.jpg").c_str(),
+	/*mountainTexture = CreateCubemap(dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/right.jpg").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/left.jpg").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/up.jpg").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/down.jpg").c_str(),
@@ -731,7 +747,7 @@ void AssetManager::InitializeSkies() {
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/up.jpg").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/down.jpg").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/forward.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/back.jpg").c_str());
+		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/back.jpg").c_str());*/
 	starTexture = CreateCubemap(dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/right.png").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/left.png").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/up.png").c_str(),
@@ -739,10 +755,10 @@ void AssetManager::InitializeSkies() {
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/forward.png").c_str(),
 		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/back.png").c_str());
 
-	CreateSky(spaceTexture, "space");
+	//CreateSky(spaceTexture, "space");
 	CreateSky(sunnyTexture, "sunny");
-	CreateSky(mountainTexture, "mountain");
-	CreateSky(niagaraTexture, "niagara");
+	//CreateSky(mountainTexture, "mountain");
+	//CreateSky(niagaraTexture, "niagara");
 	CreateSky(starTexture, "stars");
 
 	currentSky = skies[0];
@@ -990,6 +1006,33 @@ void AssetManager::InitializeAudio() {
 	CreateSound("PianoNotes/pinkyfinger__piano-d.wav", FMOD_DEFAULT);
 	CreateSound("PianoNotes/pinkyfinger__piano-f.wav", FMOD_DEFAULT);
 	CreateSound("PianoNotes/pinkyfinger__piano-g.wav", FMOD_DEFAULT);
+}
+
+void AssetManager::InitializeFonts() {
+	globalFonts = std::map<std::string, std::shared_ptr<DirectX::SpriteFont>>();
+
+	CreateSHOEFont("Roboto-Bold-72pt", L"RobotoCondensed-Bold-72pt.spritefont", true);
+	CreateSHOEFont("SmoochSans-Bold", L"SmoochSans-Bold.spritefont", true);
+	CreateSHOEFont("SmoochSans-Italic", L"SmoochSans-Italic.spritefont", true);
+	CreateSHOEFont("Arial", L"Arial.spritefont");
+	CreateSHOEFont("Roboto-Bold", L"RobotoCondensed-Bold.spritefont");
+	CreateSHOEFont("Roboto-BoldItalic", L"RobotoCondensed-BoldItalic.spritefont");
+	CreateSHOEFont("Roboto-Italic", L"RobotoCondensed-Italic.spritefont");
+	CreateSHOEFont("Roboto-Regular", L"RobotoCondensed-Regular.spritefont");
+	CreateSHOEFont("SmoochSans-BoldItalic", L"SmoochSans-BoldItalic.spritefont");
+	CreateSHOEFont("SmoochSans-Regular", L"SmoochSans-Regular.spritefont");
+}
+
+void AssetManager::InitializeIMGUI(HWND hwnd) {
+	SetLoadedAndWait("UI", "Window Initialization");
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplWin32_Init(hwnd);
+	ImGui_ImplDX11_Init(device.Get(), context.Get());
 }
 #pragma endregion
 
@@ -1761,6 +1804,14 @@ std::shared_ptr<TerrainMats> AssetManager::GetTerrainMaterialByName(std::string 
 		}
 	}
 	return nullptr;
+}
+
+//
+// Dict return by key
+//
+
+std::shared_ptr<SpriteFont> AssetManager::GetFontByName(std::string name) {
+	return globalFonts[name];
 }
 
 // Unlikely to be implemented, see GetLightIdByName

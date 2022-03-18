@@ -431,6 +431,9 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> miscEffectDepth;
 	miscEffectDepth = miscEffectDepthBuffers[type];
 
+	std::vector<std::shared_ptr<GameEntity>>::iterator it;
+	std::shared_ptr<SimplePixelShader> solidColorPS = globalAssets.GetPixelShaderByName("SolidColorPS");
+
 	context->RSSetState(0); // Unclear if this should be a custom rasterizer state
 
 	D3D11_VIEWPORT vp = {};
@@ -442,81 +445,75 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 	vp.MaxDepth = 1.0f;
 	context->RSSetViewports(1, &vp);
 
-	VSShadow->SetShader();
+	switch(type) {
+		case MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS:
+			VSShadow->SetShader();
 
-	VSShadow->SetMatrix4x4("view", sourceCam->GetViewMatrix());
-	VSShadow->SetMatrix4x4("projection", sourceCam->GetProjectionMatrix());
+			VSShadow->SetMatrix4x4("view", sourceCam->GetViewMatrix());
+			VSShadow->SetMatrix4x4("projection", sourceCam->GetProjectionMatrix());
 
-	if (type == MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS) {
-		std::shared_ptr<SimplePixelShader> solidColorPS = globalAssets.GetPixelShaderByName("SolidColorPS");
+			context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].GetAddressOf(), depthBufferDSV.Get());
 
-		context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].GetAddressOf(), depthBufferDSV.Get());
+			context->OMSetDepthStencilState(refractionSilhouetteDepthState.Get(), 0);
 
-		//context->ClearDepthStencilView(miscEffectDepth.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+			for (it = transparentEntities.begin(); it != transparentEntities.end(); it++) {
+				if (!it->get()->GetEnableDisable()) continue;
 
-		context->OMSetDepthStencilState(refractionSilhouetteDepthState.Get(), 0);
+				// Standard depth pre-pass
+				VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
 
-		std::vector<std::shared_ptr<GameEntity>>::iterator it;
+				VSShadow->CopyAllBufferData();
 
-		for (it = transparentEntities.begin(); it != transparentEntities.end(); it++) {
-			if (!it->get()->GetEnableDisable()) continue;
+				solidColorPS->SetShader();
+				solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
+				solidColorPS->CopyAllBufferData();
 
-			// Store the old material's pixel shader
-			/*std::shared_ptr<Material> mat = it->get()->GetMaterial();
-			std::shared_ptr<SimplePixelShader> prevPS = mat->GetPixShader();
-			mat->SetPixelShader(solidColorPS);*/
+				UINT stride = sizeof(Vertex);
+				UINT offset = 0;
+				context->IASetVertexBuffers(0, 1, it->get()->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+				context->IASetIndexBuffer(it->get()->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
-			// Standard depth pre-pass
-			VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
+				context->DrawIndexed(
+					it->get()->GetMesh()->GetIndexCount(),
+					0,
+					0);
+			}
 
-			VSShadow->CopyAllBufferData();
+			break;
 
-			solidColorPS->SetShader();
-			solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
-			solidColorPS->CopyAllBufferData();
+		case MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS:
+			context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::DEPTHS].GetAddressOf(), depthBufferDSV.Get());
 
-			//globalAssets.globalEntities[i]->Draw(context, cam, nullptr, nullptr);
-			UINT stride = sizeof(Vertex);
-			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, it->get()->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(it->get()->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			context->OMSetDepthStencilState(0, 0);
 
-			context->DrawIndexed(
-				it->get()->GetMesh()->GetIndexCount(),
-				0,
-				0);
+			for (it = transparentEntities.begin(); it != transparentEntities.end(); it++) {
+				if (!it->get()->GetEnableDisable()) continue;
 
-			//mat->SetPixelShader(prevPS);
-		}
-	}
-	else {
-		context->OMSetRenderTargets(0, 0, miscEffectDepth.Get());
+				std::shared_ptr<SimpleVertexShader> VS = it->get()->GetMaterial()->GetVertShader();
 
-		context->ClearDepthStencilView(miscEffectDepth.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+				// Standard depth pre-pass
+				VS->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
 
-		context->PSSetShader(0, 0, 0);
+				VS->CopyAllBufferData();
 
-		std::vector<std::shared_ptr<GameEntity>>::iterator it;
+				solidColorPS->SetShader();
+				solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
+				solidColorPS->CopyAllBufferData();
 
-		for (it = globalAssets.GetActiveGameEntities()->begin(); it != globalAssets.GetActiveGameEntities()->end(); it++) {
-			if (!it->get()->GetEnableDisable()) continue;
+				UINT stride = sizeof(Vertex);
+				UINT offset = 0;
+				context->IASetVertexBuffers(0, 1, it->get()->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+				context->IASetIndexBuffer(it->get()->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
-			// Standard depth pre-pass
-			VSShadow->SetMatrix4x4("world", it->get()->GetTransform()->GetWorldMatrix());
+				context->DrawIndexed(
+					it->get()->GetMesh()->GetIndexCount(),
+					0,
+					0);
+			}
 
-			VSShadow->CopyAllBufferData();
-
-			//globalAssets.globalEntities[i]->Draw(context, cam, nullptr, nullptr);
-			UINT stride = sizeof(Vertex);
-			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, it->get()->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(it->get()->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-
-			context->DrawIndexed(
-				it->get()->GetMesh()->GetIndexCount(),
-				0,
-				0);
-		}
+			break;
+		default:
+			break;
 	}
 
 	context->OMSetDepthStencilState(0, 0);
@@ -614,6 +611,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		renderTargets[i] = renderTargetRTVs[i].Get();
 	}
 	context->OMSetRenderTargets(4, renderTargets, depthBufferDSV.Get());
+
+	// Change to write depths beforehand - for future
+	// RenderDepths(mainCamera, MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS);
+
+	// context->OMSetDepthStencilState(prePassDepthState.Get(), 0);
 
 	// Per Frame data can be set out here for optimization
 	// This section could be improved, see Chris's Demos and

@@ -20,6 +20,8 @@
 #include <thread>
 #include <mutex>
 #include <exception>
+#include "SpriteBatch.h"
+#include "SpriteFont.h"
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 
@@ -97,6 +99,8 @@ private:
 	void InitializeSkies();
 	void InitializeEmitters();
 	void InitializeAudio();
+	void InitializeFonts();
+	void InitializeIMGUI(HWND hwnd);
 
 	std::vector<std::shared_ptr<SimplePixelShader>> pixelShaders;
 	std::vector<std::shared_ptr<SimpleVertexShader>> vertexShaders;
@@ -111,6 +115,7 @@ private:
 	std::vector<std::shared_ptr<GameEntity>> globalTerrainEntities;
 	std::vector<std::shared_ptr<Emitter>> globalParticleEmitters;
 	std::vector<FMOD::Sound*> globalSounds;
+	std::map<std::string, std::shared_ptr<DirectX::SpriteFont>> globalFonts;
 
 	std::condition_variable* threadNotifier;
 	std::mutex* threadLock;
@@ -128,7 +133,7 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11Device> GetDevice();
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> GetContext();
 
-	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock);
+	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock, HWND hwnd);
 
 	// Called whenever a material changes, or when a GameEntity is added
 	void SortEntitiesByMaterial();
@@ -164,8 +169,8 @@ public:
 												   std::string name,
 												   bool isMultiParticle = false,
 												   bool additiveBlendState = true);
-	FMOD::Sound* CreateSound(std::string filePath,
-							 FMOD_MODE mode);
+	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode);
+	std::shared_ptr<DirectX::SpriteFont> CreateSHOEFont(std::string name, std::wstring filePath, bool preInitializing = false);
 
 	// Methods to remove assets
 
@@ -231,6 +236,7 @@ public:
 	std::shared_ptr<Emitter> GetEmitterByName(std::string name);
 	std::shared_ptr<Light> GetLightByName(std::string name);
 	FMOD::Sound* GetSoundByName();
+	std::shared_ptr<DirectX::SpriteFont> GetFontByName(std::string name);
 
 	int GetGameEntityIDByName(std::string name);
 	int GetSkyIDByName(std::string name);
