@@ -2,6 +2,10 @@
 
 using namespace DirectX;
 
+// forward declaration for static members
+bool Renderer::drawColliders;
+bool Renderer::drawColliderTransforms;
+
 Renderer::Renderer(
 	unsigned int windowHeight,
 	unsigned int windowWidth,
@@ -23,6 +27,9 @@ Renderer::Renderer(
 	this->mainCamera = globalAssets.GetCameraByName("mainCamera");
 	this->mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
 	this->flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
+
+	this->drawColliders = false;
+	this->drawColliderTransforms = false;
 
 	//create and store the RS State for drawing colliders
 	D3D11_RASTERIZER_DESC colliderRSdesc = {};
@@ -621,23 +628,16 @@ void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 		// Easy access to what we're working with this loop
 		std::shared_ptr<Collider> c = colliders[i];
 
-		// Draw the OBB
-		// Comment this chunk and uncomment the following one to draw the Transforms
-		//BoundingOrientedBox obb = c->GetOrientedBoundingBox();
-		//XMMATRIX transMat = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
-		//XMMATRIX scaleMat = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
-		//XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
-		//XMMATRIX rotMat = XMMatrixRotationQuaternion(rot);
-		//// Make the transform for this collider
-		//XMMATRIX worldMat = scaleMat * rotMat * transMat;
-
-		//------------------------------------------------------------
-		// UNCOMMENT THE FOLLOWING CHUNK TO DRAW THE TRANSFORM INSTEAD
-		// GOOD FOR DEBUGGING UNCOUPLED OBB/TRANSFORM
-		//------------------------------------------------------------
-		std::shared_ptr<Transform> t = c->GetTransform();
-		world = t->GetWorldMatrix();
-		XMMATRIX worldMat = XMLoadFloat4x4(&world);
+		//----------------------//
+		// --- Draw the OBB --- //
+		//----------------------//
+		BoundingOrientedBox obb = c->GetOrientedBoundingBox();
+		XMMATRIX transMat = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
+		XMMATRIX scaleMat = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
+		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
+		XMMATRIX rotMat = XMMatrixRotationQuaternion(rot);
+		// Make the transform for this collider
+		XMMATRIX worldMat = scaleMat * rotMat * transMat;
 
 		// Convert & store as float4x4s
 		XMStoreFloat4x4(&world, worldMat);
@@ -670,10 +670,56 @@ void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 			globalAssets.GetMeshByName("Cube")->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
 			0,     // Offset to the first index we want to use
 			0);    // Offset to add to each index when looking up vertices
+
+
+		//----------------------------------------//
+		// --- Draw the Colliders' transforms --- //
+		//----------------------------------------//
+		if (drawColliderTransforms)
+		{
+			std::shared_ptr<Transform> t = c->GetTransform();
+			XMFLOAT4X4 world = t->GetWorldMatrix();
+			XMMATRIX worldMat = XMLoadFloat4x4(&world);
+
+			// Convert & store as float4x4s
+			XMStoreFloat4x4(&world, worldMat);
+			XMStoreFloat4x4(&worldInvTrans, XMMatrixInverse(0, XMMatrixTranspose(worldMat)));
+
+			// Set up the world matrix for this light
+			collidersVS->SetMatrix4x4("world", world);
+			collidersVS->SetMatrix4x4("worldInverseTranspose", worldInvTrans);
+
+			// Set up the pixel shader data
+			XMFLOAT3 finalColor = XMFLOAT3(1.0f, 0.0f, 1.0f);
+			collidersPS->SetFloat3("Color", finalColor);
+
+			// Copy data
+			collidersVS->CopyAllBufferData();
+			collidersPS->CopyAllBufferData();
+
+			// Draw
+			UINT stride = sizeof(Vertex);
+			UINT offset = 0;
+			context->IASetVertexBuffers(0, 1, globalAssets.GetMeshByName("Cube")->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(globalAssets.GetMeshByName("Cube")->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+			context->DrawIndexed(
+				globalAssets.GetMeshByName("Cube")->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+				0,     // Offset to the first index we want to use
+				0);    // Offset to add to each index when looking up vertices
+		}
 	}
+
 	// Put the RS State back to normal (/non wireframe)
 	context->RSSetState(0);
 }
+
+bool Renderer::GetDrawColliderStatus() { return drawColliders; }
+void Renderer::SetDrawColliderStatus(bool _newState) { drawColliders = _newState; }
+
+bool Renderer::GetDrawColliderTransformsStatus() { return drawColliderTransforms; }
+
+void Renderer::SetDrawColliderTransformsStatus(bool _newState) { drawColliderTransforms = _newState; }
 
 void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
@@ -851,13 +897,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		}
 	}
 
-
-
-
-	RenderColliders(cam);
-
-
-
+	if (drawColliders) RenderColliders(cam);
 
 	//Now deal with rendering the terrain, PS data first
 	std::shared_ptr<GameEntity> terrainEntity = globalAssets.GetTerrainByName("Main Terrain");

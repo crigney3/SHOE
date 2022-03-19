@@ -141,6 +141,9 @@ private:
     std::shared_ptr<Camera> flashShadowCamera;
     std::shared_ptr<Camera> mainShadowCamera;
 
+	// Conditional Drawing
+    static bool drawColliders, drawColliderTransforms;
+
     void InitRenderTargetViews();
 
 public:
@@ -175,4 +178,9 @@ public:
     void RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTypes type);
     void RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type);
     void RenderColliders(std::shared_ptr<Camera> cam);
+
+    static bool GetDrawColliderStatus();
+    static void SetDrawColliderStatus(bool _newState);
+	static bool GetDrawColliderTransformsStatus();
+    static void SetDrawColliderTransformsStatus(bool _newState);
 };

@@ -697,7 +697,18 @@ void Game::RenderUI(float deltaTime) {
 			colliderUIIndex++;
 			if (colliderUIIndex > ComponentManager::GetAll<Collider>().size() - 1) colliderUIIndex = 0;
 		};
+
+
+		bool UIDrawColliders = Renderer::GetDrawColliderStatus();
+		ImGui::Checkbox("Draw Colliders?", &UIDrawColliders);
+		UIDrawColliders ? Renderer::SetDrawColliderStatus(true) : Renderer::SetDrawColliderStatus(false);
 		
+		bool UIDrawColliderTransforms = Renderer::GetDrawColliderTransformsStatus() & UIDrawColliders;
+		ImGui::Checkbox("Draw Colliders' Transforms?", &UIDrawColliderTransforms);
+		UIDrawColliderTransforms ? Renderer::SetDrawColliderTransformsStatus(true) : Renderer::SetDrawColliderTransformsStatus(false);
+
+		ImGui::NewLine();
+		ImGui::Text("Edit Collider Transform:");
 		static XMFLOAT3 colliderUIPositionEdit	= currentCollider->GetTransform()->GetLocalPosition();
 		static XMFLOAT3 colliderUIRotationEdit	= currentCollider->GetTransform()->GetPitchYawRoll();
 		static XMFLOAT3 colliderUIScaleEdit		= currentCollider->GetTransform()->GetLocalScale();
@@ -912,6 +923,8 @@ void Game::Update(float deltaTime, float totalTime)
 		//globalAssets.GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition((float)sin(totalTime), +2.0f, +0.0f);
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+2.0f, -(float)sin(totalTime), +0.0f);
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate( 0.0f, 0.0f, -(float)sin(deltaTime));
+		globalAssets.GetGameEntityByName("Floor Cube")->GetTransform()->Rotate( 0.0f, (float)sin(deltaTime), 0.0f);
+		globalAssets.GetGameEntityByName("Floor Cube")->GetTransform()->Rotate(-(float)sin(deltaTime), 0.0f, 0.0f);
 
 		globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(totalTime), +0.0f);
 
