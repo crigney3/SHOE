@@ -13,15 +13,9 @@ CollisionManager::CollisionManager()
 	markedAsColliders_ = std::vector<std::shared_ptr<Collider>>();
 }
 
-std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsTriggerboxes()
-{
-	return markedAsTriggerboxes_;
-}
+std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsTriggerboxes() { return markedAsTriggerboxes_; }
 
-std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsColliders()
-{
-	return markedAsColliders_;
-}
+std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsColliders() { return markedAsColliders_; }
 
 void CollisionManager::Update()
 {
@@ -52,7 +46,7 @@ void CollisionManager::Update()
 }
 
 /**
- * \brief Adds a collider shared_ptr to main list and appropriate subset (collider or triggerbox) list
+ * \brief Adds a collider shared_ptr to appropriate subset (collider or triggerbox) list
  * \param _c collider to add
  */
 void CollisionManager::AddColliderToManager(std::shared_ptr<Collider> _c)

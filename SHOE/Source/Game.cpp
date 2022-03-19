@@ -113,7 +113,7 @@ void Game::Init()
 	std::shared_ptr<Collider> c6 = e6->AddComponent<Collider>();
 	std::shared_ptr<Collider> c7 = e7->AddComponent<Collider>();
 	c6->SetExtents(XMFLOAT3(1.002f, 1.002f, 1.002f)); //TODO: check and see if setting this alters where children end up (coordinate space scaling)
-	c4->SetTriggerStatus(true);
+	c7->SetTriggerStatus(true);
 
 
 	// Initialize the input manager with the window's handle
@@ -921,10 +921,10 @@ void Game::Update(float deltaTime, float totalTime)
 
 	if (movingEnabled) {
 		//globalAssets.GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition((float)sin(totalTime), +2.0f, +0.0f);
-		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+2.0f, -(float)sin(totalTime), +0.0f);
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+2.0f, (float)sin(totalTime), +0.0f);
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate( 0.0f, 0.0f, -(float)sin(deltaTime));
 		globalAssets.GetGameEntityByName("Floor Cube")->GetTransform()->Rotate( 0.0f, (float)sin(deltaTime), 0.0f);
-		globalAssets.GetGameEntityByName("Floor Cube")->GetTransform()->Rotate(-(float)sin(deltaTime), 0.0f, 0.0f);
+		globalAssets.GetGameEntityByName("Scratched Cube")->GetTransform()->Rotate(-(float)sin(deltaTime), 0.0f, 0.0f);
 
 		globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(totalTime), +0.0f);
 

@@ -28,8 +28,8 @@ Renderer::Renderer(
 	this->mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
 	this->flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
-	this->drawColliders = false;
-	this->drawColliderTransforms = false;
+	this->drawColliders = true;
+	this->drawColliderTransforms = true;
 
 	//create and store the RS State for drawing colliders
 	D3D11_RASTERIZER_DESC colliderRSdesc = {};

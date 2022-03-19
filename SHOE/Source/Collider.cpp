@@ -62,7 +62,15 @@ void Collider::SetDepth(float _depth)   { obb_.Extents.x = _depth / 2.0f; }
 bool Collider::GetTriggerStatus()       { return isTrigger_; }
 bool Collider::GetVisibilityStatus()    { return isVisible_; }
 bool Collider::GetEnabledStatus()       { return isEnabled_; }
-void Collider::SetTriggerStatus(bool _isTrigger)    { isTrigger_ = _isTrigger; }
+void Collider::SetTriggerStatus(bool _isTrigger)
+{
+	isTrigger_ = _isTrigger;
+
+    for (int i = 0; i < ComponentManager::GetAll<Collider>().size(); i++)
+    {
+	    //CollisionManager::GetMarkedAsColliders()
+    }
+}
 void Collider::SetVisibilityStatus(bool _isVisible) { isVisible_ = _isVisible; }
 void Collider::SetEnabledStatus(bool _isEnabled)    { isEnabled_ = _isEnabled; }
 void Collider::OnCollisionEnter(std::shared_ptr<GameEntity> other)
@@ -76,8 +84,6 @@ void Collider::OnTriggerEnter(std::shared_ptr<GameEntity> other)
 
 void Collider::Update()
 {
-    //printf("%s\t : collider isDirty = %s\n", owner_->GetName().c_str(), transform_->GetDirtyStatus() ? "true" : "false");
-    printf("%p\n%p\n\n", transform_.get(), owner_.get());
 	// Make sure OBB sticks to Transform
     obb_.Center = transform_->GetGlobalPosition();
 
@@ -92,10 +98,16 @@ void Collider::Update()
     //Need to make the OBB with a quaternion as XMFLOAT4
     XMFLOAT3 pyr = transform_->GetPitchYawRoll();
     XMMATRIX mtrx = DirectX::XMMatrixRotationRollPitchYaw(pyr.x, pyr.y, pyr.z);
+
+    XMFLOAT4X4 o_wrld = owner_->GetTransform()->GetWorldMatrix();
+    XMMATRIX o_wrld_m = XMLoadFloat4x4(&o_wrld);
+
+    //mtrx = XMMatrixMultiply(mtrx, o_wrld_m);
+
     XMVECTOR quat = XMQuaternionRotationMatrix(mtrx);
     XMFLOAT4 quatF;
     XMStoreFloat4(&quatF, quat);
+
     obb_.Orientation = quatF;
-
-
+    
 }
