@@ -615,36 +615,31 @@ void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 
 	for (int i = 0; i < colliders.size(); i++)
 	{
+		XMFLOAT4X4 world; 
+		XMFLOAT4X4 worldInvTrans;
+
 		// Easy access to what we're working with this loop
 		std::shared_ptr<Collider> c = colliders[i];
 
 		// Draw the OBB
 		// Comment this chunk and uncomment the following one to draw the Transforms
-		BoundingOrientedBox obb = c->GetOrientedBoundingBox();
-		XMMATRIX transMat = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
-		XMMATRIX scaleMat = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
-		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
-		XMMATRIX rotMat = XMMatrixRotationQuaternion(rot);
-		// Make the transform for this collider
-		XMMATRIX worldMat = scaleMat * rotMat * transMat;
+		//BoundingOrientedBox obb = c->GetOrientedBoundingBox();
+		//XMMATRIX transMat = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
+		//XMMATRIX scaleMat = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
+		//XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
+		//XMMATRIX rotMat = XMMatrixRotationQuaternion(rot);
+		//// Make the transform for this collider
+		//XMMATRIX worldMat = scaleMat * rotMat * transMat;
 
 		//------------------------------------------------------------
 		// UNCOMMENT THE FOLLOWING CHUNK TO DRAW THE TRANSFORM INSTEAD
 		// GOOD FOR DEBUGGING UNCOUPLED OBB/TRANSFORM
 		//------------------------------------------------------------
-		//std::shared_ptr<Transform> t = c->GetTransform();
-		//XMMATRIX transMat = XMMatrixTranslation(t->GetPosition().x, t->GetPosition().y, t->GetPosition().z);
-		//XMMATRIX scaleMat = XMMatrixScaling(t->GetScale().x, t->GetScale().y, t->GetScale().z);
-		//XMFLOAT3 pyr = t->GetPitchYawRoll();
-		//XMVECTOR rotation = XMLoadFloat3(&pyr);
-		//XMMATRIX rotMat = XMMatrixRotationQuaternion(rotation);
-		//// Make the transform for this collider
-		//XMMATRIX worldMat = scaleMat * rotMat * transMat;
-
+		std::shared_ptr<Transform> t = c->GetTransform();
+		world = t->GetWorldMatrix();
+		XMMATRIX worldMat = XMLoadFloat4x4(&world);
 
 		// Convert & store as float4x4s
-		XMFLOAT4X4 world;
-		XMFLOAT4X4 worldInvTrans;
 		XMStoreFloat4x4(&world, worldMat);
 		XMStoreFloat4x4(&worldInvTrans, XMMatrixInverse(0, XMMatrixTranspose(worldMat)));
 

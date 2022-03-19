@@ -99,6 +99,9 @@ void Game::Init()
 	std::shared_ptr<GameEntity> e3 = globalAssets.GetGameEntityByName("Rough Torus");
 	std::shared_ptr<GameEntity> e4 = globalAssets.GetGameEntityByName("Floor Helix");
 	std::shared_ptr<GameEntity> e5 = globalAssets.GetGameEntityByName("Shiny Rough Sphere");
+
+	std::shared_ptr<GameEntity> e6 = globalAssets.GetGameEntityByName("Floor Cube");
+	std::shared_ptr<GameEntity> e7 = globalAssets.GetGameEntityByName("Scratched Cube");
 	//TODO: the wood sphere will become a child of the spinning stuff if you disable and enable it via IMGUI....
 
 
@@ -107,7 +110,9 @@ void Game::Init()
 	std::shared_ptr<Collider> c3 = e3->AddComponent<Collider>();
 	std::shared_ptr<Collider> c4 = e4->AddComponent<Collider>();
 	std::shared_ptr<Collider> c5 = e5->AddComponent<Collider>();
-	//c5->SetExtents(XMFLOAT3(2, 2, 2));
+	std::shared_ptr<Collider> c6 = e6->AddComponent<Collider>();
+	std::shared_ptr<Collider> c7 = e7->AddComponent<Collider>();
+	c6->SetExtents(XMFLOAT3(1.002f, 1.002f, 1.002f)); //TODO: check and see if setting this alters where children end up (coordinate space scaling)
 	c4->SetTriggerStatus(true);
 
 
@@ -671,6 +676,42 @@ void Game::RenderUI(float deltaTime) {
 
 		ImGui::End();
 	}
+	
+	if (collidersWindowEnabled)
+	{
+		ImGui::Begin("Collider Inspector");
+		
+		static int colliderUIIndex = 0;
+		std::shared_ptr<Collider> currentCollider = ComponentManager::GetAll<Collider>()[colliderUIIndex];
+		std::string indexStr = std::to_string(colliderUIIndex) + " - " + currentCollider->GetOwner()->GetName();
+		std::string node = "Editing collider " + indexStr;
+		ImGui::Text(node.c_str());
+		
+		if (ImGui::ArrowButton("Previous Object", ImGuiDir_Left)) {
+			colliderUIIndex--;
+			if (colliderUIIndex < 0) colliderUIIndex = ComponentManager::GetAll<Collider>().size() - 1;
+		};
+		ImGui::SameLine();
+		
+		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
+			colliderUIIndex++;
+			if (colliderUIIndex > ComponentManager::GetAll<Collider>().size() - 1) colliderUIIndex = 0;
+		};
+		
+		static XMFLOAT3 colliderUIPositionEdit	= currentCollider->GetTransform()->GetLocalPosition();
+		static XMFLOAT3 colliderUIRotationEdit	= currentCollider->GetTransform()->GetPitchYawRoll();
+		static XMFLOAT3 colliderUIScaleEdit		= currentCollider->GetTransform()->GetLocalScale();
+		
+		ImGui::DragFloat3("Position ", &colliderUIPositionEdit.x, 0.5f);
+		ImGui::DragFloat3("Rotation ", &colliderUIRotationEdit.x, 0.5f, 0, 360);
+		ImGui::InputFloat3("Scale ",	&colliderUIScaleEdit.x);
+		
+		currentCollider->GetTransform()->SetPosition(colliderUIPositionEdit.x, colliderUIPositionEdit.y, colliderUIPositionEdit.z);
+		currentCollider->GetTransform()->SetRotation(colliderUIRotationEdit.x, colliderUIRotationEdit.y, colliderUIRotationEdit.z);
+		currentCollider->GetTransform()->SetScale(colliderUIScaleEdit.x, colliderUIScaleEdit.y, colliderUIScaleEdit.z);
+		
+		ImGui::End();
+	}
 
 	// TODO: Add Material Edit menu
 
@@ -692,6 +733,7 @@ void Game::RenderUI(float deltaTime) {
 			ImGui::MenuItem("Skies", "", &skyWindowEnabled);
 			ImGui::MenuItem("Sound", "", &soundWindowEnabled);
 			ImGui::MenuItem("Camera", "c", &camWindowEnabled);
+			ImGui::MenuItem("Colliders", "", &collidersWindowEnabled);
 
 			ImGui::EndMenu();
 		}
@@ -867,10 +909,12 @@ void Game::Update(float deltaTime, float totalTime)
 	}
 
 	if (movingEnabled) {
+		//globalAssets.GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition((float)sin(totalTime), +2.0f, +0.0f);
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+2.0f, -(float)sin(totalTime), +0.0f);
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate( 0.0f, 0.0f, -(float)sin(deltaTime));
+
 		globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(totalTime), +0.0f);
 
-		globalAssets.GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition((float)sin(totalTime), +2.0f, +0.0f);
 		globalAssets.GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(-(float)sin(totalTime), -2.0f, +0.0f);
 
 		globalAssets.GetGameEntityByName("Rough Torus")->GetTransform()->Rotate(+0.0f, +0.0f, +1.0f * deltaTime);

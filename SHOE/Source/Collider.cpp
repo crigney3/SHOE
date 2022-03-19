@@ -71,13 +71,14 @@ void Collider::OnCollisionEnter(std::shared_ptr<GameEntity> other)
 void Collider::OnTriggerEnter(std::shared_ptr<GameEntity> other)
 {
 }
+
 #pragma endregion
 
 void Collider::Update()
 {
-    XMFLOAT4X4 wrld = transform_->GetWorldMatrix();
-    
-    // Make sure OBB sticks to Transform
+    //printf("%s\t : collider isDirty = %s\n", owner_->GetName().c_str(), transform_->GetDirtyStatus() ? "true" : "false");
+    printf("%p\n%p\n\n", transform_.get(), owner_.get());
+	// Make sure OBB sticks to Transform
     obb_.Center = transform_->GetGlobalPosition();
 
     // DON'T DO THIS. DO NOT DO THIS or the object will scale. NO
@@ -87,6 +88,7 @@ void Collider::Update()
     //halfWidth = XMFLOAT3(halfWidth.x / 2, halfWidth.y / 2, halfWidth.z / 2);
     //obb_.Extents = halfWidth;
     //------------------------------------------------------------------------
+
     //Need to make the OBB with a quaternion as XMFLOAT4
     XMFLOAT3 pyr = transform_->GetPitchYawRoll();
     XMMATRIX mtrx = DirectX::XMMatrixRotationRollPitchYaw(pyr.x, pyr.y, pyr.z);
@@ -94,4 +96,6 @@ void Collider::Update()
     XMFLOAT4 quatF;
     XMStoreFloat4(&quatF, quat);
     obb_.Orientation = quatF;
+
+
 }

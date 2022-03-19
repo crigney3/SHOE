@@ -54,37 +54,30 @@ void Transform::UpdateWorldInfo()
 }
 
 void Transform::SetPosition(float x, float y, float z) {
-	isDirty = true;
-	//MarkChildTransformsDirty(); //JACOB
-	this->pos = XMFLOAT3(x, y, z);
+	SetPosition(XMFLOAT3(x, y, z));
 }
 
 void Transform::SetPosition(XMFLOAT3 pos) {
-	isDirty = true;
-	//MarkChildTransformsDirty();
 	this->pos = pos;
+	MarkThisDirty();
 }
 
 void Transform::SetRotation(float pitch, float yaw, float roll) {
-	isDirty = true;
-	MarkChildTransformsDirty();
-	this->rotQuat = XMFLOAT4(pitch, yaw, roll, +0.0f);
+	SetRotation(XMFLOAT3(pitch, yaw, roll));
 }
 
 void Transform::SetRotation(XMFLOAT3 rot) {
-	isDirty = true;
-	MarkChildTransformsDirty();
 	this->rotQuat = XMFLOAT4(rot.x, rot.y, rot.z, +0.0f);
+	MarkThisDirty();
 }
 
 void Transform::SetScale(float x, float y, float z) {
-	isDirty = true;
-	this->scale = XMFLOAT3(x, y, z);
+	SetScale(XMFLOAT3(x, y, z));
 }
 
 void Transform::SetScale(XMFLOAT3 scale) {
-	isDirty = true;
 	this->scale = scale;
+	MarkThisDirty();
 }
 
 XMFLOAT3 Transform::GetLocalPosition() {
@@ -125,6 +118,8 @@ XMFLOAT4X4 Transform::GetWorldMatrix()
 	return this->worldMatrix;
 }
 
+bool Transform::GetDirtyStatus() { return isDirty; }
+
 void Transform::MoveAbsolute(float x, float y, float z) {
 	float newX = x + this->pos.x;
 	float newY = y + this->pos.y;
@@ -132,7 +127,7 @@ void Transform::MoveAbsolute(float x, float y, float z) {
 
 	this->pos = XMFLOAT3(newX, newY, newZ);
 
-	isDirty = true;
+	MarkThisDirty();
 }
 
 void Transform::Rotate(float pitch, float yaw, float roll) {
@@ -142,7 +137,7 @@ void Transform::Rotate(float pitch, float yaw, float roll) {
 
 	this->rotQuat = XMFLOAT4(newPitch, newYaw, newRoll, +0.0f);
 
-	isDirty = true;
+	MarkThisDirty();
 }
 
 void Transform::Scale(float x, float y, float z) {
@@ -152,7 +147,7 @@ void Transform::Scale(float x, float y, float z) {
 
 	this->scale = XMFLOAT3(newX, newY, newZ);
 
-	isDirty = true;
+	MarkThisDirty();
 }
 
 void Transform::MoveRelative(float x, float y, float z)
@@ -169,6 +164,7 @@ void Transform::MoveRelative(float x, float y, float z)
 	XMStoreFloat3(&pos, XMLoadFloat3(&pos) + relativeMovement);
 
 	isDirty = true;
+	MarkChildTransformsDirty();
 }
 
 DirectX::XMFLOAT3 Transform::GetForward() {
@@ -227,6 +223,12 @@ std::shared_ptr<Transform> Transform::GetChild(unsigned int index) {
 
 unsigned int Transform::GetChildCount() {
 	return children.size();
+}
+
+void Transform::MarkThisDirty()
+{
+	this->isDirty = true;
+	MarkChildTransformsDirty();
 }
 
 void Transform::MarkChildTransformsDirty() {

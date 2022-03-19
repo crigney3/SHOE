@@ -17,6 +17,7 @@ private:
 	DirectX::XMFLOAT4 rotQuat; //LOCAL SPACE(?)
 
 	bool isDirty; // Can/will only be dirty if: has a parent & parent has moved
+	void MarkThisDirty();
 	void MarkChildTransformsDirty();
 
 	std::shared_ptr<Transform> parent;
@@ -43,6 +44,8 @@ public:
 	DirectX::XMFLOAT3 GetXAxis();
 	DirectX::XMFLOAT3 GetYAxis();
 	DirectX::XMFLOAT3 GetZAxis();
+
+	bool GetDirtyStatus();
 
 	void MoveAbsolute(float x, float y, float z);
 	void MoveRelative(float x, float y, float z); // Move along our "local" axes (respect rotation)
