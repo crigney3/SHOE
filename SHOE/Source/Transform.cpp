@@ -54,7 +54,7 @@ void Transform::UpdateWorldInfo()
 	// Reset the bool
 	this->isDirty = false;
 }
-
+#pragma region Setters
 void Transform::SetPosition(float x, float y, float z) {
 	SetPosition(XMFLOAT3(x, y, z));
 	MarkThisDirty();
@@ -84,7 +84,9 @@ void Transform::SetScale(XMFLOAT3 scale) {
 	this->scale = scale;
 	MarkThisDirty();
 }
+# pragma endregion
 
+#pragma region Getters
 XMFLOAT3 Transform::GetLocalPosition() {
 	return this->pos;
 }
@@ -98,7 +100,7 @@ DirectX::XMFLOAT3 Transform::GetGlobalPosition()
 	return worldPos;
 }
 
-XMFLOAT3 Transform::GetPitchYawRoll() {
+XMFLOAT3 Transform::GetLocalPitchYawRoll() {
 	return XMFLOAT3(this->rotQuat.x, this->rotQuat.y, this->rotQuat.z);
 }
 
@@ -106,6 +108,7 @@ DirectX::XMFLOAT4 Transform::GetGlobalRotation()
 {
 	// Make sure world info is updated if necessary
 	if (this->isDirty) UpdateWorldInfo();
+
 	return worldRotQuat;
 }
 
@@ -131,7 +134,9 @@ XMFLOAT4X4 Transform::GetWorldMatrix()
 }
 
 bool Transform::GetDirtyStatus() { return isDirty; }
+#pragma endregion
 
+#pragma region Transformation Methods
 void Transform::MoveAbsolute(float x, float y, float z) {
 	float newX = x + this->pos.x;
 	float newY = y + this->pos.y;
@@ -176,6 +181,7 @@ void Transform::MoveRelative(float x, float y, float z)
 
 	MarkThisDirty();
 }
+#pragma endregion
 
 DirectX::XMFLOAT3 Transform::GetForward() {
 	XMFLOAT3 forwardVec;

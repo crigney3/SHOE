@@ -36,7 +36,7 @@ public:
 
 	DirectX::XMFLOAT3 GetLocalPosition();
 	DirectX::XMFLOAT3 GetGlobalPosition();
-	DirectX::XMFLOAT3 GetPitchYawRoll();
+	DirectX::XMFLOAT3 GetLocalPitchYawRoll();
 	DirectX::XMFLOAT4 GetGlobalRotation();
 	DirectX::XMFLOAT3 GetLocalScale();
 	DirectX::XMFLOAT3 GetGlobalScale();

@@ -320,7 +320,7 @@ void Game::RenderUI(float deltaTime) {
 		currentEntity->SetEnableDisable(entityEnabled);
 
 		UIPositionEdit = currentEntity->GetTransform()->GetLocalPosition();
-		UIRotationEdit = currentEntity->GetTransform()->GetPitchYawRoll();
+		UIRotationEdit = currentEntity->GetTransform()->GetLocalPitchYawRoll();
 		UIScaleEdit = currentEntity->GetTransform()->GetLocalScale();
 		
 		ImGui::DragFloat3("Position ", &UIPositionEdit.x, 0.5f);
@@ -567,7 +567,7 @@ void Game::RenderUI(float deltaTime) {
 		currentEntity->SetEnableDisable(entityEnabled);
 
 		UIPositionEdit = currentEntity->GetTransform()->GetLocalPosition();
-		UIRotationEdit = currentEntity->GetTransform()->GetPitchYawRoll();
+		UIRotationEdit = currentEntity->GetTransform()->GetLocalPitchYawRoll();
 		UIScaleEdit = currentEntity->GetTransform()->GetLocalScale();
 
 		ImGui::DragFloat3("Position ", &UIPositionEdit.x, 0.5f);
@@ -710,7 +710,7 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::NewLine();
 		ImGui::Text("Edit Collider Transform:");
 		static XMFLOAT3 colliderUIPositionEdit	= currentCollider->GetTransform()->GetLocalPosition();
-		static XMFLOAT3 colliderUIRotationEdit	= currentCollider->GetTransform()->GetPitchYawRoll();
+		static XMFLOAT3 colliderUIRotationEdit	= currentCollider->GetTransform()->GetLocalPitchYawRoll();
 		static XMFLOAT3 colliderUIScaleEdit		= currentCollider->GetTransform()->GetLocalScale();
 		
 		ImGui::DragFloat3("Position ", &colliderUIPositionEdit.x, 0.5f);
@@ -870,7 +870,7 @@ void Game::Flashlight() {
 		flashlight->position = XMFLOAT3(camPos.x + 0.5f, camPos.y, camPos.z + 0.5f);
 		flashlight->direction = mainCamera->GetTransform()->GetForward();
 		flashShadowCamera->GetTransform()->SetPosition(flashlight->position.x, flashlight->position.y, flashlight->position.z);
-		flashShadowCamera->GetTransform()->SetRotation(mainCamera->GetTransform()->GetPitchYawRoll().x, mainCamera->GetTransform()->GetPitchYawRoll().y, mainCamera->GetTransform()->GetPitchYawRoll().z);
+		flashShadowCamera->GetTransform()->SetRotation(mainCamera->GetTransform()->GetLocalPitchYawRoll().x, mainCamera->GetTransform()->GetLocalPitchYawRoll().y, mainCamera->GetTransform()->GetLocalPitchYawRoll().z);
 		flashShadowCamera->UpdateViewMatrix();
 		FlickeringCheck();
 	}

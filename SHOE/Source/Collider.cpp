@@ -20,7 +20,7 @@ void Collider::Start()
     transform_ = owner_->GetTransform();
 
     //Need to make the OBB with a quaternion as XMFLOAT4
-    XMFLOAT3 pyr = transform_->GetPitchYawRoll();
+    XMFLOAT3 pyr = transform_->GetLocalPitchYawRoll();
     XMMATRIX mtrx = DirectX::XMMatrixRotationRollPitchYaw(pyr.x, pyr.y, pyr.z);
     XMVECTOR quat = XMQuaternionRotationMatrix(mtrx);
     XMFLOAT4 quatF;
@@ -86,8 +86,12 @@ void Collider::Update()
 {
 	// Make sure OBB sticks to Transform
     obb_.Center = transform_->GetGlobalPosition();
-    obb_.Orientation = transform_->GetGlobalRotation();
-
+    //TODO: Fix the underlying reason within Transform(?) for why this distinction needs to be here for OBB orientation to be updated correctly
+    if (transform_->GetParent() != nullptr)
+    {
+	    obb_.Orientation = transform_->GetGlobalRotation(); // works for child objects
+		return;	    
+    }
     // DON'T DO THIS. DO NOT DO THIS or the object will scale. NO
     // ----------------------------------------------------------------------
     // Remember Extents are a radius but a scale is like a diameter
@@ -95,4 +99,17 @@ void Collider::Update()
     //halfWidth = XMFLOAT3(halfWidth.x / 2, halfWidth.y / 2, halfWidth.z / 2);
     //obb_.Extents = halfWidth;
     //------------------------------------------------------------------------
+
+
+    //Need to make the OBB with a quaternion as XMFLOAT4
+    XMFLOAT3 pyr = transform_->GetLocalPitchYawRoll();
+    XMMATRIX mtrx = DirectX::XMMatrixRotationRollPitchYaw(pyr.x, pyr.y, pyr.z);
+
+    XMVECTOR quat = XMQuaternionRotationMatrix(mtrx);
+    XMFLOAT4 quatF;
+    XMStoreFloat4(&quatF, quat);
+
+    obb_.Orientation = quatF;
+
+
 }
