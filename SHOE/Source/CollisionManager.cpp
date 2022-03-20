@@ -74,7 +74,7 @@ void CollisionManager::CheckTriggerCollisions()
 		DirectX::BoundingOrientedBox tOBB = t.get()->GetOrientedBoundingBox();
 		for (auto& c : markedAsColliders_)
 		{
-			BoundingOrientedBox cOBB = c.GetOrientedBoundingBox();
+			BoundingOrientedBox cOBB = c->GetOrientedBoundingBox();
 			if (tOBB.Intersects(cOBB))
 			{
 				printf("Colliding\n");
