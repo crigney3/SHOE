@@ -110,6 +110,4 @@ void Collider::Update()
     XMStoreFloat4(&quatF, quat);
 
     obb_.Orientation = quatF;
-
-
 }

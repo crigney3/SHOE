@@ -924,7 +924,7 @@ void Game::Update(float deltaTime, float totalTime)
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+1.5f, (float)sin(totalTime) + 2.5f, +0.0f);
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate( 0.0f, 0.0f, -(float)sin(deltaTime));
 		//globalAssets.GetGameEntityByName("Floor Cube")->GetTransform()->SetPosition( (float)sin(deltaTime) + 2.5f, +1.0f, +0.0f);
-		globalAssets.GetGameEntityByName("Floor Cube")->GetTransform()->Rotate( 0.0f, (float)sin(deltaTime), 0.0f);
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate( 0.0f, (float)sin(deltaTime), 0.0f);
 		globalAssets.GetGameEntityByName("Scratched Cube")->GetTransform()->Rotate(-(float)sin(deltaTime), 0.0f, 0.0f);
 
 		globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(totalTime), +0.0f);

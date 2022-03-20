@@ -1,4 +1,6 @@
 ﻿#include "..\Headers\CollisionManager.h"
+
+#include "../Headers/GameEntity.h"
 #include "..\Headers\ComponentManager.h"
 
 using namespace DirectX;
@@ -23,26 +25,33 @@ void CollisionManager::Update()
 	{
 		c->Update();
 	}
-	CheckTriggerCollisions();
-	CheckColliderCollisions();
-	//for (int i = 0; i < allColliders_.size(); i++)
-	//{
-	//	std::shared_ptr<Collider> a = allColliders_[i];
-	//	for (int j = 0; j < allColliders_.size(); j++)
-	//	{
-	//		std::shared_ptr<Collider> b = allColliders_[j];
-	//
-	//		// Skip if about to check against self
-	//		if (b == a)
-	//			continue;
-	//
-	//		// TODO: Somehow need to check for collisions while avoiding dupes 
-	//		if (!a->GetTriggerStatus() && b->GetTriggerStatus())
-	//		{
-	//			
-	//		}
-	//	}
-	//}
+	//CheckTriggerCollisions();
+	//CheckColliderCollisions();
+
+	// ROUGH implementation of collision. Seems to work and no dupes occur (I think)
+	std::vector<std::shared_ptr<Collider>> c = ComponentManager::GetAllEnabled<Collider>();
+	for (int i = 0; i < c.size(); i++)
+	{
+		std::shared_ptr<Collider> a = c[i];
+		for (int j = 0; j < c.size(); j++)
+		{
+			std::shared_ptr<Collider> b = c[j];
+	
+			std::string aName = a->GetOwner()->GetName();
+			std::string bName = b->GetOwner()->GetName();
+
+			// Skip if about to check against self
+			if (aName == bName)
+				continue;
+	
+			// TODO: Somehow need to check for collisions while avoiding dupes 
+			if ((!a->GetTriggerStatus() && b->GetTriggerStatus())
+				&& a->GetOrientedBoundingBox().Intersects(b->GetOrientedBoundingBox()))
+			{
+				printf("\n%s Colliding with %s", aName.c_str(), bName.c_str());
+			}
+		}
+	}
 }
 
 /**
