@@ -11,10 +11,11 @@ private:
 	DirectX::XMFLOAT4X4 worldMatrix;
 	DirectX::XMFLOAT3 worldPos;
 	DirectX::XMFLOAT3 worldScale;
+	DirectX::XMFLOAT4 worldRotQuat;
 
 	DirectX::XMFLOAT3 pos; //LOCAL SPACE
 	DirectX::XMFLOAT3 scale; //LOCAL SPACE
-	DirectX::XMFLOAT4 rotQuat; //LOCAL SPACE(?)
+	DirectX::XMFLOAT4 rotQuat; //LOCAL SPACE
 
 	bool isDirty; // Can/will only be dirty if: has a parent & parent has moved
 	void MarkThisDirty();
@@ -36,6 +37,7 @@ public:
 	DirectX::XMFLOAT3 GetLocalPosition();
 	DirectX::XMFLOAT3 GetGlobalPosition();
 	DirectX::XMFLOAT3 GetPitchYawRoll();
+	DirectX::XMFLOAT4 GetGlobalRotation();
 	DirectX::XMFLOAT3 GetLocalScale();
 	DirectX::XMFLOAT3 GetGlobalScale();
 	DirectX::XMFLOAT4X4 GetWorldMatrix();

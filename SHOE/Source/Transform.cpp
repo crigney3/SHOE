@@ -16,37 +16,39 @@ void Transform::UpdateWorldInfo()
 {
 	if (!this->isDirty) return;
 
+	XMMATRIX world = XMMatrixIdentity();
+	XMMATRIX pWorld = XMMatrixIdentity();
+	XMFLOAT4X4 parentWorldF = XMFLOAT4X4();
+
 	// - World Matrix - //
 	{
 		XMMATRIX trans = XMMatrixTranslation(this->pos.x, this->pos.y, this->pos.z);
 		XMMATRIX scale = XMMatrixScaling(this->scale.x, this->scale.y, this->scale.z);
 		XMMATRIX rotation = XMMatrixRotationRollPitchYaw(this->rotQuat.x, this->rotQuat.y, this->rotQuat.z);
 
-		XMMATRIX world = scale * rotation * trans;
+		world = scale * rotation * trans;
 
 		if (parent != nullptr)
 		{
-			XMFLOAT4X4 parentWorld = parent->GetWorldMatrix();
-			world = XMMatrixMultiply(world, XMLoadFloat4x4(&parentWorld));
+			parentWorldF = parent->GetWorldMatrix();
+			world = XMMatrixMultiply(world, XMLoadFloat4x4(&parentWorldF));
 		}
 
 		// Store in field
 		XMStoreFloat4x4(&this->worldMatrix, world);
 	}
 
-	// - Global Position & Scale - //
+	// - Update stored global Position, Rotation, & Scale - //
 	if (parent != nullptr)
 	{
-		XMFLOAT3 pGPos = parent->GetGlobalPosition();
-		XMFLOAT3 pGScale = parent->GetGlobalScale();
-		XMVECTOR pGPosVec = XMLoadFloat3(&pGPos);
-		XMVECTOR pGScaleVec = XMLoadFloat3(&pGScale);
-		XMVECTOR posVec = XMLoadFloat3(&this->pos);
-		XMVECTOR sclVec = XMLoadFloat3(&this->scale);
+		XMVECTOR posVec, sclVec, rotVec;
+
+		XMMatrixDecompose(&sclVec, &rotVec, &posVec, world);
 
 		// Store in field
-		XMStoreFloat3(&worldPos, posVec * pGScaleVec + pGPosVec);
-		XMStoreFloat3(&worldScale, sclVec * pGScaleVec);
+		XMStoreFloat3(&worldPos, posVec);
+		XMStoreFloat3(&worldScale, sclVec);
+		XMStoreFloat4(&worldRotQuat, rotVec);
 	}
 
 	// Reset the bool
@@ -55,6 +57,7 @@ void Transform::UpdateWorldInfo()
 
 void Transform::SetPosition(float x, float y, float z) {
 	SetPosition(XMFLOAT3(x, y, z));
+	MarkThisDirty();
 }
 
 void Transform::SetPosition(XMFLOAT3 pos) {
@@ -64,6 +67,7 @@ void Transform::SetPosition(XMFLOAT3 pos) {
 
 void Transform::SetRotation(float pitch, float yaw, float roll) {
 	SetRotation(XMFLOAT3(pitch, yaw, roll));
+	MarkThisDirty();
 }
 
 void Transform::SetRotation(XMFLOAT3 rot) {
@@ -73,6 +77,7 @@ void Transform::SetRotation(XMFLOAT3 rot) {
 
 void Transform::SetScale(float x, float y, float z) {
 	SetScale(XMFLOAT3(x, y, z));
+	MarkThisDirty();
 }
 
 void Transform::SetScale(XMFLOAT3 scale) {
@@ -95,6 +100,13 @@ DirectX::XMFLOAT3 Transform::GetGlobalPosition()
 
 XMFLOAT3 Transform::GetPitchYawRoll() {
 	return XMFLOAT3(this->rotQuat.x, this->rotQuat.y, this->rotQuat.z);
+}
+
+DirectX::XMFLOAT4 Transform::GetGlobalRotation()
+{
+	// Make sure world info is updated if necessary
+	if (this->isDirty) UpdateWorldInfo();
+	return worldRotQuat;
 }
 
 XMFLOAT3 Transform::GetLocalScale() {
@@ -136,7 +148,6 @@ void Transform::Rotate(float pitch, float yaw, float roll) {
 	float newRoll = roll + this->rotQuat.z;
 
 	this->rotQuat = XMFLOAT4(newPitch, newYaw, newRoll, +0.0f);
-
 	MarkThisDirty();
 }
 
@@ -163,8 +174,7 @@ void Transform::MoveRelative(float x, float y, float z)
 
 	XMStoreFloat3(&pos, XMLoadFloat3(&pos) + relativeMovement);
 
-	isDirty = true;
-	MarkChildTransformsDirty();
+	MarkThisDirty();
 }
 
 DirectX::XMFLOAT3 Transform::GetForward() {
@@ -187,8 +197,7 @@ void Transform::AddChild(std::shared_ptr<Transform> child) {
 	this->children.push_back(child);
 
 	child->parent = shared_from_this();
-	child->isDirty = true;
-	child->MarkChildTransformsDirty();
+	child->MarkThisDirty();
 }
 
 void Transform::RemoveChild(std::shared_ptr<Transform> child) {
@@ -206,8 +215,7 @@ void Transform::SetParent(std::shared_ptr<Transform> newParent) {
 		this->parent = nullptr;
 	}
 
-	isDirty = true;
-	MarkChildTransformsDirty();
+	MarkThisDirty();
 }
 
 std::shared_ptr<Transform> Transform::GetParent() {
@@ -233,8 +241,7 @@ void Transform::MarkThisDirty()
 
 void Transform::MarkChildTransformsDirty() {
 	for (int i = 0; i < children.size(); i++) {
-		children[i]->isDirty = true;
-		children[i]->MarkChildTransformsDirty();
+		children[i]->MarkThisDirty();
 	}
 }
 

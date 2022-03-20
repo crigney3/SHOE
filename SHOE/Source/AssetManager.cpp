@@ -927,10 +927,8 @@ void AssetManager::InitializeCameras() {
 	globalCameras = std::vector<std::shared_ptr<Camera>>();
 
 	float aspectRatio = (float)(dxInstance->width / dxInstance->height);
-	CreateCamera("mainCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -5.5f), aspectRatio, 1);
-
-	CreateCamera("mainShadowCamera", DirectX::XMFLOAT3(0.0f, 10.0f, -5.5f), 1.0f, 0);
-
+	CreateCamera("mainCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -20.0f), aspectRatio, 1);
+	CreateCamera("mainShadowCamera", DirectX::XMFLOAT3(0.0f, 10.0f, -20.0f), 1.0f, 0);
 	std::shared_ptr<Camera> fscTemp = CreateCamera("flashShadowCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -5.5f), 1.0f, 1);
 	fscTemp->GetTransform()->SetRotation(0, 0, 0);
 	fscTemp->UpdateViewMatrix();

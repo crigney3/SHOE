@@ -31,7 +31,7 @@ void Collider::Start()
     halfWidth = XMFLOAT3(halfWidth.x / 2, halfWidth.y / 2, halfWidth.z / 2);
 
     // Create an Oriented Bounding Box with info from the Transform
-    obb_ = BoundingOrientedBox(transform_->GetLocalPosition(), halfWidth, quatF);
+    obb_ = BoundingOrientedBox(transform_->GetGlobalPosition(), halfWidth, quatF);
 
     // Track it
     CollisionManager::AddColliderToManager(shared_from_this());
@@ -86,6 +86,7 @@ void Collider::Update()
 {
 	// Make sure OBB sticks to Transform
     obb_.Center = transform_->GetGlobalPosition();
+    obb_.Orientation = transform_->GetGlobalRotation();
 
     // DON'T DO THIS. DO NOT DO THIS or the object will scale. NO
     // ----------------------------------------------------------------------
@@ -94,20 +95,4 @@ void Collider::Update()
     //halfWidth = XMFLOAT3(halfWidth.x / 2, halfWidth.y / 2, halfWidth.z / 2);
     //obb_.Extents = halfWidth;
     //------------------------------------------------------------------------
-
-    //Need to make the OBB with a quaternion as XMFLOAT4
-    XMFLOAT3 pyr = transform_->GetPitchYawRoll();
-    XMMATRIX mtrx = DirectX::XMMatrixRotationRollPitchYaw(pyr.x, pyr.y, pyr.z);
-
-    XMFLOAT4X4 o_wrld = owner_->GetTransform()->GetWorldMatrix();
-    XMMATRIX o_wrld_m = XMLoadFloat4x4(&o_wrld);
-
-    //mtrx = XMMatrixMultiply(mtrx, o_wrld_m);
-
-    XMVECTOR quat = XMQuaternionRotationMatrix(mtrx);
-    XMFLOAT4 quatF;
-    XMStoreFloat4(&quatF, quat);
-
-    obb_.Orientation = quatF;
-    
 }
