@@ -10,6 +10,11 @@ Collider::Collider()
 
 }
 
+void Collider::OnDestroy() {
+    owner_ = nullptr;
+    transform_ = nullptr;
+}
+
 void Collider::Start()
 {
     isEnabled_ = true;

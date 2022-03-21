@@ -61,7 +61,6 @@ void IComponent::Free()
 
 /**
  * \brief Returns whether this component and the GameEntity it is on is enabled
- * \return 
  */
 bool IComponent::IsEnabled()
 {

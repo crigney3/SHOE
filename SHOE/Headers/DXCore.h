@@ -81,6 +81,8 @@ protected:
 	std::string GetExePath();
 	std::wstring GetExePath_Wide();
 
+	float GetTotalTime();
+	float GetDeltaTime();
 
 private:
 	// Timing related data

@@ -1,4 +1,3 @@
-#include "GameEntity.h"
 #include "AssetManager.h"
 #include "CollisionManager.h"
 
@@ -129,7 +128,6 @@ private:
 
     // Refraction data
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> refractionSilhouetteDepthState;
-    std::vector<std::shared_ptr<GameEntity>> transparentEntities;
 
     // Depth pre-pass data
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> prePassDepthState;

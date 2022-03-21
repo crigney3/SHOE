@@ -1,31 +1,31 @@
 #pragma once
 
+#include "Camera.h"
+#include "IComponent.h"
 #include "DXCore.h"
 #include "Vertex.h"
-#include "Transform.h"
-#include "Camera.h"
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 #define RandomIntRange(min, max) (int)rand() / RAND_MAX * (max - min) + min
 
-class Emitter {
+class ParticleSystem : public IComponent
+{
 public:
-	Emitter(int maxParticles,
-			float particleLifeTime,
-			float particlesPerSecond,
-			DirectX::XMFLOAT3 position,
-			std::shared_ptr<SimplePixelShader> particlePixelShader,
-			std::shared_ptr<SimpleVertexShader> particleVertexShader,
-			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
-			Microsoft::WRL::ComPtr<ID3D11Device> device,
-			Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
-			std::string name,
-			bool isMultiParticle = false,
-			bool additiveBlend = true);
-	~Emitter();
+	static void SetDefaults(
+		std::shared_ptr<SimplePixelShader> particlePixelShader,
+		std::shared_ptr<SimpleVertexShader> particleVertexShader,
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
+		Microsoft::WRL::ComPtr<ID3D11Device> device,
+		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context
+	);
 
-	void Update(float deltaTime, float totalTime);
+	void Start() override;
+	void Update(float deltaTime, float totalTime) override;
+	void OnDestroy() override;
+
 	void Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive);
+
+	void SetParticleTextureSRV(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV);
 
 	void SetColorTint(DirectX::XMFLOAT4 color);
 	DirectX::XMFLOAT4 GetColorTint();
@@ -36,6 +36,9 @@ public:
 	void SetBlendState(bool AdditiveOrNot);
 	bool GetBlendState();
 
+	void SetIsMultiParticle(bool isMultiParticle);
+	bool IsMultiParticle();
+
 	void SetParticlesPerSecond(float particlesPerSecond);
 	float GetParticlesPerSecond();
 
@@ -45,34 +48,27 @@ public:
 	void SetMaxParticles(int maxParticles);
 	int GetMaxParticles();
 
-	void SetName(std::string name);
-	std::string GetName();
-
 	void SetSpeed(float speed);
 	float GetSpeed();
 
 	void SetDestination(DirectX::XMFLOAT3 destination);
 	DirectX::XMFLOAT3 GetDestination();
 
-	void SetEnableDisable(bool enabled);
-	bool GetEnableDisable();
-
 	void SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> shader, ParticleComputeShaderType type);
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetDrawListSRV();
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetSortListSRV();
 
-	void SetMainCamera(std::shared_ptr<Camera> cam);
-
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleDataSRV;
 private:
+	static std::shared_ptr<SimplePixelShader> defaultParticlePixelShader;
+	static std::shared_ptr<SimpleVertexShader> defaultParticleVertexShader;
+	static Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> defaultParticleTextureSRV;
+	static Microsoft::WRL::ComPtr<ID3D11Device> defaultDevice;
+	static Microsoft::WRL::ComPtr<ID3D11DeviceContext> defaultContext;
+
 	void Initialize(int maxParticles);
 	void EmitParticle(float currentTime, int emitCount);
-
-	std::string name;
-	bool enabled;
-
-	std::shared_ptr<Transform> transform;
 
 	unsigned int* indices;
 
@@ -110,7 +106,6 @@ private:
 	float speed;
 	DirectX::XMFLOAT3 destination;
 
-	std::shared_ptr<Camera> cam;
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
 };

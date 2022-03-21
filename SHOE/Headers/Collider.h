@@ -11,6 +11,7 @@ public:
 	Collider();
 	void Start() override;
 	void Update();
+	void OnDestroy() override;
 
 	std::shared_ptr<GameEntity> GetOwner();
 	void SetOwner(std::shared_ptr<GameEntity> _newOwner);

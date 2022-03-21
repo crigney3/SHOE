@@ -3,7 +3,7 @@
 #include <queue>
 
 #include "GameEntity.fwd.h"
-#include "IComponent.h"
+#include "MeshRenderer.h"
 
 constexpr auto POOL_SIZE = 30;
 
@@ -21,6 +21,8 @@ private:
 	static std::vector<std::shared_ptr<T>> allocated;
 	static std::queue<std::shared_ptr<T>> unallocated;
 };
+
+template <> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
 
 template<typename T>
 std::vector<std::shared_ptr<T>> ComponentPool<T>::allocated =

@@ -15,6 +15,13 @@ CollisionManager::CollisionManager()
 	markedAsColliders_ = std::vector<std::shared_ptr<Collider>>();
 }
 
+CollisionManager::~CollisionManager()
+{
+	for (auto c : markedAsColliders_) {
+		c.reset();
+	}
+}
+
 std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsTriggerboxes() { return markedAsTriggerboxes_; }
 
 std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsColliders() { return markedAsColliders_; }

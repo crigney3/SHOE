@@ -4,6 +4,8 @@
 #include "Sky.h"
 #include "SimpleShader.h"
 #include "GameEntity.h"
+#include "ParticleSystem.h"
+#include "Terrain.h"
 #include "WICTextureLoader.h"
 #include <assimp/Importer.hpp>
 #include <assimp/types.h>
@@ -12,7 +14,6 @@
 #include <map>
 #include <random>
 #include "DXCore.h"
-#include "Emitter.h"
 #include "experimental\filesystem"
 #include <locale>
 #include <codecvt>
@@ -88,6 +89,7 @@ private:
 	void CreateComplexGeometry();
 	void ProcessComplexModel(aiNode* node, const aiScene* scene);
 	std::shared_ptr<Mesh> ProcessComplexMesh(aiMesh* mesh, const aiScene* scene);
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::wstring textureNameToLoad, bool isMultiParticle);
 
 	void InitializeMeshes();
 	void InitializeMaterials();
@@ -112,8 +114,6 @@ private:
 	std::vector<std::shared_ptr<GameEntity>> globalEntities;
 	std::vector<std::shared_ptr<Light>> globalLights;
 	std::vector<std::shared_ptr<TerrainMats>> globalTerrainMaterials;
-	std::vector<std::shared_ptr<GameEntity>> globalTerrainEntities;
-	std::vector<std::shared_ptr<Emitter>> globalParticleEmitters;
 	std::vector<FMOD::Sound*> globalSounds;
 	std::map<std::string, std::shared_ptr<DirectX::SpriteFont>> globalFonts;
 
@@ -135,9 +135,6 @@ public:
 
 	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock, HWND hwnd);
 
-	// Called whenever a material changes, or when a GameEntity is added
-	void SortEntitiesByMaterial();
-
 	std::string GetLastLoadedCategory();
 	std::string GetLastLoadedObject();
 	std::exception_ptr GetLoadingException();
@@ -148,6 +145,7 @@ public:
 
 	// Methods to create new assets
 
+	std::shared_ptr<GameEntity> CreateGameEntity(std::string name = "GameEntity");
 	std::shared_ptr<GameEntity> CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name = "GameEntity");
 	std::shared_ptr<Sky> CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, std::string name);
 	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::wstring nameToLoad);
@@ -160,13 +158,15 @@ public:
 											    std::wstring normalNameToLoad,
 											    std::wstring metalnessNameToLoad,
 											    std::wstring roughnessNameToLoad);
-	std::shared_ptr<GameEntity> CreateTerrainEntity(std::shared_ptr<Mesh> mesh, std::string name = "Terrain");
-	std::shared_ptr<Emitter> CreateParticleEmitter(int maxParticles,
+	std::shared_ptr<Terrain> CreateTerrainEntity(std::string name = "Terrain");
+	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
+													std::wstring textureNameToLoad,
+													bool isMultiParticle);
+	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
+												   std::wstring textureNameToLoad,
+												   int maxParticles,
 												   float particleLifeTime,
 												   float particlesPerSecond,
-												   DirectX::XMFLOAT3 position, 
-												   std::wstring textureNameToLoad,
-												   std::string name,
 												   bool isMultiParticle = false,
 												   bool additiveBlendState = true);
 	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode);
@@ -186,39 +186,21 @@ public:
 	void RemoveMesh(int id);
 	void RemoveCamera(std::string name);
 	void RemoveCamera(int id);
-	void RemoveTerrain(std::string name);
-	void RemoveTerrain(int id);
 	void RemoveMaterial(std::string name);
 	void RemoveMaterial(int id);
 	void RemoveTerrainMaterial(std::string name);
 	void RemoveTerrainMaterial(int id);
 	void RemoveLight(std::string name);
 	void RemoveLight(int id);
-	void RemoveEmitter(std::string name);
-	void RemoveEmitter(int id);
 
 	// Methods to disable and enable assets for rendering
 	// Currently not implemented except for lights
-
-	void EnableDisableGameEntity(std::string name, bool value);
-	void EnableDisableGameEntity(int id, bool value);
+	
 	void EnableDisableSky(std::string name, bool value);
 	void EnableDisableSky(int id, bool value);
-	/*void EnableDisableVertexShader(std::string name, bool value);
-	void EnableDisableVertexShader(int id, bool value);
-	void EnableDisablePixelShader(std::string name, bool value);
-	void EnableDisablePixelShader(int id, bool value);*/
-	void EnableDisableMesh(std::string name, bool value);
-	void EnableDisableMesh(int id, bool value);
 	void EnableDisableCamera(std::string name, bool value);
 	void EnableDisableCamera(int id, bool value);
-	void EnableDisableTerrain(std::string name, bool value);
-	void EnableDisableTerrain(int id, bool value);
-	void EnableDisableMaterial(std::string name, bool value);
-	void EnableDisableMaterial(int id, bool value);
-	/*void EnableDisableTerrainMaterial(std::string name, bool value);
-	void EnableDisableTerrainMaterial(int id, bool value);
-	void EnableDisableLight(std::string name, bool value);*/
+	//void EnableDisableLight(std::string name, bool value);
 	void EnableDisableLight(int id, bool value);
 
 	// Asset search-by-name methods
@@ -230,10 +212,8 @@ public:
 	std::shared_ptr<SimpleComputeShader> GetComputeShaderByName(std::string name);
 	std::shared_ptr<Mesh> GetMeshByName(std::string name);
 	std::shared_ptr<Camera> GetCameraByName(std::string name);
-	std::shared_ptr<GameEntity> GetTerrainByName(std::string name);
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
 	std::shared_ptr<TerrainMats> GetTerrainMaterialByName(std::string name);
-	std::shared_ptr<Emitter> GetEmitterByName(std::string name);
 	std::shared_ptr<Light> GetLightByName(std::string name);
 	FMOD::Sound* GetSoundByName();
 	std::shared_ptr<DirectX::SpriteFont> GetFontByName(std::string name);
@@ -245,7 +225,6 @@ public:
 	int GetComputeShaderIDByName(std::string name);
 	int GetMeshIDByName(std::string name);
 	int GetCameraIDByName(std::string name);
-	int GetTerrainIDByName(std::string name);
 	int GetMaterialIDByName(std::string name);
 	/*int GetTerrainMaterialIDByName(std::string name);
 	int GetLightIDByName(std::string name);*/
@@ -263,8 +242,6 @@ public:
 	size_t GetGameEntityArraySize();
 	size_t GetLightArraySize();
 	size_t GetTerrainMaterialArraySize();
-	size_t GetTerrainEntityArraySize();
-	size_t GetEmitterArraySize();
 	size_t GetSoundArraySize();
 	Light* GetLightArray();
 	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
@@ -272,7 +249,6 @@ public:
 	Light* GetFlashlight();
 
 	Light* GetLightAtID(int id);
-	std::shared_ptr<Emitter> GetEmitterAtID(int id);
 	FMOD::Sound* GetSoundAtID(int id);
 	std::shared_ptr<Camera> GetCameraAtID(int id);
 	std::shared_ptr<Material> GetMaterialAtID(int id);
@@ -280,13 +256,8 @@ public:
 	std::shared_ptr<SimpleVertexShader> GetVertexShaderAtID(int id);
 	std::shared_ptr<SimplePixelShader> GetPixelShaderAtID(int id);
 	std::shared_ptr<SimpleComputeShader> GetComputeShaderAtID(int id);
-	std::shared_ptr<GameEntity> GetTerrainAtID(int id);
 	std::shared_ptr<GameEntity> GetGameEntityByID(int id);
 	std::shared_ptr<Sky> GetSkyAtID(int id);
-
-	// Asset internals set functions
-	void SetGameEntityMesh(std::shared_ptr<GameEntity> entity, std::shared_ptr<Mesh> newMesh);
-	void SetGameEntityMaterial(std::shared_ptr<GameEntity> entity, std::shared_ptr<Material> newMaterial);
 
 	inline std::wstring ConvertToWide(const std::string& as);
 

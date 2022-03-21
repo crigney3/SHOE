@@ -1,61 +1,17 @@
-#include "../Headers/Emitter.h"
-#include "..\Headers\ComponentManager.h"
+#include "../Headers/ParticleSystem.h"
+#include "../Headers/GameEntity.h"
 
-Emitter::Emitter(int maxParticles,
-				 float particleLifeTime,
-				 float particlesPerSecond,
-				 DirectX::XMFLOAT3 position,
-				 std::shared_ptr<SimplePixelShader> particlePixelShader,
-				 std::shared_ptr<SimpleVertexShader> particleVertexShader,
-				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
-				 Microsoft::WRL::ComPtr<ID3D11Device> device,
-				 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
-				 std::string name,
-				 bool isMultiParticle,
-				 bool additiveBlendState) 
-{
-	this->maxParticles = maxParticles;
-	this->particlesPerSecond = particlesPerSecond;
-	this->particleLifetime = particleLifeTime;
-	this->secondsPerEmission = 1.0f / particlesPerSecond;
+std::shared_ptr<SimplePixelShader> ParticleSystem::defaultParticlePixelShader = nullptr;
+std::shared_ptr<SimpleVertexShader> ParticleSystem::defaultParticleVertexShader = nullptr;
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::defaultParticleTextureSRV = nullptr;
+Microsoft::WRL::ComPtr<ID3D11Device> ParticleSystem::defaultDevice = nullptr;
+Microsoft::WRL::ComPtr<ID3D11DeviceContext> ParticleSystem::defaultContext = nullptr;
 
-	this->timeSinceEmit = 0.0f;
-
-	this->particlePixelShader = particlePixelShader;
-	this->particleVertexShader = particleVertexShader;
-	this->particleTextureSRV = particleTextureSRV;
-
-	this->device = device;
-	this->context = context;
-
-	this->name = name;
-	this->enabled = false;
-
-	this->transform = ComponentManager::Instantiate<Transform>(nullptr, true);
-	this->transform->SetPosition(position);
-
-	this->colorTint = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	this->scale = 0.0f;
-	this->speed = 1.0f;
-	this->destination = DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f);
-
-	this->additiveBlend = additiveBlendState;
-
-	// Set up a function to calculate if this emitter will overflow its buffer
-	// Then recalculate maxParticles if it will
-	Initialize(this->maxParticles);
-}
-
-Emitter::~Emitter() {
-	transform->OnDestroy();
-	ComponentManager::Free<Transform>(transform);
-}
-
-void Emitter::SetColorTint(DirectX::XMFLOAT4 color) {
+void ParticleSystem::SetColorTint(DirectX::XMFLOAT4 color) {
 	this->colorTint = color;
 }
 
-DirectX::XMFLOAT4 Emitter::GetColorTint() {
+DirectX::XMFLOAT4 ParticleSystem::GetColorTint() {
 	return this->colorTint;
 }
 
@@ -63,56 +19,50 @@ DirectX::XMFLOAT4 Emitter::GetColorTint() {
 // Scale defaults to 0 - anything above 0
 // will cause the particle to grow over time
 //
-void Emitter::SetScale(float scale) {
+void ParticleSystem::SetScale(float scale) {
 	this->scale = scale;
 }
 
-float Emitter::GetScale() {
+float ParticleSystem::GetScale() {
 	return this->scale;
 }
 
-void Emitter::SetBlendState(bool AdditiveOrNot) {
+void ParticleSystem::SetBlendState(bool AdditiveOrNot) {
 	this->additiveBlend = AdditiveOrNot;
 }
 
-bool Emitter::GetBlendState() {
+bool ParticleSystem::GetBlendState() {
 	return this->additiveBlend;
 }
 
-void Emitter::SetName(std::string name) {
-	this->name = name;
+void ParticleSystem::SetIsMultiParticle(bool isMultiParticle)
+{
+	this->isMultiParticle = isMultiParticle;
 }
 
-std::string Emitter::GetName() {
-	return this->name;
+bool ParticleSystem::IsMultiParticle()
+{
+	return isMultiParticle;
 }
 
-void Emitter::SetParticlesPerSecond(float particlesPerSecond) {
+void ParticleSystem::SetParticlesPerSecond(float particlesPerSecond) {
 	this->particlesPerSecond = particlesPerSecond;
 	this->secondsPerEmission = 1.0f / particlesPerSecond;
 }
 
-float Emitter::GetParticlesPerSecond() {
+float ParticleSystem::GetParticlesPerSecond() {
 	return this->particlesPerSecond;
 }
 
-void Emitter::SetParticleLifetime(float particleLifetime) {
+void ParticleSystem::SetParticleLifetime(float particleLifetime) {
 	this->particleLifetime = particleLifetime;
 }
 
-float Emitter::GetParticleLifetime() {
+float ParticleSystem::GetParticleLifetime() {
 	return this->particleLifetime;
 }
 
-void Emitter::SetEnableDisable(bool enabled) {
-	this->enabled = enabled;
-}
-
-bool Emitter::GetEnableDisable() {
-	return this->enabled;
-}
-
-void Emitter::SetMaxParticles(int maxParticles) {
+void ParticleSystem::SetMaxParticles(int maxParticles) {
 	if (this->maxParticles != maxParticles) {
 		// SRV handle release and wipe
 		sortListSRV.Reset();
@@ -147,63 +97,192 @@ void Emitter::SetMaxParticles(int maxParticles) {
 	}
 }
 
-int Emitter::GetMaxParticles() {
+int ParticleSystem::GetMaxParticles() {
 	return this->maxParticles;
 }
 
-void Emitter::SetSpeed(float speed) {
+void ParticleSystem::SetSpeed(float speed) {
 	this->speed = speed;
 }
 
-float Emitter::GetSpeed() {
+float ParticleSystem::GetSpeed() {
 	return this->speed;
 }
 
-void Emitter::SetDestination(DirectX::XMFLOAT3 destination) {
+void ParticleSystem::SetDestination(DirectX::XMFLOAT3 destination) {
 	this->destination = destination;
 }
 
-DirectX::XMFLOAT3 Emitter::GetDestination() {
+DirectX::XMFLOAT3 ParticleSystem::GetDestination() {
 	return this->destination;
 }
 
-void Emitter::SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> computeShader, ParticleComputeShaderType type) {
-	switch(type) {
-		case 0:
-			this->particleEmitComputeShader = computeShader;
-			break;
-		case 1:
-			this->particleSimComputeShader = computeShader;
-			break;
-		case 2:
-			this->particleCopyComputeShader = computeShader;
-			break;
-		case 3:
-			this->particleDeadListInitComputeShader = computeShader;
-			// Run the dead list initializer
-			// Add +1 thread as a buffer for "hidden counter" bug
-			particleDeadListInitComputeShader->SetShader();
-			particleDeadListInitComputeShader->SetInt("maxParticles", this->maxParticles);
-			particleDeadListInitComputeShader->SetUnorderedAccessView("DeadList", this->deadListUAV);
-			particleDeadListInitComputeShader->CopyAllBufferData();
-			particleDeadListInitComputeShader->DispatchByThreads(this->maxParticles, 1, 1);
-			break;
+void ParticleSystem::SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> computeShader, ParticleComputeShaderType type) {
+	switch (type) {
+	case 0:
+		this->particleEmitComputeShader = computeShader;
+		break;
+	case 1:
+		this->particleSimComputeShader = computeShader;
+		break;
+	case 2:
+		this->particleCopyComputeShader = computeShader;
+		break;
+	case 3:
+		this->particleDeadListInitComputeShader = computeShader;
+		// Run the dead list initializer
+		// Add +1 thread as a buffer for "hidden counter" bug
+		particleDeadListInitComputeShader->SetShader();
+		particleDeadListInitComputeShader->SetInt("maxParticles", this->maxParticles);
+		particleDeadListInitComputeShader->SetUnorderedAccessView("DeadList", this->deadListUAV);
+		particleDeadListInitComputeShader->CopyAllBufferData();
+		particleDeadListInitComputeShader->DispatchByThreads(this->maxParticles, 1, 1);
+		break;
 	}
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Emitter::GetSortListSRV() {
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetSortListSRV() {
 	return this->sortListSRV;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Emitter::GetDrawListSRV() {
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetDrawListSRV() {
 	return this->drawListSRV;
 }
 
-void Emitter::SetMainCamera(std::shared_ptr<Camera> cam) {
-	this->cam = cam;
+void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixelShader, std::shared_ptr<SimpleVertexShader> particleVertexShader, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV, Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context)
+{
+	defaultParticlePixelShader = particlePixelShader;
+	defaultParticleVertexShader = particleVertexShader;
+	defaultParticleTextureSRV = particleTextureSRV;
+	defaultDevice = device;
+	defaultContext = context;
 }
 
-void Emitter::Initialize(int maxParticles) {
+void ParticleSystem::Start()
+{
+	this->maxParticles = 20;
+	this->particlesPerSecond = 1.0f;
+	this->particleLifetime = 3.0f;
+	this->secondsPerEmission = 1.0f / particlesPerSecond;
+
+	this->timeSinceEmit = 0.0f;
+
+	this->particlePixelShader = defaultParticlePixelShader;
+	this->particleVertexShader = defaultParticleVertexShader;
+	this->particleTextureSRV = defaultParticleTextureSRV;
+
+	this->device = defaultDevice;
+	this->context = defaultContext;
+
+	this->colorTint = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	this->scale = 0.0f;
+	this->speed = 1.0f;
+	this->destination = DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f);
+
+	this->additiveBlend = true;
+	this->isMultiParticle = true;
+
+	// Set up a function to calculate if this emitter will overflow its buffer
+	// Then recalculate maxParticles if it will
+	Initialize(this->maxParticles);
+}
+
+void ParticleSystem::Update(float deltaTime, float totalTime) {
+	ID3D11UnorderedAccessView* none[8] = {};
+	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+
+	// New Emission
+	timeSinceEmit += deltaTime;
+	while (timeSinceEmit > secondsPerEmission) {
+		int emitCount = (int)(timeSinceEmit / secondsPerEmission);
+		emitCount = min(emitCount, 65535);
+		timeSinceEmit = fmod(timeSinceEmit, secondsPerEmission);
+
+		EmitParticle(totalTime, emitCount);
+	}
+
+	// Array size is equal to num of uavs
+	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+
+	// Updates particles
+	particleSimComputeShader->SetShader();
+	particleSimComputeShader->SetUnorderedAccessView("particles", this->drawListUAV);
+	particleSimComputeShader->SetUnorderedAccessView("deadList", this->deadListUAV);
+	particleSimComputeShader->SetUnorderedAccessView("sortList", this->sortListUAV, 0);
+
+	particleSimComputeShader->SetFloat("speed", this->speed);
+	particleSimComputeShader->SetFloat3("endPos", this->destination);
+	particleSimComputeShader->SetFloat("deltaTime", deltaTime);
+	particleSimComputeShader->SetFloat("lifeTime", this->particleLifetime);
+	particleSimComputeShader->SetInt("maxParticles", this->maxParticles);
+
+	particleSimComputeShader->CopyAllBufferData();
+
+	particleSimComputeShader->DispatchByThreads(this->maxParticles, 1, 1);
+
+	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+}
+
+void ParticleSystem::OnDestroy()
+{
+
+}
+
+void ParticleSystem::Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive)
+{
+	ID3D11UnorderedAccessView* none[8] = {};
+	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+
+	particleCopyComputeShader->SetShader();
+
+	particleCopyComputeShader->SetUnorderedAccessView("sortList", this->sortListUAV);
+	particleCopyComputeShader->SetUnorderedAccessView("argsList", this->argsListUAV);
+
+	particleCopyComputeShader->DispatchByThreads(1, 1, 1);
+
+	if (additiveBlend) {
+		context->OMSetBlendState(particleBlendAdditive.Get(), 0, 0xFFFFFFFF);
+	}
+	else {
+		context->OMSetBlendState(0, 0, 0xFFFFFFFF);
+	}
+
+	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+
+	UINT stride = 0;
+	UINT offset = 0;
+	ID3D11Buffer* emptyBuffer = 0;
+	context->IASetVertexBuffers(0, 1, &emptyBuffer, &stride, &offset);
+	context->IASetIndexBuffer(inBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+
+	particleVertexShader->SetShader();
+	particlePixelShader->SetShader();
+
+	context->VSSetShaderResources(0, 1, this->drawListSRV.GetAddressOf());
+	context->VSSetShaderResources(1, 1, this->sortListSRV.GetAddressOf());
+	particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV);
+
+	particleVertexShader->SetMatrix4x4("view", cam->GetViewMatrix());
+	particleVertexShader->SetMatrix4x4("projection", cam->GetProjectionMatrix());
+	particleVertexShader->SetFloat("currentTime", currentTime);
+	particleVertexShader->SetFloat("scale", this->scale);
+	particleVertexShader->CopyAllBufferData();
+	particlePixelShader->SetFloat4("colorTint", this->colorTint);
+	particlePixelShader->CopyAllBufferData();
+
+	context->DrawIndexedInstancedIndirect(argsBuffer.Get(), 0);
+
+	ID3D11ShaderResourceView* noneLarge[16] = {};
+	context->VSSetShaderResources(0, 16, noneLarge);
+}
+
+void ParticleSystem::SetParticleTextureSRV(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV)
+{
+	this->particleTextureSRV = particleTextureSRV;
+}
+
+void ParticleSystem::Initialize(int maxParticles) 
+{
 	// Deadlist for ParticleEmit and ParticleFlow
 
 	ID3D11Buffer* deadListBuffer;
@@ -305,7 +384,7 @@ void Emitter::Initialize(int maxParticles) {
 	device->CreateBuffer(&argsDesc, 0, argsBuffer.GetAddressOf());
 
 	D3D11_UNORDERED_ACCESS_VIEW_DESC argsUAVDesc = {};
-	argsUAVDesc.Format = DXGI_FORMAT_R32_UINT; 
+	argsUAVDesc.Format = DXGI_FORMAT_R32_UINT;
 	argsUAVDesc.Buffer.FirstElement = 0;
 	argsUAVDesc.Buffer.Flags = 0;
 	argsUAVDesc.Buffer.NumElements = 5;
@@ -354,101 +433,14 @@ void Emitter::Initialize(int maxParticles) {
 	delete[] indices;
 }
 
-void Emitter::Update(float deltaTime, float totalTime) {
-	ID3D11UnorderedAccessView* none[8] = {};
-	context->CSSetUnorderedAccessViews(0, 8, none, 0);
-
-	// Don't do emission if disabled
-	if (this->enabled) {
-		timeSinceEmit += deltaTime;
-		while (timeSinceEmit > secondsPerEmission) {
-			int emitCount = (int)(timeSinceEmit / secondsPerEmission);
-			emitCount = min(emitCount, 65535);
-			timeSinceEmit = fmod(timeSinceEmit, secondsPerEmission);
-
-			EmitParticle(totalTime, emitCount);
-		}
-
-		// Array size is equal to num of uavs
-		context->CSSetUnorderedAccessViews(0, 8, none, 0);
-	}
-
-	// Don't do update if disabled
-	if (this->enabled) {
-		particleSimComputeShader->SetShader();
-		particleSimComputeShader->SetUnorderedAccessView("particles", this->drawListUAV);
-		particleSimComputeShader->SetUnorderedAccessView("deadList", this->deadListUAV);
-		particleSimComputeShader->SetUnorderedAccessView("sortList", this->sortListUAV, 0);
-
-		particleSimComputeShader->SetFloat("speed", this->speed);
-		particleSimComputeShader->SetFloat3("endPos", this->destination);
-		particleSimComputeShader->SetFloat("deltaTime", deltaTime);
-		particleSimComputeShader->SetFloat("lifeTime", this->particleLifetime);
-		particleSimComputeShader->SetInt("maxParticles", this->maxParticles);
-
-		particleSimComputeShader->CopyAllBufferData();
-
-		particleSimComputeShader->DispatchByThreads(this->maxParticles, 1, 1);
-
-		context->CSSetUnorderedAccessViews(0, 8, none, 0);
-	}
-}
-
-void Emitter::Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive) {
-	ID3D11UnorderedAccessView* none[8] = {};
-	context->CSSetUnorderedAccessViews(0, 8, none, 0);
-
-	particleCopyComputeShader->SetShader();
-
-	particleCopyComputeShader->SetUnorderedAccessView("sortList", this->sortListUAV);
-	particleCopyComputeShader->SetUnorderedAccessView("argsList", this->argsListUAV);
-
-	particleCopyComputeShader->DispatchByThreads(1, 1, 1);
-
-	if (additiveBlend) {
-		context->OMSetBlendState(particleBlendAdditive.Get(), 0, 0xFFFFFFFF);
-	}
-	else {
-		context->OMSetBlendState(0, 0, 0xFFFFFFFF);
-	}
-
-	context->CSSetUnorderedAccessViews(0, 8, none, 0);
-
-	UINT stride = 0;
-	UINT offset = 0;
-	ID3D11Buffer* emptyBuffer = 0;
-	context->IASetVertexBuffers(0, 1, &emptyBuffer, &stride, &offset);
-	context->IASetIndexBuffer(inBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-
-	particleVertexShader->SetShader();
-	particlePixelShader->SetShader();
-
-	context->VSSetShaderResources(0, 1, this->drawListSRV.GetAddressOf());
-	context->VSSetShaderResources(1, 1, this->sortListSRV.GetAddressOf());
-	particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV);
-
-	particleVertexShader->SetMatrix4x4("view", cam->GetViewMatrix());
-	particleVertexShader->SetMatrix4x4("projection", cam->GetProjectionMatrix());
-	particleVertexShader->SetFloat("currentTime", currentTime);
-	particleVertexShader->SetFloat("scale", this->scale);
-	particleVertexShader->CopyAllBufferData();
-	particlePixelShader->SetFloat4("colorTint", this->colorTint);
-	particlePixelShader->CopyAllBufferData();
-
-	context->DrawIndexedInstancedIndirect(argsBuffer.Get(), 0);
-
-	ID3D11ShaderResourceView* noneLarge[16] = {};
-	context->VSSetShaderResources(0, 16, noneLarge);
-}
-
-void Emitter::EmitParticle(float currentTime, int emitCount) {
+void ParticleSystem::EmitParticle(float currentTime, int emitCount) {
 	particleEmitComputeShader->SetShader();
 
 	particleEmitComputeShader->SetUnorderedAccessView("particles", this->drawListUAV);
 	particleEmitComputeShader->SetUnorderedAccessView("deadList", this->deadListUAV);
 	//particleEmitComputeShader->SetUnorderedAccessView("sortList", this->sortListUAV);
 
-	particleEmitComputeShader->SetFloat3("startPos", this->transform->GetLocalPosition());
+	particleEmitComputeShader->SetFloat3("startPos", this->GetGameEntity()->GetTransform()->GetLocalPosition());
 	//particleEmitComputeShader->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
 	particleEmitComputeShader->SetFloat("emitTime", currentTime);
 	particleEmitComputeShader->SetInt("maxParticles", this->maxParticles);

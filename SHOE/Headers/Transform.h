@@ -25,6 +25,8 @@ private:
 	std::vector<std::shared_ptr<Transform>> children = std::vector<std::shared_ptr<Transform>>();
 public:
 	void Start() override;
+	void OnDestroy() override;
+
 	void UpdateWorldInfo();
 
 	void SetPosition(float x, float y, float z);

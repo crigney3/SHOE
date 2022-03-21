@@ -7,6 +7,7 @@ class CollisionManager
 {
 public:
 	CollisionManager();
+	~CollisionManager();
 
 	static std::vector<std::shared_ptr<Collider>> GetMarkedAsTriggerboxes();
 	static std::vector<std::shared_ptr<Collider>> GetMarkedAsColliders();

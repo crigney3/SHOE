@@ -166,7 +166,6 @@
     <ClInclude Include="Headers\ComponentPacket.h" />
     <ClInclude Include="Headers\ComponentPool.h" />
     <ClInclude Include="Headers\DXCore.h" />
-    <ClInclude Include="Headers\Emitter.h" />
     <ClInclude Include="Headers\Game.h" />
     <ClInclude Include="Headers\GameEntity.fwd.h" />
     <ClInclude Include="Headers\GameEntity.h" />
@@ -176,9 +175,12 @@
     <ClInclude Include="Headers\Lights.h" />
     <ClInclude Include="Headers\Material.h" />
     <ClInclude Include="Headers\Mesh.h" />
+    <ClInclude Include="Headers\MeshRenderer.h" />
+    <ClInclude Include="Headers\ParticleSystem.h" />
     <ClInclude Include="Headers\Renderer.h" />
     <ClInclude Include="Headers\SimpleShader.h" />
     <ClInclude Include="Headers\Sky.h" />
+    <ClInclude Include="Headers\Terrain.h" />
     <ClInclude Include="Headers\Transform.h" />
     <ClInclude Include="Headers\Collider.h" />
     <ClInclude Include="Headers\Vertex.h" />
@@ -360,9 +362,9 @@
     <ClCompile Include="Source\AssetManager.cpp" />
     <ClCompile Include="Source\AudioHandler.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
+    <ClCompile Include="Source\ComponentPool.cpp" />
     <ClCompile Include="Source\CollisionManager.cpp" />
     <ClCompile Include="Source\DXCore.cpp" />
-    <ClCompile Include="Source\Emitter.cpp" />
     <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\GameEntity.cpp" />
     <ClCompile Include="Source\IComponent.cpp" />
@@ -371,6 +373,8 @@
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\Material.cpp" />
     <ClCompile Include="Source\Mesh.cpp" />
+    <ClCompile Include="Source\MeshRenderer.cpp" />
+    <ClCompile Include="Source\ParticleSystem.cpp" />
     <ClCompile Include="Source\Renderer.cpp" />
     <ClCompile Include="Source\SimpleShader.cpp" />
     <ClCompile Include="Source\Sky.cpp" />

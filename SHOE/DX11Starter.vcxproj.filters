@@ -114,9 +114,6 @@
     <ClInclude Include="IMGUI\Headers\imstb_truetype.h">
       <Filter>Header Files\IMGUI-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Emitter.h">
-      <Filter>Header Files\SHOE-Headers</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\AudioHandler.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
@@ -142,6 +139,15 @@
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
     <ClInclude Include="Headers\IComponent.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\MeshRenderer.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\ParticleSystem.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Terrain.h">
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
   </ItemGroup>
@@ -283,9 +289,6 @@
     <ClCompile Include="Source\Sky.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Emitter.cpp">
-      <Filter>Source Files\SHOE-Source</Filter>
-    </ClCompile>
     <ClCompile Include="Source\AudioHandler.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
@@ -298,6 +301,14 @@
     <ClCompile Include="Source\Transform.cpp">
       <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
+    <ClCompile Include="Source\MeshRenderer.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ParticleSystem.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ComponentPool.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
     <ClCompile Include="Source\Collider.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>

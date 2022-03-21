@@ -54,6 +54,11 @@ void Transform::UpdateWorldInfo()
 	// Reset the bool
 	this->isDirty = false;
 }
+
+void Transform::OnDestroy()
+{
+	parent = nullptr;
+}
 #pragma region Setters
 void Transform::SetPosition(float x, float y, float z) {
 	SetPosition(XMFLOAT3(x, y, z));
