@@ -161,6 +161,7 @@
     <ClInclude Include="Headers\AssetManager.h" />
     <ClInclude Include="Headers\AudioHandler.h" />
     <ClInclude Include="Headers\Camera.h" />
+    <ClInclude Include="Headers\CollisionManager.h" />
     <ClInclude Include="Headers\ComponentManager.h" />
     <ClInclude Include="Headers\ComponentPacket.h" />
     <ClInclude Include="Headers\ComponentPool.h" />
@@ -181,6 +182,7 @@
     <ClInclude Include="Headers\Sky.h" />
     <ClInclude Include="Headers\Terrain.h" />
     <ClInclude Include="Headers\Transform.h" />
+    <ClInclude Include="Headers\Collider.h" />
     <ClInclude Include="Headers\Vertex.h" />
     <ClInclude Include="IMGUI\Headers\imconfig.h" />
     <ClInclude Include="IMGUI\Headers\imgui.h" />
@@ -361,6 +363,7 @@
     <ClCompile Include="Source\AudioHandler.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\ComponentPool.cpp" />
+    <ClCompile Include="Source\CollisionManager.cpp" />
     <ClCompile Include="Source\DXCore.cpp" />
     <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\GameEntity.cpp" />
@@ -376,6 +379,7 @@
     <ClCompile Include="Source\SimpleShader.cpp" />
     <ClCompile Include="Source\Sky.cpp" />
     <ClCompile Include="Source\Transform.cpp" />
+    <ClCompile Include="Source\Collider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

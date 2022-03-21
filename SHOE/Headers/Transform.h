@@ -9,11 +9,16 @@ class Transform : public IComponent,  public std::enable_shared_from_this<Transf
 {
 private:
 	DirectX::XMFLOAT4X4 worldMatrix;
-	DirectX::XMFLOAT3 pos;
-	DirectX::XMFLOAT3 scale;
-	DirectX::XMFLOAT4 rotQuat;
+	DirectX::XMFLOAT3 worldPos;
+	DirectX::XMFLOAT3 worldScale;
+	DirectX::XMFLOAT4 worldRotQuat;
 
-	bool isDirty;
+	DirectX::XMFLOAT3 pos; //LOCAL SPACE
+	DirectX::XMFLOAT3 scale; //LOCAL SPACE
+	DirectX::XMFLOAT4 rotQuat; //LOCAL SPACE
+
+	bool isDirty; // Can/will only be dirty if: has a parent & parent has moved
+	void MarkThisDirty();
 	void MarkChildTransformsDirty();
 
 	std::shared_ptr<Transform> parent;
@@ -21,7 +26,9 @@ private:
 public:
 	void Start() override;
 	void OnDestroy() override;
-	
+
+	void UpdateWorldInfo();
+
 	void SetPosition(float x, float y, float z);
 	void SetPosition(DirectX::XMFLOAT3 pos);
 	void SetRotation(float pitch, float yaw, float roll);
@@ -29,11 +36,20 @@ public:
 	void SetScale(float x, float y, float z);
 	void SetScale(DirectX::XMFLOAT3 scale);
 
-	DirectX::XMFLOAT3 GetPosition();
-	DirectX::XMFLOAT3 GetPitchYawRoll();
-	DirectX::XMFLOAT3 GetScale();
+	DirectX::XMFLOAT3 GetLocalPosition();
+	DirectX::XMFLOAT3 GetGlobalPosition();
+	DirectX::XMFLOAT3 GetLocalPitchYawRoll();
+	DirectX::XMFLOAT4 GetGlobalRotation();
+	DirectX::XMFLOAT3 GetLocalScale();
+	DirectX::XMFLOAT3 GetGlobalScale();
 	DirectX::XMFLOAT4X4 GetWorldMatrix();
 	DirectX::XMFLOAT3 GetForward();
+
+	DirectX::XMFLOAT3 GetXAxis();
+	DirectX::XMFLOAT3 GetYAxis();
+	DirectX::XMFLOAT3 GetZAxis();
+
+	bool GetDirtyStatus();
 
 	void MoveAbsolute(float x, float y, float z);
 	void MoveRelative(float x, float y, float z); // Move along our "local" axes (respect rotation)

@@ -75,6 +75,7 @@ private:
 	bool rtvWindowEnabled;
 	bool soundWindowEnabled;
 	bool camWindowEnabled;
+	bool collidersWindowEnabled;
 
 	// Loading screen info
 	std::condition_variable* notification;

@@ -72,11 +72,11 @@ void Camera::Update(float dt, HWND windowHandle)
 
 		//TODO: Fix gimbal lock
 		transform->Rotate(yDiff, xDiff, 0);
-		/*if (transform->GetPitchYawRoll().y >= XM_PIDIV2) {
-			transform->SetRotation(transform->GetPitchYawRoll().x, XM_PIDIV2 - 0.007f, transform->GetPitchYawRoll().z);
+		/*if (transform->GetLocalPitchYawRoll().y >= XM_PIDIV2) {
+			transform->SetRotation(transform->GetLocalPitchYawRoll().x, XM_PIDIV2 - 0.007f, transform->GetLocalPitchYawRoll().z);
 		}
-		else if (transform->GetPitchYawRoll().y <= -XM_PIDIV2) {
-			transform->SetRotation(transform->GetPitchYawRoll().x, -XM_PIDIV2 + 0.007f, transform->GetPitchYawRoll().z);
+		else if (transform->GetLocalPitchYawRoll().y <= -XM_PIDIV2) {
+			transform->SetRotation(transform->GetLocalPitchYawRoll().x, -XM_PIDIV2 + 0.007f, transform->GetLocalPitchYawRoll().z);
 		}*/
 	}
 
@@ -87,12 +87,12 @@ void Camera::UpdateViewMatrix()
 {
 	DirectX::XMFLOAT4X4 worldNew = transform->GetWorldMatrix();
 
-	XMFLOAT3 pitchYawRollValues = transform->GetPitchYawRoll();
+	XMFLOAT3 pitchYawRollValues = transform->GetLocalPitchYawRoll();
 
 	XMVECTOR forwardDirection = 
 		XMVector3Rotate(XMVectorSet(0, 0, 1, 0), XMQuaternionRotationRollPitchYawFromVector(XMLoadFloat3(&pitchYawRollValues)));
 
-	XMFLOAT3 position = transform->GetPosition();
+	XMFLOAT3 position = transform->GetLocalPosition();
 	XMMATRIX view = XMMatrixLookToLH(XMLoadFloat3(&position), forwardDirection,	XMVectorSet(0, 1, 0, 0));	
 
 	XMStoreFloat4x4(&vMatrix, view);
