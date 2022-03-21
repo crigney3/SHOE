@@ -2,32 +2,49 @@
 
 using namespace DirectX;
 
+// forward declaration for static members
+bool Renderer::drawColliders;
+bool Renderer::drawColliderTransforms;
+
 Renderer::Renderer(
-        unsigned int windowHeight,
-        unsigned int windowWidth,
-        Microsoft::WRL::ComPtr<ID3D11Device> device,
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
-        Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain,
-        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
-        Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV) 
+	unsigned int windowHeight,
+	unsigned int windowWidth,
+	Microsoft::WRL::ComPtr<ID3D11Device> device,
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
+	Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain,
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV)
 {
 	this->currentSky = globalAssets.currentSky;
-    this->windowHeight = windowHeight;
-    this->windowWidth = windowWidth;
-    this->device = device;
-    this->context = context;
-    this->swapChain = swapChain;
-    this->backBufferRTV = backBufferRTV;
-    this->depthBufferDSV = depthBufferDSV;
+	this->windowHeight = windowHeight;
+	this->windowWidth = windowWidth;
+	this->device = device;
+	this->context = context;
+	this->swapChain = swapChain;
+	this->backBufferRTV = backBufferRTV;
+	this->depthBufferDSV = depthBufferDSV;
 	this->ambientColor = DirectX::XMFLOAT3(0.05f, 0.05f, 0.1f);
 	this->mainCamera = globalAssets.GetCameraByName("mainCamera");
 	this->mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
 	this->flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
+	this->drawColliders = true;
+	this->drawColliderTransforms = true;
+
+	//create and store the RS State for drawing colliders
+	D3D11_RASTERIZER_DESC colliderRSdesc = {};
+	colliderRSdesc.FillMode = D3D11_FILL_WIREFRAME;
+	colliderRSdesc.CullMode = D3D11_CULL_NONE;
+	colliderRSdesc.DepthClipEnable = true;
+	colliderRSdesc.DepthBias = 100;
+	colliderRSdesc.DepthBiasClamp = 0.0f;
+	colliderRSdesc.SlopeScaledDepthBias = 10.0f;
+	device->CreateRasterizerState(&colliderRSdesc, &colliderRasterizer);
+
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
 
-Renderer::~Renderer(){
+Renderer::~Renderer() {
 
 }
 
@@ -196,8 +213,8 @@ void Renderer::InitRenderTargetViews() {
 	particleBlendAdditive.Reset();
 
 	D3D11_DEPTH_STENCIL_DESC particleDepthDesc = {};
-	particleDepthDesc.DepthEnable = true; 
-	particleDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; 
+	particleDepthDesc.DepthEnable = true;
+	particleDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 	particleDepthDesc.DepthFunc = D3D11_COMPARISON_LESS;
 	device->CreateDepthStencilState(&particleDepthDesc, particleDepthState.GetAddressOf());
 
@@ -233,7 +250,7 @@ void Renderer::InitRenderTargetViews() {
 }
 
 void Renderer::InitShadows() {
-    //Set up buffers and data for shadows
+	//Set up buffers and data for shadows
 	shadowSize = 2048;
 
 	shadowRasterizer.Reset();
@@ -334,7 +351,7 @@ void Renderer::InitShadows() {
 	shadowRastDesc.FillMode = D3D11_FILL_SOLID;
 	shadowRastDesc.CullMode = D3D11_CULL_BACK;
 	shadowRastDesc.DepthClipEnable = true;
-	shadowRastDesc.DepthBias = 100; 
+	shadowRastDesc.DepthBias = 100;
 	shadowRastDesc.DepthBiasClamp = 0.0f;
 	shadowRastDesc.SlopeScaledDepthBias = 10.0f;
 	device->CreateRasterizerState(&shadowRastDesc, &shadowRasterizer);
@@ -346,10 +363,10 @@ void Renderer::PreResize() {
 }
 
 void Renderer::PostResize(unsigned int windowHeight,
-        unsigned int windowWidth,
-        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
-        Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
-    ) 
+	unsigned int windowWidth,
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV,
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
+)
 {
 	this->windowHeight = windowHeight;
 	this->windowWidth = windowWidth;
@@ -570,8 +587,8 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTyp
 
 		context->DrawIndexed(
 			it->get()->GetMesh()->GetIndexCount(),
-			0,     
-			0);    
+			0,
+			0);
 	}
 
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
@@ -582,6 +599,127 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTyp
 
 	context->RSSetState(0);
 }
+
+void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
+{
+	// Get what shaders we're using
+	const std::shared_ptr<SimpleVertexShader> collidersVS = globalAssets.GetVertexShaderByName("BasicVS");
+	const std::shared_ptr<SimplePixelShader> collidersPS = globalAssets.GetPixelShaderByName("SolidColorPS");
+
+	// Set the shaders to be used
+	collidersVS->SetShader();
+	collidersPS->SetShader();
+
+	// Set up vertex shader
+	collidersVS->SetMatrix4x4("view", globalAssets.GetCameraByName("mainCamera")->GetViewMatrix());
+	collidersVS->SetMatrix4x4("projection", globalAssets.GetCameraByName("mainCamera")->GetProjectionMatrix());
+
+	//Draw in wireframe mode
+	context->RSSetState(colliderRasterizer.Get());
+
+	// Grab the list of colliders
+	const std::vector<std::shared_ptr<Collider>> colliders = ComponentManager::GetAllEnabled<Collider>();
+
+	for (int i = 0; i < colliders.size(); i++)
+	{
+		XMFLOAT4X4 world; 
+		XMFLOAT4X4 worldInvTrans;
+
+		// Easy access to what we're working with this loop
+		std::shared_ptr<Collider> c = colliders[i];
+
+		//----------------------//
+		// --- Draw the OBB --- //
+		//----------------------//
+		BoundingOrientedBox obb = c->GetOrientedBoundingBox();
+		XMMATRIX transMat = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
+		XMMATRIX scaleMat = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
+		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
+		XMMATRIX rotMat = XMMatrixRotationQuaternion(rot);
+		// Make the transform for this collider
+		XMMATRIX worldMat = scaleMat * rotMat * transMat;
+
+		// Convert & store as float4x4s
+		XMStoreFloat4x4(&world, worldMat);
+		XMStoreFloat4x4(&worldInvTrans, XMMatrixInverse(0, XMMatrixTranspose(worldMat)));
+
+		// Set up the world matrix for this light
+		collidersVS->SetMatrix4x4("world", world);
+		collidersVS->SetMatrix4x4("worldInverseTranspose", worldInvTrans);
+
+		// Set up the pixel shader data
+		XMFLOAT3 finalColor = XMFLOAT3(0.5f, 1.0f, 1.0f);
+		// drawing colliders and triggerboxes as different colors
+		if (c->GetTriggerStatus())
+		{
+			finalColor = XMFLOAT3(1.0f, 1.0f, 0.0f);
+		}
+		collidersPS->SetFloat3("Color", finalColor);
+
+		// Copy data
+		collidersVS->CopyAllBufferData();
+		collidersPS->CopyAllBufferData();
+
+		// Draw
+		UINT stride = sizeof(Vertex);
+		UINT offset = 0;
+		context->IASetVertexBuffers(0, 1, globalAssets.GetMeshByName("Cube")->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(globalAssets.GetMeshByName("Cube")->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+		context->DrawIndexed(
+			globalAssets.GetMeshByName("Cube")->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+			0,     // Offset to the first index we want to use
+			0);    // Offset to add to each index when looking up vertices
+
+
+		//----------------------------------------//
+		// --- Draw the Colliders' transforms --- //
+		//----------------------------------------//
+		if (drawColliderTransforms)
+		{
+			std::shared_ptr<Transform> t = c->GetTransform();
+			XMFLOAT4X4 world = t->GetWorldMatrix();
+			XMMATRIX worldMat = XMLoadFloat4x4(&world);
+
+			// Convert & store as float4x4s
+			XMStoreFloat4x4(&world, worldMat);
+			XMStoreFloat4x4(&worldInvTrans, XMMatrixInverse(0, XMMatrixTranspose(worldMat)));
+
+			// Set up the world matrix for this light
+			collidersVS->SetMatrix4x4("world", world);
+			collidersVS->SetMatrix4x4("worldInverseTranspose", worldInvTrans);
+
+			// Set up the pixel shader data
+			XMFLOAT3 finalColor = XMFLOAT3(1.0f, 0.0f, 1.0f);
+			collidersPS->SetFloat3("Color", finalColor);
+
+			// Copy data
+			collidersVS->CopyAllBufferData();
+			collidersPS->CopyAllBufferData();
+
+			// Draw
+			UINT stride = sizeof(Vertex);
+			UINT offset = 0;
+			context->IASetVertexBuffers(0, 1, globalAssets.GetMeshByName("Cube")->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(globalAssets.GetMeshByName("Cube")->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+			context->DrawIndexed(
+				globalAssets.GetMeshByName("Cube")->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+				0,     // Offset to the first index we want to use
+				0);    // Offset to add to each index when looking up vertices
+		}
+	}
+
+	// Put the RS State back to normal (/non wireframe)
+	context->RSSetState(0);
+}
+
+bool Renderer::GetDrawColliderStatus() { return drawColliders; }
+void Renderer::SetDrawColliderStatus(bool _newState) { drawColliders = _newState; }
+
+bool Renderer::GetDrawColliderTransformsStatus() { return drawColliderTransforms; }
+
+void Renderer::SetDrawColliderTransformsStatus(bool _newState) { drawColliderTransforms = _newState; }
 
 void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
@@ -637,7 +775,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	perFramePS->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
 	perFramePS->SetData("lightCount", &lightCount, sizeof(lightCount));
-	perFramePS->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
+	perFramePS->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 	if (this->currentSky->GetEnableDisable()) {
 		perFramePS->SetInt("specIBLTotalMipLevels", currentSky->GetIBLMipLevelCount());
 	}
@@ -759,6 +897,8 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		}
 	}
 
+	if (drawColliders) RenderColliders(cam);
+
 	//Now deal with rendering the terrain, PS data first
 	std::shared_ptr<GameEntity> terrainEntity = globalAssets.GetTerrainByName("Main Terrain");
 	if (terrainEntity->GetEnableDisable()) {
@@ -767,7 +907,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		PSTerrain->SetShader();
 		PSTerrain->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
 		PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
-		PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
+		PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 		PSTerrain->SetFloat("uvMultNear", 50.0f);
 		PSTerrain->SetFloat("uvMultFar", 150.0f);
 		PSTerrain->SetShaderResourceView("shadowMap", miscEffectSRVs[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].Get());
@@ -802,7 +942,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	if (this->currentSky->GetEnableDisable()) {
 		this->currentSky->Draw(context, cam);
 	}
-    
+
 	std::shared_ptr<SimpleVertexShader> fullscreenVS = globalAssets.GetVertexShaderByName("FullscreenVS");
 	fullscreenVS->SetShader();
 
@@ -911,7 +1051,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		refractivePS->SetFloat2("screenSize", XMFLOAT2((float)windowWidth, (float)windowHeight));
 		refractivePS->SetMatrix4x4("viewMatrix", mainCamera->GetViewMatrix());
 		refractivePS->SetMatrix4x4("projMatrix", mainCamera->GetProjectionMatrix());
-		refractivePS->SetFloat3("cameraPos", mainCamera->GetTransform()->GetPosition());
+		refractivePS->SetFloat3("cameraPos", mainCamera->GetTransform()->GetLocalPosition());
 
 		refractivePS->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
 		refractivePS->SetData("lightCount", &lightCount, sizeof(unsigned int));
@@ -993,8 +1133,10 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
 		DrawPointLights();
 
-		renderTargets[0] = backBufferRTV.Get();
-		context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
+	renderTargets[0] = backBufferRTV.Get();
+	context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
+
+	context->OMSetDepthStencilState(particleDepthState.Get(), 0);
 
 		context->OMSetDepthStencilState(particleDepthState.Get(), 0);
 
@@ -1025,7 +1167,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 }
 
 void Renderer::SetActiveSky(std::shared_ptr<Sky> sky) {
-    this->currentSky = sky;
+	this->currentSky = sky;
 }
 
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetRenderTargetSRV(RTVTypes type) {

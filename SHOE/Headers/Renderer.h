@@ -1,5 +1,6 @@
 #include "GameEntity.h"
 #include "AssetManager.h"
+#include "CollisionManager.h"
 
 #define MAX_LIGHTS 64
 
@@ -97,6 +98,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> shadowRasterizer;
     std::shared_ptr<SimpleVertexShader> VSShadow;
 
+    //components for colliders
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> colliderRasterizer;
+
     // Offset and random values for SSAO blur and texture
     Microsoft::WRL::ComPtr<ID3D11Texture2D> ssaoRandomTex;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ssaoRandomSRV;
@@ -137,6 +141,9 @@ private:
     std::shared_ptr<Camera> flashShadowCamera;
     std::shared_ptr<Camera> mainShadowCamera;
 
+	// Conditional Drawing
+    static bool drawColliders, drawColliderTransforms;
+
     void InitRenderTargetViews();
 
 public:
@@ -170,4 +177,10 @@ public:
     void InitShadows();
     void RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTypes type);
     void RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type);
+    void RenderColliders(std::shared_ptr<Camera> cam);
+
+    static bool GetDrawColliderStatus();
+    static void SetDrawColliderStatus(bool _newState);
+	static bool GetDrawColliderTransformsStatus();
+    static void SetDrawColliderTransformsStatus(bool _newState);
 };

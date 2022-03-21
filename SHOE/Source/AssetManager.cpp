@@ -527,6 +527,9 @@ void AssetManager::InitializeGameEntities() {
 
 	// Show example renders
 	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("bronzeMat"), "Bronze Cube");
+	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("floorMat"), "Floor Cube");
+	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("scratchMat"), "Scratched Cube");
+
 	CreateGameEntity(GetMeshByName("Cylinder"), GetMaterialByName("floorMat"), "Stone Cylinder");
 	CreateGameEntity(GetMeshByName("Helix"), GetMaterialByName("floorMat"), "Floor Helix");
 	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("paintMat"), "Paint Sphere");
@@ -548,7 +551,9 @@ void AssetManager::InitializeGameEntities() {
 	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveRoughMat"), "Refractive Cube");
 	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("refractiveBronzeMat"), "Refractive Torus");
 
-	GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.7f, +0.0f, +0.0f);
+	GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.0f, +0.0f, +0.0f);
+	GetGameEntityByName("Floor Cube")->GetTransform()->SetPosition(+2.0f, +0.0f, +0.0f);
+	GetGameEntityByName("Scratched Cube")->GetTransform()->SetPosition(+0.5f, +2.0f, +0.0f);
 	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-0.7f, +0.0f, +0.0f);
 	GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition(+0.0f, +0.7f, +0.0f);
 	GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(+0.0f, -0.7f, +0.0f);
@@ -572,10 +577,14 @@ void AssetManager::InitializeGameEntities() {
 	GetGameEntityByName("Refractive Torus")->GetTransform()->SetPosition(+5.0f, +0.0f, -1.0f);
 
 	//Set up some parenting examples
-	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
+	GetGameEntityByName("Floor Cube")->GetTransform()->SetParent(GetGameEntityByName("Bronze Cube")->GetTransform());
+	GetGameEntityByName("Scratched Cube")->GetTransform()->SetParent(GetGameEntityByName("Floor Cube")->GetTransform());
 	GetGameEntityByName("Rough Torus")->GetTransform()->SetParent(GetGameEntityByName("Paint Sphere")->GetTransform());
 	GetGameEntityByName("Floor Helix")->GetTransform()->SetParent(GetGameEntityByName("Rough Torus")->GetTransform());
+	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
 	GetGameEntityByName("Wood Sphere")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
+
+
 
 	CreateComplexGeometry();
 }
@@ -717,6 +726,7 @@ void AssetManager::InitializeMeshes() {
 	CreateMesh("Sphere", "sphere.obj");
 	CreateMesh("Torus", "torus.obj");
 }
+
 
 void AssetManager::InitializeSkies() {
 	skies = std::vector<std::shared_ptr<Sky>>();
@@ -917,10 +927,8 @@ void AssetManager::InitializeCameras() {
 	globalCameras = std::vector<std::shared_ptr<Camera>>();
 
 	float aspectRatio = (float)(dxInstance->width / dxInstance->height);
-	CreateCamera("mainCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -5.5f), aspectRatio, 1);
-
-	CreateCamera("mainShadowCamera", DirectX::XMFLOAT3(0.0f, 10.0f, -5.5f), 1.0f, 0);
-
+	CreateCamera("mainCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -20.0f), aspectRatio, 1);
+	CreateCamera("mainShadowCamera", DirectX::XMFLOAT3(0.0f, 10.0f, -20.0f), 1.0f, 0);
 	std::shared_ptr<Camera> fscTemp = CreateCamera("flashShadowCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -5.5f), 1.0f, 1);
 	fscTemp->GetTransform()->SetRotation(0, 0, 0);
 	fscTemp->UpdateViewMatrix();
