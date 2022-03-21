@@ -309,6 +309,7 @@
     </ClCompile>
     <ClCompile Include="Source\ComponentPool.cpp">
       <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Collider.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
