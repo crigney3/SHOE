@@ -36,7 +36,7 @@ std::queue<std::shared_ptr<T>>();
  * \brief Binds an unallocated component from the pool to a GameEntity
  * \param gameEntity The GameEntity the component is to be attached to
  * \param hierarchyIsEnabled Whether the GameEntity to be attached to is enabled
- * \return A newly bound component from the pool
+ * \return A reference to the newly bound component
  */
 template<typename T>
 std::shared_ptr<T> ComponentPool<T>::Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled)

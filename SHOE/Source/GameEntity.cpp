@@ -78,6 +78,9 @@ void GameEntity::OnTriggerEnter(std::shared_ptr<GameEntity> other)
 	}
 }
 
+/// <summary>
+/// Same as GetComponent<Transform>()
+/// </summary>
 std::shared_ptr<Transform> GameEntity::GetTransform() {
 	return transform;
 }
@@ -158,15 +161,27 @@ void GameEntity::SetName(std::string Name) {
 	this->name = Name;
 }
 
+/// <summary>
+/// Sets whether this GameEntity is enabled
+/// </summary>
+/// <param name="value"></param>
 void GameEntity::SetEnableDisable(bool value) {
 	this->enabled = value;
 	UpdateHierarchyIsEnabled(hierarchyIsEnabled);
 }
 
+/// <summary>
+/// Whether this GameEntity is enabled and all generations of parent(s) are also enabled
+/// </summary>
+/// <returns>True if all are enabled</returns>
 bool GameEntity::GetEnableDisable() {
 	return this->enabled && this->hierarchyIsEnabled;
 }
 
+/// <summary>
+/// Are all generations of parent(s) of this Entity enabled
+/// </summary>
+/// <returns>True if all are enabled</returns>
 bool GameEntity::GetHierarchyIsEnabled()
 {
 	return hierarchyIsEnabled;

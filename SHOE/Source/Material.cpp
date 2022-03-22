@@ -94,10 +94,17 @@ Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetClampSamplerState() {
 	return this->clampState;
 }
 
+/// <summary>
+/// Sets whether to render the attached textures with transparency
+/// </summary>
+/// <param name="transparent">Texture has transparency</param>
 void Material::SetTransparent(bool transparent) {
-	// If this is turning off transparency, disable refraction as well
-	if (!transparent) this->refractive = false;
-	this->transparent = transparent;
+	if (this->transparent != transparent) {
+		AssetManager::materialSortDirty = true;
+		// If this is turning off transparency, disable refraction as well
+		if (!transparent) this->refractive = false;
+		this->transparent = transparent;
+	}
 }
 
 bool Material::GetTransparent() {

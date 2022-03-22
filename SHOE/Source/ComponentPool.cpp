@@ -1,6 +1,12 @@
 #include "../Headers/ComponentPool.h"
 #include "../Headers/AssetManager.h"
 
+/// <summary>
+/// Binds an unallocated MeshRenderer from the pool to a GameEntity, then sorts the list by material
+/// </summary>
+/// <param name="gameEntity">The GameEntity the component is to be attached to</param>
+/// <param name="hierarchyIsEnabled">Whether the GameEntity to be attached to is enabled</param>
+/// <returns>A reference to the newly bound component</returns>
 template<> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiate(std::shared_ptr<GameEntity> gameEntity,
 	bool hierarchyIsEnabled)
 {
