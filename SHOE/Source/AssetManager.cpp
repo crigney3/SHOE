@@ -101,6 +101,8 @@ void AssetManager::SetLoadedAndWait(std::string category, std::string object, st
 #pragma endregion
 
 #pragma region createAssets
+bool AssetManager::materialSortDirty = false;
+
 FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode) {
 	try
 	{
@@ -308,6 +310,11 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 	}
 }
 
+/// <summary>
+/// Creates a GameEntity
+/// </summary>
+/// <param name="name">Name of the GameEntity</param>
+/// <returns>Pointer to the new GameEntity</returns>
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 {
 	try {
@@ -327,6 +334,13 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 	}
 }
 
+/// <summary>
+/// Creates a GameEntity and gives it a MeshRenderer component
+/// </summary>
+/// <param name="mesh">Mesh to render</param>
+/// <param name="mat">Material to render</param>
+/// <param name="name">Name of the GameEntity</param>
+/// <returns>Pointer to the new GameEntity</returns>
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name) {
 	try {
 		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
@@ -346,6 +360,11 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 	}
 }
 
+/// <summary>
+/// Creates a GameEntity and gives it a Terrain component
+/// </summary>
+/// <param name="name">Name of the GameEntity</param>
+/// <returns>Pointer to the new GameEntity</returns>
 std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::string name) {
 	try {
 		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
@@ -391,6 +410,13 @@ std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11Shader
 	}
 }
 
+/// <summary>
+/// Creates a GameEntity and gives it a default ParticleSystem component
+/// </summary>
+/// <param name="name">Name of the GameEntity</param>
+/// <param name="textureNameToLoad">Name of the file or file path to load the texture(s) from</param>
+/// <param name="isMultiParticle">True to recursively load textures from the file path</param>
+/// <returns>Pointer to the new GameEntity</returns>
 std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string name,
 	std::wstring textureNameToLoad,
 	bool isMultiParticle)
@@ -417,6 +443,17 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 	}
 }
 
+/// <summary>
+/// Creates a GameEntity and gives it a ParticleSystem component
+/// </summary>
+/// <param name="name">Name of the GameEntity</param>
+/// <param name="textureNameToLoad">Name of the file or file path to load the texture(s) from</param>
+/// <param name="maxParticles">Max number of active particles at one time</param>
+/// <param name="particleLifeTime">How long a particle exists for</param>
+/// <param name="particlesPerSecond">Rate of particle spawns</param>
+/// <param name="isMultiParticle">True to recursively load textures from the file path</param>
+/// <param name="additiveBlendState">Whether to use an additive blend state when rendering</param>
+/// <returns></returns>
 std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string name,
 															 std::wstring textureNameToLoad,
 															 int maxParticles,
@@ -489,7 +526,7 @@ void AssetManager::InitializeGameEntities() {
 	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("refractiveBronzeMat"), "Refractive Torus");
 
 	std::shared_ptr<Terrain> terrainEntity = CreateTerrainEntity("Main Terrain");
-	terrainEntity->GetGameEntity()->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
+	terrainEntity->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
 
 	GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.0f, +0.0f, +0.0f);
 	GetGameEntityByName("Floor Cube")->GetTransform()->SetPosition(+2.0f, +0.0f, +0.0f);
@@ -920,7 +957,7 @@ void AssetManager::InitializeEmitters() {
 		context);
 
 	std::shared_ptr<ParticleSystem> basicEmitter = CreateParticleEmitter("basicParticle", L"Smoke/smoke_01.png", 20, 1.0f, 1.0f);
-	basicEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(1.0f, 0.0f, 0.0f));
+	basicEmitter->GetTransform()->SetPosition(XMFLOAT3(1.0f, 0.0f, 0.0f));
 	basicEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> basicMultiEmitter = CreateParticleEmitter("basicParticles", L"Smoke/", true);
@@ -928,17 +965,17 @@ void AssetManager::InitializeEmitters() {
 	basicMultiEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> flameEmitter = CreateParticleEmitter("flameParticles", L"Flame/", 10, 2.0f, 5.0f, true);
-	flameEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-1.0f, 0.0f, 0.0f));
+	flameEmitter->GetTransform()->SetPosition(XMFLOAT3(-1.0f, 0.0f, 0.0f));
 	flameEmitter->SetColorTint(XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
 	flameEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> starMultiEmitter = CreateParticleEmitter("starParticles", L"Star/", 300, 2.0f, 80.0f, true);
-	starMultiEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-2.0f, 0.0f, 0.0f));
+	starMultiEmitter->GetTransform()->SetPosition(XMFLOAT3(-2.0f, 0.0f, 0.0f));
 	starMultiEmitter->SetColorTint(XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
 	starMultiEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> starEmitter = CreateParticleEmitter("starParticle", L"Star/star_08.png", 300, 2.0f, 80.0f);
-	starEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-3.0f, 0.0f, 0.0f));
+	starEmitter->GetTransform()->SetPosition(XMFLOAT3(-3.0f, 0.0f, 0.0f));
 	starEmitter->SetColorTint(XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
 	starEmitter->SetScale(0.75f);
 	starEmitter->SetEnabled(false);
@@ -1342,6 +1379,12 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::CreateCubemap(
 	return cubeSRV;
 }
 
+/// <summary>
+/// Loads a particle texture or set of particle textures
+/// </summary>
+/// <param name="textureNameToLoad">Name of the file or file path to load the texture(s) from</param>
+/// <param name="isMultiParticle">True to recursively load from the file path</param>
+/// <returns>An SRV for the loaded textures</returns>
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTexture(std::wstring textureNameToLoad, bool isMultiParticle)
 {
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;

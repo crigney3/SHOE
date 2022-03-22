@@ -1,4 +1,5 @@
 #include "..\Headers\IComponent.h"
+#include "..\Headers\GameEntity.h"
 
 /**
  * \brief Called when the component is added to a GameEntity
@@ -67,6 +68,18 @@ bool IComponent::IsEnabled()
 	return enabled && hierarchyIsEnabled;
 }
 
+/// <summary>
+/// Whether this component is enabled, irregardless of if the GameEntity it's on is
+/// </summary>
+/// <returns>True if enabled</returns>
+bool IComponent::IsLocallyEnabled()
+{
+	return enabled;
+}
+
+/// <summary>
+/// Sets if this component is locally enabled
+/// </summary>
 void IComponent::SetEnabled(bool enabled)
 {
 	this->enabled = enabled;
@@ -80,6 +93,19 @@ std::shared_ptr<GameEntity> IComponent::GetGameEntity()
 	return gameEntity;
 }
 
+/// <summary>
+/// Shortcut to get the Transform of the GameEntity this is attached to
+/// </summary>
+/// <returns>A pointer to the Transform</returns>
+std::shared_ptr<Transform> IComponent::GetTransform()
+{
+	return gameEntity->GetTransform();
+}
+
+/// <summary>
+/// Called when the GameEntity this is attached to changes enabled state
+/// </summary>
+/// <param name="active">Is the GameEntity globally enabled</param>
 void IComponent::UpdateHierarchyIsEnabled(bool active)
 {
 	hierarchyIsEnabled = active;

@@ -128,6 +128,8 @@ private:
 	bool singleLoadComplete;
 
 public:
+	static bool materialSortDirty;
+
 	~AssetManager();
 
 	Microsoft::WRL::ComPtr<ID3D11Device> GetDevice();

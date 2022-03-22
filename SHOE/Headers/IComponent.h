@@ -3,6 +3,8 @@
 
 #include "GameEntity.fwd.h"
 
+class Transform;
+
 class IComponent
 {
 public:
@@ -15,8 +17,10 @@ public:
 	void Free();
 
 	bool IsEnabled();
+	bool IsLocallyEnabled();
 	void SetEnabled(bool enabled);
 	std::shared_ptr<GameEntity> GetGameEntity();
+	std::shared_ptr<Transform> GetTransform();
 	void UpdateHierarchyIsEnabled(bool active);
 private:
 	std::shared_ptr<GameEntity> gameEntity;

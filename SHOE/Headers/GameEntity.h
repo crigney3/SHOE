@@ -22,6 +22,8 @@ private:
 
 	void UpdateHierarchyIsEnabled(bool active);
 
+	friend class Transform;
+
 public:
 	GameEntity(DirectX::XMMATRIX worldIn, std::string name);
 	~GameEntity();
