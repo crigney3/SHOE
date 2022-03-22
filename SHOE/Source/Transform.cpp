@@ -1,4 +1,5 @@
 #include "../Headers/Transform.h"
+#include "..\Headers\GameEntity.h"
 
 using namespace DirectX;
 
@@ -208,10 +209,12 @@ void Transform::AddChild(std::shared_ptr<Transform> child) {
 	this->children.push_back(child);
 
 	child->parent = shared_from_this();
+	child->GetGameEntity()->UpdateHierarchyIsEnabled(GetGameEntity()->GetEnableDisable());
 	child->MarkThisDirty();
 }
 
 void Transform::RemoveChild(std::shared_ptr<Transform> child) {
+	child->GetGameEntity()->UpdateHierarchyIsEnabled(true);
 	child->parent = nullptr;
 	children.erase(std::remove(children.begin(), children.end(), child), children.end());
 }

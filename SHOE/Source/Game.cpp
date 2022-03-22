@@ -349,9 +349,9 @@ void Game::RenderUI(float deltaTime) {
 				std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(componentList[c]);
 				ImGui::Text("MeshRenderer");
 
-				bool meshEnabled = meshRenderer->IsEnabled();
+				bool meshEnabled = meshRenderer->IsLocallyEnabled();
 				ImGui::Checkbox("Enabled ", &meshEnabled);
-				if(meshEnabled != meshRenderer->IsEnabled())
+				if(meshEnabled != meshRenderer->IsLocallyEnabled())
 					meshRenderer->SetEnabled(meshEnabled);
 
 				// Material changes
@@ -418,9 +418,9 @@ void Game::RenderUI(float deltaTime) {
 				std::shared_ptr<ParticleSystem> particleSystem = std::dynamic_pointer_cast<ParticleSystem>(componentList[c]);
 				ImGui::Text("ParticleSystem");
 
-				bool emitterEnabled = particleSystem->IsEnabled();
+				bool emitterEnabled = particleSystem->IsLocallyEnabled();
 				ImGui::Checkbox("Enabled ", &emitterEnabled);
-				if (emitterEnabled != particleSystem->IsEnabled())
+				if (emitterEnabled != particleSystem->IsLocallyEnabled())
 					particleSystem->SetEnabled(emitterEnabled);
 
 				XMFLOAT4 currentTint = particleSystem->GetColorTint();
@@ -485,9 +485,9 @@ void Game::RenderUI(float deltaTime) {
 				std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(componentList[c]);
 				ImGui::Text("Terrain");
 
-				bool terrainEnabled = terrain->IsEnabled();
+				bool terrainEnabled = terrain->IsLocallyEnabled();
 				ImGui::Checkbox("Enabled ", &terrainEnabled);
-				if (terrainEnabled != terrain->IsEnabled())
+				if (terrainEnabled != terrain->IsLocallyEnabled())
 					terrain->SetEnabled(terrainEnabled);
 			}
 		}

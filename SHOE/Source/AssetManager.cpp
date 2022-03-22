@@ -101,6 +101,8 @@ void AssetManager::SetLoadedAndWait(std::string category, std::string object, st
 #pragma endregion
 
 #pragma region createAssets
+bool AssetManager::materialSortDirty = false;
+
 FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode) {
 	try
 	{
@@ -489,7 +491,7 @@ void AssetManager::InitializeGameEntities() {
 	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("refractiveBronzeMat"), "Refractive Torus");
 
 	std::shared_ptr<Terrain> terrainEntity = CreateTerrainEntity("Main Terrain");
-	terrainEntity->GetGameEntity()->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
+	terrainEntity->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
 
 	GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.0f, +0.0f, +0.0f);
 	GetGameEntityByName("Floor Cube")->GetTransform()->SetPosition(+2.0f, +0.0f, +0.0f);
@@ -920,7 +922,7 @@ void AssetManager::InitializeEmitters() {
 		context);
 
 	std::shared_ptr<ParticleSystem> basicEmitter = CreateParticleEmitter("basicParticle", L"Smoke/smoke_01.png", 20, 1.0f, 1.0f);
-	basicEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(1.0f, 0.0f, 0.0f));
+	basicEmitter->GetTransform()->SetPosition(XMFLOAT3(1.0f, 0.0f, 0.0f));
 	basicEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> basicMultiEmitter = CreateParticleEmitter("basicParticles", L"Smoke/", true);
@@ -928,17 +930,17 @@ void AssetManager::InitializeEmitters() {
 	basicMultiEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> flameEmitter = CreateParticleEmitter("flameParticles", L"Flame/", 10, 2.0f, 5.0f, true);
-	flameEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-1.0f, 0.0f, 0.0f));
+	flameEmitter->GetTransform()->SetPosition(XMFLOAT3(-1.0f, 0.0f, 0.0f));
 	flameEmitter->SetColorTint(XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
 	flameEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> starMultiEmitter = CreateParticleEmitter("starParticles", L"Star/", 300, 2.0f, 80.0f, true);
-	starMultiEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-2.0f, 0.0f, 0.0f));
+	starMultiEmitter->GetTransform()->SetPosition(XMFLOAT3(-2.0f, 0.0f, 0.0f));
 	starMultiEmitter->SetColorTint(XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
 	starMultiEmitter->SetEnabled(false);
 
 	std::shared_ptr<ParticleSystem> starEmitter = CreateParticleEmitter("starParticle", L"Star/star_08.png", 300, 2.0f, 80.0f);
-	starEmitter->GetGameEntity()->GetTransform()->SetPosition(XMFLOAT3(-3.0f, 0.0f, 0.0f));
+	starEmitter->GetTransform()->SetPosition(XMFLOAT3(-3.0f, 0.0f, 0.0f));
 	starEmitter->SetColorTint(XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
 	starEmitter->SetScale(0.75f);
 	starEmitter->SetEnabled(false);

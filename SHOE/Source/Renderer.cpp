@@ -479,7 +479,7 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 				if (!mesh->IsEnabled() || !mesh->GetMaterial()->GetTransparent()) continue;
 
 				// Standard depth pre-pass
-				VSShadow->SetMatrix4x4("world", mesh->GetGameEntity()->GetTransform()->GetWorldMatrix());
+				VSShadow->SetMatrix4x4("world", mesh->GetTransform()->GetWorldMatrix());
 
 				VSShadow->CopyAllBufferData();
 
@@ -509,7 +509,7 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 				if (!mesh->IsEnabled() || !mesh->GetMaterial()->GetTransparent()) continue;
 
 				// Standard depth pre-pass
-				VSShadow->SetMatrix4x4("world", mesh->GetGameEntity()->GetTransform()->GetWorldMatrix());
+				VSShadow->SetMatrix4x4("world", mesh->GetTransform()->GetWorldMatrix());
 
 				solidColorPS->SetShader();
 				solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
@@ -576,7 +576,7 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTyp
 		if (mesh->GetMaterial()->GetTransparent()) break;
 
 		// This is similar to what I'd need for any depth pre-pass
-		VSShadow->SetMatrix4x4("world", mesh->GetGameEntity()->GetTransform()->GetWorldMatrix());
+		VSShadow->SetMatrix4x4("world", mesh->GetTransform()->GetWorldMatrix());
 
 		VSShadow->CopyAllBufferData();
 		
@@ -797,6 +797,15 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAll<MeshRenderer>();
 
+	if (AssetManager::materialSortDirty) {
+		//Sorts the meshes
+		std::sort(activeMeshes.begin(), activeMeshes.end(), [](std::shared_ptr<MeshRenderer> a, std::shared_ptr<MeshRenderer> b) {
+			if (a->GetMaterial()->GetTransparent() != b->GetMaterial()->GetTransparent())
+				return b->GetMaterial()->GetTransparent();
+			return a->GetMaterial() < b->GetMaterial();
+			});
+	}
+
 	for (meshIt = 0; meshIt < activeMeshes.size() && !activeMeshes[meshIt]->GetMaterial()->GetTransparent(); meshIt++)
 	{
 		if (!activeMeshes[meshIt]->IsEnabled()) continue;
@@ -869,7 +878,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 		if (currentVS != 0) {
 			// Per-Object data
-			currentVS->SetMatrix4x4("world", activeMeshes[meshIt]->GetGameEntity()->GetTransform()->GetWorldMatrix());
+			currentVS->SetMatrix4x4("world", activeMeshes[meshIt]->GetTransform()->GetWorldMatrix());
 
 			currentVS->CopyBufferData("PerObject");
 		}
@@ -926,7 +935,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 			VSTerrain->SetShader();
 
 			VSTerrain->SetFloat4("colorTint", DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-			VSTerrain->SetMatrix4x4("world", terrains[i]->GetGameEntity()->GetTransform()->GetWorldMatrix());
+			VSTerrain->SetMatrix4x4("world", terrains[i]->GetTransform()->GetWorldMatrix());
 			VSTerrain->SetMatrix4x4("view", cam->GetViewMatrix());
 			VSTerrain->SetMatrix4x4("projection", cam->GetProjectionMatrix());
 			VSTerrain->SetMatrix4x4("lightView", flashShadowCamera->GetViewMatrix());
@@ -1106,7 +1115,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 			refractiveVS->CopyBufferData("PerMaterial");
 
-			refractiveVS->SetMatrix4x4("world", activeMeshes[meshIt]->GetGameEntity()->GetTransform()->GetWorldMatrix());
+			refractiveVS->SetMatrix4x4("world", activeMeshes[meshIt]->GetTransform()->GetWorldMatrix());
 
 			refractiveVS->CopyBufferData("PerObject");
 

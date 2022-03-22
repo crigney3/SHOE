@@ -1,4 +1,5 @@
 #include "..\Headers\IComponent.h"
+#include "..\Headers\GameEntity.h"
 
 /**
  * \brief Called when the component is added to a GameEntity
@@ -67,6 +68,11 @@ bool IComponent::IsEnabled()
 	return enabled && hierarchyIsEnabled;
 }
 
+bool IComponent::IsLocallyEnabled()
+{
+	return enabled;
+}
+
 void IComponent::SetEnabled(bool enabled)
 {
 	this->enabled = enabled;
@@ -78,6 +84,11 @@ void IComponent::SetEnabled(bool enabled)
 std::shared_ptr<GameEntity> IComponent::GetGameEntity()
 {
 	return gameEntity;
+}
+
+std::shared_ptr<Transform> IComponent::GetTransform()
+{
+	return gameEntity->GetTransform();
 }
 
 void IComponent::UpdateHierarchyIsEnabled(bool active)

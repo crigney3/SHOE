@@ -1,4 +1,5 @@
 #include "../Headers/MeshRenderer.h"
+#include "..\Headers\AssetManager.h"
 
 std::shared_ptr<Mesh> MeshRenderer::defaultMesh = nullptr;
 std::shared_ptr<Material> MeshRenderer::defaultMat = nullptr;
@@ -28,5 +29,6 @@ void MeshRenderer::SetMesh(std::shared_ptr<Mesh> newMesh) {
 }
 
 void MeshRenderer::SetMaterial(std::shared_ptr<Material> newMaterial) {
+	AssetManager::materialSortDirty = true;
 	this->mat = newMaterial;
 }

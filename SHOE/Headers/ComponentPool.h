@@ -5,7 +5,7 @@
 #include "GameEntity.fwd.h"
 #include "MeshRenderer.h"
 
-constexpr auto POOL_SIZE = 30;
+constexpr auto POOL_SIZE = 32;
 
 template <typename T>
 class ComponentPool

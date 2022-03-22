@@ -13,7 +13,8 @@ void GameEntity::UpdateHierarchyIsEnabled(bool active)
 	}
 	for (std::shared_ptr<GameEntity> children : transform->GetChildrenAsGameEntities())
 	{
-		children->UpdateHierarchyIsEnabled(GetEnableDisable());
+		if(children.get() != NULL)
+			children->UpdateHierarchyIsEnabled(GetEnableDisable());
 	}
 }
 

@@ -1,4 +1,5 @@
 #include "../Headers/Material.h"
+#include "..\Headers\AssetManager.h"
 
 Material::Material(DirectX::XMFLOAT4 tint, 
 				   std::shared_ptr<SimplePixelShader> pix, 
@@ -132,10 +133,12 @@ float Material::GetRefractionScale() {
 }
 
 void Material::SetPixelShader(std::shared_ptr<SimplePixelShader> pix) {
+	AssetManager::materialSortDirty = true;
 	this->pixShader = pix;
 }
 
 void Material::SetVertexShader(std::shared_ptr<SimpleVertexShader> vert) {
+	AssetManager::materialSortDirty = true;
 	this->vertShader = vert;
 }
 

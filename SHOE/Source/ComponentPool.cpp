@@ -1,4 +1,5 @@
 #include "../Headers/ComponentPool.h"
+#include "../Headers/AssetManager.h"
 
 template<> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiate(std::shared_ptr<GameEntity> gameEntity,
 	bool hierarchyIsEnabled)
@@ -20,5 +21,6 @@ template<> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiat
 			return b->GetMaterial()->GetTransparent();
 		return a->GetMaterial() < b->GetMaterial();
 		});
+	AssetManager::materialSortDirty = false;
 	return component;
 }
