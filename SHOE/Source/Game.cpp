@@ -1,5 +1,4 @@
 #include "../Headers/Game.h"
-#include "../Headers/CollisionManager.h"
 
 // Needed for a helper function to read compiled shader files from the hard drive
 #pragma comment(lib, "d3dcompiler.lib")
@@ -72,9 +71,7 @@ void Game::Init()
 	notification = new std::condition_variable();
 
 	// Set up the multithreading for the loading screen
-	globalAssets.SetIsLoading(true);
-
-	//std::lock_guard<std::mutex> lock(*loadingMutex);
+	globalAssets.SetAMLoadState(AMLoadState::INITIALIZING);
 
 	loadingSpriteBatch = new SpriteBatch(context.Get());
 
@@ -100,27 +97,6 @@ void Game::Init()
 	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
 	Entities = globalAssets.GetActiveGameEntities();
-	std::shared_ptr<GameEntity> e = globalAssets.GetGameEntityByName("Bronze Cube");
-	std::shared_ptr<GameEntity> e2 = globalAssets.GetGameEntityByName("Scratched Sphere");
-	std::shared_ptr<GameEntity> e3 = globalAssets.GetGameEntityByName("Rough Torus");
-	std::shared_ptr<GameEntity> e4 = globalAssets.GetGameEntityByName("Floor Helix");
-	std::shared_ptr<GameEntity> e5 = globalAssets.GetGameEntityByName("Shiny Rough Sphere");
-
-	std::shared_ptr<GameEntity> e6 = globalAssets.GetGameEntityByName("Floor Cube");
-	std::shared_ptr<GameEntity> e7 = globalAssets.GetGameEntityByName("Scratched Cube");
-	//TODO: the wood sphere will become a child of the spinning stuff if you disable and enable it via IMGUI....
-
-
-	std::shared_ptr<Collider> c1 = e->AddComponent<Collider>();
-	std::shared_ptr<Collider> c2 = e2->AddComponent<Collider>();
-	std::shared_ptr<Collider> c3 = e3->AddComponent<Collider>();
-	std::shared_ptr<Collider> c4 = e4->AddComponent<Collider>();
-	std::shared_ptr<Collider> c5 = e5->AddComponent<Collider>();
-	std::shared_ptr<Collider> c6 = e6->AddComponent<Collider>();
-	std::shared_ptr<Collider> c7 = e7->AddComponent<Collider>();
-	c6->SetExtents(XMFLOAT3(1.002f, 1.002f, 1.002f)); //TODO: check and see if setting this alters where children end up (coordinate space scaling)
-	c7->SetTriggerStatus(true);
-
 
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(this->hWnd);
@@ -327,10 +303,16 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::Checkbox("Enabled: ", &entityEnabled);
 		currentEntity->SetEnableDisable(entityEnabled);
 
+		//Displays all components on the object
+		std::vector<std::shared_ptr<IComponent>> componentList = currentEntity->GetAllComponents();
+
+		// Transform is a special case, as it cannot be fetched by dynamic_pointer_cast
+		ImGui::Separator();
+
 		UIPositionEdit = currentEntity->GetTransform()->GetLocalPosition();
 		UIRotationEdit = currentEntity->GetTransform()->GetLocalPitchYawRoll();
 		UIScaleEdit = currentEntity->GetTransform()->GetLocalScale();
-		
+
 		ImGui::DragFloat3("Position ", &UIPositionEdit.x, 0.5f);
 		ImGui::DragFloat3("Rotation ", &UIRotationEdit.x, 0.5f, 0, 360);
 		ImGui::InputFloat3("Scale ", &UIScaleEdit.x);
@@ -339,11 +321,26 @@ void Game::RenderUI(float deltaTime) {
 		currentEntity->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
 		currentEntity->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
 
-		//Displays all components on the object
-		std::vector<std::shared_ptr<IComponent>> componentList = currentEntity->GetAllComponents();
+		// Remove Component Button
+		ImGui::PushID(102);
+		ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.5f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.4f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.2f));
+		if (ImGui::Button("Remove Component")) {
+			// TODO: Explore potential issues with removing Transform
+			// when other components need it
+			// Is it even worth it to ever remove this?
+			ImGui::SameLine();
+			ImGui::Text("Transforms cannot currently be removed");
+		}
+		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Transforms cannot currently be removed");
+		ImGui::PopStyleColor(3);
+		ImGui::PopID();
+
 		for(int c = 0; c < componentList.size(); c++)
 		{
 			ImGui::Separator();
+
 			if(std::dynamic_pointer_cast<MeshRenderer>(componentList[c]) != nullptr)
 			{
 				std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(componentList[c]);
@@ -382,6 +379,10 @@ void Game::RenderUI(float deltaTime) {
 					if (ImGui::Button("Swap")) {
 						meshRenderer->SetMaterial(globalAssets.GetMaterialAtID(materialIndex));
 					}
+
+					float currentTiling = meshRenderer->GetMaterial()->GetTiling();
+					ImGui::InputFloat("Change UV Tiling", &currentTiling);
+					meshRenderer->GetMaterial()->SetTiling(currentTiling);
 				}
 
 				// Mesh Swapping
@@ -407,10 +408,21 @@ void Game::RenderUI(float deltaTime) {
 						ImGui::EndListBox();
 					}
 
-					/*ImGui::LabelText("Switch to Selected Mesh: ", 0);
-					ImGui::SameLine();*/
-					if (ImGui::Button("Swap")) meshRenderer->SetMesh(globalAssets.GetMeshAtID(meshIndex));
+					if (ImGui::Button("Swap")) {
+						meshRenderer->SetMesh(globalAssets.GetMeshAtID(meshIndex));
+					}
 				}
+
+				// Remove Component Button
+				ImGui::PushID(103);
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.35f, 1.0f, 0.6f));
+				if (ImGui::Button("Remove Component")) {
+					currentEntity->RemoveComponent<MeshRenderer>();
+				}
+				ImGui::PopStyleColor(3);
+				ImGui::PopID();
 			}
 
 			if (std::dynamic_pointer_cast<ParticleSystem>(componentList[c]) != nullptr)
@@ -466,20 +478,18 @@ void Game::RenderUI(float deltaTime) {
 				ImGui::InputInt("Max Particles ", &maxParticles);
 				particleSystem->SetMaxParticles(maxParticles);
 
-				/*if (ImGui::CollapsingHeader("Particle Data ")) {
-					ImGui::Text("Sort List - Cannot be Edited live, Shader Only: ");
-					if (ImGui::BeginListBox("SortList")) {
-						DirectX::XMFLOAT2* list = (DirectX::XMFLOAT2*)currentEmitter->GetSortListSRV().Get();
-						for (int i = 0; i < maxParticles; i++) {
-							std::string listItem = "##Value at " + i;
-							listItem += ": ";
-							listItem += list[i].x;
-							ImGui::Text(listItem.c_str());
-						}
-						ImGui::EndListBox();
-					}
-				}*/
+				// Remove Component Button
+				ImGui::PushID(104);
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.35f, 1.0f, 0.6f));
+				if (ImGui::Button("Remove Component")) {
+					currentEntity->RemoveComponent<ParticleSystem>();
+				}
+				ImGui::PopStyleColor(3);
+				ImGui::PopID();
 			}
+
 			if (std::dynamic_pointer_cast<Terrain>(componentList[c]) != nullptr)
 			{
 				std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(componentList[c]);
@@ -489,9 +499,99 @@ void Game::RenderUI(float deltaTime) {
 				ImGui::Checkbox("Enabled ", &terrainEnabled);
 				if (terrainEnabled != terrain->IsLocallyEnabled())
 					terrain->SetEnabled(terrainEnabled);
+
+				// Remove Component Button
+				ImGui::PushID(105);
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.35f, 1.0f, 0.6f));
+				if (ImGui::Button("Remove Component")) {
+					currentEntity->RemoveComponent<Terrain>();
+				}
+				ImGui::PopStyleColor(3);
+				ImGui::PopID();
+			}
+
+			if (std::dynamic_pointer_cast<Collider>(componentList[c]) != nullptr)
+			{
+				std::shared_ptr<Collider> currentCollider = std::dynamic_pointer_cast<Collider>(componentList[c]);
+				currentCollider->GetTriggerStatus() ? ImGui::Text("TriggerBox") : ImGui::Text("Collider");
+
+				bool UIDrawCollider = currentCollider->GetVisibilityStatus();
+				ImGui::Checkbox("Draw Collider?", &UIDrawCollider);
+				UIDrawCollider ? currentCollider->SetVisibilityStatus(true) : currentCollider->SetVisibilityStatus(false);
+
+				bool UIDrawColliderTransform = currentCollider->GetTransformVisibilityStatus();
+				ImGui::Checkbox("Draw Transform?", &UIDrawColliderTransform);
+				UIDrawColliderTransform ? currentCollider->SetTransformVisibilityStatus(true) : currentCollider->SetTransformVisibilityStatus(false);
+
+				bool UITriggerSwitch = currentCollider->GetTriggerStatus();
+				ImGui::Checkbox("Is this a TriggerBox?", &UITriggerSwitch);
+				UITriggerSwitch ? currentCollider->SetTriggerStatus(true) : currentCollider->SetTriggerStatus(false);
+
+				ImGui::NewLine();
+
+				// Don't edit collider transforms from the UI - they use the main entity transform
+				
+				// Remove Component Button
+				ImGui::PushID(101);
+				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.35f, 1.0f, 0.6f));
+				if (ImGui::Button("Remove Component")) {
+					currentEntity->RemoveComponent<Collider>();
+				}
+				ImGui::PopStyleColor(3);
+				ImGui::PopID();
 			}
 		}
-		
+
+		ImGui::Separator();
+
+		// Dropdown and Collapsible Header to add components
+		if (ImGui::CollapsingHeader("Add Component")) {
+			static ComponentTypes selectedComponent = ComponentTypes::MESH_RENDERER;
+			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Transform", "Mesh Renderer", "Particle System", "Collider", "Terrain" };
+
+			if (ImGui::BeginListBox("Component Listbox")) {
+				for (int i = 0; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
+					const bool is_selected = (selectedComponent == i);
+					if (ImGui::Selectable(typeArray[i].c_str(), is_selected))
+						selectedComponent = (ComponentTypes)i;
+				}
+
+				ImGui::EndListBox();
+			}
+
+			ImGui::SameLine();
+
+			ImGui::PushID(100);
+			ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.3f, 1.0f, 0.56f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.3f, 1.0f, 0.87f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.65f, 1.0f, 0.5f));
+			if (ImGui::Button("Add Selected Component")) {
+				switch (selectedComponent) {
+					case ComponentTypes::TRANSFORM:
+						// No.
+						break;
+					case ComponentTypes::MESH_RENDERER:
+						currentEntity->AddComponent<MeshRenderer>();
+						break;
+					case ComponentTypes::PARTICLE_SYSTEM:
+						currentEntity->AddComponent<ParticleSystem>();
+						break;
+					case ComponentTypes::COLLIDER:
+						currentEntity->AddComponent<Collider>();
+						break;
+					case ComponentTypes::TERRAIN:
+						currentEntity->AddComponent<Terrain>();
+						break;
+				}
+			}
+			ImGui::PopStyleColor(3);
+			ImGui::PopID();
+		}
+
 		ImGui::End();
 	}
 
@@ -634,23 +734,26 @@ void Game::RenderUI(float deltaTime) {
 	{
 		ImGui::Begin("Collider Inspector");
 		
-		static int colliderUIIndex = 0;
+		// Currently commented as it's not needed for the bulk operations,
+		// and has been moved to the components UI
+		/*static int colliderUIIndex = 0;
 		std::shared_ptr<Collider> currentCollider = ComponentManager::GetAll<Collider>()[colliderUIIndex];
 		std::string indexStr = std::to_string(colliderUIIndex) + " - " + currentCollider->GetOwner()->GetName();
 		std::string node = "Editing collider " + indexStr;
 		ImGui::Text(node.c_str());
 		
-		if (ImGui::ArrowButton("Previous Object", ImGuiDir_Left)) {
+		if (ImGui::ArrowButton("Previous Collider", ImGuiDir_Left)) {
 			colliderUIIndex--;
 			if (colliderUIIndex < 0) colliderUIIndex = ComponentManager::GetAll<Collider>().size() - 1;
 		};
 		ImGui::SameLine();
 		
-		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
+		if (ImGui::ArrowButton("Next Collider", ImGuiDir_Right)) {
 			colliderUIIndex++;
 			if (colliderUIIndex > ComponentManager::GetAll<Collider>().size() - 1) colliderUIIndex = 0;
-		};
+		};*/
 
+		ImGui::Text("Collider bulk operations:");
 
 		bool UIDrawColliders = Renderer::GetDrawColliderStatus();
 		ImGui::Checkbox("Draw Colliders?", &UIDrawColliders);
@@ -660,19 +763,7 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::Checkbox("Draw Colliders' Transforms?", &UIDrawColliderTransforms);
 		UIDrawColliderTransforms ? Renderer::SetDrawColliderTransformsStatus(true) : Renderer::SetDrawColliderTransformsStatus(false);
 
-		ImGui::NewLine();
-		ImGui::Text("Edit Collider Transform:");
-		static XMFLOAT3 colliderUIPositionEdit	= currentCollider->GetTransform()->GetLocalPosition();
-		static XMFLOAT3 colliderUIRotationEdit	= currentCollider->GetTransform()->GetLocalPitchYawRoll();
-		static XMFLOAT3 colliderUIScaleEdit		= currentCollider->GetTransform()->GetLocalScale();
-		
-		ImGui::DragFloat3("Position ", &colliderUIPositionEdit.x, 0.5f);
-		ImGui::DragFloat3("Rotation ", &colliderUIRotationEdit.x, 0.5f, 0, 360);
-		ImGui::InputFloat3("Scale ",	&colliderUIScaleEdit.x);
-		
-		currentCollider->GetTransform()->SetPosition(colliderUIPositionEdit.x, colliderUIPositionEdit.y, colliderUIPositionEdit.z);
-		currentCollider->GetTransform()->SetRotation(colliderUIRotationEdit.x, colliderUIRotationEdit.y, colliderUIRotationEdit.z);
-		currentCollider->GetTransform()->SetScale(colliderUIScaleEdit.x, colliderUIScaleEdit.y, colliderUIScaleEdit.z);
+		// Don't edit collider transforms from the UI - they use the main entity transform
 		
 		ImGui::End();
 	}
@@ -712,6 +803,9 @@ void Game::RenderUI(float deltaTime) {
 
 			if (ImGui::Button("Add GameObject")) {
 				globalAssets.CreateGameEntity("GameEntity" + std::to_string(globalAssets.GetGameEntityArraySize()));
+
+				entityUIIndex = globalAssets.GetGameEntityArraySize() - 1;
+				objWindowEnabled = true;
 			}
 
 			ImGui::EndMenu();
@@ -911,7 +1005,7 @@ void Game::Update(float deltaTime, float totalTime)
 }
 
 void Game::DrawLoadingScreen() {
-	while (globalAssets.GetIsLoading()) {
+	while (globalAssets.GetAMLoadState() == AMLoadState::INITIALIZING) {
 		std::unique_lock<std::mutex> lock(*loadingMutex);
 		using time = std::chrono::duration<int, std::milli>;
 		if (notification->wait_for(lock, time(3000), [&] {return globalAssets.GetSingleLoadComplete(); })) {

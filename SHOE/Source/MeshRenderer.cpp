@@ -25,6 +25,15 @@ void MeshRenderer::Start()
 }
 
 /// <summary>
+/// Removes references to the internal mesh and material on destruction
+/// </summary>
+void MeshRenderer::OnDestroy()
+{
+	mesh = nullptr;
+	mat = nullptr;
+}
+
+/// <summary>
 /// Get the mesh this MeshRenderer renders
 /// </summary>
 /// <returns>A pointer to the mesh</returns>

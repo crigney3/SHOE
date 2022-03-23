@@ -15,6 +15,10 @@ public:
 		std::shared_ptr<SimplePixelShader> particlePixelShader,
 		std::shared_ptr<SimpleVertexShader> particleVertexShader,
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
+		std::shared_ptr<SimpleComputeShader> particleEmitComputeShader,
+		std::shared_ptr<SimpleComputeShader> particleSimComputeShader,
+		std::shared_ptr<SimpleComputeShader> particleCopyComputeShader,
+		std::shared_ptr<SimpleComputeShader> particleDeadListInitComputeShader,
 		Microsoft::WRL::ComPtr<ID3D11Device> device,
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context
 	);
@@ -63,6 +67,10 @@ public:
 private:
 	static std::shared_ptr<SimplePixelShader> defaultParticlePixelShader;
 	static std::shared_ptr<SimpleVertexShader> defaultParticleVertexShader;
+	static std::shared_ptr<SimpleComputeShader> defaultParticleEmitComputeShader;
+	static std::shared_ptr<SimpleComputeShader> defaultParticleSimComputeShader;
+	static std::shared_ptr<SimpleComputeShader> defaultParticleCopyComputeShader;
+	static std::shared_ptr<SimpleComputeShader> defaultParticleDeadListInitComputeShader;
 	static Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> defaultParticleTextureSRV;
 	static Microsoft::WRL::ComPtr<ID3D11Device> defaultDevice;
 	static Microsoft::WRL::ComPtr<ID3D11DeviceContext> defaultContext;

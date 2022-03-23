@@ -19,7 +19,8 @@ void Collider::Start()
 {
     isEnabled_ = true;
     isTrigger_ = false;
-    isVisible_ = false;
+    isVisible_ = true;
+    isTransformVisible_ = true;
 
     owner_ = GetGameEntity();
     transform_ = owner_->GetTransform();
@@ -66,6 +67,7 @@ void Collider::SetDepth(float _depth)   { obb_.Extents.x = _depth / 2.0f; }
 
 bool Collider::GetTriggerStatus()       { return isTrigger_; }
 bool Collider::GetVisibilityStatus()    { return isVisible_; }
+bool Collider::GetTransformVisibilityStatus()    { return isTransformVisible_; }
 bool Collider::GetEnabledStatus()       { return isEnabled_; }
 void Collider::SetTriggerStatus(bool _isTrigger)
 {
@@ -77,6 +79,7 @@ void Collider::SetTriggerStatus(bool _isTrigger)
     }
 }
 void Collider::SetVisibilityStatus(bool _isVisible) { isVisible_ = _isVisible; }
+void Collider::SetTransformVisibilityStatus(bool _isTransformVisible) { isTransformVisible_ = _isTransformVisible; }
 void Collider::SetEnabledStatus(bool _isEnabled)    { isEnabled_ = _isEnabled; }
 void Collider::OnCollisionEnter(std::shared_ptr<GameEntity> other)
 {

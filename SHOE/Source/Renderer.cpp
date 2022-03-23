@@ -628,54 +628,57 @@ void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 		// Easy access to what we're working with this loop
 		std::shared_ptr<Collider> c = colliders[i];
 
-		//----------------------//
-		// --- Draw the OBB --- //
-		//----------------------//
-		BoundingOrientedBox obb = c->GetOrientedBoundingBox();
-		XMMATRIX transMat = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
-		XMMATRIX scaleMat = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
-		XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
-		XMMATRIX rotMat = XMMatrixRotationQuaternion(rot);
-		// Make the transform for this collider
-		XMMATRIX worldMat = scaleMat * rotMat * transMat;
+		if (c->GetVisibilityStatus()) {
+			//----------------------//
+			// --- Draw the OBB --- //
+			//----------------------//
+			BoundingOrientedBox obb = c->GetOrientedBoundingBox();
+			XMMATRIX transMat = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
+			XMMATRIX scaleMat = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
+			XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
+			XMMATRIX rotMat = XMMatrixRotationQuaternion(rot);
+			// Make the transform for this collider
+			XMMATRIX worldMat = scaleMat * rotMat * transMat;
 
-		// Convert & store as float4x4s
-		XMStoreFloat4x4(&world, worldMat);
-		XMStoreFloat4x4(&worldInvTrans, XMMatrixInverse(0, XMMatrixTranspose(worldMat)));
+			// Convert & store as float4x4s
+			XMStoreFloat4x4(&world, worldMat);
+			XMStoreFloat4x4(&worldInvTrans, XMMatrixInverse(0, XMMatrixTranspose(worldMat)));
 
-		// Set up the world matrix for this light
-		collidersVS->SetMatrix4x4("world", world);
-		collidersVS->SetMatrix4x4("worldInverseTranspose", worldInvTrans);
+			// Set up the world matrix for this light
+			collidersVS->SetMatrix4x4("world", world);
+			collidersVS->SetMatrix4x4("worldInverseTranspose", worldInvTrans);
 
-		// Set up the pixel shader data
-		XMFLOAT3 finalColor = XMFLOAT3(0.5f, 1.0f, 1.0f);
-		// drawing colliders and triggerboxes as different colors
-		if (c->GetTriggerStatus())
-		{
-			finalColor = XMFLOAT3(1.0f, 1.0f, 0.0f);
+			// Set up the pixel shader data
+			XMFLOAT3 finalColor = XMFLOAT3(0.5f, 1.0f, 1.0f);
+			// drawing colliders and triggerboxes as different colors
+			if (c->GetTriggerStatus())
+			{
+				finalColor = XMFLOAT3(1.0f, 1.0f, 0.0f);
+			}
+			collidersPS->SetFloat3("Color", finalColor);
+
+			// Copy data
+			collidersVS->CopyAllBufferData();
+			collidersPS->CopyAllBufferData();
+
+			// Draw
+			UINT stride = sizeof(Vertex);
+			UINT offset = 0;
+			context->IASetVertexBuffers(0, 1, globalAssets.GetMeshByName("Cube")->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(globalAssets.GetMeshByName("Cube")->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+			context->DrawIndexed(
+				globalAssets.GetMeshByName("Cube")->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+				0,     // Offset to the first index we want to use
+				0);    // Offset to add to each index when looking up vertices
 		}
-		collidersPS->SetFloat3("Color", finalColor);
-
-		// Copy data
-		collidersVS->CopyAllBufferData();
-		collidersPS->CopyAllBufferData();
-
-		// Draw
-		UINT stride = sizeof(Vertex);
-		UINT offset = 0;
-		context->IASetVertexBuffers(0, 1, globalAssets.GetMeshByName("Cube")->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-		context->IASetIndexBuffer(globalAssets.GetMeshByName("Cube")->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-
-		context->DrawIndexed(
-			globalAssets.GetMeshByName("Cube")->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
-			0,     // Offset to the first index we want to use
-			0);    // Offset to add to each index when looking up vertices
+		
 
 
 		//----------------------------------------//
 		// --- Draw the Colliders' transforms --- //
 		//----------------------------------------//
-		if (drawColliderTransforms)
+		if (drawColliderTransforms && c->GetTransformVisibilityStatus())
 		{
 			std::shared_ptr<Transform> t = c->GetTransform();
 			XMFLOAT4X4 world = t->GetWorldMatrix();

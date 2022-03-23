@@ -1,5 +1,9 @@
 #pragma once
 
+// Used to show where out-parameter logic occurs
+// Removed on compile
+#define OUT
+
 #include "Lights.h"
 #include "Sky.h"
 #include "SimpleShader.h"
@@ -23,6 +27,7 @@
 #include <exception>
 #include "SpriteBatch.h"
 #include "SpriteFont.h"
+#include "CollisionManager.h"
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 
@@ -30,6 +35,32 @@ struct LoadingNotifications {
 	std::string category;
 	std::string object;
 	std::exception_ptr errorCode;
+};
+
+// State machine used to track what type of load
+// AssetManager is doing on calling any Create() function
+enum AMLoadState {
+	// Used when SHOE first loads
+	INITIALIZING,
+	// Used when something calls a Create() function
+	SINGLE_CREATION,
+	// In the future, used for complex asset imports
+	COMPLEX_CREATION,
+	// In the future, used for loading a scene with
+	// a loading screen running parallel
+	SCENE_LOAD
+};
+
+enum ComponentTypes {
+	// While Transform is tracked here, it is often skipped or handled uniquely
+	// when assessing all components, as it cannot be removed or doubled
+	TRANSFORM,
+	MESH_RENDERER,
+	PARTICLE_SYSTEM,
+	COLLIDER,
+	TERRAIN,
+	// Must always be the final enum
+	COMPONENT_TYPE_COUNT
 };
 
 class AssetManager
@@ -95,6 +126,7 @@ private:
 	void InitializeMaterials();
 	void InitializeShaders();
 	void InitializeGameEntities();
+	void InitializeColliders();
 	void InitializeLights();
 	void InitializeTerrainMaterials();
 	void InitializeCameras();
@@ -124,8 +156,10 @@ private:
 	LoadingNotifications loaded;
 	// Helper functions for threads
 	void SetLoadedAndWait(std::string category, std::string object, std::exception_ptr error = NULL);
-	bool isLoading;
+	AMLoadState assetManagerLoadState;
 	bool singleLoadComplete;
+
+	ComponentTypes allCurrentComponentTypes;
 
 public:
 	static bool materialSortDirty;
@@ -140,10 +174,12 @@ public:
 	std::string GetLastLoadedCategory();
 	std::string GetLastLoadedObject();
 	std::exception_ptr GetLoadingException();
-	bool GetIsLoading();
+	AMLoadState GetAMLoadState();
 	bool GetSingleLoadComplete();
-	void SetIsLoading(bool isLoading);
+	void SetAMLoadState(AMLoadState state);
 	void SetSingleLoadComplete(bool loadComplete);
+
+	ComponentTypes GetAllCurrentComponentTypes();
 
 	// Methods to create new assets
 
@@ -173,6 +209,11 @@ public:
 												   bool additiveBlendState = true);
 	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode);
 	std::shared_ptr<DirectX::SpriteFont> CreateSHOEFont(std::string name, std::wstring filePath, bool preInitializing = false);
+
+	// Helper methods to add components to objects
+
+	std::shared_ptr<Collider> AddColliderToGameEntity(OUT std::shared_ptr<GameEntity> entity);
+	std::shared_ptr<Collider> AddTriggerBoxToGameEntity(OUT std::shared_ptr<GameEntity> entity);
 
 	// Methods to remove assets
 

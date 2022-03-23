@@ -26,6 +26,8 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	this->threadNotifier = threadNotifier;
 	this->threadLock = threadLock;
 
+	this->assetManagerLoadState = AMLoadState::INITIALIZING;
+
 	// This must occur before the loading screen starts
 	InitializeFonts();
 
@@ -37,6 +39,7 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	InitializeMeshes();
 	InitializeTerrainMaterials();
 	InitializeGameEntities();
+	InitializeColliders();
 	InitializeEmitters();
 	InitializeSkies();
 	InitializeAudio();
@@ -47,7 +50,7 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 
 	SetLoadedAndWait("Post-Initialization", "Preparing to render");
 
-	this->isLoading = false;
+	this->assetManagerLoadState = AMLoadState::SINGLE_CREATION;
 	this->singleLoadComplete = true;
 	threadNotifier->notify_all();
 }
@@ -56,8 +59,8 @@ bool AssetManager::GetSingleLoadComplete() {
 	return this->singleLoadComplete;
 }
 
-bool AssetManager::GetIsLoading() {
-	return this->isLoading;
+AMLoadState AssetManager::GetAMLoadState() {
+	return this->assetManagerLoadState;
 }
 
 std::string AssetManager::GetLastLoadedCategory() {
@@ -72,8 +75,8 @@ std::exception_ptr AssetManager::GetLoadingException() {
 	return this->loaded.errorCode;
 }
 
-void AssetManager::SetIsLoading(bool isLoading) {
-	this->isLoading = isLoading;
+void AssetManager::SetAMLoadState(AMLoadState state) {
+	this->assetManagerLoadState = state;
 }
 
 void AssetManager::SetSingleLoadComplete(bool loadComplete) {
@@ -81,7 +84,7 @@ void AssetManager::SetSingleLoadComplete(bool loadComplete) {
 }
 
 void AssetManager::SetLoadedAndWait(std::string category, std::string object, std::exception_ptr error) {
-	if (isLoading) {
+	if (assetManagerLoadState == AMLoadState::INITIALIZING) {
 		loaded.category = category;
 		loaded.object = object;
 		if (error) {
@@ -92,6 +95,14 @@ void AssetManager::SetLoadedAndWait(std::string category, std::string object, st
 
 		std::unique_lock<std::mutex> lock(*threadLock);
 		threadNotifier->wait(lock, [&] {return singleLoadComplete == 0; });
+	}
+	else if (assetManagerLoadState == AMLoadState::COMPLEX_CREATION) {
+		// TODO: handle complex asset importing by file, and do thread logic here
+		return;
+	}
+	else if (assetManagerLoadState == AMLoadState::SCENE_LOAD) {
+		// TODO: handle running a loading screen while a new scene loads
+		return;
 	}
 	else {
 		// This a new asset being loaded without a loading screen
@@ -598,7 +609,7 @@ void AssetManager::InitializeMaterials() {
 					  L"bronze_albedo.png",
 					  L"bronze_normals.png",
 					  L"bronze_metal.png",
-					  L"bronze_roughness.png");
+					  L"bronze_roughness.png")->SetTiling(0.3f);
 
 	CreatePBRMaterial(std::string("cobbleMat"),
 					  L"cobblestone_albedo.png",
@@ -953,6 +964,10 @@ void AssetManager::InitializeEmitters() {
 		GetPixelShaderByName("ParticlesPS"),
 		GetVertexShaderByName("ParticlesVS"),
 		LoadParticleTexture(L"Smoke/", true),
+		GetComputeShaderByName("ParticleEmitCS"),
+		GetComputeShaderByName("ParticleMoveCS"),
+		GetComputeShaderByName("ParticleCopyCS"),
+		GetComputeShaderByName("ParticleInitDeadCS"),
 		device,
 		context);
 
@@ -1027,6 +1042,63 @@ void AssetManager::InitializeIMGUI(HWND hwnd) {
 	ImGui_ImplWin32_Init(hwnd);
 	ImGui_ImplDX11_Init(device.Get(), context.Get());
 }
+
+void AssetManager::InitializeColliders() {
+	std::shared_ptr<GameEntity> e = GetGameEntityByName("Bronze Cube");
+	std::shared_ptr<GameEntity> e2 = GetGameEntityByName("Scratched Sphere");
+	std::shared_ptr<GameEntity> e3 = GetGameEntityByName("Rough Torus");
+	std::shared_ptr<GameEntity> e4 = GetGameEntityByName("Floor Helix");
+	std::shared_ptr<GameEntity> e5 = GetGameEntityByName("Shiny Rough Sphere");
+
+	std::shared_ptr<GameEntity> e6 = GetGameEntityByName("Floor Cube");
+	std::shared_ptr<GameEntity> e7 = GetGameEntityByName("Scratched Cube");
+	//TODO: the wood sphere will become a child of the spinning stuff if you disable and enable it via IMGUI....
+
+	std::shared_ptr<Collider> c1 = AddColliderToGameEntity(e);
+	std::shared_ptr<Collider> c2 = AddColliderToGameEntity(e2);
+	std::shared_ptr<Collider> c3 = AddColliderToGameEntity(e3);
+	std::shared_ptr<Collider> c4 = AddColliderToGameEntity(e4);
+	std::shared_ptr<Collider> c5 = AddColliderToGameEntity(e5);
+	std::shared_ptr<Collider> c6 = AddColliderToGameEntity(e6);
+	std::shared_ptr<Collider> c7 = AddTriggerBoxToGameEntity(e7);
+	c6->SetExtents(XMFLOAT3(1.002f, 1.002f, 1.002f)); //TODO: check and see if setting this alters where children end up (coordinate space scaling)
+}
+#pragma endregion
+
+#pragma region addComponent
+
+std::shared_ptr<Collider> AssetManager::AddColliderToGameEntity(OUT std::shared_ptr<GameEntity> entity) {
+	try {
+		std::shared_ptr<Collider> c = entity->AddComponent<Collider>();
+
+		SetLoadedAndWait("Colliders", "Generic Collider");
+
+		return c;
+	}
+	catch (...) {
+		SetLoadedAndWait("Colliders", "Generic Collider", std::current_exception());
+
+		return nullptr;
+	}
+}
+
+std::shared_ptr<Collider> AssetManager::AddTriggerBoxToGameEntity(OUT std::shared_ptr<GameEntity> entity) {
+	try {
+		std::shared_ptr<Collider> c = entity->AddComponent<Collider>();
+
+		c->SetTriggerStatus(true);
+
+		SetLoadedAndWait("Colliders", "Generic Trigger Box");
+
+		return c;
+	}
+	catch (...) {
+		SetLoadedAndWait("Colliders", "Generic Trigger Box", std::current_exception());
+
+		return nullptr;
+	}
+}
+
 #pragma endregion
 
 #pragma region getMethods
@@ -1147,6 +1219,9 @@ std::shared_ptr<GameEntity> AssetManager::GetGameEntityByID(int id) {
 	return this->globalEntities[id];
 }
 
+ComponentTypes AssetManager::GetAllCurrentComponentTypes() {
+	return this->allCurrentComponentTypes;
+}
 #pragma endregion
 
 #pragma region buildAssetData

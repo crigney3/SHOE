@@ -55,7 +55,9 @@ void CollisionManager::Update()
 			if ((!a->GetTriggerStatus() && b->GetTriggerStatus())
 				&& a->GetOrientedBoundingBox().Intersects(b->GetOrientedBoundingBox()))
 			{
+#if defined(DEBUG) || defined(_DEBUG)
 				printf("\n%s Colliding with %s", aName.c_str(), bName.c_str());
+#endif
 			}
 		}
 	}
@@ -84,11 +86,15 @@ void CollisionManager::CheckTriggerCollisions()
 			BoundingOrientedBox cOBB = c->GetOrientedBoundingBox();
 			if (tOBB.Intersects(cOBB))
 			{
+#if defined(DEBUG) || defined(_DEBUG)
 				printf("Colliding\n");
+#endif
 			}
 			if (cOBB.Intersects(tOBB))
 			{
+#if defined(DEBUG) || defined(_DEBUG)
 				printf("Colliding2\n");
+#endif
 			}
 		}
 	}

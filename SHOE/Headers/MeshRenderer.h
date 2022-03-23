@@ -12,6 +12,7 @@ public:
 		std::shared_ptr<Material> mat
 	);
 	void Start() override;
+	void OnDestroy() override;
 	std::shared_ptr<Mesh> GetMesh();
 	std::shared_ptr<Material> GetMaterial();
 

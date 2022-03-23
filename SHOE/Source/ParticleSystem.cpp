@@ -4,6 +4,10 @@
 std::shared_ptr<SimplePixelShader> ParticleSystem::defaultParticlePixelShader = nullptr;
 std::shared_ptr<SimpleVertexShader> ParticleSystem::defaultParticleVertexShader = nullptr;
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::defaultParticleTextureSRV = nullptr;
+std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleEmitComputeShader = nullptr;
+std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleSimComputeShader = nullptr;
+std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleCopyComputeShader = nullptr;
+std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleDeadListInitComputeShader = nullptr;
 Microsoft::WRL::ComPtr<ID3D11Device> ParticleSystem::defaultDevice = nullptr;
 Microsoft::WRL::ComPtr<ID3D11DeviceContext> ParticleSystem::defaultContext = nullptr;
 
@@ -149,11 +153,23 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetDrawListSRV(
 	return this->drawListSRV;
 }
 
-void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixelShader, std::shared_ptr<SimpleVertexShader> particleVertexShader, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV, Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context)
+void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixelShader,
+								 std::shared_ptr<SimpleVertexShader> particleVertexShader,
+								 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
+								 std::shared_ptr<SimpleComputeShader> particleEmitComputeShader,
+								 std::shared_ptr<SimpleComputeShader> particleSimComputeShader,
+								 std::shared_ptr<SimpleComputeShader> particleCopyComputeShader,
+								 std::shared_ptr<SimpleComputeShader> particleDeadListInitComputeShader,
+								 Microsoft::WRL::ComPtr<ID3D11Device> device,
+								 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context)
 {
 	defaultParticlePixelShader = particlePixelShader;
 	defaultParticleVertexShader = particleVertexShader;
 	defaultParticleTextureSRV = particleTextureSRV;
+	defaultParticleCopyComputeShader = particleCopyComputeShader;
+	defaultParticleEmitComputeShader = particleEmitComputeShader;
+	defaultParticleSimComputeShader = particleSimComputeShader;
+	defaultParticleDeadListInitComputeShader = particleDeadListInitComputeShader;
 	defaultDevice = device;
 	defaultContext = context;
 }
@@ -185,6 +201,11 @@ void ParticleSystem::Start()
 	// Set up a function to calculate if this emitter will overflow its buffer
 	// Then recalculate maxParticles if it will
 	Initialize(this->maxParticles);
+
+	SetParticleComputeShader(defaultParticleCopyComputeShader, ParticleComputeShaderType::Copy);
+	SetParticleComputeShader(defaultParticleSimComputeShader, ParticleComputeShaderType::Simulate);
+	SetParticleComputeShader(defaultParticleEmitComputeShader, ParticleComputeShaderType::Emit);
+	SetParticleComputeShader(defaultParticleDeadListInitComputeShader, ParticleComputeShaderType::DeadListInit);
 }
 
 void ParticleSystem::Update(float deltaTime, float totalTime) {
