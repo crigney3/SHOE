@@ -1,5 +1,6 @@
 #include "../Headers/Transform.h"
 #include "..\Headers\GameEntity.h"
+#include "../Headers/Light.h"
 
 using namespace DirectX;
 
@@ -51,6 +52,8 @@ void Transform::UpdateWorldInfo()
 		XMStoreFloat3(&worldScale, sclVec);
 		XMStoreFloat4(&worldRotQuat, rotVec);
 	}
+
+	if (GetGameEntity()->HasLightAttached()) Light::MarkDirty();
 
 	// Reset the bool
 	this->isDirty = false;

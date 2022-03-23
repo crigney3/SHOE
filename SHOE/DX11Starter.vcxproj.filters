@@ -69,9 +69,6 @@
     <ClInclude Include="Headers\Input.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Lights.h">
-      <Filter>Header Files\SHOE-Headers</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\Material.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
@@ -120,9 +117,6 @@
     <ClInclude Include="Headers\Keybind.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Collider.h">
-      <Filter>Header Files\SHOE-Headers</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\CollisionManager.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
@@ -148,6 +142,12 @@
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
     <ClInclude Include="Headers\Terrain.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Collider.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Light.h">
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
   </ItemGroup>
@@ -310,11 +310,14 @@
     <ClCompile Include="Source\ComponentPool.cpp">
       <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Collider.cpp">
-      <Filter>Source Files\SHOE-Source</Filter>
-    </ClCompile>
     <ClCompile Include="Source\CollisionManager.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Light.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Collider.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

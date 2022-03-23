@@ -16,6 +16,7 @@ private:
 	std::string name;
 	bool enabled;
 	bool hierarchyIsEnabled;
+	int attachedLightCount = 0;
 
 	std::vector<std::shared_ptr<IComponent>> rawComponentList;
 	std::vector<std::shared_ptr<ComponentPacket>> componentList;
@@ -41,6 +42,7 @@ public:
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();
 	bool GetHierarchyIsEnabled();
+	bool HasLightAttached();
 
 	//Component stuff
 	template <typename T>
@@ -50,6 +52,7 @@ public:
 	template <typename T>
 	bool RemoveComponent();
 	template <> bool RemoveComponent<Transform>();
+	bool RemoveComponent(std::shared_ptr<IComponent> component);
 
 	template <typename T>
 	std::shared_ptr<T> GetComponent();
@@ -82,6 +85,7 @@ std::shared_ptr<T> GameEntity::AddComponent()
 	std::shared_ptr<T> component = ComponentManager::Instantiate<T>(shared_from_this(), this->GetHierarchyIsEnabled());
 	componentList.push_back(std::make_shared<ComponentPacket>(component, ComponentManager::Free<T>));
 	rawComponentList.push_back(component);
+	attachedLightCount += (std::dynamic_pointer_cast<Light>(component) != nullptr);
 	return component;
 }
 
@@ -95,8 +99,10 @@ bool GameEntity::RemoveComponent()
 {
 	for(int i = 0; i < componentList.size(); i++)
 	{
-		if(std::dynamic_pointer_cast<T>(componentList[i]->component).get() != nullptr)
+		if(std::dynamic_pointer_cast<T>(componentList[i]->component) != nullptr)
 		{
+
+			attachedLightCount -= (std::dynamic_pointer_cast<Light>(componentList[i]->component) != nullptr);
 			componentList[i]->component->OnDestroy();
 			componentList[i]->deallocator(componentList[i]->component);
 			componentList.erase(componentList.begin() + i);
@@ -116,7 +122,7 @@ template<typename T>
 std::shared_ptr<T> GameEntity::GetComponent()
 {
 	for (std::shared_ptr<ComponentPacket> packet : componentList) {
-		if (std::dynamic_pointer_cast<T>(packet->component).get() != nullptr)
+		if (std::dynamic_pointer_cast<T>(packet->component) != nullptr)
 			return packet->component;
 	}
 	return nullptr;
@@ -133,7 +139,7 @@ std::vector<std::shared_ptr<T>> GameEntity::GetComponents()
 	std::vector<std::shared_ptr<T>> components = std::vector<std::shared_ptr<T>>();
 	for (std::shared_ptr<ComponentPacket> packet : componentList) {
 		std::shared_ptr<T> component = std::dynamic_pointer_cast<T>(packet->component);
-		if (component.get() != nullptr)
+		if (component != nullptr)
 			components.push_back(component);
 	}
 	return components;
@@ -154,7 +160,7 @@ std::shared_ptr<T> GameEntity::GetComponentInChildren()
 	for(auto& child : transform->GetChildrenAsGameEntities())
 	{
 		component = child->GetComponentInChildren<T>();
-		if (component.get() != nullptr)
+		if (component != nullptr)
 			return component;
 	}
 

@@ -186,3 +186,29 @@ bool GameEntity::GetHierarchyIsEnabled()
 {
 	return hierarchyIsEnabled;
 }
+
+bool GameEntity::HasLightAttached()
+{
+	return attachedLightCount > 0;
+}
+
+/// <summary>
+/// Removes a component by reference
+/// </summary>
+/// <param name="component">Component to remove</param>
+/// <returns>If the component was successfully removed</returns>
+bool GameEntity::RemoveComponent(std::shared_ptr<IComponent> component)
+{
+	for (int i = 0; i < componentList.size(); i++)
+	{
+		if (componentList[i]->component == component)
+		{
+			componentList[i]->component->OnDestroy();
+			componentList[i]->deallocator(componentList[i]->component);
+			componentList.erase(componentList.begin() + i);
+			rawComponentList.erase(rawComponentList.begin() + i);
+			return true;
+		}
+	}
+	return false;
+}
