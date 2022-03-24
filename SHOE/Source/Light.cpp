@@ -2,13 +2,20 @@
 #include "..\Headers\GameEntity.h"
 #include "..\Headers\ComponentManager.h"
 
+bool Light::lightArrayDirty = false;
+std::vector<LightData> Light::lightData = std::vector<LightData>();
+
 LightData Light::GetData()
 {
+	DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&direction);
+	DirectX::XMVECTOR rot = DirectX::XMLoadFloat4(&GetGameEntity()->GetTransform()->GetGlobalRotation());
+	DirectX::XMFLOAT3 finalFacing;
+	DirectX::XMStoreFloat3(&finalFacing, DirectX::XMVector3Rotate(dir, rot));
 	return LightData{
 		type,
 		color,
 		intensity,
-		direction,
+		finalFacing,
 		(float)IsEnabled(),
 		GetGameEntity()->GetTransform()->GetGlobalPosition(),
 		range
@@ -28,6 +35,16 @@ LightData* Light::GetLightArray()
 	return lightData.data();
 }
 
+int Light::GetLightArrayCount()
+{
+	return lightData.size();
+}
+
+void Light::MarkDirty()
+{
+	lightArrayDirty = true;
+}
+
 void Light::Start()
 {
 	type = 0.0f;
@@ -41,5 +58,60 @@ void Light::Start()
 
 void Light::OnDestroy()
 {
+	lightArrayDirty = true;
+}
+
+float Light::GetType()
+{
+	return type;
+}
+
+void Light::SetType(float type)
+{
+	this->type = type;
+	lightArrayDirty = true;
+}
+
+DirectX::XMFLOAT3 Light::GetColor()
+{
+	return color;
+}
+
+void Light::SetColor(DirectX::XMFLOAT3 color)
+{
+	this->color = color;
+	lightArrayDirty = true;
+}
+
+float Light::GetIntensity()
+{
+	return intensity;
+}
+
+void Light::SetIntensity(float intensity)
+{
+	this->intensity;
+	lightArrayDirty = true;
+}
+
+DirectX::XMFLOAT3 Light::GetDirection()
+{
+	return direction;
+}
+
+void Light::SetDirection(DirectX::XMFLOAT3 direction)
+{
+	this->direction = direction;
+	lightArrayDirty = true;
+}
+
+float Light::GetRange()
+{
+	return range;
+}
+
+void Light::SetRange(float range)
+{
+	this->range = range;
 	lightArrayDirty = true;
 }

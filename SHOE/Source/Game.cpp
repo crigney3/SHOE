@@ -95,6 +95,7 @@ void Game::Init()
 	mainCamera = globalAssets.GetCameraByName("mainCamera");
 	mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
 	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
+	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
 
 	Entities = globalAssets.GetActiveGameEntities();
 
@@ -107,17 +108,12 @@ void Game::Init()
 	skyWindowEnabled = false;
 	objHierarchyEnabled = true;
 	rtvWindowEnabled = false;
-	childIndices = std::vector<int>();
 
 	flashMenuToggle = false;
-	lightUIIndex = 0;
 	camUIIndex = 0;
 	skyUIIndex = 0;
 
 	skies = globalAssets.GetSkyArray();
-
-	//Very important this is set accurately
-	lightCount = globalAssets.GetLightArraySize();
 	
 	// Tell the input assembler stage of the pipeline what kind of
 	// geometric primitives (points, lines or triangles) we want to draw.  
@@ -182,7 +178,7 @@ void Game::RenderUI(float deltaTime) {
 
 		ImGui::Text(node.c_str());
 
-		infoStr = std::to_string(globalAssets.GetLightArraySize());
+		infoStr = std::to_string(Light::GetLightArrayCount());
 		node = "Light count: " + infoStr;
 
 		ImGui::Text(node.c_str());
@@ -234,41 +230,6 @@ void Game::RenderUI(float deltaTime) {
 		}
 
 		//ImGui::Image(globalAssets.GetEmitterAtID(0)->particleDataSRV.Get(), ImVec2(256, 256));
-		ImGui::End();
-	}
-
-	if (lightWindowEnabled) {
-		// Display the debug UI for lights
-		Light* currentLight = globalAssets.GetLightAtID(lightUIIndex);
-
-		std::string indexStr = std::to_string(lightUIIndex);
-		std::string node = "Editing light " + indexStr;
-		ImGui::Begin("Light Editor");
-		ImGui::Text(node.c_str());
-		if (lightUIIndex == 4) ImGui::Text("Caution: Editing the flashlight");
-
-		if (ImGui::ArrowButton("Previous Light", ImGuiDir_Left)) {
-			lightUIIndex--;
-			if (lightUIIndex < 0) {
-				lightUIIndex = globalAssets.GetLightArraySize() - 1;
-			}
-		};
-		ImGui::SameLine();
-
-		if (ImGui::ArrowButton("Next Light", ImGuiDir_Right)) {
-			lightUIIndex++;
-			if (lightUIIndex > globalAssets.GetLightArraySize() - 1) {
-				lightUIIndex = 0;
-			}
-		};
-
-		bool lightEnabled = (bool)currentLight->enabled;
-		ImGui::Checkbox("Enabled ", &lightEnabled);
-		lightEnabled ? currentLight->enabled = 1.0f : currentLight->enabled = 0.0f;
-
-		ImGui::ColorEdit3("Color ", &currentLight->color.x);
-		ImGui::DragFloat("Intensity ", &currentLight->intensity, 0.1f, 0.01f, 1.0f);
-		ImGui::DragFloat("Range ", &currentLight->range, 1, 5.0f, 20.0f);
 		ImGui::End();
 	}
 
@@ -544,6 +505,39 @@ void Game::RenderUI(float deltaTime) {
 				ImGui::PopStyleColor(3);
 				ImGui::PopID();
 			}
+			if (std::dynamic_pointer_cast<Light>(componentList[c]) != nullptr)
+			{
+				std::shared_ptr<Light> light = std::dynamic_pointer_cast<Light>(componentList[c]);
+				ImGui::Text("Light");
+
+				bool lightEnabled = light->IsLocallyEnabled();
+				ImGui::Checkbox("Enabled ", &lightEnabled);
+				if (lightEnabled != light->IsLocallyEnabled())
+					light->SetEnabled(lightEnabled);
+
+				UILightType = light->GetType();
+				ImGui::DragFloat("Type ", &UILightType, 1.0f, 0.0f, 2.0f);
+				light->SetType(UILightType);
+
+				//Directional Light
+				if (light->GetType() == 0.0f || light->GetType() == 2.0f) {
+					UILightDirectionEdit = light->GetDirection();
+					ImGui::InputFloat3("Direction ", &UILightDirectionEdit.x);
+					light->SetDirection(UILightDirectionEdit);
+				}
+				//Point Light
+				if (light->GetType() == 1.0f || light->GetType() == 2.0f) {
+					UILightRange = light->GetRange();
+					ImGui::DragFloat("Range ", &UILightRange, 1, 5.0f, 20.0f);
+					light->SetRange(UILightRange);
+				}
+				UILightColorEdit = light->GetColor();
+				ImGui::ColorEdit3("Color ", &UILightColorEdit.x);
+				light->SetColor(UILightColorEdit);
+				UILightIntensity = light->GetIntensity();
+				ImGui::DragFloat("Intensity ", &UILightIntensity, 0.1f, 0.01f, 1.0f);
+				light->SetIntensity(UILightIntensity);
+			}
 		}
 
 		ImGui::Separator();
@@ -619,17 +613,6 @@ void Game::RenderUI(float deltaTime) {
 				}
 			}
 
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNodeEx("Lights", 
-			ImGuiTreeNodeFlags_DefaultOpen |
-			ImGuiTreeNodeFlags_FramePadding)) {
-			ImGui::Text("Lights can't be parented (yet)");
-			for (int i = 0; i < globalAssets.GetLightArraySize(); i++) {
-				if (ImGui::TreeNode((void*)(intptr_t)i, "Light %d", i)) {
-					ImGui::TreePop();
-				}
-			}
 			ImGui::TreePop();
 		}
 	}
@@ -798,7 +781,6 @@ void Game::RenderUI(float deltaTime) {
 		}
 
 		if (ImGui::BeginMenu("Add")) {
-			//ImGui::MenuItem("Toggle Flashlight", "f", &flashMenuToggle);
 			ImGui::Text("This menu will allow easily adding more objects and lights.");
 
 			if (ImGui::Button("Add GameObject")) {
@@ -898,24 +880,17 @@ void Game::RenderSky() {
 }
 
 void Game::Flashlight() {
-	Light* flashlight = globalAssets.GetFlashlight();
 	if (input.TestKeyAction(KeyActions::ToggleFlashlight)) {
 		flashMenuToggle = !flashMenuToggle;
+		flashlight->SetEnabled(flashMenuToggle);
 	}
 
 	if (flashMenuToggle) {
-		flashlight->enabled = true;
-	}
-	else {
-		flashlight->enabled = false;
-	}
-
-	if (flashMenuToggle) {
-		XMFLOAT3 camPos = mainCamera->GetTransform()->GetLocalPosition();
-		flashlight->position = XMFLOAT3(camPos.x + 0.5f, camPos.y, camPos.z + 0.5f);
-		flashlight->direction = mainCamera->GetTransform()->GetForward();
-		flashShadowCamera->GetTransform()->SetPosition(flashlight->position.x, flashlight->position.y, flashlight->position.z);
-		flashShadowCamera->GetTransform()->SetRotation(mainCamera->GetTransform()->GetLocalPitchYawRoll().x, mainCamera->GetTransform()->GetLocalPitchYawRoll().y, mainCamera->GetTransform()->GetLocalPitchYawRoll().z);
+		XMFLOAT3 camPos = mainCamera->GetTransform()->GetGlobalPosition();
+		flashlight->GetTransform()->SetPosition(XMFLOAT3(camPos.x + 0.5f, camPos.y, camPos.z + 0.5f));
+		flashlight->SetDirection(mainCamera->GetTransform()->GetForward());
+		flashShadowCamera->GetTransform()->SetPosition(flashlight->GetTransform()->GetGlobalPosition());
+		flashShadowCamera->GetTransform()->SetRotation(mainCamera->GetTransform()->GetLocalPitchYawRoll());
 		flashShadowCamera->UpdateViewMatrix();
 		FlickeringCheck();
 	}

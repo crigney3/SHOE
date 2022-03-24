@@ -3,6 +3,8 @@
 #include "IComponent.h"
 #include <vector>
 
+#define MAX_LIGHTS 64
+
 struct LightData {
 	float type;
 	DirectX::XMFLOAT3 color;
@@ -29,13 +31,21 @@ private:
 	LightData GetData();
 public:
 	static LightData* GetLightArray();
-	/// <summary>
-	/// TODO: Set dirty in UpdateWorldInfo when GameEntity w/ light's transform changes
-	/// TODO: Set dirty when light's IsEnabled changes
-	/// </summary>
+	static int GetLightArrayCount();
 	static void MarkDirty();
 
 	void Start() override;
 	void OnDestroy() override;
+
+	float GetType();
+	void SetType(float type);
+	DirectX::XMFLOAT3 GetColor();
+	void SetColor(DirectX::XMFLOAT3 color);
+	float GetIntensity();
+	void SetIntensity(float intensity);
+	DirectX::XMFLOAT3 GetDirection();
+	void SetDirection(DirectX::XMFLOAT3 direction);
+	float GetRange();
+	void SetRange(float range);
 };
 

@@ -3,6 +3,7 @@
 #include <memory>
 #include "GameEntity.fwd.h"
 #include "Transform.h"
+#include "Light.h"
 #include "Mesh.h"
 #include "Material.h"
 #include "Camera.h"
@@ -48,6 +49,7 @@ public:
 	template <typename T>
 	std::shared_ptr<T> AddComponent();
 	template <> std::shared_ptr<Transform> AddComponent();
+	template <> std::shared_ptr<Light> AddComponent();
 
 	template <typename T>
 	bool RemoveComponent();
@@ -85,7 +87,6 @@ std::shared_ptr<T> GameEntity::AddComponent()
 	std::shared_ptr<T> component = ComponentManager::Instantiate<T>(shared_from_this(), this->GetHierarchyIsEnabled());
 	componentList.push_back(std::make_shared<ComponentPacket>(component, ComponentManager::Free<T>));
 	rawComponentList.push_back(component);
-	attachedLightCount += (std::dynamic_pointer_cast<Light>(component) != nullptr);
 	return component;
 }
 
@@ -123,7 +124,7 @@ std::shared_ptr<T> GameEntity::GetComponent()
 {
 	for (std::shared_ptr<ComponentPacket> packet : componentList) {
 		if (std::dynamic_pointer_cast<T>(packet->component) != nullptr)
-			return packet->component;
+			return std::dynamic_pointer_cast<T>(packet->component);
 	}
 	return nullptr;
 }

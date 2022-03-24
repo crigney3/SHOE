@@ -111,5 +111,4 @@ std::shared_ptr<Transform> IComponent::GetTransform()
 void IComponent::UpdateHierarchyIsEnabled(bool active)
 {
 	hierarchyIsEnabled = active;
-	if (GetGameEntity()->HasLightAttached()) Light::MarkDirty();
 }

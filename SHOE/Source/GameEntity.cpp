@@ -6,15 +6,18 @@
  */
 void GameEntity::UpdateHierarchyIsEnabled(bool active)
 {
-	hierarchyIsEnabled = active;
-	for (std::shared_ptr<ComponentPacket> packet : componentList)
-	{
-		packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
-	}
-	for (std::shared_ptr<GameEntity> children : transform->GetChildrenAsGameEntities())
-	{
-		if(children.get() != NULL)
-			children->UpdateHierarchyIsEnabled(GetEnableDisable());
+	if (hierarchyIsEnabled != active) {
+		hierarchyIsEnabled = active;
+		if (HasLightAttached()) Light::MarkDirty();
+		for (std::shared_ptr<ComponentPacket> packet : componentList)
+		{
+			packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
+		}
+		for (std::shared_ptr<GameEntity> children : transform->GetChildrenAsGameEntities())
+		{
+			if (children.get() != NULL)
+				children->UpdateHierarchyIsEnabled(GetEnableDisable());
+		}
 	}
 }
 
@@ -94,6 +97,26 @@ std::shared_ptr<Transform> GameEntity::AddComponent<Transform>()
 {
 	//Does nothing, cannot have multiple transforms
 	return transform;
+}
+
+/**
+ * \brief Special case for lights since they need to be tracked
+ * \return A pointer to the new light, or nullptr if MAX_LIGHTS was already reached
+ */
+template <>
+std::shared_ptr<Light> GameEntity::AddComponent<Light>()
+{
+	if (Light::GetLightArrayCount() == MAX_LIGHTS) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("\nMax lights already exist, cancelling addition of light component.");
+#endif
+		return nullptr;
+	}
+	std::shared_ptr<Light> component = ComponentManager::Instantiate<Light>(shared_from_this(), this->GetHierarchyIsEnabled());
+	componentList.push_back(std::make_shared<ComponentPacket>(component, ComponentManager::Free<Light>));
+	rawComponentList.push_back(component);
+	attachedLightCount++;
+	return component;
 }
 
 /**

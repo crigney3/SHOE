@@ -392,38 +392,26 @@ void Renderer::DrawPointLights()
 	lightVS->SetMatrix4x4("view", globalAssets.GetCameraByName("mainCamera")->GetViewMatrix());
 	lightVS->SetMatrix4x4("projection", globalAssets.GetCameraByName("mainCamera")->GetProjectionMatrix());
 
-	for (int i = 0; i < globalAssets.GetLightArraySize(); i++)
-	{
-		Light light = globalAssets.GetLightArray()[i];
+	std::vector<std::shared_ptr<Light>> lights = ComponentManager::GetAll<Light>();
 
+	for (int i = 0; i < lights.size(); i++)
+	{
 		// Only drawing points, so skip others
-		if (light.type != 1.0f || light.enabled != true)
+		if (lights[i]->GetType() != 1.0f || !lights[i]->IsEnabled())
 			continue;
 
 		// Calc quick scale based on range
 		// (assuming range is between 5 - 10)
-		float scale = light.range / 10.0f;
-
-		// Make the transform for this light
-		DirectX::XMMATRIX rotMat = DirectX::XMMatrixIdentity();
-		DirectX::XMMATRIX scaleMat = DirectX::XMMatrixScaling(scale, scale, scale);
-		DirectX::XMMATRIX transMat = DirectX::XMMatrixTranslation(light.position.x, light.position.y, light.position.z);
-		DirectX::XMMATRIX worldMat = scaleMat * rotMat * transMat;
-
-		DirectX::XMFLOAT4X4 world;
-		DirectX::XMFLOAT4X4 worldInvTrans;
-		XMStoreFloat4x4(&world, worldMat);
-		XMStoreFloat4x4(&worldInvTrans, XMMatrixInverse(0, XMMatrixTranspose(worldMat)));
+		float scale = lights[i]->GetRange() / 10.0f;
 
 		// Set up the world matrix for this light
-		lightVS->SetMatrix4x4("world", world);
-		lightVS->SetMatrix4x4("worldInverseTranspose", worldInvTrans);
+		lightVS->SetMatrix4x4("world", lights[i]->GetTransform()->GetWorldMatrix());
 
 		// Set up the pixel shader data
-		DirectX::XMFLOAT3 finalColor = light.color;
-		finalColor.x *= light.intensity;
-		finalColor.y *= light.intensity;
-		finalColor.z *= light.intensity;
+		DirectX::XMFLOAT3 finalColor = lights[i]->GetColor();
+		finalColor.x *= lights[i]->GetIntensity();
+		finalColor.y *= lights[i]->GetIntensity();
+		finalColor.z *= lights[i]->GetIntensity();
 		lightPS->SetFloat3("Color", finalColor);
 
 		// Copy data
@@ -441,7 +429,6 @@ void Renderer::DrawPointLights()
 			0,     // Offset to the first index we want to use
 			0);    // Offset to add to each index when looking up vertices
 	}
-
 }
 
 void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type) {
@@ -762,7 +749,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	// This section could be improved, see Chris's Demos and
 	// Structs in header. Currently only supports the single default 
 	// PBR+IBL shader
-	unsigned int lightCount = globalAssets.GetLightArraySize();
+	unsigned int lightCount = Light::GetLightArrayCount();
 
 	std::shared_ptr<SimpleVertexShader> perFrameVS = globalAssets.GetVertexShaderByName("NormalsVS");
 
@@ -776,7 +763,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	std::shared_ptr<SimplePixelShader> perFramePS = globalAssets.GetPixelShaderByName("NormalsPS");
 
-	perFramePS->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
+	perFramePS->SetData("lights", Light::GetLightArray(), sizeof(Light) * 64);
 	perFramePS->SetData("lightCount", &lightCount, sizeof(lightCount));
 	perFramePS->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 	if (this->currentSky->GetEnableDisable()) {
@@ -904,7 +891,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 			if (!terrains[i]->IsEnabled()) continue;
 
 			PSTerrain->SetShader();
-			PSTerrain->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
+			PSTerrain->SetData("lights", Light::GetLightArray(), sizeof(Light) * 64);
 			PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
 			PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 			PSTerrain->SetFloat("uvMultNear", 50.0f);
@@ -1087,7 +1074,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		refractivePS->SetMatrix4x4("projMatrix", mainCamera->GetProjectionMatrix());
 		refractivePS->SetFloat3("cameraPos", mainCamera->GetTransform()->GetLocalPosition());
 
-		refractivePS->SetData("lights", globalAssets.GetLightArray(), sizeof(Light) * 64);
+		refractivePS->SetData("lights", Light::GetLightArray(), sizeof(Light) * 64);
 		refractivePS->SetData("lightCount", &lightCount, sizeof(unsigned int));
 
 		refractivePS->SetShaderResourceView("environmentMap", currentSky->GetSkyTexture().Get());

@@ -1,8 +1,6 @@
 #include "AssetManager.h"
 #include "CollisionManager.h"
 
-#define MAX_LIGHTS 64
-
 // Effects that require multiple render target views
 // are stored in the following order:
 // 0 - Color minus ambient
@@ -63,7 +61,7 @@ struct VSPerObjectData
 // These need to match the expected per-frame/object/material pixel shader data
 struct PSPerFrameData
 {
-    Light Lights[MAX_LIGHTS];
+    LightData Lights[MAX_LIGHTS];
     DirectX::XMFLOAT3 CameraPosition;
     unsigned int LightCount;
     int SpecIBLMipLevel;

@@ -4,7 +4,7 @@
 // Removed on compile
 #define OUT
 
-#include "Lights.h"
+#include "Light.h"
 #include "Sky.h"
 #include "SimpleShader.h"
 #include "GameEntity.h"
@@ -127,9 +127,9 @@ private:
 	void InitializeShaders();
 	void InitializeGameEntities();
 	void InitializeColliders();
-	void InitializeLights();
 	void InitializeTerrainMaterials();
 	void InitializeCameras();
+	void InitializeLights();
 	void InitializeSkies();
 	void InitializeEmitters();
 	void InitializeAudio();
@@ -144,7 +144,6 @@ private:
 	std::vector<std::shared_ptr<Mesh>> globalMeshes;
 	std::vector<std::shared_ptr<Material>> globalMaterials;
 	std::vector<std::shared_ptr<GameEntity>> globalEntities;
-	std::vector<std::shared_ptr<Light>> globalLights;
 	std::vector<std::shared_ptr<TerrainMats>> globalTerrainMaterials;
 	std::vector<FMOD::Sound*> globalSounds;
 	std::map<std::string, std::shared_ptr<DirectX::SpriteFont>> globalFonts;
@@ -191,6 +190,9 @@ public:
 	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::wstring nameToLoad);
 	std::shared_ptr<Mesh> CreateMesh(std::string id, std::string nameToLoad);
 	std::shared_ptr<Camera> CreateCamera(std::string id, DirectX::XMFLOAT3 pos, float aspectRatio, int type);
+	std::shared_ptr<Light> CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 direction, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
+	std::shared_ptr<Light> CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
+	std::shared_ptr<Light> CreateSpotLight(std::string name, DirectX::XMFLOAT3 direction, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Material> CreatePBRMaterial(std::string id,
 											    std::wstring albedoNameToLoad,
 											    std::wstring normalNameToLoad,
@@ -233,8 +235,6 @@ public:
 	void RemoveMaterial(int id);
 	void RemoveTerrainMaterial(std::string name);
 	void RemoveTerrainMaterial(int id);
-	void RemoveLight(std::string name);
-	void RemoveLight(int id);
 
 	// Methods to disable and enable assets for rendering
 	// Currently not implemented except for lights
@@ -243,8 +243,6 @@ public:
 	void EnableDisableSky(int id, bool value);
 	void EnableDisableCamera(std::string name, bool value);
 	void EnableDisableCamera(int id, bool value);
-	//void EnableDisableLight(std::string name, bool value);
-	void EnableDisableLight(int id, bool value);
 
 	// Asset search-by-name methods
 
@@ -257,7 +255,6 @@ public:
 	std::shared_ptr<Camera> GetCameraByName(std::string name);
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
 	std::shared_ptr<TerrainMats> GetTerrainMaterialByName(std::string name);
-	std::shared_ptr<Light> GetLightByName(std::string name);
 	FMOD::Sound* GetSoundByName();
 	std::shared_ptr<DirectX::SpriteFont> GetFontByName(std::string name);
 
@@ -269,8 +266,7 @@ public:
 	int GetMeshIDByName(std::string name);
 	int GetCameraIDByName(std::string name);
 	int GetMaterialIDByName(std::string name);
-	/*int GetTerrainMaterialIDByName(std::string name);
-	int GetLightIDByName(std::string name);*/
+	//int GetTerrainMaterialIDByName(std::string name);
 
 	// Relevant Get methods
 	
@@ -283,15 +279,12 @@ public:
 	size_t GetMeshArraySize();
 	size_t GetMaterialArraySize();
 	size_t GetGameEntityArraySize();
-	size_t GetLightArraySize();
 	size_t GetTerrainMaterialArraySize();
 	size_t GetSoundArraySize();
-	Light* GetLightArray();
 	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
 	std::vector<std::shared_ptr<Sky>>* GetSkyArray();
 	Light* GetFlashlight();
 
-	Light* GetLightAtID(int id);
 	FMOD::Sound* GetSoundAtID(int id);
 	std::shared_ptr<Camera> GetCameraAtID(int id);
 	std::shared_ptr<Material> GetMaterialAtID(int id);
@@ -305,5 +298,4 @@ public:
 	inline std::wstring ConvertToWide(const std::string& as);
 
 	std::shared_ptr<Sky> currentSky;
-	int lightCount;
 };
