@@ -68,8 +68,10 @@ float Light::GetType()
 
 void Light::SetType(float type)
 {
-	this->type = type;
-	lightArrayDirty = true;
+	if (this->type != type) {
+		this->type = type;
+		lightArrayDirty = true;
+	}
 }
 
 DirectX::XMFLOAT3 Light::GetColor()
@@ -79,8 +81,10 @@ DirectX::XMFLOAT3 Light::GetColor()
 
 void Light::SetColor(DirectX::XMFLOAT3 color)
 {
-	this->color = color;
-	lightArrayDirty = true;
+	if (this->color.x != color.x || this->color.y != color.y || this->color.z != color.z) {
+		this->color = color;
+		lightArrayDirty = true;
+	}
 }
 
 float Light::GetIntensity()
@@ -90,8 +94,10 @@ float Light::GetIntensity()
 
 void Light::SetIntensity(float intensity)
 {
-	this->intensity;
-	lightArrayDirty = true;
+	if (this->intensity != intensity) {
+		this->intensity;
+		lightArrayDirty = true;
+	}
 }
 
 DirectX::XMFLOAT3 Light::GetDirection()
@@ -101,8 +107,10 @@ DirectX::XMFLOAT3 Light::GetDirection()
 
 void Light::SetDirection(DirectX::XMFLOAT3 direction)
 {
-	this->direction = direction;
-	lightArrayDirty = true;
+	if (this->direction.x != direction.x || this->direction.y != direction.y || this->direction.z != direction.z) {
+		this->direction = direction;
+		lightArrayDirty = true;
+	}
 }
 
 float Light::GetRange()
@@ -112,6 +120,8 @@ float Light::GetRange()
 
 void Light::SetRange(float range)
 {
-	this->range = range;
-	lightArrayDirty = true;
+	if (this->range != range) {
+		this->range = range;
+		lightArrayDirty = true;
+	}
 }
