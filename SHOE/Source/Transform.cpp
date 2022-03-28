@@ -222,10 +222,46 @@ void Transform::RemoveChild(std::shared_ptr<Transform> child) {
 void Transform::SetParent(std::shared_ptr<Transform> newParent) {
 	if (newParent.get() != nullptr) {
 		this->parent = newParent;
+
+		// Ensure internals are correctly updated
+		XMVECTOR childPos = XMLoadFloat3(&pos);
+		XMVECTOR parentPos = XMLoadFloat3(&this->parent->GetGlobalPosition());
+		childPos -= parentPos;
+
+		XMVECTOR childRot = XMLoadFloat4(&rotQuat);
+		XMVECTOR parentRot = XMLoadFloat4(&this->parent->GetGlobalRotation());
+		childRot -= parentRot;
+
+		XMVECTOR childScale = XMLoadFloat3(&scale);
+		XMVECTOR parentScale = XMLoadFloat3(&this->parent->GetGlobalScale());
+		childScale /= parentScale;
+
+		XMStoreFloat3(&this->pos, childPos);
+		XMStoreFloat4(&this->rotQuat, childRot);
+		XMStoreFloat3(&this->scale, childScale);
+
 		newParent->children.push_back(shared_from_this());
 	}
 	else {
+		// Ensure internals are correctly updated
+		XMVECTOR childPos = XMLoadFloat3(&pos);
+		XMVECTOR parentPos = XMLoadFloat3(&this->parent->GetGlobalPosition());
+		childPos += parentPos;
+
+		XMVECTOR childRot = XMLoadFloat4(&rotQuat);
+		XMVECTOR parentRot = XMLoadFloat4(&this->parent->GetGlobalRotation());
+		childRot += parentRot;
+
+		XMVECTOR childScale = XMLoadFloat3(&scale);
+		XMVECTOR parentScale = XMLoadFloat3(&this->parent->GetGlobalScale());
+		childScale *= parentScale;
+
+		XMStoreFloat3(&this->pos, childPos);
+		XMStoreFloat4(&this->rotQuat, childRot);
+		XMStoreFloat3(&this->scale, childScale);
+
 		this->parent->RemoveChild(shared_from_this());
+
 		this->parent = nullptr;
 	}
 

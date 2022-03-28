@@ -33,9 +33,11 @@ public:
 	// Bool Get/Sets
 	bool GetTriggerStatus();
 	bool GetVisibilityStatus();
+	bool GetTransformVisibilityStatus();
 	bool GetEnabledStatus();
 	void SetTriggerStatus(bool _isTrigger);
 	void SetVisibilityStatus(bool _isVisible);
+	void SetTransformVisibilityStatus(bool _isTransformVisible);
 	void SetEnabledStatus(bool _isEnabled);
 
 	void OnCollisionEnter(std::shared_ptr<GameEntity> other) override;
@@ -49,4 +51,5 @@ private:
 	bool isEnabled_;
 	bool isTrigger_;
 	bool isVisible_;
+	bool isTransformVisible_;
 };
