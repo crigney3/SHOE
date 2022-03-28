@@ -371,6 +371,14 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 	}
 }
 
+/// <summary>
+/// Creates a GameEntity, gives it a light component, and populates it with Directional Light values
+/// </summary>
+/// <param name="name">Name of the GameEntity</param>
+/// <param name="direction">Direction of the light</param>
+/// <param name="color">Color of the light</param>
+/// <param name="intensity">Intensity of the light</param>
+/// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 direction, DirectX::XMFLOAT3 color, float intensity)
 {
 	std::shared_ptr<Light> light = CreateGameEntity(name)->AddComponent<Light>();
@@ -383,6 +391,14 @@ std::shared_ptr<Light> AssetManager::CreateDirectionalLight(std::string name, Di
 	return light;
 }
 
+/// <summary>
+/// Creates a GameEntity, gives it a light component, and populates it with Point Light values
+/// </summary>
+/// <param name="name">Name of the GameEntity</param>
+/// <param name="range">Range of the light</param>
+/// <param name="color">Color of the light</param>
+/// <param name="intensity">Intensity of the light</param>
+/// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color, float intensity)
 {
 	std::shared_ptr<Light> light = CreateGameEntity(name)->AddComponent<Light>();
@@ -395,6 +411,15 @@ std::shared_ptr<Light> AssetManager::CreatePointLight(std::string name, float ra
 	return light;
 }
 
+/// <summary>
+/// Creates a GameEntity, gives it a light component, and populates it with Spot Light values
+/// </summary>
+/// <param name="name">Name of the GameEntity</param>
+/// <param name="direction">Direction of the light</param>
+/// <param name="range">Range of the light</param>
+/// <param name="color">Color of the light</param>
+/// <param name="intensity">Intensity of the light</param>
+/// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreateSpotLight(std::string name, DirectX::XMFLOAT3 direction, float range, DirectX::XMFLOAT3 color, float intensity)
 {
 	std::shared_ptr<Light> light = CreateGameEntity(name)->AddComponent<Light>();

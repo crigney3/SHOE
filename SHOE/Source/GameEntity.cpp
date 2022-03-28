@@ -151,6 +151,10 @@ bool GameEntity::GetHierarchyIsEnabled()
 	return hierarchyIsEnabled;
 }
 
+/// <summary>
+/// Returns whether this has at least one light component attached
+/// </summary>
+/// <returns>If this has a light component</returns>
 bool GameEntity::HasLightAttached()
 {
 	return attachedLightCount > 0;

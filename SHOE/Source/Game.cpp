@@ -373,17 +373,6 @@ void Game::RenderUI(float deltaTime) {
 						meshRenderer->SetMesh(globalAssets.GetMeshAtID(meshIndex));
 					}
 				}
-
-				// Remove Component Button
-				ImGui::PushID(103);
-				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.35f, 1.0f, 0.6f));
-				if (ImGui::Button("Remove Component")) {
-					currentEntity->RemoveComponent<MeshRenderer>();
-				}
-				ImGui::PopStyleColor(3);
-				ImGui::PopID();
 			}
 
 			if (std::dynamic_pointer_cast<ParticleSystem>(componentList[c]) != nullptr)
@@ -438,17 +427,6 @@ void Game::RenderUI(float deltaTime) {
 				int maxParticles = particleSystem->GetMaxParticles();
 				ImGui::InputInt("Max Particles ", &maxParticles);
 				particleSystem->SetMaxParticles(maxParticles);
-
-				// Remove Component Button
-				ImGui::PushID(104);
-				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.35f, 1.0f, 0.6f));
-				if (ImGui::Button("Remove Component")) {
-					currentEntity->RemoveComponent<ParticleSystem>();
-				}
-				ImGui::PopStyleColor(3);
-				ImGui::PopID();
 			}
 
 			if (std::dynamic_pointer_cast<Terrain>(componentList[c]) != nullptr)
@@ -460,23 +438,17 @@ void Game::RenderUI(float deltaTime) {
 				ImGui::Checkbox("Enabled ", &terrainEnabled);
 				if (terrainEnabled != terrain->IsLocallyEnabled())
 					terrain->SetEnabled(terrainEnabled);
-
-				// Remove Component Button
-				ImGui::PushID(105);
-				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.35f, 1.0f, 0.6f));
-				if (ImGui::Button("Remove Component")) {
-					currentEntity->RemoveComponent<Terrain>();
-				}
-				ImGui::PopStyleColor(3);
-				ImGui::PopID();
 			}
 
 			if (std::dynamic_pointer_cast<Collider>(componentList[c]) != nullptr)
 			{
 				std::shared_ptr<Collider> currentCollider = std::dynamic_pointer_cast<Collider>(componentList[c]);
 				currentCollider->GetTriggerStatus() ? ImGui::Text("TriggerBox") : ImGui::Text("Collider");
+
+				bool colliderEnabled = currentCollider->IsLocallyEnabled();
+				ImGui::Checkbox("Enabled ", &colliderEnabled);
+				if (colliderEnabled != currentCollider->IsLocallyEnabled())
+					currentCollider->SetEnabled(colliderEnabled);
 
 				bool UIDrawCollider = currentCollider->GetVisibilityStatus();
 				ImGui::Checkbox("Draw Collider?", &UIDrawCollider);
@@ -493,18 +465,8 @@ void Game::RenderUI(float deltaTime) {
 				ImGui::NewLine();
 
 				// Don't edit collider transforms from the UI - they use the main entity transform
-				
-				// Remove Component Button
-				ImGui::PushID(101);
-				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.35f, 1.0f, 0.6f));
-				if (ImGui::Button("Remove Component")) {
-					currentEntity->RemoveComponent<Collider>();
-				}
-				ImGui::PopStyleColor(3);
-				ImGui::PopID();
 			}
+
 			if (std::dynamic_pointer_cast<Light>(componentList[c]) != nullptr)
 			{
 				std::shared_ptr<Light> light = std::dynamic_pointer_cast<Light>(componentList[c]);
@@ -538,6 +500,18 @@ void Game::RenderUI(float deltaTime) {
 				ImGui::DragFloat("Intensity ", &UILightIntensity, 0.1f, 0.01f, 1.0f);
 				light->SetIntensity(UILightIntensity);
 			}
+
+			// Remove Component Button
+			int storage = c;
+			ImGui::PushID(101 + c);
+			ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.35f, 1.0f, 0.6f));
+			if (ImGui::Button("Remove Component")) {
+				currentEntity->RemoveComponent(componentList[storage]);
+			}
+			ImGui::PopStyleColor(3);
+			ImGui::PopID();
 		}
 
 		ImGui::Separator();

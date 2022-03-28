@@ -5,6 +5,10 @@
 bool Light::lightArrayDirty = false;
 std::vector<LightData> Light::lightData = std::vector<LightData>();
 
+/// <summary>
+/// Gets the data from this light in LightData format
+/// </summary>
+/// <returns>A LightData populted with this frame's data</returns>
 LightData Light::GetData()
 {
 	DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&direction);
@@ -22,6 +26,10 @@ LightData Light::GetData()
 	};
 }
 
+/// <summary>
+/// Updates and gets a reference to this frame's array of LightData
+/// </summary>
+/// <returns>A reference to the array</returns>
 LightData* Light::GetLightArray()
 {
 	if (lightArrayDirty) {
@@ -45,6 +53,9 @@ void Light::MarkDirty()
 	lightArrayDirty = true;
 }
 
+/// <summary>
+/// Populates this light with default data
+/// </summary>
 void Light::Start()
 {
 	type = 0.0f;
