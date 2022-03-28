@@ -4,10 +4,10 @@
  * \brief Updates children and attached components with whether the object's parent is enabled
  * \param active Whether this entity's parent is considered enabled
  */
-void GameEntity::UpdateHierarchyIsEnabled(bool active)
+void GameEntity::UpdateHierarchyIsEnabled(bool active, bool head)
 {
-	if (hierarchyIsEnabled != active) {
-		hierarchyIsEnabled = active;
+	if (head || hierarchyIsEnabled != active) {
+		if(!head) hierarchyIsEnabled = active;
 		if (HasLightAttached()) Light::MarkDirty();
 		for (std::shared_ptr<ComponentPacket> packet : componentList)
 		{
@@ -89,67 +89,6 @@ std::shared_ptr<Transform> GameEntity::GetTransform() {
 }
 
 /**
- * \brief Special case for transform, cannot have multiple transforms
- * \return This entity's transform
- */
-template <>
-std::shared_ptr<Transform> GameEntity::AddComponent<Transform>()
-{
-	//Does nothing, cannot have multiple transforms
-	return transform;
-}
-
-/**
- * \brief Special case for lights since they need to be tracked
- * \return A pointer to the new light, or nullptr if MAX_LIGHTS was already reached
- */
-template <>
-std::shared_ptr<Light> GameEntity::AddComponent<Light>()
-{
-	if (Light::GetLightArrayCount() == MAX_LIGHTS) {
-#if defined(DEBUG) || defined(_DEBUG)
-		printf("\nMax lights already exist, cancelling addition of light component.");
-#endif
-		return nullptr;
-	}
-	std::shared_ptr<Light> component = ComponentManager::Instantiate<Light>(shared_from_this(), this->GetHierarchyIsEnabled());
-	componentList.push_back(std::make_shared<ComponentPacket>(component, ComponentManager::Free<Light>));
-	rawComponentList.push_back(component);
-	attachedLightCount++;
-	return component;
-}
-
-/**
- * \brief Special case for transform, does nothing since the transform has the same lifetime as the entity
- * \return False
- */
-template <>
-bool GameEntity::RemoveComponent<Transform>()
-{
-	return false;
-}
-
-/**
- * \brief Special case for transform
- * \return This entity's transform
- */
-template <>
-std::shared_ptr<Transform> GameEntity::GetComponent<Transform>()
-{
-	return transform;
-}
-
-/**
- * \brief Special case for transform
- * \return This entity's transform
- */
-template <>
-std::vector<std::shared_ptr<Transform>> GameEntity::GetComponents<Transform>()
-{
-	return std::vector<std::shared_ptr<Transform>> { transform };
-}
-
-/**
  * \brief Returns a list of all attached components
  */
 std::vector<std::shared_ptr<IComponent>> GameEntity::GetAllComponents()
@@ -189,8 +128,10 @@ void GameEntity::SetName(std::string Name) {
 /// </summary>
 /// <param name="value"></param>
 void GameEntity::SetEnableDisable(bool value) {
-	this->enabled = value;
-	UpdateHierarchyIsEnabled(hierarchyIsEnabled);
+	if (enabled != value) {
+		this->enabled = value;
+		UpdateHierarchyIsEnabled(GetEnableDisable(), true);
+	}
 }
 
 /// <summary>

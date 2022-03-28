@@ -22,7 +22,7 @@ private:
 	std::vector<std::shared_ptr<IComponent>> rawComponentList;
 	std::vector<std::shared_ptr<ComponentPacket>> componentList;
 
-	void UpdateHierarchyIsEnabled(bool active);
+	void UpdateHierarchyIsEnabled(bool active, bool head = false);
 
 	friend class Transform;
 
@@ -91,6 +91,37 @@ std::shared_ptr<T> GameEntity::AddComponent()
 }
 
 /**
+ * \brief Special case for transform, cannot have multiple transforms
+ * \return This entity's transform
+ */
+template <>
+std::shared_ptr<Transform> GameEntity::AddComponent<Transform>()
+{
+	//Does nothing, cannot have multiple transforms
+	return transform;
+}
+
+/**
+ * \brief Special case for lights since they need to be tracked
+ * \return A pointer to the new light, or nullptr if MAX_LIGHTS was already reached
+ */
+template <>
+std::shared_ptr<Light> GameEntity::AddComponent<Light>()
+{
+	if (Light::GetLightArrayCount() == MAX_LIGHTS) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("\nMax lights already exist, cancelling addition of light component.");
+#endif
+		return nullptr;
+	}
+	std::shared_ptr<Light> component = ComponentManager::Instantiate<Light>(shared_from_this(), this->GetHierarchyIsEnabled());
+	componentList.push_back(std::make_shared<ComponentPacket>(component, ComponentManager::Free<Light>));
+	rawComponentList.push_back(component);
+	attachedLightCount++;
+	return component;
+}
+
+/**
  * \brief Frees and removes the first component of the given type
  * \tparam T Type of component to remove
  * \return Whether the component was successfully removed
@@ -115,6 +146,16 @@ bool GameEntity::RemoveComponent()
 }
 
 /**
+ * \brief Special case for transform, does nothing since the transform has the same lifetime as the entity
+ * \return False
+ */
+template <>
+bool GameEntity::RemoveComponent<Transform>()
+{
+	return false;
+}
+
+/**
  * \brief Gets the first component of a given type on this entity
  * \tparam T Type of component to get
  * \return A reference to the component, or nullptr if none are found
@@ -127,6 +168,16 @@ std::shared_ptr<T> GameEntity::GetComponent()
 			return std::dynamic_pointer_cast<T>(packet->component);
 	}
 	return nullptr;
+}
+
+/**
+ * \brief Special case for transform
+ * \return This entity's transform
+ */
+template <>
+std::shared_ptr<Transform> GameEntity::GetComponent<Transform>()
+{
+	return transform;
 }
 
 /**
@@ -144,6 +195,16 @@ std::vector<std::shared_ptr<T>> GameEntity::GetComponents()
 			components.push_back(component);
 	}
 	return components;
+}
+
+/**
+ * \brief Special case for transform
+ * \return This entity's transform
+ */
+template <>
+std::vector<std::shared_ptr<Transform>> GameEntity::GetComponents<Transform>()
+{
+	return std::vector<std::shared_ptr<Transform>> { transform };
 }
 
 /**

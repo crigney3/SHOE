@@ -34,11 +34,11 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	// The rest signal the loading screen each time an object loads
 	InitializeShaders();
 	InitializeCameras();
-	InitializeLights();
 	InitializeMaterials();
 	InitializeMeshes();
 	InitializeTerrainMaterials();
 	InitializeGameEntities();
+	InitializeLights();
 	InitializeColliders();
 	InitializeEmitters();
 	InitializeSkies();
@@ -816,7 +816,7 @@ void AssetManager::InitializeLights() {
 		SetLoadedAndWait("Lights", "bottomLight");
 
 		//red pointlight in the center
-		std::shared_ptr<Light> bottomLight = CreatePointLight("BottomLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
+		std::shared_ptr<Light> bottomLight = CreatePointLight("CenterLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
 		bottomLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
 
 		SetLoadedAndWait("Lights", "centerLight");

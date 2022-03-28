@@ -763,7 +763,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	std::shared_ptr<SimplePixelShader> perFramePS = globalAssets.GetPixelShaderByName("NormalsPS");
 
-	perFramePS->SetData("lights", Light::GetLightArray(), sizeof(Light) * 64);
+	perFramePS->SetData("lights", Light::GetLightArray(), sizeof(LightData) * MAX_LIGHTS);
 	perFramePS->SetData("lightCount", &lightCount, sizeof(lightCount));
 	perFramePS->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 	if (this->currentSky->GetEnableDisable()) {

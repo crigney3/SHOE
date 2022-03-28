@@ -95,7 +95,7 @@ float Light::GetIntensity()
 void Light::SetIntensity(float intensity)
 {
 	if (this->intensity != intensity) {
-		this->intensity;
+		this->intensity = intensity;
 		lightArrayDirty = true;
 	}
 }
