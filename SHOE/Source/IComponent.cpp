@@ -1,5 +1,6 @@
 #include "..\Headers\IComponent.h"
 #include "..\Headers\GameEntity.h"
+#include "..\Headers\Light.h"
 
 /**
  * \brief Called when the component is added to a GameEntity
@@ -83,6 +84,7 @@ bool IComponent::IsLocallyEnabled()
 void IComponent::SetEnabled(bool enabled)
 {
 	this->enabled = enabled;
+	if (GetGameEntity()->HasLightAttached()) Light::MarkDirty();
 }
 
 /**

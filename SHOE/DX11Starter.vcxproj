@@ -172,7 +172,7 @@
     <ClInclude Include="Headers\IComponent.h" />
     <ClInclude Include="Headers\Input.h" />
     <ClInclude Include="Headers\Keybind.h" />
-    <ClInclude Include="Headers\Lights.h" />
+    <ClInclude Include="Headers\Light.h" />
     <ClInclude Include="Headers\Material.h" />
     <ClInclude Include="Headers\Mesh.h" />
     <ClInclude Include="Headers\MeshRenderer.h" />
@@ -370,6 +370,7 @@
     <ClCompile Include="Source\IComponent.cpp" />
     <ClCompile Include="Source\Input.cpp" />
     <ClCompile Include="Source\Keybind.cpp" />
+    <ClCompile Include="Source\Light.cpp" />
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\Material.cpp" />
     <ClCompile Include="Source\Mesh.cpp" />

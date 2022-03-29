@@ -34,11 +34,11 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	// The rest signal the loading screen each time an object loads
 	InitializeShaders();
 	InitializeCameras();
-	InitializeLights();
 	InitializeMaterials();
 	InitializeMeshes();
 	InitializeTerrainMaterials();
 	InitializeGameEntities();
+	InitializeLights();
 	InitializeColliders();
 	InitializeEmitters();
 	InitializeSkies();
@@ -369,6 +369,68 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 
 		return NULL;
 	}
+}
+
+/// <summary>
+/// Creates a GameEntity, gives it a light component, and populates it with Directional Light values
+/// </summary>
+/// <param name="name">Name of the GameEntity</param>
+/// <param name="direction">Direction of the light</param>
+/// <param name="color">Color of the light</param>
+/// <param name="intensity">Intensity of the light</param>
+/// <returns>Pointer to the new Light component</returns>
+std::shared_ptr<Light> AssetManager::CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 direction, DirectX::XMFLOAT3 color, float intensity)
+{
+	std::shared_ptr<Light> light = CreateGameEntity(name)->AddComponent<Light>();
+	if (light != nullptr) {
+		light->SetType(0.0f);
+		light->SetDirection(direction);
+		light->SetColor(color);
+		light->SetIntensity(intensity);
+	}
+	return light;
+}
+
+/// <summary>
+/// Creates a GameEntity, gives it a light component, and populates it with Point Light values
+/// </summary>
+/// <param name="name">Name of the GameEntity</param>
+/// <param name="range">Range of the light</param>
+/// <param name="color">Color of the light</param>
+/// <param name="intensity">Intensity of the light</param>
+/// <returns>Pointer to the new Light component</returns>
+std::shared_ptr<Light> AssetManager::CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color, float intensity)
+{
+	std::shared_ptr<Light> light = CreateGameEntity(name)->AddComponent<Light>();
+	if (light != nullptr) {
+		light->SetType(1.0f);
+		light->SetRange(range);
+		light->SetColor(color);
+		light->SetIntensity(intensity);
+	}
+	return light;
+}
+
+/// <summary>
+/// Creates a GameEntity, gives it a light component, and populates it with Spot Light values
+/// </summary>
+/// <param name="name">Name of the GameEntity</param>
+/// <param name="direction">Direction of the light</param>
+/// <param name="range">Range of the light</param>
+/// <param name="color">Color of the light</param>
+/// <param name="intensity">Intensity of the light</param>
+/// <returns>Pointer to the new Light component</returns>
+std::shared_ptr<Light> AssetManager::CreateSpotLight(std::string name, DirectX::XMFLOAT3 direction, float range, DirectX::XMFLOAT3 color, float intensity)
+{
+	std::shared_ptr<Light> light = CreateGameEntity(name)->AddComponent<Light>();
+	if (light != nullptr) {
+		light->SetType(2.0f);
+		light->SetDirection(direction);
+		light->SetRange(range);
+		light->SetColor(color);
+		light->SetIntensity(intensity);
+	}
+	return light;
 }
 
 /// <summary>
@@ -763,70 +825,33 @@ void AssetManager::InitializeSkies() {
 
 void AssetManager::InitializeLights() {
 	try {
-		//Init lights list
-		globalLights = std::vector<std::shared_ptr<Light>>();
-
 		//white light from the top left
-		std::shared_ptr<Light> mainLight = std::make_shared<Light>();
-		mainLight->type = 0.0f;
-		mainLight->enabled = true;
-		mainLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-		mainLight->intensity = 0.7f;
-		mainLight->direction = DirectX::XMFLOAT3(1, -1, 0);
-		mainLight->range = 100.0f;
+		CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1, -1, 0), DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 0.7f);
 
 		SetLoadedAndWait("Lights", "mainLight");
 
 		//white light from the back
-		std::shared_ptr<Light> backLight = std::make_shared<Light>();
-		backLight->type = 0.0f;
-		backLight->enabled = false;
-		backLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-		backLight->intensity = 1.0f;
-		backLight->direction = DirectX::XMFLOAT3(0, 0, -1);
-		backLight->range = 100.0f;
+		CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, -1));
 
 		SetLoadedAndWait("Lights", "backLight");
 
 		//red light on the bottom
-		std::shared_ptr<Light> bottomLight = std::make_shared<Light>();
-		bottomLight->type = 0.0f;
-		bottomLight->enabled = false;
-		bottomLight->color = DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f);
-		bottomLight->intensity = 1.0f;
-		bottomLight->direction = DirectX::XMFLOAT3(0, 1, 0);
-		bottomLight->range = 100.0f;
+		CreateDirectionalLight("BottomLight", DirectX::XMFLOAT3(0, 1, 0), DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f));
 
 		SetLoadedAndWait("Lights", "bottomLight");
 
 		//red pointlight in the center
-		std::shared_ptr<PointLight> centerLight = std::make_shared<PointLight>();
-		centerLight->type = 1.0f;
-		centerLight->enabled = true;
-		centerLight->color = DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f);
-		centerLight->intensity = 1.0f;
-		centerLight->position = DirectX::XMFLOAT3(0, 1.5f, 0);
-		centerLight->range = 2.0f;
+		std::shared_ptr<Light> bottomLight = CreatePointLight("CenterLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
+		bottomLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
 
 		SetLoadedAndWait("Lights", "centerLight");
 
 		//flashlight attached to camera +.5z and x
-		std::shared_ptr<DirectionalLight> flashLight = std::make_shared<DirectionalLight>();
-		flashLight->type = 2.0f;
-		flashLight->enabled = false;
-		flashLight->color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-		flashLight->intensity = 1.0f;
-		flashLight->direction = DirectX::XMFLOAT3(0, 0, -1);
-		flashLight->position = DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f);
-		flashLight->range = 10.0f;
+		std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", DirectX::XMFLOAT3(0, 0, -1), 10.0f);
+		flashlight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f));
+		flashlight->SetEnabled(false);
 
 		SetLoadedAndWait("Lights", "flashLight");
-
-		globalLights.push_back(mainLight);
-		globalLights.push_back(backLight);
-		globalLights.push_back(bottomLight);
-		globalLights.push_back(centerLight);
-		globalLights.push_back(flashLight);
 	}
 	catch (...) {
 		SetLoadedAndWait("Lights", "Unknown Light", std::current_exception());
@@ -1146,10 +1171,6 @@ size_t AssetManager::GetGameEntityArraySize() {
 	return this->globalEntities.size();
 }
 
-size_t AssetManager::GetLightArraySize() {
-	return this->globalLights.size();
-}
-
 size_t AssetManager::GetTerrainMaterialArraySize() {
 	return this->globalTerrainMaterials.size();
 }
@@ -1158,29 +1179,12 @@ size_t AssetManager::GetSoundArraySize() {
 	return this->globalSounds.size();
 }
 
-Light* AssetManager::GetLightArray() {
-	Light lightArray[64];
-	for (int i = 0; i < globalLights.size(); i++) {
-		lightArray[i] = *globalLights[i];
-	}
-
-	return lightArray;
-}
-
 std::vector<std::shared_ptr<GameEntity>>* AssetManager::GetActiveGameEntities() {
 	return &this->globalEntities;
 }
 
 std::vector<std::shared_ptr<Sky>>* AssetManager::GetSkyArray() {
 	return &this->skies;
-}
-
-Light* AssetManager::GetFlashlight() {
-	return this->globalLights[4].get();
-}
-
-Light* AssetManager::GetLightAtID(int id) {
-	return this->globalLights[id].get();
 }
 
 FMOD::Sound* AssetManager::GetSoundAtID(int id) {
@@ -1747,14 +1751,6 @@ void AssetManager::EnableDisableCamera(int id, bool value) {
 	globalCameras[id]->SetEnableDisable(value);
 }
 
-// See GetLightIDByName
-//void AssetManager::EnableDisableLight(std::string name, bool value) {
-//	GetLightByName(name)->SetEnableDisable(value);
-//}
-
-void AssetManager::EnableDisableLight(int id, bool value) {
-	globalLights[id]->enabled = value;
-}
 #pragma endregion
 
 #pragma region nameSearch

@@ -1,11 +1,12 @@
 #include "../Headers/Transform.h"
 #include "..\Headers\GameEntity.h"
+#include "../Headers/Light.h"
 
 using namespace DirectX;
 
 void Transform::Start() {
 	this->parent = nullptr;
-	this->isDirty = false;
+	this->isDirty = true;
 	XMStoreFloat4x4(&this->worldMatrix, XMMatrixIdentity());
 	this->pos = XMFLOAT3(+0.0f, +0.0f, +0.0f);
 	this->scale = XMFLOAT3(+1.0f, +1.0f, +1.0f);
@@ -40,7 +41,6 @@ void Transform::UpdateWorldInfo()
 	}
 
 	// - Update stored global Position, Rotation, & Scale - //
-	if (parent != nullptr)
 	{
 		XMVECTOR posVec, sclVec, rotVec;
 
@@ -63,32 +63,35 @@ void Transform::OnDestroy()
 #pragma region Setters
 void Transform::SetPosition(float x, float y, float z) {
 	SetPosition(XMFLOAT3(x, y, z));
-	MarkThisDirty();
 }
 
 void Transform::SetPosition(XMFLOAT3 pos) {
-	this->pos = pos;
-	MarkThisDirty();
+	if (this->pos.x != pos.x || this->pos.y != pos.y || this->pos.z != pos.z) {
+		this->pos = pos;
+		MarkThisDirty();
+	}
 }
 
 void Transform::SetRotation(float pitch, float yaw, float roll) {
 	SetRotation(XMFLOAT3(pitch, yaw, roll));
-	MarkThisDirty();
 }
 
 void Transform::SetRotation(XMFLOAT3 rot) {
-	this->rotQuat = XMFLOAT4(rot.x, rot.y, rot.z, +0.0f);
-	MarkThisDirty();
+	if (this->rotQuat.x != rot.x || this->rotQuat.y != rot.y || this->rotQuat.z != rot.z) {
+		this->rotQuat = XMFLOAT4(rot.x, rot.y, rot.z, +0.0f);
+		MarkThisDirty();
+	}
 }
 
 void Transform::SetScale(float x, float y, float z) {
 	SetScale(XMFLOAT3(x, y, z));
-	MarkThisDirty();
 }
 
 void Transform::SetScale(XMFLOAT3 scale) {
-	this->scale = scale;
-	MarkThisDirty();
+	if (this->scale.x != scale.x || this->scale.y != scale.y || this->scale.z != scale.z) {
+		this->scale = scale;
+		MarkThisDirty();
+	}
 }
 # pragma endregion
 
@@ -144,6 +147,7 @@ bool Transform::GetDirtyStatus() { return isDirty; }
 
 #pragma region Transformation Methods
 void Transform::MoveAbsolute(float x, float y, float z) {
+	if (x == 0 && y == 0 && z == 0) return;
 	float newX = x + this->pos.x;
 	float newY = y + this->pos.y;
 	float newZ = z + this->pos.z;
@@ -154,6 +158,7 @@ void Transform::MoveAbsolute(float x, float y, float z) {
 }
 
 void Transform::Rotate(float pitch, float yaw, float roll) {
+	if (pitch == 0 && yaw == 0 && roll == 0) return;
 	float newPitch = pitch + this->rotQuat.x;
 	float newYaw = yaw + this->rotQuat.y;
 	float newRoll = roll + this->rotQuat.z;
@@ -163,6 +168,7 @@ void Transform::Rotate(float pitch, float yaw, float roll) {
 }
 
 void Transform::Scale(float x, float y, float z) {
+	if (x == 1 && y == 1 && z == 1) return;
 	float newX = x * this->scale.x;
 	float newY = y * this->scale.y;
 	float newZ = z * this->scale.z;
@@ -174,6 +180,7 @@ void Transform::Scale(float x, float y, float z) {
 
 void Transform::MoveRelative(float x, float y, float z)
 {
+	if (x == 0 && y == 0 && z == 0) return;
 	XMVECTOR desiredMovement = XMVectorSet(x, y, z, 0);
 
 	XMVECTOR rotationQuat =
@@ -206,11 +213,13 @@ DirectX::XMFLOAT3 Transform::GetForward() {
 }
 
 void Transform::AddChild(std::shared_ptr<Transform> child) {
-	this->children.push_back(child);
+	if (std::find(children.begin(), children.end(), child) == children.end()) {
+		this->children.push_back(child);
 
-	child->parent = shared_from_this();
-	child->GetGameEntity()->UpdateHierarchyIsEnabled(GetGameEntity()->GetEnableDisable());
-	child->MarkThisDirty();
+		child->parent = shared_from_this();
+		child->GetGameEntity()->UpdateHierarchyIsEnabled(GetGameEntity()->GetEnableDisable());
+		child->MarkThisDirty();
+	}
 }
 
 void Transform::RemoveChild(std::shared_ptr<Transform> child) {
@@ -220,52 +229,54 @@ void Transform::RemoveChild(std::shared_ptr<Transform> child) {
 }
 
 void Transform::SetParent(std::shared_ptr<Transform> newParent) {
-	if (newParent.get() != nullptr) {
-		this->parent = newParent;
+    if(parent != newParent){
+	    if (newParent.get() != nullptr) {
+		    this->parent = newParent;
 
-		// Ensure internals are correctly updated
-		XMVECTOR childPos = XMLoadFloat3(&pos);
-		XMVECTOR parentPos = XMLoadFloat3(&this->parent->GetGlobalPosition());
-		childPos -= parentPos;
+		    // Ensure internals are correctly updated
+		    XMVECTOR childPos = XMLoadFloat3(&pos);
+		    XMVECTOR parentPos = XMLoadFloat3(&this->parent->GetGlobalPosition());
+		    childPos -= parentPos;
 
-		XMVECTOR childRot = XMLoadFloat4(&rotQuat);
-		XMVECTOR parentRot = XMLoadFloat4(&this->parent->GetGlobalRotation());
-		childRot -= parentRot;
+		    XMVECTOR childRot = XMLoadFloat4(&rotQuat);
+		    XMVECTOR parentRot = XMLoadFloat4(&this->parent->GetGlobalRotation());
+		    childRot -= parentRot;
 
-		XMVECTOR childScale = XMLoadFloat3(&scale);
-		XMVECTOR parentScale = XMLoadFloat3(&this->parent->GetGlobalScale());
-		childScale /= parentScale;
+		    XMVECTOR childScale = XMLoadFloat3(&scale);
+		    XMVECTOR parentScale = XMLoadFloat3(&this->parent->GetGlobalScale());
+		    childScale /= parentScale;
 
-		XMStoreFloat3(&this->pos, childPos);
-		XMStoreFloat4(&this->rotQuat, childRot);
-		XMStoreFloat3(&this->scale, childScale);
+		    XMStoreFloat3(&this->pos, childPos);
+		    XMStoreFloat4(&this->rotQuat, childRot);
+		    XMStoreFloat3(&this->scale, childScale);
 
-		newParent->children.push_back(shared_from_this());
-	}
-	else {
-		// Ensure internals are correctly updated
-		XMVECTOR childPos = XMLoadFloat3(&pos);
-		XMVECTOR parentPos = XMLoadFloat3(&this->parent->GetGlobalPosition());
-		childPos += parentPos;
+		    newParent->children.push_back(shared_from_this());
+	    }
+	    else {
+		    // Ensure internals are correctly updated
+		    XMVECTOR childPos = XMLoadFloat3(&pos);
+		    XMVECTOR parentPos = XMLoadFloat3(&this->parent->GetGlobalPosition());
+		    childPos += parentPos;
 
-		XMVECTOR childRot = XMLoadFloat4(&rotQuat);
-		XMVECTOR parentRot = XMLoadFloat4(&this->parent->GetGlobalRotation());
-		childRot += parentRot;
+		    XMVECTOR childRot = XMLoadFloat4(&rotQuat);
+		    XMVECTOR parentRot = XMLoadFloat4(&this->parent->GetGlobalRotation());
+		    childRot += parentRot;
 
-		XMVECTOR childScale = XMLoadFloat3(&scale);
-		XMVECTOR parentScale = XMLoadFloat3(&this->parent->GetGlobalScale());
-		childScale *= parentScale;
+		    XMVECTOR childScale = XMLoadFloat3(&scale);
+		    XMVECTOR parentScale = XMLoadFloat3(&this->parent->GetGlobalScale());
+		    childScale *= parentScale;
 
-		XMStoreFloat3(&this->pos, childPos);
-		XMStoreFloat4(&this->rotQuat, childRot);
-		XMStoreFloat3(&this->scale, childScale);
+		    XMStoreFloat3(&this->pos, childPos);
+		    XMStoreFloat4(&this->rotQuat, childRot);
+		    XMStoreFloat3(&this->scale, childScale);
 
-		this->parent->RemoveChild(shared_from_this());
+		    this->parent->RemoveChild(shared_from_this());
 
-		this->parent = nullptr;
-	}
+		    this->parent = nullptr;
+	    }
 
-	MarkThisDirty();
+	    MarkThisDirty();
+    }
 }
 
 std::shared_ptr<Transform> Transform::GetParent() {
@@ -286,6 +297,7 @@ unsigned int Transform::GetChildCount() {
 void Transform::MarkThisDirty()
 {
 	this->isDirty = true;
+	if (GetGameEntity() != nullptr && GetGameEntity()->HasLightAttached()) Light::MarkDirty();
 	MarkChildTransformsDirty();
 }
 

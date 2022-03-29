@@ -4,17 +4,20 @@
  * \brief Updates children and attached components with whether the object's parent is enabled
  * \param active Whether this entity's parent is considered enabled
  */
-void GameEntity::UpdateHierarchyIsEnabled(bool active)
+void GameEntity::UpdateHierarchyIsEnabled(bool active, bool head)
 {
-	hierarchyIsEnabled = active;
-	for (std::shared_ptr<ComponentPacket> packet : componentList)
-	{
-		packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
-	}
-	for (std::shared_ptr<GameEntity> children : transform->GetChildrenAsGameEntities())
-	{
-		if(children.get() != NULL)
-			children->UpdateHierarchyIsEnabled(GetEnableDisable());
+	if (head || hierarchyIsEnabled != active) {
+		if(!head) hierarchyIsEnabled = active;
+		if (HasLightAttached()) Light::MarkDirty();
+		for (std::shared_ptr<ComponentPacket> packet : componentList)
+		{
+			packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
+		}
+		for (std::shared_ptr<GameEntity> children : transform->GetChildrenAsGameEntities())
+		{
+			if (children.get() != NULL)
+				children->UpdateHierarchyIsEnabled(GetEnableDisable());
+		}
 	}
 }
 
@@ -86,47 +89,6 @@ std::shared_ptr<Transform> GameEntity::GetTransform() {
 }
 
 /**
- * \brief Special case for transform, cannot have multiple transforms
- * \return This entity's transform
- */
-template <>
-std::shared_ptr<Transform> GameEntity::AddComponent<Transform>()
-{
-	//Does nothing, cannot have multiple transforms
-	return transform;
-}
-
-/**
- * \brief Special case for transform, does nothing since the transform has the same lifetime as the entity
- * \return False
- */
-template <>
-bool GameEntity::RemoveComponent<Transform>()
-{
-	return false;
-}
-
-/**
- * \brief Special case for transform
- * \return This entity's transform
- */
-template <>
-std::shared_ptr<Transform> GameEntity::GetComponent<Transform>()
-{
-	return transform;
-}
-
-/**
- * \brief Special case for transform
- * \return This entity's transform
- */
-template <>
-std::vector<std::shared_ptr<Transform>> GameEntity::GetComponents<Transform>()
-{
-	return std::vector<std::shared_ptr<Transform>> { transform };
-}
-
-/**
  * \brief Returns a list of all attached components
  */
 std::vector<std::shared_ptr<IComponent>> GameEntity::GetAllComponents()
@@ -166,8 +128,10 @@ void GameEntity::SetName(std::string Name) {
 /// </summary>
 /// <param name="value"></param>
 void GameEntity::SetEnableDisable(bool value) {
-	this->enabled = value;
-	UpdateHierarchyIsEnabled(hierarchyIsEnabled);
+	if (enabled != value) {
+		this->enabled = value;
+		UpdateHierarchyIsEnabled(GetEnableDisable(), true);
+	}
 }
 
 /// <summary>
@@ -185,4 +149,34 @@ bool GameEntity::GetEnableDisable() {
 bool GameEntity::GetHierarchyIsEnabled()
 {
 	return hierarchyIsEnabled;
+}
+
+/// <summary>
+/// Returns whether this has at least one light component attached
+/// </summary>
+/// <returns>If this has a light component</returns>
+bool GameEntity::HasLightAttached()
+{
+	return attachedLightCount > 0;
+}
+
+/// <summary>
+/// Removes a component by reference
+/// </summary>
+/// <param name="component">Component to remove</param>
+/// <returns>If the component was successfully removed</returns>
+bool GameEntity::RemoveComponent(std::shared_ptr<IComponent> component)
+{
+	for (int i = 0; i < componentList.size(); i++)
+	{
+		if (componentList[i]->component == component)
+		{
+			componentList[i]->component->OnDestroy();
+			componentList[i]->deallocator(componentList[i]->component);
+			componentList.erase(componentList.begin() + i);
+			rawComponentList.erase(rawComponentList.begin() + i);
+			return true;
+		}
+	}
+	return false;
 }

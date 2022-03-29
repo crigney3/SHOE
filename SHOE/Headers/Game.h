@@ -3,7 +3,7 @@
 #include <DirectXMath.h> 
 #include <vector>
 #include "GameEntity.h"
-#include "Lights.h"
+#include "Light.h"
 #include "Sky.h"
 #include <string>
 #include <iostream>
@@ -52,7 +52,7 @@ private:
 	std::shared_ptr<Camera> mainShadowCamera;
 
 	// Flashlight checking
-	bool flashEnabled;
+	std::shared_ptr<Light> flashlight;
 	bool flashMenuToggle;
 	bool flickeringEnabled;
 	bool hasFlickered;
@@ -88,10 +88,15 @@ private:
 	int entityUIIndex;
 	int camUIIndex;
 	int skyUIIndex;
-	std::vector<int> childIndices;
 	DirectX::XMFLOAT3 UIPositionEdit;
 	DirectX::XMFLOAT3 UIRotationEdit;
 	DirectX::XMFLOAT3 UIScaleEdit;
+
+	float UILightType;
+	DirectX::XMFLOAT3 UILightDirectionEdit;
+	DirectX::XMFLOAT3 UILightColorEdit;
+	float UILightRange;
+	float UILightIntensity;
 
 	// Buffers to hold actual geometry data
 	Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
@@ -124,15 +129,6 @@ private:
 	std::shared_ptr<Sky> mountainSky;
 	std::shared_ptr<Sky> niagaraSky;
 	std::shared_ptr<Sky> starSky;
-
-	//Lights
-	int lightUIIndex;
-	unsigned int lightCount;
-	DirectionalLight mainLight;
-	DirectionalLight backLight;
-	DirectionalLight bottomLight;
-	SpotLight flashLight;
-	PointLight centerLight;
 
 	// UI Helper/Recursive Functions
 	void RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity);
