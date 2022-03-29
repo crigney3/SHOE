@@ -59,6 +59,7 @@ enum ComponentTypes {
 	PARTICLE_SYSTEM,
 	COLLIDER,
 	TERRAIN,
+	LIGHT,
 	// Must always be the final enum
 	COMPONENT_TYPE_COUNT
 };

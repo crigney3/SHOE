@@ -282,25 +282,10 @@ void Game::RenderUI(float deltaTime) {
 		currentEntity->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
 		currentEntity->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
 
-		// Remove Component Button
-		ImGui::PushID(102);
-		ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.5f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.4f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.0f, 0.0f, 0.2f));
-		if (ImGui::Button("Remove Component")) {
-			// TODO: Explore potential issues with removing Transform
-			// when other components need it
-			// Is it even worth it to ever remove this?
-			ImGui::SameLine();
-			ImGui::Text("Transforms cannot currently be removed");
-		}
-		if (ImGui::IsItemHovered()) ImGui::SetTooltip("Transforms cannot currently be removed");
-		ImGui::PopStyleColor(3);
-		ImGui::PopID();
-
 		for(int c = 0; c < componentList.size(); c++)
 		{
 			ImGui::Separator();
+			ImGui::PushID(101 + c);
 
 			if(std::dynamic_pointer_cast<MeshRenderer>(componentList[c]) != nullptr)
 			{
@@ -502,13 +487,11 @@ void Game::RenderUI(float deltaTime) {
 			}
 
 			// Remove Component Button
-			int storage = c;
-			ImGui::PushID(101 + c);
 			ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.35f, 1.0f, 0.6f));
 			if (ImGui::Button("Remove Component")) {
-				currentEntity->RemoveComponent(componentList[storage]);
+				currentEntity->RemoveComponent(componentList[c]);
 			}
 			ImGui::PopStyleColor(3);
 			ImGui::PopID();
@@ -519,7 +502,7 @@ void Game::RenderUI(float deltaTime) {
 		// Dropdown and Collapsible Header to add components
 		if (ImGui::CollapsingHeader("Add Component")) {
 			static ComponentTypes selectedComponent = ComponentTypes::MESH_RENDERER;
-			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Transform", "Mesh Renderer", "Particle System", "Collider", "Terrain" };
+			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Transform", "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light"};
 
 			if (ImGui::BeginListBox("Component Listbox")) {
 				for (int i = 0; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
@@ -553,6 +536,9 @@ void Game::RenderUI(float deltaTime) {
 						break;
 					case ComponentTypes::TERRAIN:
 						currentEntity->AddComponent<Terrain>();
+						break;
+					case ComponentTypes::LIGHT:
+						currentEntity->AddComponent<Light>();
 						break;
 				}
 			}
