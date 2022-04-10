@@ -250,52 +250,55 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 					// Mesh Renderers are really just storage for a Mesh
 					// and a Material, so store those in an object
 					rapidjson::Value meshValue(rapidjson::kObjectType);
+					std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
 
 					// Simple types first
-					meshValue.AddMember(MESH_INDEX_COUNT, meshRenderer->GetMesh()->GetIndexCount(), allocator);
-					meshValue.AddMember(MESH_MATERIAL_INDEX, meshRenderer->GetMesh()->GetMaterialIndex(), allocator);
-					meshValue.AddMember(MESH_ENABLED, meshRenderer->GetMesh()->GetEnableDisable(), allocator);
-					meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, meshRenderer->GetMesh()->GetDepthPrePass(), allocator);
+					meshValue.AddMember(MESH_INDEX_COUNT, mesh->GetIndexCount(), allocator);
+					meshValue.AddMember(MESH_MATERIAL_INDEX, mesh->GetMaterialIndex(), allocator);
+					meshValue.AddMember(MESH_ENABLED, mesh->GetEnableDisable(), allocator);
+					meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, mesh->GetDepthPrePass(), allocator);
 
 					// Strings
 					rapidjson::Value meshName;
-					meshName.SetString(meshRenderer->GetMesh()->GetName().c_str(), allocator);
+					meshName.SetString(mesh->GetName().c_str(), allocator);
 					meshValue.AddMember(MESH_NAME, meshName, allocator);
 
-					// Complex data - vertex and index buffers
-					rapidjson::Value vBufferValue(rapidjson::kArrayType);
-					Microsoft::WRL::ComPtr<ID3D11Buffer> vBuf = meshRenderer->GetMesh()->GetVertexBuffer();
-					Microsoft::WRL::ComPtr<ID3D11Buffer> vBufCopy;
+					// Complex data - filename string key
+					rapidjson::Value fileKeyValue;
+					fileKeyValue.SetString(mesh->GetFileNameKey().c_str(), allocator);
+					//Microsoft::WRL::ComPtr<ID3D11Buffer> vBuf = mesh->GetVertexBuffer();
+					//Microsoft::WRL::ComPtr<ID3D11Buffer> vBufCopy;
 
-					D3D11_BUFFER_DESC vbd;
-					vBuf->GetDesc(&vbd);
-					vbd.Usage = D3D11_USAGE_STAGING;
-					vbd.BindFlags = 0;
-					vbd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-					const size_t vBufSize = sizeof(vbd.ByteWidth);
+					//D3D11_BUFFER_DESC vbd;
+					//vBuf->GetDesc(&vbd);
+					//vbd.Usage = D3D11_USAGE_STAGING;
+					//vbd.BindFlags = 0;
+					//vbd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+					//const size_t vBufSize = sizeof(vbd.ByteWidth);
 
-					device->CreateBuffer(&vbd, nullptr, vBufCopy.GetAddressOf());
+					//device->CreateBuffer(&vbd, nullptr, vBufCopy.GetAddressOf());
 
-					context->CopyResource(vBufCopy.Get(), vBuf.Get());
+					//context->CopyResource(vBufCopy.Get(), vBuf.Get());
 
-					float vertices[vBufSize];
-					context->Map(vBufCopy.Get(), 0, (D3D11_MAP)1, 0, NULL);
-					memcpy(vertices, vBufCopy.Get(), vBufSize);
-					context->Unmap(vBufCopy.Get(), 0);
+					//float vertices[vBufSize];
+					//context->Map(vBufCopy.Get(), 0, (D3D11_MAP)1, 0, NULL);
+					//memcpy(vertices, vBufCopy.Get(), vBufSize);
+					//context->Unmap(vBufCopy.Get(), 0);
 
-					for (auto vb : vertices) {
-						// Need offset
-						vBufferValue.PushBack(vb, allocator);
-					}
+					//for (auto vb : vertices) {
+					//	// Need offset
+					//	vBufferValue.PushBack(vb, allocator);
+					//}
 
-					meshValue.AddMember(MESH_VERTICES, vBufferValue, allocator);
+					meshValue.AddMember(MESH_FILENAME_KEY, fileKeyValue, allocator);
 
 					coValue.AddMember(MESH_OBJECT, meshValue, allocator);
 
 					rapidjson::Value matValue(rapidjson::kObjectType);
+					std::shared_ptr<Material> mat = meshRenderer->GetMaterial();
 
 					// Simple types first
-					//coValue.AddMember();
+					matValue.AddMember(MAT_UV_TILING, mat->GetTiling(), allocator);
 
 					coValue.AddMember(MATERIAL_OBJECT, matValue, allocator);
 				}
@@ -485,9 +488,13 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 		std::shared_ptr<Mesh> newMesh;
 		std::string assetPath;
 
-		assetPath = "../../../Assets/Models/";
+		assetPath = dxInstance->GetAssetPathString(ASSET_MODEL_PATH);
+		std::string namePath = assetPath + nameToLoad;
+		char pathBuf[1024];
 
-		newMesh = std::make_shared<Mesh>(dxInstance->GetFullPathTo(assetPath + nameToLoad).c_str(), device, id);
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		newMesh = std::make_shared<Mesh>(pathBuf, device, id);
 
 		globalMeshes.push_back(newMesh);
 

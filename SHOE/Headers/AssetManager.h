@@ -4,6 +4,7 @@
 // Removed on compile
 #define OUT
 
+#pragma region saveLoadIdentifiers
 // Saving and loading shorthand identifiers
 // General:
 #define VALID_SHOE_SCENE "ivs"
@@ -39,10 +40,13 @@
 #define MESH_ENABLED "mE"
 #define MESH_NEEDS_DEPTH_PREPASS "nDP"
 #define MESH_NAME "mN"
-#define MESH_VERTICES "mV"
-#define MESH_INDICES "mIn"
+#define MESH_FILENAME_KEY "mFK"
 
 // Material Data:
+
+#define MAT_UV_TILING "aUT"
+
+#pragma endregion
 
 #include "Light.h"
 #include "Sky.h"

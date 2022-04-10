@@ -423,6 +423,42 @@ void DXCore::Quit()
 	PostMessage(this->hWnd, WM_CLOSE, NULL, NULL);
 }
 
+// This is so cursed. Visual Studio why
+void DXCore::SetBuildAssetPaths() {
+	assetPathStrings[0] = "..\\..\\..\\Assets\\Models\\";
+	assetPathStrings[1] = "..\\..\\..\\Assets\\Scenes\\";
+	assetPathStrings[2] = "..\\..\\..\\Assets\\HeightMaps\\";
+	assetPathStrings[3] = "..\\..\\..\\Assets\\Fonts\\";
+	assetPathStrings[4] = "..\\..\\..\\Assets\\Particles\\";
+	assetPathStrings[5] = "..\\..\\..\\Assets\\Sounds\\";
+	assetPathStrings[6] = "..\\..\\..\\Assets\\Textures\\";
+	assetPathStrings[7] = "..\\..\\..\\Assets\\Textures\\Skies\\";
+	assetPathStrings[8] = "..\\..\\..\\Assets\\PBR\\";
+	assetPathStrings[9] = "..\\..\\..\\Assets\\PBR\\Albedo\\";
+	assetPathStrings[10] = "..\\..\\..\\Assets\\PBR\\Normals\\";
+	assetPathStrings[11] = "..\\..\\..\\Assets\\PBR\\Metalness\\";
+	assetPathStrings[12] = "..\\..\\..\\Assets\\PBR\\Roughness\\";
+}
+
+void DXCore::SetVSAssetPaths() {
+	assetPathStrings[0] = "..\\Assets\\Models\\";
+	assetPathStrings[1] = "..\\Assets\\Scenes\\";
+	assetPathStrings[2] = "..\\Assets\\HeightMaps\\";
+	assetPathStrings[3] = "..\\Assets\\Fonts\\";
+	assetPathStrings[4] = "..\\Assets\\Particles\\";
+	assetPathStrings[5] = "..\\Assets\\Sounds\\";
+	assetPathStrings[6] = "..\\Assets\\Textures\\";
+	assetPathStrings[7] = "..\\Assets\\Textures\\Skies\\";
+	assetPathStrings[8] = "..\\Assets\\PBR\\";
+	assetPathStrings[9] = "..\\Assets\\PBR\\Albedo\\";
+	assetPathStrings[10] = "..\\Assets\\PBR\\Normals\\";
+	assetPathStrings[11] = "..\\Assets\\PBR\\Metalness\\";
+	assetPathStrings[12] = "..\\Assets\\PBR\\Roughness\\";
+}
+
+std::string DXCore::GetAssetPathString(int index) {
+	return assetPathStrings[index];
+}
 
 // --------------------------------------------------------
 // Uses high resolution time stamps to get very accurate

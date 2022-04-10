@@ -32,10 +32,22 @@ Game::Game(HINSTANCE hInstance)
 	CreateConsoleWindow(500, 120, 32, 120);
 	printf("Console window created successfully.  Feel free to printf() here.\n");
 	printf("Use arrow keys to switch skyboxes. \n");
-	printf("Use F to toggle flashlight. \n");
-	printf("When the flashlight's on, use G to toggle flickering. \n");
 #endif
 
+	// Check if the directory defines are correct
+	char pathBuf[1024];
+
+	GetFullPathNameA("SHOE.exe", sizeof(pathBuf), pathBuf, NULL);
+	std::string::size_type pos = std::string(pathBuf).find_last_of("\\/");
+
+	std::string currentSubPath = std::string(pathBuf).substr(40, pos);
+
+	if (currentSubPath.find("SHOE\\x64\\") != std::string::npos) {
+		SetBuildAssetPaths();
+	}
+	else {
+		SetVSAssetPaths();
+	}
 }
 
 // --------------------------------------------------------

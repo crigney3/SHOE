@@ -119,6 +119,7 @@ public:
 	Microsoft::WRL::ComPtr<ID3DBlob> GetShaderBlob() { return shaderBlob; }
 	std::string GetName();
 	void SetName();
+	std::string GetFileNameKey();
 
 	// Error reporting
 	static bool ReportErrors;
@@ -128,6 +129,7 @@ protected:
 
 	bool shaderValid;
 	std::string name;
+	std::string filenameKey;
 	Microsoft::WRL::ComPtr<ID3DBlob> shaderBlob;
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> deviceContext;

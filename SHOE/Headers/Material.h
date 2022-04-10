@@ -15,7 +15,7 @@ private:
 	std::shared_ptr<SimplePixelShader> pixShader;
 	std::shared_ptr<SimplePixelShader> refractivePixShader;
 	std::shared_ptr<SimpleVertexShader> vertShader;
-	//float specularExponent;
+
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState;
@@ -54,7 +54,7 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetNormalMap();
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMetalMap();
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRoughMap();
-	//float GetSpecExponent();
+
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture();
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetClampSamplerState();

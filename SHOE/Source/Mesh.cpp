@@ -25,10 +25,26 @@ Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCo
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
 }
 
-Mesh::Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
+Mesh::Mesh(std::string filename, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
 	this->materialIndex = -1;
 	this->name = name;
 	this->needsDepthPrePass = false;
+
+	// Serialize the filename if it's in the right folder
+	std::string baseFilename = "";
+	size_t dirPos = filename.find("Assets\\Models");
+	if (dirPos != std::string::npos) {
+		// File is in the assets folder
+		baseFilename = "t";
+		baseFilename += filename.substr(dirPos + sizeof("Assets\\Models"));
+	}
+	else {
+		baseFilename = "f";
+		baseFilename += filename;
+	}
+
+	this->filenameKey = baseFilename;
+
 	// Author: Chris Cascioli
 	// Purpose: Basic .OBJ 3D model loading, supporting positions, uvs and normals
 	// 
@@ -39,7 +55,7 @@ Mesh::Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device, st
 	// - NOTE: You'll need to #include <fstream>
 
 	// File input object
-	std::ifstream obj(filename);
+	std::ifstream obj(filename.c_str());
 
 	// Check for successful open
 	if (!obj.is_open())
@@ -398,6 +414,10 @@ bool Mesh::GetEnableDisable() {
 
 std::string Mesh::GetName() {
 	return this->name;
+}
+
+std::string Mesh::GetFileNameKey() {
+	return this->filenameKey;
 }
 
 void Mesh::SetDepthPrePass(bool prePass) {

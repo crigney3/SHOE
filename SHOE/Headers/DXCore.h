@@ -9,6 +9,30 @@
 #include "../IMGUI/Headers/imgui_impl_dx11.h"
 #include "Input.h"
 
+#pragma region paths
+
+// We gotta do some crazy preprocessor stuff
+// To check if this is a visual studio run
+// or an executable run
+
+#define ASSET_PATH_COUNT 13
+
+#define ASSET_MODEL_PATH 0
+#define ASSET_SCENE_PATH 1
+#define ASSET_HEIGHTMAP_PATH 2
+#define ASSET_FONT_PATH 3
+#define ASSET_PARTICLE_PATH 4
+#define ASSET_SOUND_PATH 5
+#define ASSET_TEXTURE_PATH_BASIC 6
+#define ASSET_TEXTURE_PATH_SKIES 7
+#define ASSET_TEXTURE_PATH_PBR 8
+#define ASSET_TEXTURE_PATH_PBR_ALBEDO 9
+#define ASSET_TEXTURE_PATH_PBR_NORMALS 10
+#define ASSET_TEXTURE_PATH_PBR_METALNESS 11
+#define ASSET_TEXTURE_PATH_PBR_ROUGHNESS 12
+
+#pragma endregion
+
 // We can include the correct library files here
 // instead of in Visual Studio settings if we want
 #pragma comment(lib, "d3d11.lib")
@@ -51,9 +75,14 @@ public:
 	std::string GetFullPathTo(std::string relativeFilePath);
 	std::wstring GetFullPathTo_Wide(std::wstring relativeFilePath);
 
+	void SetVSAssetPaths();
+	void SetBuildAssetPaths();
+
 	// Size of the window's client area
 	unsigned int width;
 	unsigned int height;
+
+	std::string GetAssetPathString(int index);
 
 protected:
 	HINSTANCE	hInstance;		// The handle to the application
@@ -83,6 +112,8 @@ protected:
 
 	float GetTotalTime();
 	float GetDeltaTime();
+
+	std::string assetPathStrings[ASSET_PATH_COUNT];
 
 private:
 	// Timing related data
