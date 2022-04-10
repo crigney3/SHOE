@@ -50,7 +50,7 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 
 	SetLoadedAndWait("Post-Initialization", "Preparing to render");
 
-	this->assetManagerLoadState = AMLoadState::SINGLE_CREATION;
+	this->assetManagerLoadState = AMLoadState::NOT_LOADING;
 	this->singleLoadComplete = true;
 	threadNotifier->notify_all();
 }
@@ -105,9 +105,263 @@ void AssetManager::SetLoadedAndWait(std::string category, std::string object, st
 		return;
 	}
 	else {
-		// This a new asset being loaded without a loading screen
+		// This a new asset being loaded without a loading screen.
+		// Or this got called while the asset manager wasn't aware
+		// of the loading.
 		return;
 	}
+}
+
+std::string AssetManager::GetLoadingSceneName() {
+	return "";
+}
+
+void AssetManager::LoadScene(std::string filepath) {
+	rapidjson::Document sceneDoc;
+
+	std::string fullPath = "../../../Assets/Scenes/" + filepath;
+	fullPath = dxInstance->GetFullPathTo(fullPath);
+	FILE* file;
+	fopen_s(&file, fullPath.c_str(), "rb");
+
+	char readBuffer[FILE_BUFFER_SIZE];
+	rapidjson::FileReadStream sceneFileStream(file, readBuffer, sizeof(readBuffer));
+
+	sceneDoc.ParseStream(sceneFileStream);
+
+	fclose(file);
+}
+
+void AssetManager::LoadScene(FILE* file) {
+	rapidjson::Document sceneDoc;
+
+	char readBuffer[FILE_BUFFER_SIZE];
+	rapidjson::FileReadStream sceneFileStream(file, readBuffer, sizeof(readBuffer));
+
+	sceneDoc.ParseStream(sceneFileStream);
+
+	fclose(file);
+}
+
+void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
+	try {
+		char cbuf[2048];
+		rapidjson::MemoryPoolAllocator<> allocator(cbuf, sizeof(cbuf));
+
+		rapidjson::Document sceneDocToSave(&allocator, 256);
+
+		sceneDocToSave.SetObject();
+
+		// RapidJSON doesn't know about our file types directly, so they
+		// have to be reconstructed and stored as individual values.
+		rapidjson::Value validSceneCheck;
+		validSceneCheck.SetBool(true);
+		sceneDocToSave.AddMember(VALID_SHOE_SCENE, validSceneCheck, allocator);
+
+		rapidjson::Value sceneNameValue;
+		sceneNameValue.SetString("Test");
+		sceneDocToSave.AddMember(SCENE_NAME, sceneNameValue, allocator);
+
+		rapidjson::Value gameEntityBlock(rapidjson::kArrayType);
+		for (auto ge : this->globalEntities) {
+			rapidjson::Value geValue(rapidjson::kObjectType);
+
+			// First add entity-level types
+			rapidjson::Value geName;
+			geName.SetString(ge->GetName().c_str(), allocator);
+			geValue.AddMember(ENTITY_NAME, geName, allocator);
+			geValue.AddMember(ENTITY_ENABLED, ge->GetEnableDisable(), allocator);
+			geValue.AddMember(ENTITY_HIERARCHY_ENABLED, ge->GetHierarchyIsEnabled(), allocator);
+			geValue.AddMember(ENTITY_ATTACHED_LIGHTS, ge->GetAttachedLightCount(), allocator);
+
+			rapidjson::Value geComponents(rapidjson::kArrayType);
+			for (auto co : ge->GetAllComponents()) {
+				rapidjson::Value coValue(rapidjson::kObjectType);
+
+				// Currently this value uses full descriptors.
+				// For later optimization, make these strings very short
+				// while maintaining unique ids.
+				// Additional memory optimization could be achieved by making
+				// Member strings unique to only one section, allowing for 
+				// super short keys like 'lt' for lightType
+				// May be worth using #define so it's still readable
+				rapidjson::Value componentType;
+
+				// Is it a Light?
+				if (std::dynamic_pointer_cast<Light>(co) != nullptr) {
+					std::shared_ptr<Light> light = std::dynamic_pointer_cast<Light>(co);
+					componentType.SetString("Light");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+
+					// Basic types
+					coValue.AddMember(LIGHT_TYPE, light->GetType(), allocator);
+					coValue.AddMember(LIGHT_INTENSITY, light->GetIntensity(), allocator);
+					coValue.AddMember(LIGHT_ENABLED, light->IsEnabled(), allocator);
+					coValue.AddMember(LIGHT_RANGE, light->GetRange(), allocator);
+
+					// Treat FLOATX as float array[x]
+					rapidjson::Value color(rapidjson::kArrayType);
+					DirectX::XMFLOAT3 lightColor = light->GetColor();
+					color.PushBack(lightColor.x, allocator);
+					color.PushBack(lightColor.y, allocator);
+					color.PushBack(lightColor.z, allocator);
+
+					coValue.AddMember(LIGHT_COLOR, color, allocator);
+
+					rapidjson::Value direction(rapidjson::kArrayType);
+					DirectX::XMFLOAT3 lightDir = light->GetDirection();
+					direction.PushBack(lightDir.x, allocator);
+					direction.PushBack(lightDir.y, allocator);
+					direction.PushBack(lightDir.z, allocator);
+
+					coValue.AddMember(LIGHT_DIRECTION, direction, allocator);
+					
+					// No need to store position, as it's pulled from ge's transform
+					// Padding is always empty
+				}
+
+				// Is it a Collider?
+				if (std::dynamic_pointer_cast<Collider>(co) != nullptr) {
+					componentType.SetString("Collider");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+				}
+
+				// Is it Terrain?
+				if (std::dynamic_pointer_cast<Terrain>(co) != nullptr) {
+					componentType.SetString("Terrain");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+
+					// Terrain is static rn, can't be saved or loaded for the moment
+				}
+
+				// Is it a Particle System?
+				if (std::dynamic_pointer_cast<ParticleSystem>(co) != nullptr) {
+					componentType.SetString("ParticleSystem");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+				}
+
+				// Is it a MeshRenderer?
+				if (std::dynamic_pointer_cast<MeshRenderer>(co) != nullptr) {
+					componentType.SetString("MeshRenderer");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+
+					std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(co);
+
+					// Mesh Renderers are really just storage for a Mesh
+					// and a Material, so store those in an object
+					rapidjson::Value meshValue(rapidjson::kObjectType);
+
+					// Simple types first
+					meshValue.AddMember(MESH_INDEX_COUNT, meshRenderer->GetMesh()->GetIndexCount(), allocator);
+					meshValue.AddMember(MESH_MATERIAL_INDEX, meshRenderer->GetMesh()->GetMaterialIndex(), allocator);
+					meshValue.AddMember(MESH_ENABLED, meshRenderer->GetMesh()->GetEnableDisable(), allocator);
+					meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, meshRenderer->GetMesh()->GetDepthPrePass(), allocator);
+
+					// Strings
+					rapidjson::Value meshName;
+					meshName.SetString(meshRenderer->GetMesh()->GetName().c_str(), allocator);
+					meshValue.AddMember(MESH_NAME, meshName, allocator);
+
+					// Complex data - vertex and index buffers
+					rapidjson::Value vBufferValue(rapidjson::kArrayType);
+					Microsoft::WRL::ComPtr<ID3D11Buffer> vBuf = meshRenderer->GetMesh()->GetVertexBuffer();
+					Microsoft::WRL::ComPtr<ID3D11Buffer> vBufCopy;
+
+					D3D11_BUFFER_DESC vbd;
+					vBuf->GetDesc(&vbd);
+					vbd.Usage = D3D11_USAGE_STAGING;
+					vbd.BindFlags = 0;
+					vbd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+					const size_t vBufSize = sizeof(vbd.ByteWidth);
+
+					device->CreateBuffer(&vbd, nullptr, vBufCopy.GetAddressOf());
+
+					context->CopyResource(vBufCopy.Get(), vBuf.Get());
+
+					float vertices[vBufSize];
+					context->Map(vBufCopy.Get(), 0, (D3D11_MAP)1, 0, NULL);
+					memcpy(vertices, vBufCopy.Get(), vBufSize);
+					context->Unmap(vBufCopy.Get(), 0);
+
+					for (auto vb : vertices) {
+						// Need offset
+						vBufferValue.PushBack(vb, allocator);
+					}
+
+					meshValue.AddMember(MESH_VERTICES, vBufferValue, allocator);
+
+					coValue.AddMember(MESH_OBJECT, meshValue, allocator);
+
+					rapidjson::Value matValue(rapidjson::kObjectType);
+
+					// Simple types first
+					//coValue.AddMember();
+
+					coValue.AddMember(MATERIAL_OBJECT, matValue, allocator);
+				}
+
+				// Is it a Transform?
+				if (std::dynamic_pointer_cast<Transform>(co) != nullptr) {
+					componentType.SetString("Transform");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+
+					// Treat FLOATX as float array[x]
+					// rapidjson::Value globalWorldPos(rapidjson::kArrayType);
+
+				}
+
+				geComponents.PushBack(coValue, allocator);
+			}
+
+			// Push all the components to the game entity
+			geValue.AddMember(COMPONENTS, geComponents, allocator);
+
+			// Push everything to the game entity array
+			gameEntityBlock.PushBack(geValue, allocator);
+		}
+
+		// Add the game entity array to the doc
+		sceneDocToSave.AddMember(ENTITIES, gameEntityBlock, allocator);
+
+		//rapidjson::Value fontBlock(rapidjson::kArrayType);
+		/*for (auto font : globalFonts) {
+			font.second->File
+			fontBlock.PushBack(rapidjson::Value().SetString(), allocator);
+		}*/
+
+
+		// At the end of gathering data, write it all
+		// to the appropriate file
+		std::string fullPath = "../../../Assets/Scenes/" + filepath;
+		fullPath = dxInstance->GetFullPathTo(fullPath);
+		FILE* file;
+		fopen_s(&file, fullPath.c_str(), "w");
+
+		char writeBuffer[FILE_BUFFER_SIZE];
+		rapidjson::FileWriteStream sceneFileStream(file, writeBuffer, sizeof(writeBuffer));
+
+		rapidjson::Writer<rapidjson::FileWriteStream> writer(sceneFileStream);
+		sceneDocToSave.Accept(writer);
+
+		fclose(file);
+	}
+	catch (...) {
+
+	}
+}
+
+void AssetManager::SaveScene(FILE* file, std::string sceneName) {
+	rapidjson::Document sceneDocToSave;
+
+	// At the end of gathering data, write it all
+	// to the appropriate file
+	char writeBuffer[FILE_BUFFER_SIZE];
+	rapidjson::FileWriteStream sceneFileStream(file, writeBuffer, sizeof(writeBuffer));
+
+	rapidjson::Writer<rapidjson::FileWriteStream> writer(sceneFileStream);
+	sceneDocToSave.Accept(writer);
+
+	fclose(file);
 }
 #pragma endregion
 

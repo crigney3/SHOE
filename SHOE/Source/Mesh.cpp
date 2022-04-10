@@ -253,7 +253,7 @@ void Mesh::MakeBuffers(Vertex* vertexArray, int vertices, unsigned int* indices,
 
 	D3D11_BUFFER_DESC vbd;
 	vbd.Usage = D3D11_USAGE_IMMUTABLE;
-	vbd.ByteWidth = sizeof(Vertex) * vertices;       // 3 = number of vertices in the buffer
+	vbd.ByteWidth = sizeof(Vertex) * vertices;
 	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER; // Tells DirectX this is a vertex buffer
 	vbd.CPUAccessFlags = 0;
 	vbd.MiscFlags = 0;
@@ -378,6 +378,14 @@ Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetIndexBuffer() {
 
 int Mesh::GetIndexCount() {
 	return this->indices;
+}
+
+void Mesh::SetMaterialIndex(int matIndex) {
+	this->materialIndex = matIndex;
+}
+
+int Mesh::GetMaterialIndex() {
+	return this->materialIndex;
 }
 
 void Mesh::SetEnableDisable(bool value) {

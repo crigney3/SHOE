@@ -41,6 +41,9 @@ public:
 	void SetDepthPrePass(bool prePass);
 	bool GetDepthPrePass();
 
+	void SetMaterialIndex(int matIndex);
+	int GetMaterialIndex();
+
 	std::string GetName();
 
 	void SetEnableDisable(bool value);

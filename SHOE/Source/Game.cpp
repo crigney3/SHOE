@@ -81,7 +81,7 @@ void Game::Init()
 
 	// Start the loading thread and the loading screen thread
 	std::thread loadingThread = std::thread( [this] { globalAssets.Initialize(device, context, notification, loadingMutex, hWnd); });
-	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(); });
+	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(globalAssets.GetAMLoadState()); });
 
 	// Once they've stopped passing control back and forth, join them
 	// to the main thread
@@ -133,6 +133,22 @@ void Game::Init()
 	printf("Took %3.4f seconds for  post-initialization. \n", this->GetDeltaTime());
 	printf("Total Initialization time was %3.4f seconds. \n", this->GetTotalTime());
 #endif
+}
+
+void Game::LoadScene() {
+	globalAssets.LoadScene("structureTest.json");
+}
+
+void Game::SaveScene() {
+	globalAssets.SaveScene("structurTest.json");
+}
+
+void Game::SaveSceneAs() {
+	// Handle file browser popup before anything else
+
+
+
+	globalAssets.SaveScene("structureTest.json");
 }
 
 void Game::RenderUI(float deltaTime) {
@@ -717,6 +733,17 @@ void Game::RenderUI(float deltaTime) {
 	if (ImGui::BeginMainMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
 			ImGui::Text("This menu will eventually contain a saving and loading system, designed for swapping between feature test scenes.");
+			if (ImGui::MenuItem("Save Scene", "ctrl+s")) {
+				SaveScene();
+			}
+
+			if (ImGui::MenuItem("Save Scene As", "ctrl+s")) {
+				SaveSceneAs();
+			}
+
+			if (ImGui::MenuItem("Load Scene", "ctrl+s")) {
+				LoadScene();
+			}
 			//ImGui::MenuItem("Toggle Flashlight", "f", &flashMenuToggle);
 
 			ImGui::EndMenu();
@@ -939,8 +966,8 @@ void Game::Update(float deltaTime, float totalTime)
 	//flashShadowCamera->Update(deltaTime, this->hWnd);
 }
 
-void Game::DrawLoadingScreen() {
-	while (globalAssets.GetAMLoadState() == AMLoadState::INITIALIZING) {
+void Game::DrawLoadingScreen(AMLoadState loadType) {
+	while (globalAssets.GetAMLoadState() != AMLoadState::NOT_LOADING) {
 		std::unique_lock<std::mutex> lock(*loadingMutex);
 		using time = std::chrono::duration<int, std::milli>;
 		if (notification->wait_for(lock, time(3000), [&] {return globalAssets.GetSingleLoadComplete(); })) {
@@ -984,12 +1011,24 @@ void Game::DrawLoadingScreen() {
 			DirectX::XMFLOAT2 categoryOrigin;
 			DirectX::XMFLOAT2 objectOrigin;
 
+			std::string titleString = "";
+
+			if (loadType == AMLoadState::INITIALIZING) {
+				titleString = "SHOE";
+				DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
+			}
+			else if (loadType == AMLoadState::SCENE_LOAD) {
+				titleString = "Loading '";
+				titleString += globalAssets.GetLoadingSceneName();
+				titleString += "'";
+				DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
+			}
+			
 			// Certified conversion moment
-			DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString("SHOE") / 2.0f);
 			DirectX::XMStoreFloat2(&categoryOrigin, categoryFont->MeasureString(loadedCategoryString.c_str()) / 2.0f);
 			DirectX::XMStoreFloat2(&objectOrigin, objectFont->MeasureString(loadedObjectString.c_str()) / 2.0f);
 
-			titleFont->DrawString(loadingSpriteBatch, "SHOE", DirectX::XMFLOAT2(width / 2, height / 5), DirectX::Colors::Gold, 0.0f, titleOrigin);
+			titleFont->DrawString(loadingSpriteBatch, titleString.c_str(), DirectX::XMFLOAT2(width / 2, height / 5), DirectX::Colors::Gold, 0.0f, titleOrigin);
 			categoryFont->DrawString(loadingSpriteBatch, loadedCategoryString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.5), DirectX::Colors::White, 0.0f, categoryOrigin);
 			objectFont->DrawString(loadingSpriteBatch, loadedObjectString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.2), DirectX::Colors::LightGray, 0.0f, objectOrigin);
 

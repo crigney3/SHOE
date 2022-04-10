@@ -4,6 +4,46 @@
 // Removed on compile
 #define OUT
 
+// Saving and loading shorthand identifiers
+// General:
+#define VALID_SHOE_SCENE "ivs"
+#define SCENE_NAME "sN"
+
+// Categories:
+#define ENTITIES "en"
+#define COMPONENTS "cm"
+
+// Entities:
+#define ENTITY_NAME "n"
+#define ENTITY_ENABLED "e"
+#define ENTITY_HIERARCHY_ENABLED "hE"
+#define ENTITY_ATTACHED_LIGHTS "aL"
+#define COMPONENT_TYPE "ct"
+
+// Light Components:
+#define LIGHT_TYPE "lT"
+#define LIGHT_INTENSITY "i"
+#define LIGHT_ENABLED "lE"
+#define LIGHT_RANGE "lR"
+#define LIGHT_COLOR "lC"
+#define LIGHT_DIRECTION "lD"
+
+// Mesh Renderer Components:
+#define MESH_OBJECT "mO"
+#define MATERIAL_OBJECT "mA"
+
+// Mesh Data:
+
+#define MESH_INDEX_COUNT "iC"
+#define MESH_MATERIAL_INDEX "mI"
+#define MESH_ENABLED "mE"
+#define MESH_NEEDS_DEPTH_PREPASS "nDP"
+#define MESH_NAME "mN"
+#define MESH_VERTICES "mV"
+#define MESH_INDICES "mIn"
+
+// Material Data:
+
 #include "Light.h"
 #include "Sky.h"
 #include "SimpleShader.h"
@@ -28,8 +68,13 @@
 #include "SpriteBatch.h"
 #include "SpriteFont.h"
 #include "CollisionManager.h"
+#include "rapidjson\document.h"
+#include "rapidjson\filereadstream.h"
+#include "rapidjson\filewritestream.h"
+#include "rapidjson\writer.h"
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
+#define FILE_BUFFER_SIZE 65536
 
 struct LoadingNotifications {
 	std::string category;
@@ -40,6 +85,8 @@ struct LoadingNotifications {
 // State machine used to track what type of load
 // AssetManager is doing on calling any Create() function
 enum AMLoadState {
+	// Used when SHOE isn't loading
+	NOT_LOADING,
 	// Used when SHOE first loads
 	INITIALIZING,
 	// Used when something calls a Create() function
@@ -161,6 +208,8 @@ private:
 
 	ComponentTypes allCurrentComponentTypes;
 
+	std::string currentSceneName;
+
 public:
 	static bool materialSortDirty;
 
@@ -171,13 +220,25 @@ public:
 
 	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock, HWND hwnd);
 
+	// Loading helper methods for other classes
 	std::string GetLastLoadedCategory();
 	std::string GetLastLoadedObject();
+
 	std::exception_ptr GetLoadingException();
 	AMLoadState GetAMLoadState();
+
 	bool GetSingleLoadComplete();
 	void SetAMLoadState(AMLoadState state);
 	void SetSingleLoadComplete(bool loadComplete);
+
+	std::string GetLoadingSceneName();
+	// Pass file pointer?
+	void LoadScene(std::string filepath);
+	void LoadScene(FILE* file);
+	void SaveScene(std::string filepath, std::string sceneName = "");
+	void SaveScene(FILE* file, std::string sceneName = "");
+
+	std::string GetCurrentSceneName();
 
 	ComponentTypes GetAllCurrentComponentTypes();
 

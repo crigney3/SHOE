@@ -70,6 +70,8 @@ public:
 	std::vector<std::shared_ptr<T>> GetComponentsInChildren();
 
 	std::vector<std::shared_ptr<IComponent>> GetAllComponents();
+
+	int GetAttachedLightCount();
 	
 	void Release();
 

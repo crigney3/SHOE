@@ -97,6 +97,13 @@ std::vector<std::shared_ptr<IComponent>> GameEntity::GetAllComponents()
 }
 
 /**
+ * \brief Returns how many lights are attached to the entity.
+ */
+int GameEntity::GetAttachedLightCount() {
+	return attachedLightCount;
+}
+
+/**
  * \brief Frees all of the stored objects in the entity so it can be safely destroyed
  */
 void GameEntity::Release()

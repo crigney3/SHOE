@@ -32,12 +32,19 @@ public:
 	void Draw(float deltaTime, float totalTime);
 
 	// Loading screen info
-	void DrawLoadingScreen();
+	void DrawLoadingScreen(AMLoadState loadType);
 
 private:
 	// Asset Manager instance
 	AssetManager& globalAssets = AssetManager::GetInstance();
 	AudioHandler& audioHandler = AudioHandler::GetInstance();
+
+	// Loading methods for initializing threads.
+	// Mainly does pre- and post- loading, and creates
+	// the threads that do the actual loading
+	void LoadScene();
+	void SaveScene();
+	void SaveSceneAs();
 
 	// Rendering helper methods
 	void RenderSky();
