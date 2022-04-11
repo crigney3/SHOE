@@ -50,7 +50,7 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 
 	SetLoadedAndWait("Post-Initialization", "Preparing to render");
 
-	this->assetManagerLoadState = AMLoadState::SINGLE_CREATION;
+	this->assetManagerLoadState = AMLoadState::NOT_LOADING;
 	this->singleLoadComplete = true;
 	threadNotifier->notify_all();
 }
@@ -105,9 +105,320 @@ void AssetManager::SetLoadedAndWait(std::string category, std::string object, st
 		return;
 	}
 	else {
-		// This a new asset being loaded without a loading screen
+		// This a new asset being loaded without a loading screen.
+		// Or this got called while the asset manager wasn't aware
+		// of the loading.
 		return;
 	}
+}
+
+std::string AssetManager::GetLoadingSceneName() {
+	return "";
+}
+
+void AssetManager::LoadScene(std::string filepath) {
+	rapidjson::Document sceneDoc;
+
+	std::string fullPath = "../../../Assets/Scenes/" + filepath;
+	fullPath = dxInstance->GetFullPathTo(fullPath);
+	FILE* file;
+	fopen_s(&file, fullPath.c_str(), "rb");
+
+	char readBuffer[FILE_BUFFER_SIZE];
+	rapidjson::FileReadStream sceneFileStream(file, readBuffer, sizeof(readBuffer));
+
+	sceneDoc.ParseStream(sceneFileStream);
+
+	fclose(file);
+}
+
+void AssetManager::LoadScene(FILE* file) {
+	rapidjson::Document sceneDoc;
+
+	char readBuffer[FILE_BUFFER_SIZE];
+	rapidjson::FileReadStream sceneFileStream(file, readBuffer, sizeof(readBuffer));
+
+	sceneDoc.ParseStream(sceneFileStream);
+
+	fclose(file);
+}
+
+void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
+	try {
+		char cbuf[2048];
+		rapidjson::MemoryPoolAllocator<> allocator(cbuf, sizeof(cbuf));
+
+		rapidjson::Document sceneDocToSave(&allocator, 256);
+
+		sceneDocToSave.SetObject();
+
+		// RapidJSON doesn't know about our file types directly, so they
+		// have to be reconstructed and stored as individual values.
+		rapidjson::Value validSceneCheck;
+		validSceneCheck.SetBool(true);
+		sceneDocToSave.AddMember(VALID_SHOE_SCENE, validSceneCheck, allocator);
+
+		rapidjson::Value sceneNameValue;
+		sceneNameValue.SetString("Test");
+		sceneDocToSave.AddMember(SCENE_NAME, sceneNameValue, allocator);
+
+		rapidjson::Value gameEntityBlock(rapidjson::kArrayType);
+		for (auto ge : this->globalEntities) {
+			rapidjson::Value geValue(rapidjson::kObjectType);
+
+			// First add entity-level types
+			rapidjson::Value geName;
+			geName.SetString(ge->GetName().c_str(), allocator);
+			geValue.AddMember(ENTITY_NAME, geName, allocator);
+			geValue.AddMember(ENTITY_ENABLED, ge->GetEnableDisable(), allocator);
+			geValue.AddMember(ENTITY_HIERARCHY_ENABLED, ge->GetHierarchyIsEnabled(), allocator);
+			geValue.AddMember(ENTITY_ATTACHED_LIGHTS, ge->GetAttachedLightCount(), allocator);
+
+			rapidjson::Value geComponents(rapidjson::kArrayType);
+			for (auto co : ge->GetAllComponents()) {
+				rapidjson::Value coValue(rapidjson::kObjectType);
+
+				// Currently this value uses full descriptors.
+				// For later optimization, make these strings very short
+				// while maintaining unique ids.
+				// Additional memory optimization could be achieved by making
+				// Member strings unique to only one section, allowing for 
+				// super short keys like 'lt' for lightType
+				// May be worth using #define so it's still readable
+				rapidjson::Value componentType;
+
+				// Is it a Light?
+				if (std::dynamic_pointer_cast<Light>(co) != nullptr) {
+					std::shared_ptr<Light> light = std::dynamic_pointer_cast<Light>(co);
+					componentType.SetString("Light");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+
+					// Basic types
+					coValue.AddMember(LIGHT_TYPE, light->GetType(), allocator);
+					coValue.AddMember(LIGHT_INTENSITY, light->GetIntensity(), allocator);
+					coValue.AddMember(LIGHT_ENABLED, light->IsEnabled(), allocator);
+					coValue.AddMember(LIGHT_RANGE, light->GetRange(), allocator);
+
+					// Treat FLOATX as float array[x]
+					rapidjson::Value color(rapidjson::kArrayType);
+					DirectX::XMFLOAT3 lightColor = light->GetColor();
+					color.PushBack(lightColor.x, allocator);
+					color.PushBack(lightColor.y, allocator);
+					color.PushBack(lightColor.z, allocator);
+
+					coValue.AddMember(LIGHT_COLOR, color, allocator);
+
+					rapidjson::Value direction(rapidjson::kArrayType);
+					DirectX::XMFLOAT3 lightDir = light->GetDirection();
+					direction.PushBack(lightDir.x, allocator);
+					direction.PushBack(lightDir.y, allocator);
+					direction.PushBack(lightDir.z, allocator);
+
+					coValue.AddMember(LIGHT_DIRECTION, direction, allocator);
+					
+					// No need to store position, as it's pulled from ge's transform
+					// Padding is always empty
+				}
+
+				// Is it a Collider?
+				if (std::dynamic_pointer_cast<Collider>(co) != nullptr) {
+					componentType.SetString("Collider");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+				}
+
+				// Is it Terrain?
+				if (std::dynamic_pointer_cast<Terrain>(co) != nullptr) {
+					componentType.SetString("Terrain");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+
+					// Terrain is static rn, can't be saved or loaded for the moment
+				}
+
+				// Is it a Particle System?
+				if (std::dynamic_pointer_cast<ParticleSystem>(co) != nullptr) {
+					componentType.SetString("ParticleSystem");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+				}
+
+				// Is it a MeshRenderer?
+				if (std::dynamic_pointer_cast<MeshRenderer>(co) != nullptr) {
+					componentType.SetString("MeshRenderer");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+
+					std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(co);
+
+					// Mesh Renderers are really just storage for a Mesh
+					// and a Material, so store those in an object
+					rapidjson::Value meshValue(rapidjson::kObjectType);
+					std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
+
+					// Simple types first
+					meshValue.AddMember(MESH_INDEX_COUNT, mesh->GetIndexCount(), allocator);
+					meshValue.AddMember(MESH_MATERIAL_INDEX, mesh->GetMaterialIndex(), allocator);
+					meshValue.AddMember(MESH_ENABLED, mesh->GetEnableDisable(), allocator);
+					meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, mesh->GetDepthPrePass(), allocator);
+
+					// Strings
+					rapidjson::Value meshName;
+					meshName.SetString(mesh->GetName().c_str(), allocator);
+					meshValue.AddMember(MESH_NAME, meshName, allocator);
+
+					// Complex data - filename string key
+					rapidjson::Value fileKeyValue;
+					fileKeyValue.SetString(mesh->GetFileNameKey().c_str(), allocator);
+					//Microsoft::WRL::ComPtr<ID3D11Buffer> vBuf = mesh->GetVertexBuffer();
+					//Microsoft::WRL::ComPtr<ID3D11Buffer> vBufCopy;
+
+					//D3D11_BUFFER_DESC vbd;
+					//vBuf->GetDesc(&vbd);
+					//vbd.Usage = D3D11_USAGE_STAGING;
+					//vbd.BindFlags = 0;
+					//vbd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+					//const size_t vBufSize = sizeof(vbd.ByteWidth);
+
+					//device->CreateBuffer(&vbd, nullptr, vBufCopy.GetAddressOf());
+
+					//context->CopyResource(vBufCopy.Get(), vBuf.Get());
+
+					//float vertices[vBufSize];
+					//context->Map(vBufCopy.Get(), 0, (D3D11_MAP)1, 0, NULL);
+					//memcpy(vertices, vBufCopy.Get(), vBufSize);
+					//context->Unmap(vBufCopy.Get(), 0);
+
+					//for (auto vb : vertices) {
+					//	// Need offset
+					//	vBufferValue.PushBack(vb, allocator);
+					//}
+
+					meshValue.AddMember(MESH_FILENAME_KEY, fileKeyValue, allocator);
+
+					coValue.AddMember(MESH_OBJECT, meshValue, allocator);
+
+					rapidjson::Value matValue(rapidjson::kObjectType);
+					std::shared_ptr<Material> mat = meshRenderer->GetMaterial();
+
+					// Simple types first
+					matValue.AddMember(MAT_UV_TILING, mat->GetTiling(), allocator);
+
+					coValue.AddMember(MATERIAL_OBJECT, matValue, allocator);
+				}
+
+				// Is it a Transform?
+				if (std::dynamic_pointer_cast<Transform>(co) != nullptr) {
+					componentType.SetString("Transform");
+					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+
+					// Treat FLOATX as float array[x]
+					// rapidjson::Value globalWorldPos(rapidjson::kArrayType);
+
+				}
+
+				geComponents.PushBack(coValue, allocator);
+			}
+
+			// Push all the components to the game entity
+			geValue.AddMember(COMPONENTS, geComponents, allocator);
+
+			// Push everything to the game entity array
+			gameEntityBlock.PushBack(geValue, allocator);
+		}
+
+		// Add the game entity array to the doc
+		sceneDocToSave.AddMember(ENTITIES, gameEntityBlock, allocator);
+
+		//rapidjson::Value fontBlock(rapidjson::kArrayType);
+		/*for (auto font : globalFonts) {
+			font.second->File
+			fontBlock.PushBack(rapidjson::Value().SetString(), allocator);
+		}*/
+
+		// Save all shaders
+		rapidjson::Value vertexShaderBlock(rapidjson::kArrayType);
+		for (auto vs : vertexShaders) {
+			rapidjson::Value vsObject(rapidjson::kObjectType);
+
+			rapidjson::Value vsName;
+			rapidjson::Value vsKey;
+
+			vsName.SetString(vs->GetName().c_str(), allocator);
+			vsKey.SetString(vs->GetFileNameKey().c_str(), allocator);
+
+			vsObject.AddMember(SHADER_NAME, vsName, allocator);
+			vsObject.AddMember(SHADER_FILE_PATH, vsKey, allocator);
+
+			vertexShaderBlock.PushBack(vsObject, allocator);
+		}
+
+		sceneDocToSave.AddMember(VERTEX_SHADERS, vertexShaderBlock, allocator);
+
+		rapidjson::Value pixelShaderBlock(rapidjson::kArrayType);
+		for (auto ps : pixelShaders) {
+			rapidjson::Value psObject(rapidjson::kObjectType);
+
+			rapidjson::Value psName;
+			rapidjson::Value psKey;
+
+			psName.SetString(ps->GetName().c_str(), allocator);
+			psKey.SetString(ps->GetFileNameKey().c_str(), allocator);
+
+			psObject.AddMember(SHADER_NAME, psName, allocator);
+			psObject.AddMember(SHADER_FILE_PATH, psKey, allocator);
+
+			pixelShaderBlock.PushBack(psObject, allocator);
+		}
+
+		sceneDocToSave.AddMember(PIXEL_SHADERS, pixelShaderBlock, allocator);
+
+		rapidjson::Value computeShaderBlock(rapidjson::kArrayType);
+		for (auto cs : computeShaders) {
+			rapidjson::Value csObject(rapidjson::kObjectType);
+
+			rapidjson::Value csName;
+			rapidjson::Value csKey;
+
+			csName.SetString(cs->GetName().c_str(), allocator);
+			csKey.SetString(cs->GetFileNameKey().c_str(), allocator);
+
+			csObject.AddMember(SHADER_NAME, csName, allocator);
+			csObject.AddMember(SHADER_FILE_PATH, csKey, allocator);
+
+			computeShaderBlock.PushBack(csObject, allocator);
+		}
+
+		sceneDocToSave.AddMember(COMPUTE_SHADERS, computeShaderBlock, allocator);
+
+		// At the end of gathering data, write it all
+		// to the appropriate file
+		std::string fullPath = "../../../Assets/Scenes/" + filepath;
+		fullPath = dxInstance->GetFullPathTo(fullPath);
+		FILE* file;
+		fopen_s(&file, fullPath.c_str(), "w");
+
+		char writeBuffer[FILE_BUFFER_SIZE];
+		rapidjson::FileWriteStream sceneFileStream(file, writeBuffer, sizeof(writeBuffer));
+
+		rapidjson::Writer<rapidjson::FileWriteStream> writer(sceneFileStream);
+		sceneDocToSave.Accept(writer);
+
+		fclose(file);
+	}
+	catch (...) {
+
+	}
+}
+
+void AssetManager::SaveScene(FILE* file, std::string sceneName) {
+	rapidjson::Document sceneDocToSave;
+
+	// At the end of gathering data, write it all
+	// to the appropriate file
+	char writeBuffer[FILE_BUFFER_SIZE];
+	rapidjson::FileWriteStream sceneFileStream(file, writeBuffer, sizeof(writeBuffer));
+
+	rapidjson::Writer<rapidjson::FileWriteStream> writer(sceneFileStream);
+	sceneDocToSave.Accept(writer);
+
+	fclose(file);
 }
 #pragma endregion
 
@@ -155,11 +466,34 @@ std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFL
 	
 }
 
-std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::wstring nameToLoad) {
+std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::string nameToLoad) {
 	try {
 		std::shared_ptr<SimpleVertexShader> newVS;
+		std::string assetPath;
 
-		newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
+		assetPath = dxInstance->GetAssetPathString(ASSET_SHADER_PATH);
+		std::string namePath = assetPath + nameToLoad;
+		char pathBuf[1024];
+
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), pathBuf, id);
+
+		// Serialize the filename if it's in the right folder
+		std::string baseFilename = "";
+		std::string assetPathStr = "Assets\\Shaders";
+		size_t dirPos = nameToLoad.find(assetPathStr);
+		if (dirPos != std::string::npos) {
+			// File is in the assets folder
+			baseFilename = "t";
+			baseFilename += nameToLoad.substr(dirPos + sizeof(assetPathStr));
+		}
+		else {
+			baseFilename = "f";
+			baseFilename += nameToLoad;
+		}
+
+		newVS->SetFileNameKey(baseFilename);
 
 		vertexShaders.push_back(newVS);
 
@@ -174,11 +508,34 @@ std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string
 	}
 }
 
-std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string id, std::wstring nameToLoad) {
+std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string id, std::string nameToLoad) {
 	try {
 		std::shared_ptr<SimplePixelShader> newPS;
+		std::string assetPath;
 
-		newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
+		assetPath = dxInstance->GetAssetPathString(ASSET_SHADER_PATH);
+		std::string namePath = assetPath + nameToLoad;
+		char pathBuf[1024];
+
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), pathBuf, id);
+
+		// Serialize the filename if it's in the right folder
+		std::string baseFilename = "";
+		std::string assetPathStr = "Assets\\Shaders";
+		size_t dirPos = nameToLoad.find(assetPathStr);
+		if (dirPos != std::string::npos) {
+			// File is in the assets folder
+			baseFilename = "t";
+			baseFilename += nameToLoad.substr(dirPos + sizeof(assetPathStr));
+		}
+		else {
+			baseFilename = "f";
+			baseFilename += nameToLoad;
+		}
+
+		newPS->SetFileNameKey(baseFilename);
 
 		pixelShaders.push_back(newPS);
 
@@ -193,11 +550,34 @@ std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string i
 	}
 }
 
-std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::wstring nameToLoad) {
+std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::string nameToLoad) {
 	try {
 		std::shared_ptr<SimpleComputeShader> newCS;
+		std::string assetPath;
 
-		newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
+		assetPath = dxInstance->GetAssetPathString(ASSET_SHADER_PATH);
+		std::string namePath = assetPath + nameToLoad;
+		char pathBuf[1024];
+
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), pathBuf, id);
+
+		// Serialize the filename if it's in the right folder
+		std::string baseFilename = "";
+		std::string assetPathStr = "Assets\\Shaders";
+		size_t dirPos = nameToLoad.find(assetPathStr);
+		if (dirPos != std::string::npos) {
+			// File is in the assets folder
+			baseFilename = "t";
+			baseFilename += nameToLoad.substr(dirPos + sizeof(assetPathStr));
+		}
+		else {
+			baseFilename = "f";
+			baseFilename += nameToLoad;
+		}
+
+		newCS->SetFileNameKey(baseFilename);
 
 		computeShaders.push_back(newCS);
 
@@ -231,9 +611,13 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 		std::shared_ptr<Mesh> newMesh;
 		std::string assetPath;
 
-		assetPath = "../../../Assets/Models/";
+		assetPath = dxInstance->GetAssetPathString(ASSET_MODEL_PATH);
+		std::string namePath = assetPath + nameToLoad;
+		char pathBuf[1024];
 
-		newMesh = std::make_shared<Mesh>(dxInstance->GetFullPathTo(assetPath + nameToLoad).c_str(), device, id);
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		newMesh = std::make_shared<Mesh>(pathBuf, device, id);
 
 		globalMeshes.push_back(newMesh);
 
@@ -953,35 +1337,35 @@ void AssetManager::InitializeShaders() {
 	computeShaders = std::vector<std::shared_ptr<SimpleComputeShader>>();
 
 	// Make vertex shaders
-	CreateVertexShader("BasicVS", L"VertexShader.cso");
-	CreateVertexShader("NormalsVS", L"VSNormalMap.cso");
-	CreateVertexShader("SkyVS", L"VSSkybox.cso");
-	CreateVertexShader("TerrainVS", L"VSTerrainBlend.cso");
-	CreateVertexShader("ShadowVS", L"VSShadowMap.cso");
-	CreateVertexShader("ParticlesVS", L"VSParticles.cso");
-	CreateVertexShader("FullscreenVS", L"FullscreenVS.cso");
+	CreateVertexShader("BasicVS", "VertexShader.cso");
+	CreateVertexShader("NormalsVS", "VSNormalMap.cso");
+	CreateVertexShader("SkyVS", "VSSkybox.cso");
+	CreateVertexShader("TerrainVS", "VSTerrainBlend.cso");
+	CreateVertexShader("ShadowVS", "VSShadowMap.cso");
+	CreateVertexShader("ParticlesVS", "VSParticles.cso");
+	CreateVertexShader("FullscreenVS", "FullscreenVS.cso");
 
 	// Make pixel shaders
-	CreatePixelShader("BasicPS", L"PixelShader.cso");
-	CreatePixelShader("SolidColorPS", L"PSSolidColor.cso");
-	CreatePixelShader("NormalsPS", L"PSNormalMap.cso");
-	CreatePixelShader("SkyPS", L"PSSkybox.cso");
-	CreatePixelShader("TerrainPS", L"PSTerrainBlend.cso");
-	CreatePixelShader("IrradiancePS", L"IBLIrradianceMapPS.cso");
-	CreatePixelShader("SpecularConvolutionPS", L"IBLSpecularConvolutionPS.cso");
-	CreatePixelShader("BRDFLookupTablePS", L"IBLBrdfLookUpTablePS.cso");
-	CreatePixelShader("SSAOPS", L"PSAmbientOcclusion.cso");
-	CreatePixelShader("SSAOBlurPS", L"PSOcclusionBlur.cso");
-	CreatePixelShader("SSAOCombinePS", L"PSOcclusionCombine.cso");
-	CreatePixelShader("ParticlesPS", L"PSParticles.cso");
-	CreatePixelShader("TextureSamplePS", L"PSTextureSample.cso");
-	CreatePixelShader("RefractivePS", L"PSRefractive.cso");
+	CreatePixelShader("BasicPS", "PixelShader.cso");
+	CreatePixelShader("SolidColorPS", "PSSolidColor.cso");
+	CreatePixelShader("NormalsPS", "PSNormalMap.cso");
+	CreatePixelShader("SkyPS", "PSSkybox.cso");
+	CreatePixelShader("TerrainPS", "PSTerrainBlend.cso");
+	CreatePixelShader("IrradiancePS", "IBLIrradianceMapPS.cso");
+	CreatePixelShader("SpecularConvolutionPS", "IBLSpecularConvolutionPS.cso");
+	CreatePixelShader("BRDFLookupTablePS", "IBLBrdfLookUpTablePS.cso");
+	CreatePixelShader("SSAOPS", "PSAmbientOcclusion.cso");
+	CreatePixelShader("SSAOBlurPS", "PSOcclusionBlur.cso");
+	CreatePixelShader("SSAOCombinePS", "PSOcclusionCombine.cso");
+	CreatePixelShader("ParticlesPS", "PSParticles.cso");
+	CreatePixelShader("TextureSamplePS", "PSTextureSample.cso");
+	CreatePixelShader("RefractivePS", "PSRefractive.cso");
 
 	// Make compute shaders
-	CreateComputeShader("ParticleMoveCS", L"CSParticleFlow.cso");
-	CreateComputeShader("ParticleEmitCS", L"CSParticleEmit.cso");
-	CreateComputeShader("ParticleCopyCS", L"CSCopyDrawCount.cso");
-	CreateComputeShader("ParticleInitDeadCS", L"CSInitDeadList.cso");
+	CreateComputeShader("ParticleMoveCS", "CSParticleFlow.cso");
+	CreateComputeShader("ParticleEmitCS", "CSParticleEmit.cso");
+	CreateComputeShader("ParticleCopyCS", "CSCopyDrawCount.cso");
+	CreateComputeShader("ParticleInitDeadCS", "CSInitDeadList.cso");
 }
 
 void AssetManager::InitializeEmitters() {
@@ -1479,7 +1863,7 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(dxInstance->GetFullPathTo(assets + subfolderPath))) {
 			textures.push_back(nullptr);
 			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
-			std::wstring path = ConvertToWide(p.path().string().c_str());
+			std::wstring path = ISimpleShader::ConvertToWide(p.path().string().c_str());
 
 			CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), (ID3D11Resource**)textures[i].GetAddressOf(), nullptr);
 
@@ -1959,13 +2343,6 @@ int AssetManager::GetMaterialIDByName(std::string name) {
 
 #pragma region inlines
 
-inline std::wstring AssetManager::ConvertToWide(const std::string& as)
-{
-	wchar_t* buf = new wchar_t[as.size() * 2 + 2];
-	swprintf_s(buf, as.size() * 2 + 2, L"%S", as.c_str());
-	std::wstring rval = buf;
-	delete[] buf;
-	return rval;
-}
+
 
 #pragma endregion

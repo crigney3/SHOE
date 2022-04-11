@@ -25,10 +25,26 @@ Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCo
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
 }
 
-Mesh::Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
+Mesh::Mesh(std::string filename, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
 	this->materialIndex = -1;
 	this->name = name;
 	this->needsDepthPrePass = false;
+
+	// Serialize the filename if it's in the right folder
+	std::string baseFilename = "";
+	size_t dirPos = filename.find("Assets\\Models");
+	if (dirPos != std::string::npos) {
+		// File is in the assets folder
+		baseFilename = "t";
+		baseFilename += filename.substr(dirPos + sizeof("Assets\\Models"));
+	}
+	else {
+		baseFilename = "f";
+		baseFilename += filename;
+	}
+
+	this->filenameKey = baseFilename;
+
 	// Author: Chris Cascioli
 	// Purpose: Basic .OBJ 3D model loading, supporting positions, uvs and normals
 	// 
@@ -39,7 +55,7 @@ Mesh::Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device, st
 	// - NOTE: You'll need to #include <fstream>
 
 	// File input object
-	std::ifstream obj(filename);
+	std::ifstream obj(filename.c_str());
 
 	// Check for successful open
 	if (!obj.is_open())
@@ -253,7 +269,7 @@ void Mesh::MakeBuffers(Vertex* vertexArray, int vertices, unsigned int* indices,
 
 	D3D11_BUFFER_DESC vbd;
 	vbd.Usage = D3D11_USAGE_IMMUTABLE;
-	vbd.ByteWidth = sizeof(Vertex) * vertices;       // 3 = number of vertices in the buffer
+	vbd.ByteWidth = sizeof(Vertex) * vertices;
 	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER; // Tells DirectX this is a vertex buffer
 	vbd.CPUAccessFlags = 0;
 	vbd.MiscFlags = 0;
@@ -380,6 +396,14 @@ int Mesh::GetIndexCount() {
 	return this->indices;
 }
 
+void Mesh::SetMaterialIndex(int matIndex) {
+	this->materialIndex = matIndex;
+}
+
+int Mesh::GetMaterialIndex() {
+	return this->materialIndex;
+}
+
 void Mesh::SetEnableDisable(bool value) {
 	this->enabled = value;
 }
@@ -390,6 +414,10 @@ bool Mesh::GetEnableDisable() {
 
 std::string Mesh::GetName() {
 	return this->name;
+}
+
+std::string Mesh::GetFileNameKey() {
+	return this->filenameKey;
 }
 
 void Mesh::SetDepthPrePass(bool prePass) {
