@@ -332,6 +332,60 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			fontBlock.PushBack(rapidjson::Value().SetString(), allocator);
 		}*/
 
+		// Save all shaders
+		rapidjson::Value vertexShaderBlock(rapidjson::kArrayType);
+		for (auto vs : vertexShaders) {
+			rapidjson::Value vsObject(rapidjson::kObjectType);
+
+			rapidjson::Value vsName;
+			rapidjson::Value vsKey;
+
+			vsName.SetString(vs->GetName().c_str(), allocator);
+			vsKey.SetString(vs->GetFileNameKey().c_str(), allocator);
+
+			vsObject.AddMember(SHADER_NAME, vsName, allocator);
+			vsObject.AddMember(SHADER_FILE_PATH, vsKey, allocator);
+
+			vertexShaderBlock.PushBack(vsObject, allocator);
+		}
+
+		sceneDocToSave.AddMember(VERTEX_SHADERS, vertexShaderBlock, allocator);
+
+		rapidjson::Value pixelShaderBlock(rapidjson::kArrayType);
+		for (auto ps : pixelShaders) {
+			rapidjson::Value psObject(rapidjson::kObjectType);
+
+			rapidjson::Value psName;
+			rapidjson::Value psKey;
+
+			psName.SetString(ps->GetName().c_str(), allocator);
+			psKey.SetString(ps->GetFileNameKey().c_str(), allocator);
+
+			psObject.AddMember(SHADER_NAME, psName, allocator);
+			psObject.AddMember(SHADER_FILE_PATH, psKey, allocator);
+
+			pixelShaderBlock.PushBack(psObject, allocator);
+		}
+
+		sceneDocToSave.AddMember(PIXEL_SHADERS, pixelShaderBlock, allocator);
+
+		rapidjson::Value computeShaderBlock(rapidjson::kArrayType);
+		for (auto cs : computeShaders) {
+			rapidjson::Value csObject(rapidjson::kObjectType);
+
+			rapidjson::Value csName;
+			rapidjson::Value csKey;
+
+			csName.SetString(cs->GetName().c_str(), allocator);
+			csKey.SetString(cs->GetFileNameKey().c_str(), allocator);
+
+			csObject.AddMember(SHADER_NAME, csName, allocator);
+			csObject.AddMember(SHADER_FILE_PATH, csKey, allocator);
+
+			computeShaderBlock.PushBack(csObject, allocator);
+		}
+
+		sceneDocToSave.AddMember(COMPUTE_SHADERS, computeShaderBlock, allocator);
 
 		// At the end of gathering data, write it all
 		// to the appropriate file
@@ -412,11 +466,34 @@ std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFL
 	
 }
 
-std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::wstring nameToLoad) {
+std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::string nameToLoad) {
 	try {
 		std::shared_ptr<SimpleVertexShader> newVS;
+		std::string assetPath;
 
-		newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
+		assetPath = dxInstance->GetAssetPathString(ASSET_SHADER_PATH);
+		std::string namePath = assetPath + nameToLoad;
+		char pathBuf[1024];
+
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), pathBuf, id);
+
+		// Serialize the filename if it's in the right folder
+		std::string baseFilename = "";
+		std::string assetPathStr = "Assets\\Shaders";
+		size_t dirPos = nameToLoad.find(assetPathStr);
+		if (dirPos != std::string::npos) {
+			// File is in the assets folder
+			baseFilename = "t";
+			baseFilename += nameToLoad.substr(dirPos + sizeof(assetPathStr));
+		}
+		else {
+			baseFilename = "f";
+			baseFilename += nameToLoad;
+		}
+
+		newVS->SetFileNameKey(baseFilename);
 
 		vertexShaders.push_back(newVS);
 
@@ -431,11 +508,34 @@ std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string
 	}
 }
 
-std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string id, std::wstring nameToLoad) {
+std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string id, std::string nameToLoad) {
 	try {
 		std::shared_ptr<SimplePixelShader> newPS;
+		std::string assetPath;
 
-		newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
+		assetPath = dxInstance->GetAssetPathString(ASSET_SHADER_PATH);
+		std::string namePath = assetPath + nameToLoad;
+		char pathBuf[1024];
+
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), pathBuf, id);
+
+		// Serialize the filename if it's in the right folder
+		std::string baseFilename = "";
+		std::string assetPathStr = "Assets\\Shaders";
+		size_t dirPos = nameToLoad.find(assetPathStr);
+		if (dirPos != std::string::npos) {
+			// File is in the assets folder
+			baseFilename = "t";
+			baseFilename += nameToLoad.substr(dirPos + sizeof(assetPathStr));
+		}
+		else {
+			baseFilename = "f";
+			baseFilename += nameToLoad;
+		}
+
+		newPS->SetFileNameKey(baseFilename);
 
 		pixelShaders.push_back(newPS);
 
@@ -450,11 +550,34 @@ std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string i
 	}
 }
 
-std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::wstring nameToLoad) {
+std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::string nameToLoad) {
 	try {
 		std::shared_ptr<SimpleComputeShader> newCS;
+		std::string assetPath;
 
-		newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(nameToLoad).c_str(), id);
+		assetPath = dxInstance->GetAssetPathString(ASSET_SHADER_PATH);
+		std::string namePath = assetPath + nameToLoad;
+		char pathBuf[1024];
+
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), pathBuf, id);
+
+		// Serialize the filename if it's in the right folder
+		std::string baseFilename = "";
+		std::string assetPathStr = "Assets\\Shaders";
+		size_t dirPos = nameToLoad.find(assetPathStr);
+		if (dirPos != std::string::npos) {
+			// File is in the assets folder
+			baseFilename = "t";
+			baseFilename += nameToLoad.substr(dirPos + sizeof(assetPathStr));
+		}
+		else {
+			baseFilename = "f";
+			baseFilename += nameToLoad;
+		}
+
+		newCS->SetFileNameKey(baseFilename);
 
 		computeShaders.push_back(newCS);
 
@@ -1214,35 +1337,35 @@ void AssetManager::InitializeShaders() {
 	computeShaders = std::vector<std::shared_ptr<SimpleComputeShader>>();
 
 	// Make vertex shaders
-	CreateVertexShader("BasicVS", L"VertexShader.cso");
-	CreateVertexShader("NormalsVS", L"VSNormalMap.cso");
-	CreateVertexShader("SkyVS", L"VSSkybox.cso");
-	CreateVertexShader("TerrainVS", L"VSTerrainBlend.cso");
-	CreateVertexShader("ShadowVS", L"VSShadowMap.cso");
-	CreateVertexShader("ParticlesVS", L"VSParticles.cso");
-	CreateVertexShader("FullscreenVS", L"FullscreenVS.cso");
+	CreateVertexShader("BasicVS", "VertexShader.cso");
+	CreateVertexShader("NormalsVS", "VSNormalMap.cso");
+	CreateVertexShader("SkyVS", "VSSkybox.cso");
+	CreateVertexShader("TerrainVS", "VSTerrainBlend.cso");
+	CreateVertexShader("ShadowVS", "VSShadowMap.cso");
+	CreateVertexShader("ParticlesVS", "VSParticles.cso");
+	CreateVertexShader("FullscreenVS", "FullscreenVS.cso");
 
 	// Make pixel shaders
-	CreatePixelShader("BasicPS", L"PixelShader.cso");
-	CreatePixelShader("SolidColorPS", L"PSSolidColor.cso");
-	CreatePixelShader("NormalsPS", L"PSNormalMap.cso");
-	CreatePixelShader("SkyPS", L"PSSkybox.cso");
-	CreatePixelShader("TerrainPS", L"PSTerrainBlend.cso");
-	CreatePixelShader("IrradiancePS", L"IBLIrradianceMapPS.cso");
-	CreatePixelShader("SpecularConvolutionPS", L"IBLSpecularConvolutionPS.cso");
-	CreatePixelShader("BRDFLookupTablePS", L"IBLBrdfLookUpTablePS.cso");
-	CreatePixelShader("SSAOPS", L"PSAmbientOcclusion.cso");
-	CreatePixelShader("SSAOBlurPS", L"PSOcclusionBlur.cso");
-	CreatePixelShader("SSAOCombinePS", L"PSOcclusionCombine.cso");
-	CreatePixelShader("ParticlesPS", L"PSParticles.cso");
-	CreatePixelShader("TextureSamplePS", L"PSTextureSample.cso");
-	CreatePixelShader("RefractivePS", L"PSRefractive.cso");
+	CreatePixelShader("BasicPS", "PixelShader.cso");
+	CreatePixelShader("SolidColorPS", "PSSolidColor.cso");
+	CreatePixelShader("NormalsPS", "PSNormalMap.cso");
+	CreatePixelShader("SkyPS", "PSSkybox.cso");
+	CreatePixelShader("TerrainPS", "PSTerrainBlend.cso");
+	CreatePixelShader("IrradiancePS", "IBLIrradianceMapPS.cso");
+	CreatePixelShader("SpecularConvolutionPS", "IBLSpecularConvolutionPS.cso");
+	CreatePixelShader("BRDFLookupTablePS", "IBLBrdfLookUpTablePS.cso");
+	CreatePixelShader("SSAOPS", "PSAmbientOcclusion.cso");
+	CreatePixelShader("SSAOBlurPS", "PSOcclusionBlur.cso");
+	CreatePixelShader("SSAOCombinePS", "PSOcclusionCombine.cso");
+	CreatePixelShader("ParticlesPS", "PSParticles.cso");
+	CreatePixelShader("TextureSamplePS", "PSTextureSample.cso");
+	CreatePixelShader("RefractivePS", "PSRefractive.cso");
 
 	// Make compute shaders
-	CreateComputeShader("ParticleMoveCS", L"CSParticleFlow.cso");
-	CreateComputeShader("ParticleEmitCS", L"CSParticleEmit.cso");
-	CreateComputeShader("ParticleCopyCS", L"CSCopyDrawCount.cso");
-	CreateComputeShader("ParticleInitDeadCS", L"CSInitDeadList.cso");
+	CreateComputeShader("ParticleMoveCS", "CSParticleFlow.cso");
+	CreateComputeShader("ParticleEmitCS", "CSParticleEmit.cso");
+	CreateComputeShader("ParticleCopyCS", "CSCopyDrawCount.cso");
+	CreateComputeShader("ParticleInitDeadCS", "CSInitDeadList.cso");
 }
 
 void AssetManager::InitializeEmitters() {
@@ -1740,7 +1863,7 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(dxInstance->GetFullPathTo(assets + subfolderPath))) {
 			textures.push_back(nullptr);
 			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
-			std::wstring path = ConvertToWide(p.path().string().c_str());
+			std::wstring path = ISimpleShader::ConvertToWide(p.path().string().c_str());
 
 			CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), (ID3D11Resource**)textures[i].GetAddressOf(), nullptr);
 
@@ -2220,13 +2343,6 @@ int AssetManager::GetMaterialIDByName(std::string name) {
 
 #pragma region inlines
 
-inline std::wstring AssetManager::ConvertToWide(const std::string& as)
-{
-	wchar_t* buf = new wchar_t[as.size() * 2 + 2];
-	swprintf_s(buf, as.size() * 2 + 2, L"%S", as.c_str());
-	std::wstring rval = buf;
-	delete[] buf;
-	return rval;
-}
+
 
 #pragma endregion

@@ -15,7 +15,7 @@
 // To check if this is a visual studio run
 // or an executable run
 
-#define ASSET_PATH_COUNT 13
+#define ASSET_PATH_COUNT 14
 
 #define ASSET_MODEL_PATH 0
 #define ASSET_SCENE_PATH 1
@@ -30,6 +30,7 @@
 #define ASSET_TEXTURE_PATH_PBR_NORMALS 10
 #define ASSET_TEXTURE_PATH_PBR_METALNESS 11
 #define ASSET_TEXTURE_PATH_PBR_ROUGHNESS 12
+#define ASSET_SHADER_PATH 13
 
 #pragma endregion
 

@@ -117,6 +117,10 @@
     <PostBuildEvent>
       <Command>xcopy /y /d "$(SolutionDir)packages\FMOD\core\lib\x64\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
+    <FxCompile>
+      <ShaderModel>5.0</ShaderModel>
+      <ObjectFileOutput>$(SolutionDir)\..\Assets\Shaders\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -157,6 +161,10 @@
     <PostBuildEvent>
       <Command>xcopy /y /d "$(SolutionDir)packages\FMOD\core\lib\x64\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
+    <FxCompile>
+      <ShaderModel>5.0</ShaderModel>
+      <ObjectFileOutput>$(SolutionDir)\..\Assets\Shaders\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Headers\AssetManager.h" />

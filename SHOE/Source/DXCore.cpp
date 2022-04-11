@@ -438,6 +438,7 @@ void DXCore::SetBuildAssetPaths() {
 	assetPathStrings[10] = "..\\..\\..\\Assets\\PBR\\Normals\\";
 	assetPathStrings[11] = "..\\..\\..\\Assets\\PBR\\Metalness\\";
 	assetPathStrings[12] = "..\\..\\..\\Assets\\PBR\\Roughness\\";
+	assetPathStrings[13] = "..\\..\\..\\Assets\\Shaders\\";
 }
 
 void DXCore::SetVSAssetPaths() {
@@ -454,6 +455,7 @@ void DXCore::SetVSAssetPaths() {
 	assetPathStrings[10] = "..\\Assets\\PBR\\Normals\\";
 	assetPathStrings[11] = "..\\Assets\\PBR\\Metalness\\";
 	assetPathStrings[12] = "..\\Assets\\PBR\\Roughness\\";
+	assetPathStrings[13] = "..\\Assets\\Shaders\\";
 }
 
 std::string DXCore::GetAssetPathString(int index) {

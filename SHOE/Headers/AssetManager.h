@@ -13,6 +13,9 @@
 // Categories:
 #define ENTITIES "en"
 #define COMPONENTS "cm"
+#define VERTEX_SHADERS "vS"
+#define PIXEL_SHADERS "pS"
+#define COMPUTE_SHADERS "cS"
 
 // Entities:
 #define ENTITY_NAME "n"
@@ -43,8 +46,20 @@
 #define MESH_FILENAME_KEY "mFK"
 
 // Material Data:
-
 #define MAT_UV_TILING "aUT"
+
+// Generic Shader Data:
+#define SHADER_NAME "sN"
+#define SHADER_FILE_PATH "sK"
+
+// Vertex Shader Data:
+#define VERTEX_SHADER_OBJECT "vSO"
+
+// Pixel Shader Data:
+#define PIXEL_SHADER_OBJECT "pSO"
+
+// Compute Shader DAta:
+#define COMPUTE_SHADER_OBJECT "cSO"
 
 #pragma endregion
 
@@ -251,9 +266,9 @@ public:
 	std::shared_ptr<GameEntity> CreateGameEntity(std::string name = "GameEntity");
 	std::shared_ptr<GameEntity> CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name = "GameEntity");
 	std::shared_ptr<Sky> CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, std::string name);
-	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::wstring nameToLoad);
-	std::shared_ptr<SimplePixelShader> CreatePixelShader(std::string id, std::wstring nameToLoad);
-	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::wstring nameToLoad);
+	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::string nameToLoad);
+	std::shared_ptr<SimplePixelShader> CreatePixelShader(std::string id, std::string nameToLoad);
+	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::string nameToLoad);
 	std::shared_ptr<Mesh> CreateMesh(std::string id, std::string nameToLoad);
 	std::shared_ptr<Camera> CreateCamera(std::string id, DirectX::XMFLOAT3 pos, float aspectRatio, int type);
 	std::shared_ptr<Light> CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 direction, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
@@ -361,7 +376,8 @@ public:
 	std::shared_ptr<GameEntity> GetGameEntityByID(int id);
 	std::shared_ptr<Sky> GetSkyAtID(int id);
 
-	inline std::wstring ConvertToWide(const std::string& as);
+	// Moved to simpleshader for global use
+	//inline std::wstring ConvertToWide(const std::string& as);
 
 	std::shared_ptr<Sky> currentSky;
 };
