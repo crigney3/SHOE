@@ -1863,7 +1863,8 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(dxInstance->GetFullPathTo(assets + subfolderPath))) {
 			textures.push_back(nullptr);
 			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
-			std::wstring path = ISimpleShader::ConvertToWide(p.path().string().c_str());
+			std::wstring path = L"";
+			ISimpleShader::ConvertToWide(p.path().string().c_str(), path);
 
 			CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), (ID3D11Resource**)textures[i].GetAddressOf(), nullptr);
 

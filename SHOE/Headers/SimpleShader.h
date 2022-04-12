@@ -127,7 +127,7 @@ public:
 	static bool ReportErrors;
 	static bool ReportWarnings;
 
-	static inline wchar_t* ConvertToWide(const std::string& as);
+	static inline HRESULT ConvertToWide(const std::string& as, OUT std::wstring& cs);
 
 protected:
 

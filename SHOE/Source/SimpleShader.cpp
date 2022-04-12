@@ -89,11 +89,11 @@ void ISimpleShader::CleanUp()
 bool ISimpleShader::LoadShaderFile(std::string shaderFile)
 {
 	// Convert string to wide
-	// This leaks lotsa memory, because strings are dumb
-	LPCWSTR wToLoad = ConvertToWide(shaderFile);
+	std::wstring wToLoad = L"";
+	ConvertToWide(shaderFile, wToLoad);
 
 	// Load the shader to a blob and ensure it worked
-	HRESULT hr = D3DReadFileToBlob(wToLoad, shaderBlob.GetAddressOf());
+	HRESULT hr = D3DReadFileToBlob(wToLoad.c_str(), shaderBlob.GetAddressOf());
 	if (hr != S_OK)
 	{
 		if (ReportErrors)
@@ -103,12 +103,8 @@ bool ISimpleShader::LoadShaderFile(std::string shaderFile)
 			LogError("'. Ensure this file exists and is spelled correctly.\n");
 		}
 
-		delete[] wToLoad;
-
 		return false;
 	}
-
-	delete[] wToLoad;
 
 	// Create the shader - Calls an overloaded version of this abstract
 	// method in the appropriate child class
@@ -1993,9 +1989,17 @@ int SimpleComputeShader::GetUnorderedAccessViewIndex(std::string name)
 	return result->second;
 }
 
-inline wchar_t* ISimpleShader::ConvertToWide(const std::string& as)
+inline HRESULT ISimpleShader::ConvertToWide(const std::string& as, std::wstring& cs)
 {
-	wchar_t* buf = new wchar_t[as.size() * 2 + 2];
-	swprintf_s(buf, as.size() * 2 + 2, L"%S", as.c_str());
-	return buf;
+	HRESULT hr;
+	try {
+		wchar_t* buf = new wchar_t[as.size() * 2 + 2];
+		swprintf_s(buf, as.size() * 2 + 2, L"%S", as.c_str());
+		cs = buf;
+		delete[] buf;
+		return 0;
+	}
+	catch (...) {
+		return 1;
+	}
 }
