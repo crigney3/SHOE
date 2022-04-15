@@ -47,6 +47,35 @@
 
 // Material Data:
 #define MAT_UV_TILING "aUT"
+#define MAT_NAME "aN"
+#define MAT_ENABLED "aE"
+#define MAT_IS_TRANSPARENT "aIT"
+#define MAT_IS_REFRACTIVE "aIR"
+#define MAT_INDEX_OF_REFRACTION "aOR"
+#define MAT_REFRACTION_SCALE "aRS"
+#define MAT_COLOR_TINT "aCT"
+#define MAT_PIXEL_SHADER "aPS"
+#define MAT_REFRACTION_PIXEL_SHADER "aRS"
+#define MAT_VERTEX_SHADER "aVS"
+#define MAT_TEXTURE_OR_ALBEDO_MAP "aAM"
+#define MAT_NORMAL_MAP "aNM"
+#define MAT_METAL_MAP "aMM"
+#define MAT_ROUGNESS_MAP "aRM"
+#define MAT_TEXTURE_SAMPLER_STATE "aTS"
+#define MAT_CLAMP_SAMPLER_STATE "aCS"
+
+// Material data subsection - 
+// Sampler description data:
+#define SAMPLER_ADDRESS_U "sAU"
+#define SAMPLER_ADDRESS_V "sAV"
+#define SAMPLER_ADDRESS_W "sAW"
+#define SAMPLER_BORDER_COLOR "sBC"
+#define SAMPLER_COMPARISON_FUNCTION "sCF"
+#define SAMPLER_FILTER "sF"
+#define SAMPLER_MAX_ANISOTROPY "sMA"
+#define SAMPLER_MAX_LOD "sML"
+#define SAMPLER_MIN_LOD "sIL"
+#define SAMPLER_MIP_LOD_BIAS "sPB"
 
 // Generic Shader Data:
 #define SHADER_NAME "sN"

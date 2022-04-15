@@ -145,7 +145,7 @@ void AssetManager::LoadScene(FILE* file) {
 
 void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 	try {
-		char cbuf[2048];
+		char cbuf[4096];
 		rapidjson::MemoryPoolAllocator<> allocator(cbuf, sizeof(cbuf));
 
 		rapidjson::Document sceneDocToSave(&allocator, 256);
@@ -249,58 +249,148 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 
 					// Mesh Renderers are really just storage for a Mesh
 					// and a Material, so store those in an object
-					rapidjson::Value meshValue(rapidjson::kObjectType);
-					std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
 
-					// Simple types first
-					meshValue.AddMember(MESH_INDEX_COUNT, mesh->GetIndexCount(), allocator);
-					meshValue.AddMember(MESH_MATERIAL_INDEX, mesh->GetMaterialIndex(), allocator);
-					meshValue.AddMember(MESH_ENABLED, mesh->GetEnableDisable(), allocator);
-					meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, mesh->GetDepthPrePass(), allocator);
+					{
+						// Mesh
+						rapidjson::Value meshValue(rapidjson::kObjectType);
+						std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
 
-					// Strings
-					rapidjson::Value meshName;
-					meshName.SetString(mesh->GetName().c_str(), allocator);
-					meshValue.AddMember(MESH_NAME, meshName, allocator);
+						// Simple types first
+						meshValue.AddMember(MESH_INDEX_COUNT, mesh->GetIndexCount(), allocator);
+						meshValue.AddMember(MESH_MATERIAL_INDEX, mesh->GetMaterialIndex(), allocator);
+						meshValue.AddMember(MESH_ENABLED, mesh->GetEnableDisable(), allocator);
+						meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, mesh->GetDepthPrePass(), allocator);
 
-					// Complex data - filename string key
-					rapidjson::Value fileKeyValue;
-					fileKeyValue.SetString(mesh->GetFileNameKey().c_str(), allocator);
-					//Microsoft::WRL::ComPtr<ID3D11Buffer> vBuf = mesh->GetVertexBuffer();
-					//Microsoft::WRL::ComPtr<ID3D11Buffer> vBufCopy;
+						// Strings
+						rapidjson::Value meshName;
+						meshName.SetString(mesh->GetName().c_str(), allocator);
+						meshValue.AddMember(MESH_NAME, meshName, allocator);
 
-					//D3D11_BUFFER_DESC vbd;
-					//vBuf->GetDesc(&vbd);
-					//vbd.Usage = D3D11_USAGE_STAGING;
-					//vbd.BindFlags = 0;
-					//vbd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-					//const size_t vBufSize = sizeof(vbd.ByteWidth);
+						// Complex data - filename string key
+						rapidjson::Value fileKeyValue;
+						fileKeyValue.SetString(mesh->GetFileNameKey().c_str(), allocator);
 
-					//device->CreateBuffer(&vbd, nullptr, vBufCopy.GetAddressOf());
+						meshValue.AddMember(MESH_FILENAME_KEY, fileKeyValue, allocator);
 
-					//context->CopyResource(vBufCopy.Get(), vBuf.Get());
+						coValue.AddMember(MESH_OBJECT, meshValue, allocator);
+					}
 
-					//float vertices[vBufSize];
-					//context->Map(vBufCopy.Get(), 0, (D3D11_MAP)1, 0, NULL);
-					//memcpy(vertices, vBufCopy.Get(), vBufSize);
-					//context->Unmap(vBufCopy.Get(), 0);
+					{
+						// Material
+						rapidjson::Value matValue(rapidjson::kObjectType);
+						std::shared_ptr<Material> mat = meshRenderer->GetMaterial();
 
-					//for (auto vb : vertices) {
-					//	// Need offset
-					//	vBufferValue.PushBack(vb, allocator);
-					//}
+						// Simple types first
+						matValue.AddMember(MAT_UV_TILING, mat->GetTiling(), allocator);
+						matValue.AddMember(MAT_ENABLED, mat->GetEnableDisable(), allocator);
+						matValue.AddMember(MAT_IS_TRANSPARENT, mat->GetTransparent(), allocator);
+						matValue.AddMember(MAT_IS_REFRACTIVE, mat->GetRefractive(), allocator);
+						matValue.AddMember(MAT_INDEX_OF_REFRACTION, mat->GetIndexOfRefraction(), allocator);
+						matValue.AddMember(MAT_REFRACTION_SCALE, mat->GetRefractionScale(), allocator);
 
-					meshValue.AddMember(MESH_FILENAME_KEY, fileKeyValue, allocator);
+						// String types
+						rapidjson::Value matName;
+						rapidjson::Value pixShader;
+						rapidjson::Value vertShader;
+						rapidjson::Value refractivePixShader;
 
-					coValue.AddMember(MESH_OBJECT, meshValue, allocator);
+						matName.SetString(mat->GetName().c_str(), allocator);
+						pixShader.SetString(mat->GetPixShader()->GetFileNameKey().c_str(), allocator);
+						vertShader.SetString(mat->GetVertShader()->GetFileNameKey().c_str(), allocator);
 
-					rapidjson::Value matValue(rapidjson::kObjectType);
-					std::shared_ptr<Material> mat = meshRenderer->GetMaterial();
+						matValue.AddMember(MAT_NAME, matName, allocator);
+						matValue.AddMember(MAT_PIXEL_SHADER, pixShader, allocator);
+						matValue.AddMember(MAT_VERTEX_SHADER, vertShader, allocator);
 
-					// Simple types first
-					matValue.AddMember(MAT_UV_TILING, mat->GetTiling(), allocator);
+						if (mat->GetRefractive()) {
+							refractivePixShader.SetString(mat->GetRefractivePixelShader()->GetFileNameKey().c_str(), allocator);
+							matValue.AddMember(MAT_REFRACTION_PIXEL_SHADER, refractivePixShader, allocator);
+						}
 
-					coValue.AddMember(MATERIAL_OBJECT, matValue, allocator);
+						// Array and Color types
+						rapidjson::Value colorTintValue(rapidjson::kArrayType);
+
+						colorTintValue.PushBack(mat->GetTint().x, allocator);
+						colorTintValue.PushBack(mat->GetTint().y, allocator);
+						colorTintValue.PushBack(mat->GetTint().z, allocator);
+						colorTintValue.PushBack(mat->GetTint().w, allocator);
+
+						matValue.AddMember(MAT_COLOR_TINT, colorTintValue, allocator);
+
+						// Complex types - Sampler States
+						// Need to read the descriptions for any important values and 
+						// store those values
+						// Future optimization - If these are 0, don't store,
+						// and in Load(), default all of these to 0 if not found
+						{
+							// Main Texture Sampler
+							rapidjson::Value sampleState(rapidjson::kObjectType);
+
+							D3D11_SAMPLER_DESC texSamplerDesc;
+							mat->GetSamplerState()->GetDesc(&texSamplerDesc);
+
+							// Read each value of the description and add it to the
+							// JSON object
+							sampleState.AddMember(SAMPLER_ADDRESS_U, texSamplerDesc.AddressU, allocator);
+							sampleState.AddMember(SAMPLER_ADDRESS_V, texSamplerDesc.AddressV, allocator);
+							sampleState.AddMember(SAMPLER_ADDRESS_W, texSamplerDesc.AddressW, allocator);
+							sampleState.AddMember(SAMPLER_COMPARISON_FUNCTION, texSamplerDesc.ComparisonFunc, allocator);
+							sampleState.AddMember(SAMPLER_FILTER, texSamplerDesc.Filter, allocator);
+							sampleState.AddMember(SAMPLER_MAX_ANISOTROPY, texSamplerDesc.MaxAnisotropy, allocator);
+							sampleState.AddMember(SAMPLER_MAX_LOD, texSamplerDesc.MaxLOD, allocator);
+							sampleState.AddMember(SAMPLER_MIN_LOD, texSamplerDesc.MinLOD, allocator);
+							sampleState.AddMember(SAMPLER_MIP_LOD_BIAS, texSamplerDesc.MipLODBias, allocator);
+
+							// Some of these are complex types
+							rapidjson::Value borderColorValue(rapidjson::kArrayType);
+
+							borderColorValue.PushBack(texSamplerDesc.BorderColor[0], allocator);
+							borderColorValue.PushBack(texSamplerDesc.BorderColor[1], allocator);
+							borderColorValue.PushBack(texSamplerDesc.BorderColor[2], allocator);
+							borderColorValue.PushBack(texSamplerDesc.BorderColor[3], allocator);
+
+							sampleState.AddMember(SAMPLER_BORDER_COLOR, borderColorValue, allocator);
+
+							// Add all that to the material
+							matValue.AddMember(MAT_TEXTURE_SAMPLER_STATE, sampleState, allocator);
+						}
+
+						{
+							// Clamp Texture Sampler
+							rapidjson::Value clampSampleState(rapidjson::kObjectType);
+
+							D3D11_SAMPLER_DESC texSamplerDesc;
+							mat->GetClampSamplerState()->GetDesc(&texSamplerDesc);
+
+							// Read each value of the description and add it to the
+							// JSON object
+							clampSampleState.AddMember(SAMPLER_ADDRESS_U, texSamplerDesc.AddressU, allocator);
+							clampSampleState.AddMember(SAMPLER_ADDRESS_V, texSamplerDesc.AddressV, allocator);
+							clampSampleState.AddMember(SAMPLER_ADDRESS_W, texSamplerDesc.AddressW, allocator);
+							clampSampleState.AddMember(SAMPLER_COMPARISON_FUNCTION, texSamplerDesc.ComparisonFunc, allocator);
+							clampSampleState.AddMember(SAMPLER_FILTER, texSamplerDesc.Filter, allocator);
+							clampSampleState.AddMember(SAMPLER_MAX_ANISOTROPY, texSamplerDesc.MaxAnisotropy, allocator);
+							clampSampleState.AddMember(SAMPLER_MAX_LOD, texSamplerDesc.MaxLOD, allocator);
+							clampSampleState.AddMember(SAMPLER_MIN_LOD, texSamplerDesc.MinLOD, allocator);
+							clampSampleState.AddMember(SAMPLER_MIP_LOD_BIAS, texSamplerDesc.MipLODBias, allocator);
+
+							// Some of these are complex types
+							rapidjson::Value borderColorValue(rapidjson::kArrayType);
+
+							borderColorValue.PushBack(texSamplerDesc.BorderColor[0], allocator);
+							borderColorValue.PushBack(texSamplerDesc.BorderColor[1], allocator);
+							borderColorValue.PushBack(texSamplerDesc.BorderColor[2], allocator);
+							borderColorValue.PushBack(texSamplerDesc.BorderColor[3], allocator);
+
+							clampSampleState.AddMember(SAMPLER_BORDER_COLOR, borderColorValue, allocator);
+
+							// Add all that to the material
+							matValue.AddMember(MAT_TEXTURE_SAMPLER_STATE, clampSampleState, allocator);
+						}
+
+						// Add everything to the component
+						coValue.AddMember(MATERIAL_OBJECT, matValue, allocator);
+					}
 				}
 
 				// Is it a Transform?
@@ -403,7 +493,9 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 		fclose(file);
 	}
 	catch (...) {
-
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to save scene with error:\n %s \n", std::current_exception());
+#endif
 	}
 }
 

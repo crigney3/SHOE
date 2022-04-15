@@ -741,9 +741,9 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	context->OMSetRenderTargets(4, renderTargets, depthBufferDSV.Get());
 
 	// Change to write depths beforehand - for future
-	// RenderDepths(mainCamera, MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS);
+	//RenderDepths(mainCamera, MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS);
 
-	// context->OMSetDepthStencilState(prePassDepthState.Get(), 0);
+	 //context->OMSetDepthStencilState(prePassDepthState.Get(), 0);
 
 	// Per Frame data can be set out here for optimization
 	// This section could be improved, see Chris's Demos and
