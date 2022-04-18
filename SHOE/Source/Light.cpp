@@ -72,6 +72,16 @@ void Light::OnDestroy()
 	lightArrayDirty = true;
 }
 
+void Light::OnMove(DirectX::XMFLOAT3 delta)
+{
+	lightArrayDirty = true;
+}
+
+void Light::OnRotate(DirectX::XMFLOAT3 delta)
+{
+	lightArrayDirty = true;
+}
+
 float Light::GetType()
 {
 	return type;

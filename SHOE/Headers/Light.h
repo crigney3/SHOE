@@ -36,6 +36,8 @@ public:
 
 	void Start() override;
 	void OnDestroy() override;
+	void OnMove(DirectX::XMFLOAT3 delta) override;
+	void OnRotate(DirectX::XMFLOAT3 delta) override;
 
 	float GetType();
 	void SetType(float type);

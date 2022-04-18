@@ -8,10 +8,13 @@ void GameEntity::UpdateHierarchyIsEnabled(bool active, bool head)
 {
 	if (head || hierarchyIsEnabled != active) {
 		if(!head) hierarchyIsEnabled = active;
-		if (HasLightAttached()) Light::MarkDirty();
+		OnEnabledChanged(active);
 		for (std::shared_ptr<ComponentPacket> packet : componentList)
 		{
-			packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
+			if (packet->component->IsLocallyEnabled() != GetEnableDisable()) {
+				packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
+				packet->component->OnEnabledChanged(packet->component->IsEnabled());
+			}
 		}
 		for (std::shared_ptr<GameEntity> children : transform->GetChildrenAsGameEntities())
 		{
@@ -77,6 +80,46 @@ void GameEntity::OnTriggerEnter(std::shared_ptr<GameEntity> other)
 		for (std::shared_ptr<ComponentPacket> packet : componentList) {
 			if (packet->component->IsEnabled())
 				packet->component->OnTriggerEnter(other);
+		}
+	}
+}
+
+void GameEntity::OnMove(DirectX::XMFLOAT3 delta)
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->OnMove(delta);
+		}
+	}
+}
+
+void GameEntity::OnRotate(DirectX::XMFLOAT3 delta)
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->OnRotate(delta);
+		}
+	}
+}
+
+void GameEntity::OnScale(DirectX::XMFLOAT3 delta)
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->OnScale(delta);
+		}
+	}
+}
+
+void GameEntity::OnEnabledChanged(bool newState)
+{
+	if (enabled) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsLocallyEnabled())
+				packet->component->OnEnabledChanged(newState);
 		}
 	}
 }
