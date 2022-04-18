@@ -28,8 +28,12 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 
 	this->assetManagerLoadState = AMLoadState::INITIALIZING;
 
+	textureSampleStates = std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>>();
+
 	// This must occur before the loading screen starts
 	InitializeFonts();
+
+	InitializeTextureSampleStates();
 
 	// The rest signal the loading screen each time an object loads
 	InitializeShaders();
@@ -318,74 +322,21 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 						matValue.AddMember(MAT_COLOR_TINT, colorTintValue, allocator);
 
 						// Complex types - Sampler States
-						// Need to read the descriptions for any important values and 
-						// store those values
-						// Future optimization - If these are 0, don't store,
-						// and in Load(), default all of these to 0 if not found
-						{
-							// Main Texture Sampler
-							rapidjson::Value sampleState(rapidjson::kObjectType);
-
-							D3D11_SAMPLER_DESC texSamplerDesc;
-							mat->GetSamplerState()->GetDesc(&texSamplerDesc);
-
-							// Read each value of the description and add it to the
-							// JSON object
-							sampleState.AddMember(SAMPLER_ADDRESS_U, texSamplerDesc.AddressU, allocator);
-							sampleState.AddMember(SAMPLER_ADDRESS_V, texSamplerDesc.AddressV, allocator);
-							sampleState.AddMember(SAMPLER_ADDRESS_W, texSamplerDesc.AddressW, allocator);
-							sampleState.AddMember(SAMPLER_COMPARISON_FUNCTION, texSamplerDesc.ComparisonFunc, allocator);
-							sampleState.AddMember(SAMPLER_FILTER, texSamplerDesc.Filter, allocator);
-							sampleState.AddMember(SAMPLER_MAX_ANISOTROPY, texSamplerDesc.MaxAnisotropy, allocator);
-							sampleState.AddMember(SAMPLER_MAX_LOD, texSamplerDesc.MaxLOD, allocator);
-							sampleState.AddMember(SAMPLER_MIN_LOD, texSamplerDesc.MinLOD, allocator);
-							sampleState.AddMember(SAMPLER_MIP_LOD_BIAS, texSamplerDesc.MipLODBias, allocator);
-
-							// Some of these are complex types
-							rapidjson::Value borderColorValue(rapidjson::kArrayType);
-
-							borderColorValue.PushBack(texSamplerDesc.BorderColor[0], allocator);
-							borderColorValue.PushBack(texSamplerDesc.BorderColor[1], allocator);
-							borderColorValue.PushBack(texSamplerDesc.BorderColor[2], allocator);
-							borderColorValue.PushBack(texSamplerDesc.BorderColor[3], allocator);
-
-							sampleState.AddMember(SAMPLER_BORDER_COLOR, borderColorValue, allocator);
-
-							// Add all that to the material
-							matValue.AddMember(MAT_TEXTURE_SAMPLER_STATE, sampleState, allocator);
+						// Store the index of the state being used.
+						// States are stored in the scene file.
+						// Index is determined by a pointer-match search
+						for (int i = 0; i < textureSampleStates.size(); i++) {
+							if (mat->GetSamplerState() == textureSampleStates[i]) {
+								matValue.AddMember(MAT_TEXTURE_SAMPLER_STATE, i, allocator);
+								break;
+							}
 						}
 
-						{
-							// Clamp Texture Sampler
-							rapidjson::Value clampSampleState(rapidjson::kObjectType);
-
-							D3D11_SAMPLER_DESC texSamplerDesc;
-							mat->GetClampSamplerState()->GetDesc(&texSamplerDesc);
-
-							// Read each value of the description and add it to the
-							// JSON object
-							clampSampleState.AddMember(SAMPLER_ADDRESS_U, texSamplerDesc.AddressU, allocator);
-							clampSampleState.AddMember(SAMPLER_ADDRESS_V, texSamplerDesc.AddressV, allocator);
-							clampSampleState.AddMember(SAMPLER_ADDRESS_W, texSamplerDesc.AddressW, allocator);
-							clampSampleState.AddMember(SAMPLER_COMPARISON_FUNCTION, texSamplerDesc.ComparisonFunc, allocator);
-							clampSampleState.AddMember(SAMPLER_FILTER, texSamplerDesc.Filter, allocator);
-							clampSampleState.AddMember(SAMPLER_MAX_ANISOTROPY, texSamplerDesc.MaxAnisotropy, allocator);
-							clampSampleState.AddMember(SAMPLER_MAX_LOD, texSamplerDesc.MaxLOD, allocator);
-							clampSampleState.AddMember(SAMPLER_MIN_LOD, texSamplerDesc.MinLOD, allocator);
-							clampSampleState.AddMember(SAMPLER_MIP_LOD_BIAS, texSamplerDesc.MipLODBias, allocator);
-
-							// Some of these are complex types
-							rapidjson::Value borderColorValue(rapidjson::kArrayType);
-
-							borderColorValue.PushBack(texSamplerDesc.BorderColor[0], allocator);
-							borderColorValue.PushBack(texSamplerDesc.BorderColor[1], allocator);
-							borderColorValue.PushBack(texSamplerDesc.BorderColor[2], allocator);
-							borderColorValue.PushBack(texSamplerDesc.BorderColor[3], allocator);
-
-							clampSampleState.AddMember(SAMPLER_BORDER_COLOR, borderColorValue, allocator);
-
-							// Add all that to the material
-							matValue.AddMember(MAT_TEXTURE_SAMPLER_STATE, clampSampleState, allocator);
+						for (int i = 0; i < textureSampleStates.size(); i++) {
+							if (mat->GetClampSamplerState() == textureSampleStates[i]) {
+								matValue.AddMember(MAT_CLAMP_SAMPLER_STATE, i, allocator);
+								break;
+							}
 						}
 
 						// Add everything to the component
@@ -397,10 +348,33 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 				if (std::dynamic_pointer_cast<Transform>(co) != nullptr) {
 					componentType.SetString("Transform");
 					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+					std::shared_ptr<Transform> transform = std::dynamic_pointer_cast<Transform>(co);
 
 					// Treat FLOATX as float array[x]
-					// rapidjson::Value globalWorldPos(rapidjson::kArrayType);
+					rapidjson::Value pos(rapidjson::kArrayType);
+					rapidjson::Value rot(rapidjson::kArrayType);
+					rapidjson::Value scale(rapidjson::kArrayType);
 
+					// I have no idea how to serialize this
+					// I'd need to essentially create a unique id system - GUIDs?
+					rapidjson::Value parent;
+					rapidjson::Value children;
+
+					pos.PushBack(transform->GetLocalPosition().x, allocator);
+					pos.PushBack(transform->GetLocalPosition().y, allocator);
+					pos.PushBack(transform->GetLocalPosition().z, allocator);
+
+					scale.PushBack(transform->GetLocalPosition().x, allocator);
+					scale.PushBack(transform->GetLocalPosition().y, allocator);
+					scale.PushBack(transform->GetLocalPosition().z, allocator);
+
+					rot.PushBack(transform->GetLocalPitchYawRoll().x, allocator);
+					rot.PushBack(transform->GetLocalPitchYawRoll().y, allocator);
+					rot.PushBack(transform->GetLocalPitchYawRoll().z, allocator);
+
+					coValue.AddMember(TRANSFORM_LOCAL_POSITION, pos, allocator);
+					coValue.AddMember(TRANSFORM_LOCAL_SCALE, scale, allocator);
+					coValue.AddMember(TRANSFORM_LOCAL_ROTATION, rot, allocator);
 				}
 
 				geComponents.PushBack(coValue, allocator);
@@ -416,11 +390,55 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 		// Add the game entity array to the doc
 		sceneDocToSave.AddMember(ENTITIES, gameEntityBlock, allocator);
 
-		//rapidjson::Value fontBlock(rapidjson::kArrayType);
-		/*for (auto font : globalFonts) {
-			font.second->File
-			fontBlock.PushBack(rapidjson::Value().SetString(), allocator);
-		}*/
+		rapidjson::Value fontBlock(rapidjson::kArrayType);
+		for (auto font : globalFonts) {
+			rapidjson::Value fontObject(rapidjson::kObjectType);
+
+			fontObject.AddMember(FONT_FILENAME_KEY, rapidjson::Value().SetString(font->fileNameKey.c_str(), allocator), allocator);
+			fontObject.AddMember(FONT_NAME, rapidjson::Value().SetString(font->name.c_str(), allocator), allocator);
+
+			fontBlock.PushBack(fontObject, allocator);
+		}
+
+		sceneDocToSave.AddMember(FONTS, fontBlock, allocator);
+
+		// Save all texture sample states
+		rapidjson::Value texSampleStateBlock(rapidjson::kArrayType);
+		for (auto tss : textureSampleStates) {
+			// Future optimization - If these are 0, don't store,
+			// and in Load(), default all of these to 0 if not found
+			rapidjson::Value sampleState(rapidjson::kObjectType);
+
+			D3D11_SAMPLER_DESC texSamplerDesc;
+			tss->GetDesc(&texSamplerDesc);
+
+			// Read each value of the description and add it to the
+			// JSON object
+			sampleState.AddMember(SAMPLER_ADDRESS_U, texSamplerDesc.AddressU, allocator);
+			sampleState.AddMember(SAMPLER_ADDRESS_V, texSamplerDesc.AddressV, allocator);
+			sampleState.AddMember(SAMPLER_ADDRESS_W, texSamplerDesc.AddressW, allocator);
+			sampleState.AddMember(SAMPLER_COMPARISON_FUNCTION, texSamplerDesc.ComparisonFunc, allocator);
+			sampleState.AddMember(SAMPLER_FILTER, texSamplerDesc.Filter, allocator);
+			sampleState.AddMember(SAMPLER_MAX_ANISOTROPY, texSamplerDesc.MaxAnisotropy, allocator);
+			sampleState.AddMember(SAMPLER_MAX_LOD, texSamplerDesc.MaxLOD, allocator);
+			sampleState.AddMember(SAMPLER_MIN_LOD, texSamplerDesc.MinLOD, allocator);
+			sampleState.AddMember(SAMPLER_MIP_LOD_BIAS, texSamplerDesc.MipLODBias, allocator);
+
+			// Some of these are complex types
+			rapidjson::Value borderColorValue(rapidjson::kArrayType);
+
+			borderColorValue.PushBack(texSamplerDesc.BorderColor[0], allocator);
+			borderColorValue.PushBack(texSamplerDesc.BorderColor[1], allocator);
+			borderColorValue.PushBack(texSamplerDesc.BorderColor[2], allocator);
+			borderColorValue.PushBack(texSamplerDesc.BorderColor[3], allocator);
+
+			sampleState.AddMember(SAMPLER_BORDER_COLOR, borderColorValue, allocator);
+
+			// Add all that to array
+			texSampleStateBlock.PushBack(sampleState, allocator);
+		}
+
+		sceneDocToSave.AddMember(TEXTURE_SAMPLE_STATES, texSampleStateBlock, allocator);
 
 		// Save all shaders
 		rapidjson::Value vertexShaderBlock(rapidjson::kArrayType);
@@ -737,32 +755,6 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 		std::shared_ptr<Material> newMat;
 		std::wstring assetPathString;
 
-		//Create sampler state
-		D3D11_SAMPLER_DESC textureDesc;
-		textureDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-		textureDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-		textureDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-		textureDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-		textureDesc.MaxAnisotropy = 10;
-		textureDesc.MaxLOD = D3D11_FLOAT32_MAX;
-		textureDesc.MipLODBias = 0;
-		textureDesc.MinLOD = 0;
-
-		device->CreateSamplerState(&textureDesc, &textureState);
-
-		//Create clamp sampler state
-		D3D11_SAMPLER_DESC clampDesc;
-		clampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-		clampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-		clampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-		clampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-		clampDesc.MaxAnisotropy = 10;
-		clampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-		clampDesc.MipLODBias = 0;
-		clampDesc.MinLOD = 0;
-
-		device->CreateSamplerState(&clampDesc, &clampState);
-
 		std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
 		std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
 
@@ -1019,13 +1011,40 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 	return newEmitter;
 }
 
-std::shared_ptr<SpriteFont> AssetManager::CreateSHOEFont(std::string name, std::wstring filePath, bool preInitializing) {
+std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::string filePath, bool preInitializing) {
 	try {
-		std::wstring assetPath = L"../../../Assets/Fonts/";
+		std::string assetPath;
 
-		std::shared_ptr<SpriteFont> newFont = std::make_shared<SpriteFont>(device.Get(), dxInstance->GetFullPathTo_Wide(assetPath + filePath).c_str());
+		assetPath = dxInstance->GetAssetPathString(ASSET_FONT_PATH);
+		std::string namePath = assetPath + filePath;
+		std::wstring wPathBuf;
+		char pathBuf[1024];
 
-		globalFonts.emplace(name, newFont);
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		// Serialize the filename if it's in the right folder
+		std::string baseFilename = "";
+		size_t dirPos = filePath.find("Assets\\Fonts");
+		if (dirPos != std::string::npos) {
+			// File is in the assets folder
+			baseFilename = "t";
+			baseFilename += filePath.substr(dirPos + sizeof("Assets\\Fonts"));
+		}
+		else {
+			baseFilename = "f";
+			baseFilename += filePath;
+		}
+
+		ISimpleShader::ConvertToWide(pathBuf, wPathBuf);
+
+		std::shared_ptr<DirectX::SpriteFont> sFont = std::make_shared<DirectX::SpriteFont>(device.Get(), wPathBuf.c_str());
+
+		std::shared_ptr<SHOEFont> newFont = std::make_shared<SHOEFont>();
+		newFont->fileNameKey = baseFilename;
+		newFont->name = name;
+		newFont->spritefont = sFont;
+
+		globalFonts.push_back(newFont);
 
 		// If the loading screen fonts aren't loaded, don't trigger
 		// the loading screen.
@@ -1042,6 +1061,43 @@ std::shared_ptr<SpriteFont> AssetManager::CreateSHOEFont(std::string name, std::
 #pragma endregion
 
 #pragma region initAssets
+void AssetManager::InitializeTextureSampleStates() {
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> basicSampler;
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSampler;
+
+	//Create sampler state
+	D3D11_SAMPLER_DESC textureDesc;
+	textureDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	textureDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	textureDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	textureDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+	textureDesc.MaxAnisotropy = 10;
+	textureDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	textureDesc.MipLODBias = 0;
+	textureDesc.MinLOD = 0;
+
+	device->CreateSamplerState(&textureDesc, &basicSampler);
+
+	//Create clamp sampler state
+	D3D11_SAMPLER_DESC clampDesc;
+	clampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	clampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	clampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	clampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+	clampDesc.MaxAnisotropy = 10;
+	clampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	clampDesc.MipLODBias = 0;
+	clampDesc.MinLOD = 0;
+
+	device->CreateSamplerState(&clampDesc, &clampSampler);
+
+	textureSampleStates.push_back(basicSampler);
+	textureSampleStates.push_back(clampSampler);
+
+	textureState = textureSampleStates[0];
+	clampState = textureSampleStates[1];
+}
+
 void AssetManager::InitializeGameEntities() {
 	//Initializes default values for components
 	MeshRenderer::SetDefaults(GetMeshByName("Cube"), GetMaterialByName("largeCobbleMat"));
@@ -1518,18 +1574,18 @@ void AssetManager::InitializeAudio() {
 }
 
 void AssetManager::InitializeFonts() {
-	globalFonts = std::map<std::string, std::shared_ptr<DirectX::SpriteFont>>();
+	globalFonts = std::vector<std::shared_ptr<SHOEFont>>();
 
-	CreateSHOEFont("Roboto-Bold-72pt", L"RobotoCondensed-Bold-72pt.spritefont", true);
-	CreateSHOEFont("SmoochSans-Bold", L"SmoochSans-Bold.spritefont", true);
-	CreateSHOEFont("SmoochSans-Italic", L"SmoochSans-Italic.spritefont", true);
-	CreateSHOEFont("Arial", L"Arial.spritefont");
-	CreateSHOEFont("Roboto-Bold", L"RobotoCondensed-Bold.spritefont");
-	CreateSHOEFont("Roboto-BoldItalic", L"RobotoCondensed-BoldItalic.spritefont");
-	CreateSHOEFont("Roboto-Italic", L"RobotoCondensed-Italic.spritefont");
-	CreateSHOEFont("Roboto-Regular", L"RobotoCondensed-Regular.spritefont");
-	CreateSHOEFont("SmoochSans-BoldItalic", L"SmoochSans-BoldItalic.spritefont");
-	CreateSHOEFont("SmoochSans-Regular", L"SmoochSans-Regular.spritefont");
+	CreateSHOEFont("Roboto-Bold-72pt", "RobotoCondensed-Bold-72pt.spritefont", true);
+	CreateSHOEFont("SmoochSans-Bold", "SmoochSans-Bold.spritefont", true);
+	CreateSHOEFont("SmoochSans-Italic", "SmoochSans-Italic.spritefont", true);
+	CreateSHOEFont("Arial", "Arial.spritefont");
+	CreateSHOEFont("Roboto-Bold", "RobotoCondensed-Bold.spritefont");
+	CreateSHOEFont("Roboto-BoldItalic", "RobotoCondensed-BoldItalic.spritefont");
+	CreateSHOEFont("Roboto-Italic", "RobotoCondensed-Italic.spritefont");
+	CreateSHOEFont("Roboto-Regular", "RobotoCondensed-Regular.spritefont");
+	CreateSHOEFont("SmoochSans-BoldItalic", "SmoochSans-BoldItalic.spritefont");
+	CreateSHOEFont("SmoochSans-Regular", "SmoochSans-Regular.spritefont");
 }
 
 void AssetManager::InitializeIMGUI(HWND hwnd) {
@@ -2321,8 +2377,13 @@ std::shared_ptr<TerrainMats> AssetManager::GetTerrainMaterialByName(std::string 
 // Dict return by key
 //
 
-std::shared_ptr<SpriteFont> AssetManager::GetFontByName(std::string name) {
-	return globalFonts[name];
+std::shared_ptr<SHOEFont> AssetManager::GetFontByName(std::string name) {
+	for (int i = 0; i < globalFonts.size(); i++) {
+		if (globalFonts[i]->name == name) {
+			return globalFonts[i];
+		}
+	}
+	return nullptr;
 }
 
 // Unlikely to be implemented, see GetLightIdByName

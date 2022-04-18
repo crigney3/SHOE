@@ -16,6 +16,8 @@
 #define VERTEX_SHADERS "vS"
 #define PIXEL_SHADERS "pS"
 #define COMPUTE_SHADERS "cS"
+#define FONTS "fn"
+#define TEXTURE_SAMPLE_STATES "eS"
 
 // Entities:
 #define ENTITY_NAME "n"
@@ -77,6 +79,15 @@
 #define SAMPLER_MIN_LOD "sIL"
 #define SAMPLER_MIP_LOD_BIAS "sPB"
 
+// Font Data:
+#define FONT_FILENAME_KEY "fFK"
+#define FONT_NAME "fN"
+
+// Transform DatA:
+#define TRANSFORM_LOCAL_POSITION "tLP"
+#define TRANSFORM_LOCAL_SCALE "tLS"
+#define TRANSFORM_LOCAL_ROTATION "tLR"
+
 // Generic Shader Data:
 #define SHADER_NAME "sN"
 #define SHADER_FILE_PATH "sK"
@@ -114,7 +125,6 @@
 #include <mutex>
 #include <exception>
 #include "SpriteBatch.h"
-#include "SpriteFont.h"
 #include "CollisionManager.h"
 #include "rapidjson\document.h"
 #include "rapidjson\filereadstream.h"
@@ -193,6 +203,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
 
+	std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>> textureSampleStates;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState;
 
@@ -218,6 +229,7 @@ private:
 	std::shared_ptr<Mesh> ProcessComplexMesh(aiMesh* mesh, const aiScene* scene);
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::wstring textureNameToLoad, bool isMultiParticle);
 
+	void InitializeTextureSampleStates();
 	void InitializeMeshes();
 	void InitializeMaterials();
 	void InitializeShaders();
@@ -242,7 +254,7 @@ private:
 	std::vector<std::shared_ptr<GameEntity>> globalEntities;
 	std::vector<std::shared_ptr<TerrainMats>> globalTerrainMaterials;
 	std::vector<FMOD::Sound*> globalSounds;
-	std::map<std::string, std::shared_ptr<DirectX::SpriteFont>> globalFonts;
+	std::vector<std::shared_ptr<SHOEFont>> globalFonts;
 
 	std::condition_variable* threadNotifier;
 	std::mutex* threadLock;
@@ -320,7 +332,7 @@ public:
 												   bool isMultiParticle = false,
 												   bool additiveBlendState = true);
 	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode);
-	std::shared_ptr<DirectX::SpriteFont> CreateSHOEFont(std::string name, std::wstring filePath, bool preInitializing = false);
+	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false);
 
 	// Helper methods to add components to objects
 
@@ -366,7 +378,7 @@ public:
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
 	std::shared_ptr<TerrainMats> GetTerrainMaterialByName(std::string name);
 	FMOD::Sound* GetSoundByName();
-	std::shared_ptr<DirectX::SpriteFont> GetFontByName(std::string name);
+	std::shared_ptr<SHOEFont> GetFontByName(std::string name);
 
 	int GetGameEntityIDByName(std::string name);
 	int GetSkyIDByName(std::string name);
