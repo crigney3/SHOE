@@ -104,7 +104,7 @@ void Game::Init()
 	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
 #endif
 
-	mainCamera = globalAssets.GetCameraByName("mainCamera");
+	mainCamera = globalAssets.GetMainCamera();
 	mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
 	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
@@ -1073,8 +1073,6 @@ void Game::Draw(float deltaTime, float totalTime)
 	}
 
 	renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
-
-	//renderer->RenderDepths(mainCamera, MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS);
 
 	renderer->Draw(mainCamera, totalTime);
 }

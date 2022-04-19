@@ -495,6 +495,60 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 
 		sceneDocToSave.AddMember(COMPUTE_SHADERS, computeShaderBlock, allocator);
 
+		rapidjson::Value cameraBlock(rapidjson::kArrayType);
+		for (auto ca : globalCameras) {
+			rapidjson::Value caObject(rapidjson::kObjectType);
+			rapidjson::Value caName;
+
+			caObject.AddMember(CAMERA_NAME, caName.SetString(ca->GetName().c_str(), allocator), allocator);
+			caObject.AddMember(CAMERA_ASPECT_RATIO, ca->GetAspectRatio(), allocator);
+			caObject.AddMember(CAMERA_PROJECTION_MATRIX_TYPE, ca->GetProjectionMatrixType(), allocator);
+			caObject.AddMember(CAMERA_TAG, ca->GetTag(), allocator);
+			caObject.AddMember(CAMERA_LOOK_SPEED, ca->GetLookSpeed(), allocator);
+			caObject.AddMember(CAMERA_MOVE_SPEED, ca->GetMoveSpeed(), allocator);
+			caObject.AddMember(CAMERA_ENABLED, ca->GetEnableDisable(), allocator);
+			caObject.AddMember(CAMERA_NEAR_DISTANCE, ca->GetNearDist(), allocator);
+			caObject.AddMember(CAMERA_FAR_DISTANCE, ca->GetFarDist(), allocator);
+			caObject.AddMember(CAMERA_FIELD_OF_VIEW, ca->GetFOV(), allocator);
+
+			rapidjson::Value caTransform(rapidjson::kObjectType);
+			std::shared_ptr<Transform> transform = ca->GetTransform();
+			
+			{
+				// Treat FLOATX as float array[x]
+				rapidjson::Value pos(rapidjson::kArrayType);
+				rapidjson::Value rot(rapidjson::kArrayType);
+				rapidjson::Value scale(rapidjson::kArrayType);
+
+				// I have no idea how to serialize this
+				// I'd need to essentially create a unique id system - GUIDs?
+				rapidjson::Value parent;
+				rapidjson::Value children;
+
+				pos.PushBack(transform->GetLocalPosition().x, allocator);
+				pos.PushBack(transform->GetLocalPosition().y, allocator);
+				pos.PushBack(transform->GetLocalPosition().z, allocator);
+
+				scale.PushBack(transform->GetLocalPosition().x, allocator);
+				scale.PushBack(transform->GetLocalPosition().y, allocator);
+				scale.PushBack(transform->GetLocalPosition().z, allocator);
+
+				rot.PushBack(transform->GetLocalPitchYawRoll().x, allocator);
+				rot.PushBack(transform->GetLocalPitchYawRoll().y, allocator);
+				rot.PushBack(transform->GetLocalPitchYawRoll().z, allocator);
+
+				caTransform.AddMember(TRANSFORM_LOCAL_POSITION, pos, allocator);
+				caTransform.AddMember(TRANSFORM_LOCAL_SCALE, scale, allocator);
+				caTransform.AddMember(TRANSFORM_LOCAL_ROTATION, rot, allocator);
+			}
+
+			caObject.AddMember(CAMERA_TRANSFORM, caTransform, allocator);
+
+			cameraBlock.PushBack(caObject, allocator);
+		}
+
+		sceneDocToSave.AddMember(CAMERAS, cameraBlock, allocator);
+
 		// At the end of gathering data, write it all
 		// to the appropriate file
 		std::string fullPath = "../../../Assets/Scenes/" + filepath;
@@ -1464,9 +1518,10 @@ void AssetManager::InitializeCameras() {
 	globalCameras = std::vector<std::shared_ptr<Camera>>();
 
 	float aspectRatio = (float)(dxInstance->width / dxInstance->height);
-	CreateCamera("mainCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -20.0f), aspectRatio, 1);
-	CreateCamera("mainShadowCamera", DirectX::XMFLOAT3(0.0f, 10.0f, -20.0f), 1.0f, 0);
+	CreateCamera("mainCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -20.0f), aspectRatio, 1)->SetTag(CameraType::MAIN);
+	CreateCamera("mainShadowCamera", DirectX::XMFLOAT3(0.0f, 10.0f, -20.0f), 1.0f, 0)->SetTag(CameraType::MISC_SHADOW);
 	std::shared_ptr<Camera> fscTemp = CreateCamera("flashShadowCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -5.5f), 1.0f, 1);
+	fscTemp->SetTag(CameraType::MISC_SHADOW);
 	fscTemp->GetTransform()->SetRotation(0, 0, 0);
 	fscTemp->UpdateViewMatrix();
 }
@@ -1757,6 +1812,54 @@ std::shared_ptr<GameEntity> AssetManager::GetGameEntityByID(int id) {
 
 ComponentTypes AssetManager::GetAllCurrentComponentTypes() {
 	return this->allCurrentComponentTypes;
+}
+
+std::shared_ptr<Camera> AssetManager::GetMainCamera() {
+	for (auto ca : globalCameras) {
+		if (ca->GetTag() == CameraType::MAIN) {
+			return ca;
+		}
+	}
+	return nullptr;
+}
+
+std::shared_ptr<Camera> AssetManager::GetPlayCamera() {
+	for (auto ca : globalCameras) {
+		if (ca->GetTag() == CameraType::PLAY) {
+			return ca;
+		}
+	}
+	return nullptr;
+}
+
+std::vector<std::shared_ptr<Camera>> AssetManager::GetCamerasByTag(CameraType type) {
+	std::vector<std::shared_ptr<Camera>> cams;
+
+	for (auto ca : globalCameras) {
+		if (ca->GetTag() == type) {
+			cams.push_back(ca);
+		}
+	}
+
+	return cams;
+}
+
+/// <summary>
+/// Safely sets volatile camera tags such as MAIN and PLAY.
+/// If one of these is passed, whichever camera previously had the tag
+/// will be swapped to Misc.
+/// </summary>
+/// <param name="cam"></param>
+/// <param name="tag"></param>
+void AssetManager::SetCameraTag(std::shared_ptr<Camera> cam, CameraType tag) {
+	if (tag == CameraType::MAIN) {
+		GetMainCamera()->SetTag(CameraType::MISC);
+	}
+	else if (tag == CameraType::PLAY) {
+		GetPlayCamera()->SetTag(CameraType::MISC);
+	}
+
+	cam->SetTag(tag);
 }
 #pragma endregion
 

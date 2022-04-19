@@ -18,6 +18,7 @@
 #define COMPUTE_SHADERS "cS"
 #define FONTS "fn"
 #define TEXTURE_SAMPLE_STATES "eS"
+#define CAMERAS "ca"
 
 // Entities:
 #define ENTITY_NAME "n"
@@ -83,7 +84,7 @@
 #define FONT_FILENAME_KEY "fFK"
 #define FONT_NAME "fN"
 
-// Transform DatA:
+// Transform Data:
 #define TRANSFORM_LOCAL_POSITION "tLP"
 #define TRANSFORM_LOCAL_SCALE "tLS"
 #define TRANSFORM_LOCAL_ROTATION "tLR"
@@ -98,8 +99,21 @@
 // Pixel Shader Data:
 #define PIXEL_SHADER_OBJECT "pSO"
 
-// Compute Shader DAta:
+// Compute Shader Data:
 #define COMPUTE_SHADER_OBJECT "cSO"
+
+// Camera Data:
+#define CAMERA_NAME "cN"
+#define CAMERA_TRANSFORM "cT"
+#define CAMERA_ASPECT_RATIO "cAR"
+#define CAMERA_PROJECTION_MATRIX_TYPE "cPM"
+#define CAMERA_TAG "cG"
+#define CAMERA_LOOK_SPEED "cLS"
+#define CAMERA_MOVE_SPEED "cMS"
+#define CAMERA_ENABLED "cE"
+#define CAMERA_NEAR_DISTANCE "cND"
+#define CAMERA_FAR_DISTANCE "cFD"
+#define CAMERA_FIELD_OF_VIEW "cF"
 
 #pragma endregion
 
@@ -301,6 +315,12 @@ public:
 	std::string GetCurrentSceneName();
 
 	ComponentTypes GetAllCurrentComponentTypes();
+
+	// Camera Tag Functions
+	std::shared_ptr<Camera> GetMainCamera();
+	std::shared_ptr<Camera> GetPlayCamera();
+	std::vector<std::shared_ptr<Camera>> GetCamerasByTag(CameraType type);
+	void SetCameraTag(std::shared_ptr<Camera> cam, CameraType tag);
 
 	// Methods to create new assets
 
