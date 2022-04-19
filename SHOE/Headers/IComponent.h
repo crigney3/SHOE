@@ -1,6 +1,6 @@
 #pragma once
 #include <memory>
-
+#include <DirectXMath.h>
 #include "GameEntity.fwd.h"
 
 class Transform;
@@ -13,6 +13,11 @@ public:
 	virtual void OnDestroy();
 	virtual void OnCollisionEnter(std::shared_ptr<GameEntity> other);
 	virtual void OnTriggerEnter(std::shared_ptr<GameEntity> other);
+	virtual void OnMove(DirectX::XMFLOAT3 delta);
+	virtual void OnRotate(DirectX::XMFLOAT3 delta);
+	virtual void OnScale(DirectX::XMFLOAT3 delta);
+	virtual void OnEnabledChanged(bool newState);
+
 	void Bind(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
 	void Free();
 

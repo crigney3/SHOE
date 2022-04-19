@@ -1,5 +1,4 @@
 #pragma once
-#include <DirectXMath.h>
 #include "IComponent.h"
 #include <vector>
 
@@ -32,10 +31,12 @@ private:
 public:
 	static LightData* GetLightArray();
 	static int GetLightArrayCount();
-	static void MarkDirty();
 
 	void Start() override;
 	void OnDestroy() override;
+	void OnMove(DirectX::XMFLOAT3 delta) override;
+	void OnRotate(DirectX::XMFLOAT3 delta) override;
+	void OnEnabledChanged(bool newState) override;
 
 	float GetType();
 	void SetType(float type);

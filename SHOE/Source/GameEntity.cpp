@@ -8,9 +8,12 @@ void GameEntity::UpdateHierarchyIsEnabled(bool active, bool head)
 {
 	if (head || hierarchyIsEnabled != active) {
 		if(!head) hierarchyIsEnabled = active;
-		if (HasLightAttached()) Light::MarkDirty();
+		OnEnabledChanged(active);
 		for (std::shared_ptr<ComponentPacket> packet : componentList)
 		{
+			if (packet->component->IsEnabled() != GetEnableDisable()) {
+				packet->component->OnEnabledChanged(packet->component->IsEnabled());
+			}
 			packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
 		}
 		for (std::shared_ptr<GameEntity> children : transform->GetChildrenAsGameEntities())
@@ -81,6 +84,46 @@ void GameEntity::OnTriggerEnter(std::shared_ptr<GameEntity> other)
 	}
 }
 
+void GameEntity::OnMove(DirectX::XMFLOAT3 delta)
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->OnMove(delta);
+		}
+	}
+}
+
+void GameEntity::OnRotate(DirectX::XMFLOAT3 delta)
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->OnRotate(delta);
+		}
+	}
+}
+
+void GameEntity::OnScale(DirectX::XMFLOAT3 delta)
+{
+	if (GetEnableDisable()) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsEnabled())
+				packet->component->OnScale(delta);
+		}
+	}
+}
+
+void GameEntity::OnEnabledChanged(bool newState)
+{
+	if (enabled) {
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (packet->component->IsLocallyEnabled())
+				packet->component->OnEnabledChanged(newState);
+		}
+	}
+}
+
 /// <summary>
 /// Same as GetComponent<Transform>()
 /// </summary>
@@ -94,13 +137,6 @@ std::shared_ptr<Transform> GameEntity::GetTransform() {
 std::vector<std::shared_ptr<IComponent>> GameEntity::GetAllComponents()
 {
 	return rawComponentList;
-}
-
-/**
- * \brief Returns how many lights are attached to the entity.
- */
-int GameEntity::GetAttachedLightCount() {
-	return attachedLightCount;
 }
 
 /**
@@ -156,15 +192,6 @@ bool GameEntity::GetEnableDisable() {
 bool GameEntity::GetHierarchyIsEnabled()
 {
 	return hierarchyIsEnabled;
-}
-
-/// <summary>
-/// Returns whether this has at least one light component attached
-/// </summary>
-/// <returns>If this has a light component</returns>
-bool GameEntity::HasLightAttached()
-{
-	return attachedLightCount > 0;
 }
 
 /// <summary>

@@ -172,7 +172,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			geValue.AddMember(ENTITY_NAME, geName, allocator);
 			geValue.AddMember(ENTITY_ENABLED, ge->GetEnableDisable(), allocator);
 			geValue.AddMember(ENTITY_HIERARCHY_ENABLED, ge->GetHierarchyIsEnabled(), allocator);
-			geValue.AddMember(ENTITY_ATTACHED_LIGHTS, ge->GetAttachedLightCount(), allocator);
 
 			rapidjson::Value geComponents(rapidjson::kArrayType);
 			for (auto co : ge->GetAllComponents()) {

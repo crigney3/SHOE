@@ -42,6 +42,38 @@ void IComponent::OnTriggerEnter(std::shared_ptr<GameEntity> other)
 }
 
 /**
+ * \brief Called when this entity's position is changed
+ * \param delta DirectX::XMFLOAT3 The delta of this move
+ */
+void IComponent::OnMove(DirectX::XMFLOAT3 delta)
+{
+}
+
+/**
+ * \brief Called when this entity's rotation is changed
+ * \param delta DirectX::XMFLOAT3 The delta of this rotation
+ */
+void IComponent::OnRotate(DirectX::XMFLOAT3 delta)
+{
+}
+
+/**
+ * \brief Called when this entity's scale is changed
+ * \param delta DirectX::XMFLOAT3 The delta of this scale
+ */
+void IComponent::OnScale(DirectX::XMFLOAT3 delta)
+{
+}
+
+/**
+ * \brief Called when this entity's enabled state is changed
+ * \param newState bool The new state of the component
+ */
+void IComponent::OnEnabledChanged(bool newState)
+{
+}
+
+/**
  * \brief 
  * \param gameEntity The GameEntity to be attached to
  * \param hierarchyIsEnabled If that GameEntity is enabled
@@ -83,8 +115,10 @@ bool IComponent::IsLocallyEnabled()
 /// </summary>
 void IComponent::SetEnabled(bool enabled)
 {
-	this->enabled = enabled;
-	if (GetGameEntity()->HasLightAttached()) Light::MarkDirty();
+	if (this->enabled != enabled) {
+		this->enabled = enabled;
+		OnEnabledChanged(enabled);
+	}
 }
 
 /**
