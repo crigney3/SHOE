@@ -48,11 +48,6 @@ int Light::GetLightArrayCount()
 	return lightData.size();
 }
 
-void Light::MarkDirty()
-{
-	lightArrayDirty = true;
-}
-
 /// <summary>
 /// Populates this light with default data
 /// </summary>
@@ -78,6 +73,11 @@ void Light::OnMove(DirectX::XMFLOAT3 delta)
 }
 
 void Light::OnRotate(DirectX::XMFLOAT3 delta)
+{
+	lightArrayDirty = true;
+}
+
+void Light::OnEnabledChanged(bool newState)
 {
 	lightArrayDirty = true;
 }

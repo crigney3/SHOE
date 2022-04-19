@@ -11,10 +11,10 @@ void GameEntity::UpdateHierarchyIsEnabled(bool active, bool head)
 		OnEnabledChanged(active);
 		for (std::shared_ptr<ComponentPacket> packet : componentList)
 		{
-			if (packet->component->IsLocallyEnabled() != GetEnableDisable()) {
-				packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
+			if (packet->component->IsEnabled() != GetEnableDisable()) {
 				packet->component->OnEnabledChanged(packet->component->IsEnabled());
 			}
+			packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
 		}
 		for (std::shared_ptr<GameEntity> children : transform->GetChildrenAsGameEntities())
 		{
@@ -140,13 +140,6 @@ std::vector<std::shared_ptr<IComponent>> GameEntity::GetAllComponents()
 }
 
 /**
- * \brief Returns how many lights are attached to the entity.
- */
-int GameEntity::GetAttachedLightCount() {
-	return attachedLightCount;
-}
-
-/**
  * \brief Frees all of the stored objects in the entity so it can be safely destroyed
  */
 void GameEntity::Release()
@@ -199,15 +192,6 @@ bool GameEntity::GetEnableDisable() {
 bool GameEntity::GetHierarchyIsEnabled()
 {
 	return hierarchyIsEnabled;
-}
-
-/// <summary>
-/// Returns whether this has at least one light component attached
-/// </summary>
-/// <returns>If this has a light component</returns>
-bool GameEntity::HasLightAttached()
-{
-	return attachedLightCount > 0;
 }
 
 /// <summary>

@@ -40,7 +40,7 @@ Game::Game(HINSTANCE hInstance)
 	GetFullPathNameA("SHOE.exe", sizeof(pathBuf), pathBuf, NULL);
 	std::string::size_type pos = std::string(pathBuf).find_last_of("\\/");
 
-	std::string currentSubPath = std::string(pathBuf).substr(40, pos);
+	std::string currentSubPath = std::string(pathBuf);// .substr(40, pos);
 
 	if (currentSubPath.find("SHOE\\x64\\") != std::string::npos) {
 		SetBuildAssetPaths();

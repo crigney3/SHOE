@@ -69,7 +69,7 @@ void Transform::SetPosition(XMFLOAT3 pos) {
 	if (this->pos.x != pos.x || this->pos.y != pos.y || this->pos.z != pos.z) {
 		XMFLOAT3 delta = XMFLOAT3(pos.x - this->pos.x, pos.y - this->pos.y, pos.z - this->pos.z);
 		this->pos = pos;
-		GetGameEntity()->OnMove(delta);
+		if(GetGameEntity() != nullptr) GetGameEntity()->OnMove(delta);
 		MarkThisDirty();
 	}
 }
@@ -82,7 +82,7 @@ void Transform::SetRotation(XMFLOAT3 rot) {
 	if (this->rotQuat.x != rot.x || this->rotQuat.y != rot.y || this->rotQuat.z != rot.z) {
 		XMFLOAT3 delta = XMFLOAT3(rot.x - this->rotQuat.x, rot.y - this->rotQuat.y, rot.z - this->rotQuat.z);
 		this->rotQuat = XMFLOAT4(rot.x, rot.y, rot.z, +0.0f);
-		GetGameEntity()->OnRotate(delta);
+		if (GetGameEntity() != nullptr) GetGameEntity()->OnRotate(delta);
 		MarkThisDirty();
 	}
 }
@@ -95,7 +95,7 @@ void Transform::SetScale(XMFLOAT3 scale) {
 	if (this->scale.x != scale.x || this->scale.y != scale.y || this->scale.z != scale.z) {
 		XMFLOAT3 delta = XMFLOAT3(scale.x - this->scale.x, scale.y - this->scale.y, scale.z - this->scale.z);
 		this->scale = scale;
-		GetGameEntity()->OnScale(delta);
+		if (GetGameEntity() != nullptr) GetGameEntity()->OnScale(delta);
 		MarkThisDirty();
 	}
 }
