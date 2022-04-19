@@ -40,6 +40,15 @@ public:
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();
 
+	bool GetFilenameKeyType();
+	void SetFilenameKeyType(bool FKType);
+
+	std::string GetFilenameKey();
+	void SetFilenameKey(std::string filenameKey);
+
+	std::string GetFileExtension();
+	void SetFileExtension(std::string fileExtension);
+
 	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<Camera> cam);
 private:
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
@@ -52,6 +61,14 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureSRV;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> depthType;
 	Microsoft::WRL::ComPtr<ID3D11RasterizerState> rasterizerOptions;
+
+	// 0 means this is a .dds filepath, and 1 means
+	// this is a directory path containing 6 files
+	// correctly labelled as back, down, forward, left, right
+	// and up in any filesystem order.
+	bool filenameKeyType;
+	std::string filenameKey;
+	std::string fileExtension;
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> irradianceCM;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> convolvedSpecularCM;

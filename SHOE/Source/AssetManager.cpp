@@ -549,6 +549,26 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 
 		sceneDocToSave.AddMember(CAMERAS, cameraBlock, allocator);
 
+		rapidjson::Value skyBlock(rapidjson::kArrayType);
+		for (auto sy : skies) {
+			rapidjson::Value skyObject(rapidjson::kObjectType);
+			rapidjson::Value skyName;
+			rapidjson::Value skyFilenameKey;
+			rapidjson::Value skyFilenameExtension;
+			skyName.SetString(sy->GetName().c_str(), allocator);
+			skyFilenameKey.SetString(sy->GetFilenameKey().c_str(), allocator);
+			skyFilenameKey.SetString(sy->GetFileExtension().c_str(), allocator);
+
+			skyObject.AddMember(SKY_NAME, skyName, allocator);
+			skyObject.AddMember(SKY_FILENAME_KEY_TYPE, sy->GetFilenameKeyType(), allocator);
+			skyObject.AddMember(SKY_FILENAME_KEY, skyFilenameKey, allocator);
+			skyObject.AddMember(SKY_FILENAME_EXTENSION, skyFilenameExtension, allocator);
+
+			skyBlock.PushBack(skyObject, allocator);
+		}
+
+		sceneDocToSave.AddMember(SKIES, skyBlock, allocator);
+
 		// At the end of gathering data, write it all
 		// to the appropriate file
 		std::string fullPath = "../../../Assets/Scenes/" + filepath;
@@ -975,7 +995,7 @@ std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::string name) {
 	}
 }
 
-std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, std::string name) {
+std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension) {
 	try {
 		std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
 
@@ -990,7 +1010,74 @@ std::shared_ptr<Sky> AssetManager::CreateSky(Microsoft::WRL::ComPtr<ID3D11Shader
 		importantSkyVertexShaders.push_back(GetVertexShaderByName("SkyVS"));
 		importantSkyVertexShaders.push_back(GetVertexShaderByName("FullscreenVS"));
 
-		std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, skyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
+		std::string assetPath;
+		std::string filenameKey;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newSkyTexture;
+
+		assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_SKIES);
+		std::string namePath = assetPath + filepath;
+		char pathBuf[1024];
+		std::string stringifiedPathBuf;
+
+		if (fileType) {
+			// Process as 6 textures in a directory
+			GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+			std::wstring skyDDSWide;
+			std::wstring fileExtensionW;
+			ISimpleShader::ConvertToWide(pathBuf, skyDDSWide);
+			ISimpleShader::ConvertToWide(fileExtension, fileExtensionW);
+
+			newSkyTexture = CreateCubemap((skyDDSWide + L"right" + fileExtensionW).c_str(),
+				(skyDDSWide + L"left" + fileExtensionW).c_str(),
+				(skyDDSWide + L"up" + fileExtensionW).c_str(),
+				(skyDDSWide + L"down" + fileExtensionW).c_str(),
+				(skyDDSWide + L"forward" + fileExtensionW).c_str(),
+				(skyDDSWide + L"back" + fileExtensionW).c_str());
+
+			stringifiedPathBuf = pathBuf;
+
+			// Serialize the filename if it's in the right folder
+			size_t dirPos = stringifiedPathBuf.find("Assets\\Textures\\Skies");
+			if (dirPos != std::string::npos) {
+				// File is in the assets folder
+				filenameKey = "t";
+				filenameKey += stringifiedPathBuf.substr(dirPos + sizeof("Assets\\Textures\\Skies"));
+			}
+			else {
+				filenameKey = "f";
+				filenameKey += stringifiedPathBuf;
+			}
+		}
+		else {
+			// Process as a .dds
+			GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+			std::wstring skyDDSWide;
+			ISimpleShader::ConvertToWide(pathBuf, skyDDSWide);
+
+			CreateDDSTextureFromFile(device.Get(), context.Get(), skyDDSWide.c_str(), nullptr, &newSkyTexture);
+
+			stringifiedPathBuf = pathBuf;
+
+			// Serialize the filename if it's in the right folder
+			size_t dirPos = stringifiedPathBuf.find("Assets\\Textures\\Skies");
+			if (dirPos != std::string::npos) {
+				// File is in the assets folder
+				filenameKey = "t";
+				filenameKey += stringifiedPathBuf.substr(dirPos + sizeof("Assets\\Textures\\Skies"));
+			}
+			else {
+				filenameKey = "f";
+				filenameKey += stringifiedPathBuf;
+			}
+		}
+
+		std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, newSkyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
+
+		newSky->SetFilenameKeyType(fileType);
+		newSky->SetFilenameKey(filenameKey);
+		newSky->SetFileExtension(fileExtension);
 
 		skies.push_back(newSky);
 
@@ -1366,45 +1453,14 @@ void AssetManager::InitializeMeshes() {
 void AssetManager::InitializeSkies() {
 	skies = std::vector<std::shared_ptr<Sky>>();
 
-	std::shared_ptr<SimpleVertexShader> VSSky = GetVertexShaderByName("SkyVS");
-	std::shared_ptr<SimplePixelShader> PSSky = GetPixelShaderByName("SkyPS");
-	std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
-
-	// Skybox map pointers
 	// Temporarily, we only load 2 skies, as they take a while to load
-	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> spaceTexture;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> sunnyTexture;
-	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> mountainTexture;
-	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> niagaraTexture;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> starTexture;
-
-	//CreateDDSTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/SpaceCubeMap.dds").c_str(), nullptr, &spaceTexture);
-	CreateDDSTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/SunnyCubeMap.dds").c_str(), nullptr, &sunnyTexture);
-
-	/*mountainTexture = CreateCubemap(dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/right.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/left.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/up.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/down.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/forward.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Mountain/back.jpg").c_str());
-	niagaraTexture = CreateCubemap(dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/right.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/left.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/up.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/down.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/forward.jpg").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Niagara/back.jpg").c_str());*/
-	starTexture = CreateCubemap(dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/right.png").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/left.png").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/up.png").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/down.png").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/forward.png").c_str(),
-		dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/Skies/Stars/back.png").c_str());
 
 	//CreateSky(spaceTexture, "space");
-	CreateSky(sunnyTexture, "sunny");
+	CreateSky("SunnyCubeMap.dds", 0, "sunny");
 	//CreateSky(mountainTexture, "mountain");
-	//CreateSky(niagaraTexture, "niagara");
-	CreateSky(starTexture, "stars");
+	CreateSky("Niagara/", 1, "niagara", ".jpg");
+	// Default is .png, which this is
+	CreateSky("Stars/", 1, "stars");
 
 	currentSky = skies[0];
 }

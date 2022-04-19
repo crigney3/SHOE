@@ -19,6 +19,7 @@
 #define FONTS "fn"
 #define TEXTURE_SAMPLE_STATES "eS"
 #define CAMERAS "ca"
+#define SKIES "s"
 
 // Entities:
 #define ENTITY_NAME "n"
@@ -114,6 +115,12 @@
 #define CAMERA_NEAR_DISTANCE "cND"
 #define CAMERA_FAR_DISTANCE "cFD"
 #define CAMERA_FIELD_OF_VIEW "cF"
+
+// Sky Data:
+#define SKY_NAME "sN"
+#define SKY_FILENAME_KEY_TYPE "sFT"
+#define SKY_FILENAME_KEY "sFK"
+#define SKY_FILENAME_EXTENSION "sFE"
 
 #pragma endregion
 
@@ -326,7 +333,16 @@ public:
 
 	std::shared_ptr<GameEntity> CreateGameEntity(std::string name = "GameEntity");
 	std::shared_ptr<GameEntity> CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name = "GameEntity");
-	std::shared_ptr<Sky> CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, std::string name);
+
+	/// <summary>
+	/// Creates a new skybox object with the given texture.
+	/// </summary>
+	/// <param name="filepath">If a .dds, this is the name of that file. If 6 textures, this is a directory path.</param>
+	/// <param name="fileType">0 for .dds, 1 for directory path.</param>
+	/// <param name="name"></param>
+	/// <param name="fileExtension">Only needed if fileType is 1</param>
+	/// <returns></returns>
+	std::shared_ptr<Sky> CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension = ".png");
 	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::string nameToLoad);
 	std::shared_ptr<SimplePixelShader> CreatePixelShader(std::string id, std::string nameToLoad);
 	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::string nameToLoad);

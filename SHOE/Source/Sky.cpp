@@ -361,3 +361,27 @@ std::string Sky::GetName() {
 void Sky::SetName(std::string name) {
 	this->name = name;
 }
+
+bool Sky::GetFilenameKeyType() {
+	return this->filenameKeyType;
+}
+
+void Sky::SetFilenameKeyType(bool FKType) {
+	this->filenameKeyType = FKType;
+}
+
+std::string Sky::GetFilenameKey() {
+	return this->filenameKey;
+}
+
+void Sky::SetFilenameKey(std::string filenameKey) {
+	this->filenameKey = filenameKey;
+}
+
+std::string Sky::GetFileExtension() {
+	return this->fileExtension;
+}
+
+void Sky::SetFileExtension(std::string fileExtension) {
+	this->fileExtension = fileExtension;
+}
