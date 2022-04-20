@@ -861,6 +861,18 @@ void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 	}
 }
 
+std::shared_ptr<GameEntity> Game::GetClickedEntity()
+{
+	//Gets the clicked screen position
+
+	//Convert screen position to ray
+
+	//Raycast against MeshRenderer bounds
+
+
+	return std::shared_ptr<GameEntity>();
+}
+
 void Game::RenderSky() {
 	if (input.KeyPress(VK_RIGHT)) {
 		skyUIIndex++;

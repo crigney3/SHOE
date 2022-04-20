@@ -139,5 +139,9 @@ private:
 
 	// UI Helper/Recursive Functions
 	void RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity);
+
+	//For selecting objects with a click
+	std::shared_ptr<GameEntity> GetClickedEntity();
+	std::shared_ptr<GameEntity> clickedEntityBuffer;
 };
 

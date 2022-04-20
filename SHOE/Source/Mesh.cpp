@@ -394,7 +394,7 @@ void Mesh::CalculateBounds(Vertex* verts, int numVerts)
 {
 	DirectX::XMFLOAT3* positions = new DirectX::XMFLOAT3[numVerts];
 	for (int i = 0; i < numVerts; i++) positions[i] = verts[i].Position;
-	DirectX::BoundingOrientedBox::CreateFromPoints(bounds, numVerts, positions, 1);
+	DirectX::BoundingOrientedBox::CreateFromPoints(bounds, numVerts, positions, sizeof(DirectX::XMFLOAT3));
 	delete[] positions;
 }
 

@@ -90,17 +90,18 @@ void Input::Initialize(HWND windowHandle)
 	keybinds = new Keybind[KeyActions::Length]{};
 
 	//Default Keybinds
-	keybinds[KeyActions::MoveForward].Bind				(0, 0, 0, 0, 1, new int[] { 'W' },		 1, new int[] { 'S' });
-	keybinds[KeyActions::MoveBack].Bind					(0, 0, 0, 0, 1, new int[] { 'S' },		 1, new int[] { 'W' });
-	keybinds[KeyActions::StrafeLeft].Bind				(0, 0, 0, 0, 1, new int[] { 'A' },		 1, new int[] { 'D' });
-	keybinds[KeyActions::StrafeRight].Bind				(0, 0, 0, 0, 1, new int[] { 'D' },		 1, new int[] { 'A' });
-	keybinds[KeyActions::MoveDown].Bind					(0, 0, 0, 0, 1, new int[] { 'X' },		 1, new int[] { ' ' });
-	keybinds[KeyActions::MoveUp].Bind					(0, 0, 0, 0, 1, new int[] { ' ' },		 1, new int[] { 'X' });
-	keybinds[KeyActions::SprintModifier].Bind			(0, 0, 0, 0, 1, new int[] { VK_SHIFT },	 1, new int[] { VK_CONTROL });
-	keybinds[KeyActions::SneakModifier].Bind			(0, 0, 0, 0, 1, new int[] { VK_CONTROL },1, new int[] { VK_SHIFT });
-	keybinds[KeyActions::ToggleFlashlight].Bind			(1, new int[] { 'F' });
-	keybinds[KeyActions::ToggleFlashlightFlicker].Bind	(1, new int[] { 'V' });
-	keybinds[KeyActions::QuitGame].Bind					(1, new int[] { VK_ESCAPE });
+	keybinds[KeyActions::MoveForward].Bind					(0, 0, 0, 0, 1, new int[] { 'W' },		 1, new int[] { 'S' });
+	keybinds[KeyActions::MoveBack].Bind						(0, 0, 0, 0, 1, new int[] { 'S' },		 1, new int[] { 'W' });
+	keybinds[KeyActions::StrafeLeft].Bind					(0, 0, 0, 0, 1, new int[] { 'A' },		 1, new int[] { 'D' });
+	keybinds[KeyActions::StrafeRight].Bind					(0, 0, 0, 0, 1, new int[] { 'D' },		 1, new int[] { 'A' });
+	keybinds[KeyActions::MoveDown].Bind						(0, 0, 0, 0, 1, new int[] { 'X' },		 1, new int[] { ' ' });
+	keybinds[KeyActions::MoveUp].Bind						(0, 0, 0, 0, 1, new int[] { ' ' },		 1, new int[] { 'X' });
+	keybinds[KeyActions::SprintModifier].Bind				(0, 0, 0, 0, 1, new int[] { VK_SHIFT },	 1, new int[] { VK_CONTROL });
+	keybinds[KeyActions::SneakModifier].Bind				(0, 0, 0, 0, 1, new int[] { VK_CONTROL },1, new int[] { VK_SHIFT });
+	keybinds[KeyActions::ToggleFlashlight].Bind				(1, new int[] { 'F' });
+	keybinds[KeyActions::ToggleFlashlightFlicker].Bind		(1, new int[] { 'V' });
+	keybinds[KeyActions::QuitGame].Bind						(1, new int[] { VK_ESCAPE });
+	keybinds[KeyActions::ObjectSelectionClickModifier].Bind	(0, 0, 0, 0, 1, new int[] { VK_MENU }); //Alt
 }
 
 // ----------------------------------------------------------
