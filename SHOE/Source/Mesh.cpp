@@ -14,6 +14,8 @@ Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCo
 	CalculateTangents(vertexArray, vertices, indices, indexCount);
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
+
+	CalculateBounds(vertexArray, vertices);
 }
 
 Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, int associatedMaterialIndex, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
@@ -23,6 +25,8 @@ Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCo
 	this->needsDepthPrePass = false;
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
+
+	CalculateBounds(vertexArray, vertices);
 }
 
 Mesh::Mesh(std::string filename, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
@@ -262,6 +266,8 @@ Mesh::Mesh(std::string filename, Microsoft::WRL::ComPtr<ID3D11Device> device, st
 	CalculateTangents(&verts[0], vertCounter, &indices[0], indexCounter);
 
 	MakeBuffers(&verts[0], vertCounter, &indices[0], indexCounter, device);
+
+	CalculateBounds(&verts[0], vertCounter);
 }
 
 void Mesh::MakeBuffers(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, Microsoft::WRL::ComPtr<ID3D11Device> device) {
@@ -384,6 +390,14 @@ void Mesh::CalculateTangents(Vertex* verts, int numVerts, unsigned int* indices,
 	}
 }
 
+void Mesh::CalculateBounds(Vertex* verts, int numVerts)
+{
+	DirectX::XMFLOAT3* positions = new DirectX::XMFLOAT3[numVerts];
+	for (int i = 0; i < numVerts; i++) positions[i] = verts[i].Position;
+	DirectX::BoundingOrientedBox::CreateFromPoints(bounds, numVerts, positions, 1);
+	delete[] positions;
+}
+
 Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetVertexBuffer() {
 	return vBuffer;
 }
@@ -404,20 +418,17 @@ int Mesh::GetMaterialIndex() {
 	return this->materialIndex;
 }
 
-void Mesh::SetEnableDisable(bool value) {
-	this->enabled = value;
-}
-
-bool Mesh::GetEnableDisable() {
-	return this->enabled;
-}
-
 std::string Mesh::GetName() {
 	return this->name;
 }
 
 std::string Mesh::GetFileNameKey() {
 	return this->filenameKey;
+}
+
+DirectX::BoundingOrientedBox Mesh::GetBounds()
+{
+	return bounds;
 }
 
 void Mesh::SetDepthPrePass(bool prePass) {

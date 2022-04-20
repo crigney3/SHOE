@@ -268,7 +268,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 						// Simple types first
 						meshValue.AddMember(MESH_INDEX_COUNT, mesh->GetIndexCount(), allocator);
 						meshValue.AddMember(MESH_MATERIAL_INDEX, mesh->GetMaterialIndex(), allocator);
-						meshValue.AddMember(MESH_ENABLED, mesh->GetEnableDisable(), allocator);
 						meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, mesh->GetDepthPrePass(), allocator);
 
 						// Strings

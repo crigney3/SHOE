@@ -18,10 +18,15 @@ public:
 
 	void SetMesh(std::shared_ptr<Mesh> newMesh);
 	void SetMaterial(std::shared_ptr<Material> newMaterial);
+
+	DirectX::BoundingOrientedBox GetBounds();
 private:
 	static std::shared_ptr<Mesh> defaultMesh;
 	static std::shared_ptr<Material> defaultMat;
 
 	std::shared_ptr<Mesh> mesh;
 	std::shared_ptr<Material> mat;
+
+	DirectX::BoundingOrientedBox bounds;
+	void CalculateBounds();
 };
