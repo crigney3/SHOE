@@ -137,6 +137,13 @@
 #define SOUND_NAME "oN"
 #define SOUND_FMOD_MODE "oFM"
 
+// Terrain Material Data:
+#define TERRAIN_MATERIAL_NAME "tN"
+#define TERRAIN_MATERIAL_ENABLED "tE"
+#define TERRAIN_MATERIAL_BLEND_MAP_PATH "tBP"
+#define TERRAIN_MATERIAL_BLEND_MAP_ENABLED "tBE"
+#define TERRAIN_MATERIAL_MATERIAL_ARRAY "tMA"
+
 #pragma endregion
 
 #include "Light.h"
@@ -293,7 +300,7 @@ private:
 	std::vector<std::shared_ptr<Mesh>> globalMeshes;
 	std::vector<std::shared_ptr<Material>> globalMaterials;
 	std::vector<std::shared_ptr<GameEntity>> globalEntities;
-	std::vector<std::shared_ptr<TerrainMats>> globalTerrainMaterials;
+	std::vector<std::shared_ptr<TerrainMaterial>> globalTerrainMaterials;
 	std::vector<FMOD::Sound*> globalSounds;
 	std::vector<std::shared_ptr<SHOEFont>> globalFonts;
 
@@ -372,10 +379,10 @@ public:
 	std::shared_ptr<Light> CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Light> CreateSpotLight(std::string name, DirectX::XMFLOAT3 direction, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Material> CreatePBRMaterial(std::string id,
-											    std::wstring albedoNameToLoad,
-											    std::wstring normalNameToLoad,
-											    std::wstring metalnessNameToLoad,
-											    std::wstring roughnessNameToLoad);
+											    std::string albedoNameToLoad,
+											    std::string normalNameToLoad,
+											    std::string metalnessNameToLoad,
+											    std::string roughnessNameToLoad);
 	std::shared_ptr<Terrain> CreateTerrainEntity(std::string name = "Terrain");
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
 													std::wstring textureNameToLoad,
@@ -389,6 +396,9 @@ public:
 												   bool additiveBlendState = true);
 	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode, std::string name = "");
 	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false);
+
+	// Creation Helper Methods
+	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture);
 
 	// Helper methods to add components to objects
 
@@ -432,7 +442,7 @@ public:
 	std::shared_ptr<Mesh> GetMeshByName(std::string name);
 	std::shared_ptr<Camera> GetCameraByName(std::string name);
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
-	std::shared_ptr<TerrainMats> GetTerrainMaterialByName(std::string name);
+	std::shared_ptr<TerrainMaterial> GetTerrainMaterialByName(std::string name);
 	FMOD::Sound* GetSoundByName();
 	std::shared_ptr<SHOEFont> GetFontByName(std::string name);
 

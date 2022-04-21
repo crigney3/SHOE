@@ -613,6 +613,37 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 
 		sceneDocToSave.AddMember(SOUNDS, soundBlock, allocator);
 
+		rapidjson::Value terrainMatBlock(rapidjson::kArrayType);
+		for (auto tm : globalTerrainMaterials) {
+			rapidjson::Value terrainMatObj(rapidjson::kObjectType);
+			rapidjson::Value tmName;
+			rapidjson::Value tmBlendPath;
+
+			tmName.SetString(tm->GetName().c_str(), allocator);
+			tmBlendPath.SetString(tm->GetBlendMapFilenameKey().c_str(), allocator);
+
+			terrainMatObj.AddMember(TERRAIN_MATERIAL_ENABLED, tm->GetEnableDisable(), allocator);
+			terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_ENABLED, tm->GetUsingBlendMap(), allocator);
+			terrainMatObj.AddMember(TERRAIN_MATERIAL_NAME, tmName, allocator);
+			terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_PATH, tmBlendPath, allocator);
+
+			// The internal materials are already tracked as regular materials,
+			// So we just need an array of pointers to them
+			rapidjson::Value terrainInternalMats(rapidjson::kArrayType);
+			for (int i = 0; i < tm->GetMaterialCount(); i++) {
+				// GUIDs aren't implemented yet, so store names for now
+				rapidjson::Value matName;
+				matName.SetString(tm->GetMaterialAtID(i)->GetName().c_str(), allocator);
+
+				terrainInternalMats.PushBack(matName, allocator);
+			}
+			terrainMatObj.AddMember(TERRAIN_MATERIAL_MATERIAL_ARRAY, terrainInternalMats, allocator);
+
+			terrainMatBlock.PushBack(terrainMatObj, allocator);
+		}
+		
+		sceneDocToSave.AddMember(TERRAIN_MATERIALS, terrainMatBlock, allocator);
+
 		// At the end of gathering data, write it all
 		// to the appropriate file
 		std::string assetPath;
@@ -894,28 +925,39 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 	}
 }
 
+HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture) {
+	std::string assetPath;
+
+	assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR);
+	std::string namePath = assetPath + nameToLoad;
+	std::wstring widePath;
+	char pathBuf[1024];
+
+	GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+	ISimpleShader::ConvertToWide(pathBuf, widePath);
+
+	CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, &texture);
+}
+
 std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
-														  std::wstring albedoNameToLoad,
-														  std::wstring normalNameToLoad,
-														  std::wstring metalnessNameToLoad,
-														  std::wstring roughnessNameToLoad) {
+														  std::string albedoNameToLoad,
+														  std::string normalNameToLoad,
+														  std::string metalnessNameToLoad,
+														  std::string roughnessNameToLoad) {
 	try {
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
 		std::shared_ptr<Material> newMat;
-		std::wstring assetPathString;
 
 		std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
 		std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
 
-		assetPathString = L"../../../Assets/PBR/";
-
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Albedo/" + albedoNameToLoad).c_str(), nullptr, &albedo);
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Normals/" + normalNameToLoad).c_str(), nullptr, &normals);
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Metalness/" + metalnessNameToLoad).c_str(), nullptr, &metalness);
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + L"Roughness/" + roughnessNameToLoad).c_str(), nullptr, &roughness);
+		LoadPBRTexture(albedoNameToLoad, albedo);
+		LoadPBRTexture(normalNameToLoad, normals);
+		LoadPBRTexture(metalnessNameToLoad, metalness);
+		LoadPBRTexture(roughnessNameToLoad, roughness);
 
 		newMat = std::make_shared<Material>(whiteTint,
 			PSNormal,
@@ -1394,122 +1436,122 @@ void AssetManager::InitializeMaterials() {
 
 	// Make reflective PBR materials
 	CreatePBRMaterial(std::string("reflectiveMetal"),
-					  L"BlankAlbedo.png",
-					  L"blank_normals.png",
-					  L"bronze_metal.png",
-					  L"GenericRoughness0.png");
+					  "BlankAlbedo.png",
+					  "blank_normals.png",
+					  "bronze_metal.png",
+					  "GenericRoughness0.png");
 
 	CreatePBRMaterial(std::string("reflective"),
-					  L"BlankAlbedo.png",
-					  L"blank_normals.png",
-					  L"wood_metal.png",
-					  L"GenericRoughness0.png");
+					  "BlankAlbedo.png",
+					  "blank_normals.png",
+					  "wood_metal.png",
+					  "GenericRoughness0.png");
 
 	CreatePBRMaterial(std::string("reflectiveRough"),
-					  L"BlankAlbedo.png",
-					  L"blank_normals.png",
-					  L"wood_metal.png",
-					  L"GenericRoughness100.png");
+					  "BlankAlbedo.png",
+					  "blank_normals.png",
+					  "wood_metal.png",
+					  "GenericRoughness100.png");
 
 	CreatePBRMaterial(std::string("reflectiveRoughMetal"),
-					  L"BlankAlbedo.png",
-					  L"blank_normals.png",
-					  L"bronze_metal.png",
-					  L"GenericRoughness100.png");
+					  "BlankAlbedo.png",
+					  "blank_normals.png",
+					  "bronze_metal.png",
+					  "GenericRoughness100.png");
 
 	//Make PBR materials
 	CreatePBRMaterial(std::string("bronzeMat"),
-					  L"bronze_albedo.png",
-					  L"bronze_normals.png",
-					  L"bronze_metal.png",
-					  L"bronze_roughness.png")->SetTiling(0.3f);
+					  "bronze_albedo.png",
+					  "bronze_normals.png",
+					  "bronze_metal.png",
+					  "bronze_roughness.png")->SetTiling(0.3f);
 
 	CreatePBRMaterial(std::string("cobbleMat"),
-					  L"cobblestone_albedo.png",
-					  L"cobblestone_normals.png",
-					  L"cobblestone_metal.png",
-					  L"cobblestone_roughness.png");
+					  "cobblestone_albedo.png",
+					  "cobblestone_normals.png",
+					  "cobblestone_metal.png",
+					  "cobblestone_roughness.png");
 
 	CreatePBRMaterial(std::string("largeCobbleMat"),
-					  L"cobblestone_albedo.png",
-					  L"cobblestone_normals.png",
-					  L"cobblestone_metal.png",
-					  L"cobblestone_roughness.png")->SetTiling(5.0f);
+					  "cobblestone_albedo.png",
+					  "cobblestone_normals.png",
+					  "cobblestone_metal.png",
+					  "cobblestone_roughness.png")->SetTiling(5.0f);
 
 	CreatePBRMaterial(std::string("floorMat"),
-					  L"floor_albedo.png",
-					  L"floor_normals.png",
-					  L"floor_metal.png",
-					  L"floor_roughness.png");
+					  "floor_albedo.png",
+					  "floor_normals.png",
+					  "floor_metal.png",
+					  "floor_roughness.png");
 
 	CreatePBRMaterial(std::string("terrainFloorMat"),
-					  L"floor_albedo.png",
-					  L"floor_normals.png",
-					  L"floor_metal.png",
-					  L"floor_roughness.png")->SetTiling(256.0f);
+					  "floor_albedo.png",
+					  "floor_normals.png",
+					  "floor_metal.png",
+					  "floor_roughness.png")->SetTiling(256.0f);
 
 	CreatePBRMaterial(std::string("paintMat"),
-					  L"paint_albedo.png",
-					  L"paint_normals.png",
-					  L"paint_metal.png",
-					  L"paint_roughness.png");
+					  "paint_albedo.png",
+					  "paint_normals.png",
+					  "paint_metal.png",
+					  "paint_roughness.png");
 
 	CreatePBRMaterial(std::string("largePaintMat"),
-					  L"paint_albedo.png",
-					  L"paint_normals.png",
-					  L"paint_metal.png",
-					  L"paint_roughness.png")->SetTiling(5.0f);
+					  "paint_albedo.png",
+					  "paint_normals.png",
+					  "paint_metal.png",
+					  "paint_roughness.png")->SetTiling(5.0f);
 
 	CreatePBRMaterial(std::string("roughMat"),
-					  L"rough_albedo.png",
-					  L"rough_normals.png",
-					  L"rough_metal.png",
-					  L"rough_roughness.png");
+					  "rough_albedo.png",
+					  "rough_normals.png",
+					  "rough_metal.png",
+					  "rough_roughness.png");
 
 	CreatePBRMaterial(std::string("scratchMat"),
-					  L"scratched_albedo.png",
-					  L"scratched_normals.png",
-					  L"scratched_metal.png",
-					  L"scratched_roughness.png");
+					  "scratched_albedo.png",
+					  "scratched_normals.png",
+					  "scratched_metal.png",
+					  "scratched_roughness.png");
 
 	CreatePBRMaterial(std::string("woodMat"),
-					  L"wood_albedo.png",
-					  L"wood_normals.png",
-					  L"wood_metal.png",
-					  L"wood_roughness.png");
+					  "wood_albedo.png",
+					  "wood_normals.png",
+					  "wood_metal.png",
+					  "wood_roughness.png");
 
 	/*CreatePBRMaterial(std::string("transparentScratchMat"),
-					  L"scratched_albedo.png",
-					  L"scratched_normals.png",
-					  L"scratched_metal.png",
-					  L"scratched_roughness.png")->SetTransparent(true);*/
+					  "scratched_albedo.png",
+					  "scratched_normals.png",
+					  "scratched_metal.png",
+					  "scratched_roughness.png")->SetTransparent(true);*/
 
 	CreatePBRMaterial(std::string("refractivePaintMat"),
-					  L"paint_albedo.png",
-					  L"paint_normals.png",
-					  L"paint_metal.png",
-					  L"paint_roughness.png")->SetRefractive(true);
+					  "paint_albedo.png",
+					  "paint_normals.png",
+					  "paint_metal.png",
+					  "paint_roughness.png")->SetRefractive(true);
 	GetMaterialByName("refractivePaintMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 	CreatePBRMaterial(std::string("refractiveWoodMat"),
-					  L"wood_albedo.png",
-					  L"wood_normals.png",
-					  L"wood_metal.png",
-					  L"wood_roughness.png")->SetTransparent(true);
+					  "wood_albedo.png",
+					  "wood_normals.png",
+					  "wood_metal.png",
+					  "wood_roughness.png")->SetTransparent(true);
 	GetMaterialByName("refractiveWoodMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 	CreatePBRMaterial(std::string("refractiveRoughMat"),
-					  L"rough_albedo.png",
-					  L"rough_normals.png",
-					  L"rough_metal.png",
-					  L"rough_roughness.png")->SetRefractive(true);
+					  "rough_albedo.png",
+					  "rough_normals.png",
+					  "rough_metal.png",
+					  "rough_roughness.png")->SetRefractive(true);
 	GetMaterialByName("refractiveRoughMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 	CreatePBRMaterial(std::string("refractiveBronzeMat"),
-					  L"bronze_albedo.png",
-					  L"bronze_normals.png",
-					  L"bronze_metal.png",
-					  L"bronze_roughness.png")->SetRefractive(true);
+					  "bronze_albedo.png",
+					  "bronze_normals.png",
+					  "bronze_metal.png",
+					  "bronze_roughness.png")->SetRefractive(true);
 	GetMaterialByName("refractiveBronzeMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 	//GetMaterialByName("refractiveScratchMat")->SetTint(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 }
@@ -1582,64 +1624,69 @@ void AssetManager::InitializeLights() {
 
 void AssetManager::InitializeTerrainMaterials() {
 	try {
-		globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMats>>();
-
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogAlbedo;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestAlbedo;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyAlbedo;
-
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogMetal;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestMetal;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyMetal;
-
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogNormal;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestNormal;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyNormal;
-
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> bogRough;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> forestRough;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> rockyRough;
-
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Albedo/bog_albedo.png").c_str(), nullptr, &bogAlbedo);
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Albedo/forest_floor_albedo.png").c_str(), nullptr, &forestAlbedo);
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Albedo/rocky_dirt1-albedo.png").c_str(), nullptr, &rockyAlbedo);
-
-		SetLoadedAndWait("Terrain", "TerrainMatAlbedo");
-
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Metalness/wood_metal.png").c_str(), nullptr, &bogMetal); //These metal maps are blank, so just load the wood
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Metalness/wood_metal.png").c_str(), nullptr, &forestMetal); //Could maybe optimize loading times with memcpy
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Metalness/wood_metal.png").c_str(), nullptr, &rockyMetal);
-
-		SetLoadedAndWait("Terrain", "TerrainMatMetal");
-
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Normals/bog_normal-ogl.png").c_str(), nullptr, &bogNormal);
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Normals/forest_floor_Normal-ogl.png").c_str(), nullptr, &forestNormal);
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Normals/rocky_dirt1-normal-ogl.png").c_str(), nullptr, &rockyNormal);
-
-		SetLoadedAndWait("Terrain", "TerrainMatNormal");
-
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Roughness/bog_roughness.png").c_str(), nullptr, &bogRough);
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Roughness/forest_floor_Roughness.png").c_str(), nullptr, &forestRough);
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/PBR/Roughness/rocky_dirt1_Roughness.png").c_str(), nullptr, &rockyRough);
+		globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMaterial>>();
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> defaultBlendMap;
+		std::shared_ptr<TerrainMaterial> forestTerrainMaterial;
 
 		//Load terrain and add a blend map
-		std::shared_ptr<Mesh> mainTerrain = LoadTerrain(dxInstance->GetFullPathTo("../../../Assets/HeightMaps/valley.raw16").c_str(), 512, 512, 25.0f);
+
+		std::string assetPath;
+
+		assetPath = dxInstance->GetAssetPathString(ASSET_HEIGHTMAP_PATH);
+		std::string namePath = assetPath + "valley.raw16";
+		char pathBuf[1024];
+
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		std::shared_ptr<Mesh> mainTerrain = LoadTerrain(pathBuf, 512, 512, 25.0f);
 		globalMeshes.push_back(mainTerrain);
-		std::shared_ptr<TerrainMats> mainTerrainMaterials = std::make_shared<TerrainMats>();
-		mainTerrainMaterials->blendMaterials = std::vector<Material>();
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(L"../../../Assets/Textures/blendMap.png").c_str(), nullptr, &mainTerrainMaterials->blendMap);
-		mainTerrainMaterials->blendMaterials.push_back(Material(whiteTint, nullptr, nullptr, forestAlbedo, textureState, clampState, forestNormal, forestRough, forestMetal));
-		mainTerrainMaterials->blendMaterials.push_back(Material(whiteTint, nullptr, nullptr, bogAlbedo, textureState, clampState, bogNormal, bogRough, bogMetal)); //Set these mats' shaders to null as they use the blend map shader
-		mainTerrainMaterials->blendMaterials.push_back(Material(whiteTint, nullptr, nullptr, rockyAlbedo, textureState, clampState, rockyNormal, rockyRough, rockyMetal));
+
+		assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_BASIC);
+		namePath = assetPath + "blendMap.png";
+
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		std::wstring wPath;
+		ISimpleShader::ConvertToWide(pathBuf, wPath);
+
+		CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, defaultBlendMap.GetAddressOf());
+
+		// Serialize the filename if it's in the right folder
+		std::string baseFilename = "";
+		std::string assetPathStr = "Assets\\Textures";
+		std::string pathBufString = std::string(pathBuf);
+		size_t dirPos = pathBufString.find(assetPathStr);
+		if (dirPos != std::string::npos) {
+			// File is in the assets folder
+			baseFilename = "t";
+			baseFilename += pathBufString.substr(dirPos + sizeof(assetPathStr));
+		}
+		else {
+			baseFilename = "f";
+			baseFilename += pathBufString;
+		}
+
+		SetLoadedAndWait("Terrain", "Height and Blend Maps");
+
+		std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", "forest_floor_albedo.png", "forest_floor_Normal-ogl.png", "wood_metal.png", "forest_floor_Roughness.png");
+		std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", "bog_albedo.png.png", "bog_normal-ogl.png", "wood_metal.png", "bog_roughness.png");
+		std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", "rocky_dirt1-albedo.png", "rocky_dirt1-normal-ogl.png", "wood_metal.png", "rocky_dirt1_Roughness.png");
 
 		//Set appropriate tiling
-		mainTerrainMaterials->blendMaterials[0].SetTiling(10.0f);
-		mainTerrainMaterials->blendMaterials[1].SetTiling(10.0f);
-		mainTerrainMaterials->name = std::string("Forest TMaterial");
+		forestMat->SetTiling(10.0f);
+		bogMat->SetTiling(10.0f);
 
-		globalTerrainMaterials.push_back(mainTerrainMaterials);
+		forestTerrainMaterial = std::make_shared<TerrainMaterial>("Forest Terrain Material", defaultBlendMap);
 
-		SetLoadedAndWait("Terrain", "MainTerrainMaterial");
+		forestTerrainMaterial->AddMaterial(forestMat);
+		forestTerrainMaterial->AddMaterial(bogMat);
+		forestTerrainMaterial->AddMaterial(rockyMat);
+
+		forestTerrainMaterial->SetBlendMapFilenameKey(baseFilename);
+
+		globalTerrainMaterials.push_back(forestTerrainMaterial);
+
+		SetLoadedAndWait("Terrain", "Forest Terrain Material");
 	}
 	catch (...) {
 		SetLoadedAndWait("Terrain Materials", "Unknown Terrain Material", std::current_exception());
@@ -2601,9 +2648,9 @@ std::shared_ptr<Material> AssetManager::GetMaterialByName(std::string name) {
 	return nullptr;
 }
 
-std::shared_ptr<TerrainMats> AssetManager::GetTerrainMaterialByName(std::string name) {
+std::shared_ptr<TerrainMaterial> AssetManager::GetTerrainMaterialByName(std::string name) {
 	for (int i = 0; i < globalTerrainMaterials.size(); i++) {
-		if (globalTerrainMaterials[i]->name == name) {
+		if (globalTerrainMaterials[i]->GetName() == name) {
 			return globalTerrainMaterials[i];
 		}
 	}
