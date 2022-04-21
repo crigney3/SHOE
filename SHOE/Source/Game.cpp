@@ -869,7 +869,7 @@ std::shared_ptr<GameEntity> Game::GetClickedEntity()
 
 	//Convert screen position to ray
 	//Based on https://stackoverflow.com/questions/39376687/mouse-picking-with-ray-casting-in-directx
-	XMVECTOR orig = XMVector3Unproject(
+	XMVECTOR origin = XMVector3Unproject(
 		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 0)),
 		0,
 		0,
@@ -881,7 +881,7 @@ std::shared_ptr<GameEntity> Game::GetClickedEntity()
 		viewMatrix,
 		XMMatrixIdentity());
 
-	XMVECTOR dest = XMVector3Unproject(
+	XMVECTOR destination = XMVector3Unproject(
 		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 1)),
 		0,
 		0,
@@ -893,7 +893,7 @@ std::shared_ptr<GameEntity> Game::GetClickedEntity()
 		viewMatrix,
 		XMMatrixIdentity());
 
-	XMVECTOR direction = XMVector3Normalize(dest - orig);
+	XMVECTOR direction = XMVector3Normalize(destination - origin);
 
 	//Raycast against MeshRenderer bounds
 	std::shared_ptr<GameEntity> closestHitEntity = nullptr;
@@ -902,9 +902,9 @@ std::shared_ptr<GameEntity> Game::GetClickedEntity()
 
 	for (std::shared_ptr<MeshRenderer> meshRenderer : ComponentManager::GetAllEnabled<MeshRenderer>()) 
 	{
-		if (meshRenderer->GetBounds().Intersects(orig, direction, rayLength)) {
-			XMMATRIX worldMatrix = XMLoadFloat4x4(&meshRenderer->GetTransform()->GetWorldMatrix());
+		if (meshRenderer->GetBounds().Intersects(origin, direction, rayLength)) {
 			std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
+			XMMATRIX worldMatrix = XMLoadFloat4x4(&meshRenderer->GetTransform()->GetWorldMatrix());
 			Vertex* vertices = mesh->GetVertexArray();
 			unsigned int* indices = mesh->GetIndexArray();
 			float distToTri;
@@ -913,8 +913,8 @@ std::shared_ptr<GameEntity> Game::GetClickedEntity()
 				XMVECTOR vertex0 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i]].Position), worldMatrix);
 				XMVECTOR vertex1 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 1]].Position), worldMatrix);
 				XMVECTOR vertex2 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 2]].Position), worldMatrix);
-				if (DirectX::TriangleTests::Intersects(orig, direction, vertex0, vertex1, vertex2, distToTri) && 
-					distToTri < distToHit) {
+				if (DirectX::TriangleTests::Intersects(origin, direction, vertex0, vertex1, vertex2, distToTri) && distToTri < distToHit)
+				{
 					distToHit = distToTri;
 					closestHitEntity = meshRenderer->GetGameEntity();
 				}
@@ -1026,10 +1026,14 @@ void Game::Update(float deltaTime, float totalTime)
 	if (input.MouseRightPress()) {
 		clickedEntityBuffer = GetClickedEntity();
 	}
-	if (clickedEntityBuffer != nullptr && input.MouseRightRelease()) {
-		if (clickedEntityBuffer == GetClickedEntity()) {
+	if (input.MouseRightRelease()) {
+		if (clickedEntityBuffer != nullptr && clickedEntityBuffer == GetClickedEntity()) {
 			objWindowEnabled = true;
 			entityUIIndex = globalAssets.GetGameEntityIDByName(clickedEntityBuffer->GetName());
+		}
+		else {
+			objWindowEnabled = false;
+			entityUIIndex = -1;
 		}
 		clickedEntityBuffer = nullptr;
 	}

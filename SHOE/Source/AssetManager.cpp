@@ -1576,7 +1576,7 @@ void AssetManager::InitializeMeshes() {
 	globalMeshes = std::vector<std::shared_ptr<Mesh>>();
 
 	// Test loading failure
-	CreateMesh("ExceptionTest", "InvalidPath");
+	//CreateMesh("ExceptionTest", "InvalidPath");
 
 	CreateMesh("Cube", "cube.obj");
 	CreateMesh("Cylinder", "cylinder.obj");
@@ -2405,12 +2405,12 @@ void AssetManager::CreateComplexGeometry() {
 void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene) {
 	for (unsigned int i = 0; i < node->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		std::string newName = "ComplexMesh" + std::to_string(i);
-		mesh->mName = newName;
-		globalMeshes.push_back(ProcessComplexMesh(mesh, scene));
-		CreateGameEntity(GetMeshByName(mesh->mName.C_Str() + std::string("Mesh")), GetMaterialByName("cobbleMat"), mesh->mName.C_Str());
-		GetGameEntityByName(mesh->mName.C_Str())->GetTransform()->SetPosition(0.0f, 3.0f * i, 1.0f);
-		GetGameEntityByName(mesh->mName.C_Str())->GetTransform()->SetScale(0.25f, 0.25f, 0.25f);
+		mesh->mName = "ComplexMesh" + std::to_string(i);
+		std::shared_ptr<Mesh> processedMesh = ProcessComplexMesh(mesh, scene);
+		globalMeshes.push_back(processedMesh);
+		std::shared_ptr<GameEntity> meshEntity = CreateGameEntity(processedMesh, GetMaterialByName("cobbleMat"), mesh->mName.C_Str());
+		meshEntity->GetTransform()->SetPosition(0.0f, 3.0f * i, 1.0f);
+		meshEntity->GetTransform()->SetScale(0.25f, 0.25f, 0.25f);
 	}
 
 	for (unsigned int i = 0; i < node->mNumChildren; i++) {
