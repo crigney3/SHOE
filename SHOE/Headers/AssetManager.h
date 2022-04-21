@@ -20,6 +20,8 @@
 #define TEXTURE_SAMPLE_STATES "eS"
 #define CAMERAS "ca"
 #define SKIES "s"
+#define SOUNDS "sO"
+#define TERRAIN_MATERIALS "tM"
 
 // Entities:
 #define ENTITY_NAME "n"
@@ -122,6 +124,19 @@
 #define SKY_FILENAME_KEY "sFK"
 #define SKY_FILENAME_EXTENSION "sFE"
 
+// Collider Data:
+// Fairly sparse for now
+#define COLLIDER_TYPE "cT"
+#define COLLIDER_ENABLED "cE"
+#define COLLIDER_IS_VISIBLE "cIV"
+#define COLLIDER_IS_TRANSFORM_VISIBLE "cIT"
+
+// Sound Data:
+// Just a filenameKey and a name
+#define SOUND_FILENAME_KEY "oFK"
+#define SOUND_NAME "oN"
+#define SOUND_FMOD_MODE "oFM"
+
 #pragma endregion
 
 #include "Light.h"
@@ -159,6 +174,11 @@ struct LoadingNotifications {
 	std::string category;
 	std::string object;
 	std::exception_ptr errorCode;
+};
+
+struct FMODUserData {
+	std::string name;
+	std::string filenameKey;
 };
 
 // State machine used to track what type of load
@@ -367,7 +387,7 @@ public:
 												   float particlesPerSecond,
 												   bool isMultiParticle = false,
 												   bool additiveBlendState = true);
-	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode);
+	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode, std::string name = "");
 	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false);
 
 	// Helper methods to add components to objects

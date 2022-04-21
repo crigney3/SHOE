@@ -65,10 +65,19 @@ void Collider::SetWidth(float _width)   { obb_.Extents.x = _width / 2.0f; }
 void Collider::SetHeight(float _height) { obb_.Extents.y = _height / 2.0f; }
 void Collider::SetDepth(float _depth)   { obb_.Extents.x = _depth / 2.0f; }
 
+/// <summary>
+/// Gets whether this is a collider or a trigger box.
+/// </summary>
+/// <returns>0/false is Collider, 1/true is TriggerBox</returns>
 bool Collider::GetTriggerStatus()       { return isTrigger_; }
 bool Collider::GetVisibilityStatus()    { return isVisible_; }
 bool Collider::GetTransformVisibilityStatus()    { return isTransformVisible_; }
 bool Collider::GetEnabledStatus()       { return isEnabled_; }
+
+/// <summary>
+/// Sets whether this is a collider or a trigger box.
+/// </summary>
+/// <param name="_isTrigger">0/false is Collider, 1/true is TriggerBox</param>
 void Collider::SetTriggerStatus(bool _isTrigger)
 {
 	isTrigger_ = _isTrigger;

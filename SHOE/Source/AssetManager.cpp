@@ -228,6 +228,12 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 				if (std::dynamic_pointer_cast<Collider>(co) != nullptr) {
 					componentType.SetString("Collider");
 					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+					std::shared_ptr<Collider> collider = std::dynamic_pointer_cast<Collider>(co);
+
+					coValue.AddMember(COLLIDER_TYPE, collider->GetTriggerStatus(), allocator);
+					coValue.AddMember(COLLIDER_ENABLED, collider->GetEnabledStatus(), allocator);
+					coValue.AddMember(COLLIDER_IS_VISIBLE, collider->GetVisibilityStatus(), allocator);
+					coValue.AddMember(COLLIDER_IS_TRANSFORM_VISIBLE, collider->GetTransformVisibilityStatus(), allocator);
 				}
 
 				// Is it Terrain?
@@ -236,6 +242,7 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
 
 					// Terrain is static rn, can't be saved or loaded for the moment
+					// TODO: Stop storing terrain like that, allowing for multiple terrains
 				}
 
 				// Is it a Particle System?
@@ -569,12 +576,55 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 
 		sceneDocToSave.AddMember(SKIES, skyBlock, allocator);
 
+		rapidjson::Value soundBlock(rapidjson::kArrayType);
+		for (auto so : globalSounds) {
+			rapidjson::Value soundObject(rapidjson::kObjectType);
+			FMODUserData* uData;
+			FMOD_MODE sMode;
+
+			FMOD_RESULT uDataResult = so->getUserData((void**)&uData);
+
+#if defined(DEBUG) || defined(_DEBUG)
+			if (uDataResult != FMOD_OK) {
+				printf("Failed to save sound with user data error!");
+			}	
+#endif
+
+			uDataResult = so->getMode(&sMode);
+
+#if defined(DEBUG) || defined(_DEBUG)
+			if (uDataResult != FMOD_OK) {
+				printf("Failed to save sound with mode error!");
+			}
+#endif
+
+			rapidjson::Value soundFK;
+			rapidjson::Value soundN;
+
+			soundFK.SetString(uData->filenameKey.c_str(), allocator);
+			soundN.SetString(uData->name.c_str(), allocator);
+
+			soundObject.AddMember(SOUND_FILENAME_KEY, soundFK, allocator);
+			soundObject.AddMember(SOUND_NAME, soundN, allocator);
+			soundObject.AddMember(SOUND_FMOD_MODE, sMode, allocator);
+
+			soundBlock.PushBack(soundObject, allocator);
+		}
+
+		sceneDocToSave.AddMember(SOUNDS, soundBlock, allocator);
+
 		// At the end of gathering data, write it all
 		// to the appropriate file
-		std::string fullPath = "../../../Assets/Scenes/" + filepath;
-		fullPath = dxInstance->GetFullPathTo(fullPath);
+		std::string assetPath;
+
+		assetPath = dxInstance->GetAssetPathString(ASSET_SCENE_PATH);
+		std::string namePath = assetPath + filepath;
+		char pathBuf[1024];
+
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
 		FILE* file;
-		fopen_s(&file, fullPath.c_str(), "w");
+		fopen_s(&file, pathBuf, "w");
 
 		char writeBuffer[FILE_BUFFER_SIZE];
 		rapidjson::FileWriteStream sceneFileStream(file, writeBuffer, sizeof(writeBuffer));
@@ -609,13 +659,41 @@ void AssetManager::SaveScene(FILE* file, std::string sceneName) {
 #pragma region createAssets
 bool AssetManager::materialSortDirty = false;
 
-FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode) {
+FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::string name) {
 	try
 	{
+		std::shared_ptr<FMODUserData> uData = std::make_shared<FMODUserData>();
 		FMOD::Sound* sound;
-		std::string assetPath = "../../../Assets/Sounds/";
+		std::string assetPath;
 
-		sound = audioInstance.LoadSound(dxInstance->GetFullPathTo(assetPath + path), mode);
+		assetPath = dxInstance->GetAssetPathString(ASSET_SOUND_PATH);
+		std::string namePath = assetPath + path;
+		char pathBuf[1024];
+
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		sound = audioInstance.LoadSound(pathBuf, mode);
+
+		// Serialize the filename if it's in the right folder
+		std::string baseFilename = "";
+		std::string assetPathStr = "Assets\\Sounds";
+		std::string pathBufString = std::string(pathBuf);
+		size_t dirPos = pathBufString.find(assetPathStr);
+		if (dirPos != std::string::npos) {
+			// File is in the assets folder
+			baseFilename = "t";
+			baseFilename += pathBufString.substr(dirPos + sizeof(assetPathStr));
+		}
+		else {
+			baseFilename = "f";
+			baseFilename += pathBufString;
+		}
+
+		uData->filenameKey = baseFilename;
+		uData->name = name;
+
+		// On getUserData, we will receive the whole struct
+		sound->setUserData(uData.get());
 
 		globalSounds.push_back(sound);
 
@@ -1453,7 +1531,7 @@ void AssetManager::InitializeMeshes() {
 void AssetManager::InitializeSkies() {
 	skies = std::vector<std::shared_ptr<Sky>>();
 
-	// Temporarily, we only load 2 skies, as they take a while to load
+	// Temporarily, we only load 3 skies, as they take a while to load
 
 	//CreateSky(spaceTexture, "space");
 	CreateSky("SunnyCubeMap.dds", 0, "sunny");
@@ -1673,15 +1751,15 @@ void AssetManager::InitializeAudio() {
 
 	globalSounds = std::vector<FMOD::Sound*>();
 	
-	CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_DEFAULT);
-	CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_DEFAULT);
-	CreateSound("PianoNotes/pinkyfinger__piano-bb.wav", FMOD_DEFAULT);
-	CreateSound("PianoNotes/pinkyfinger__piano-c.wav", FMOD_DEFAULT);
-	CreateSound("PianoNotes/pinkyfinger__piano-e.wav", FMOD_DEFAULT);
-	CreateSound("PianoNotes/pinkyfinger__piano-eb.wav", FMOD_DEFAULT);
-	CreateSound("PianoNotes/pinkyfinger__piano-d.wav", FMOD_DEFAULT);
-	CreateSound("PianoNotes/pinkyfinger__piano-f.wav", FMOD_DEFAULT);
-	CreateSound("PianoNotes/pinkyfinger__piano-g.wav", FMOD_DEFAULT);
+	CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_DEFAULT, "piano-a");
+	CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_DEFAULT, "piano-b");
+	CreateSound("PianoNotes/pinkyfinger__piano-bb.wav", FMOD_DEFAULT, "piano-bb");
+	CreateSound("PianoNotes/pinkyfinger__piano-c.wav", FMOD_DEFAULT, "piano-c");
+	CreateSound("PianoNotes/pinkyfinger__piano-e.wav", FMOD_DEFAULT, "piano-e");
+	CreateSound("PianoNotes/pinkyfinger__piano-eb.wav", FMOD_DEFAULT, "piano-eb");
+	CreateSound("PianoNotes/pinkyfinger__piano-d.wav", FMOD_DEFAULT, "piano-d");
+	CreateSound("PianoNotes/pinkyfinger__piano-f.wav", FMOD_DEFAULT, "piano-f");
+	CreateSound("PianoNotes/pinkyfinger__piano-g.wav", FMOD_DEFAULT, "piano-g");
 }
 
 void AssetManager::InitializeFonts() {
