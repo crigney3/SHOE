@@ -33,6 +33,16 @@ void MeshRenderer::OnDestroy()
 	mat = nullptr;
 }
 
+void MeshRenderer::OnRotate(DirectX::XMFLOAT3 delta)
+{
+	CalculateBounds();
+}
+
+void MeshRenderer::OnScale(DirectX::XMFLOAT3 delta)
+{
+	CalculateBounds();
+}
+
 /// <summary>
 /// Get the mesh this MeshRenderer renders
 /// </summary>

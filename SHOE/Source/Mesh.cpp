@@ -3,14 +3,22 @@
 using namespace DirectX;
 
 Mesh::~Mesh() {
-
+	delete[] vertexArray;
+	delete[] indices;
 }
 
 Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
+	this->vertexArray = new Vertex[vertices];
+	this->indices = new unsigned int[indexCount];
+	this->indexCount = indexCount;
 	this->materialIndex = -1;
 	this->enabled = true;
 	this->name = name;
 	this->needsDepthPrePass = false;
+
+	std::copy(vertexArray, vertexArray + vertices, this->vertexArray);
+	std::copy(indices, indices + vertices, this->indices);
+
 	CalculateTangents(vertexArray, vertices, indices, indexCount);
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
@@ -19,10 +27,16 @@ Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCo
 }
 
 Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, int associatedMaterialIndex, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
+	this->vertexArray = new Vertex[vertices];
+	this->indices = new unsigned int[indexCount];
+	this->indexCount = indexCount;
 	this->materialIndex = associatedMaterialIndex;
 	this->enabled = true;
 	this->name = name;
 	this->needsDepthPrePass = false;
+
+	std::copy(vertexArray, vertexArray + vertices, this->vertexArray);
+	std::copy(indices, indices + vertices, this->indices);
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
 
@@ -263,6 +277,12 @@ Mesh::Mesh(std::string filename, Microsoft::WRL::ComPtr<ID3D11Device> device, st
 	//    and detect duplicate vertices, but at that point it would be better to use a more
 	//    sophisticated model loading library like TinyOBJLoader or AssImp (yes, that's its name)
 
+	this->vertexArray = new Vertex[vertCounter];
+	this->indices = new unsigned int[indexCounter];
+	this->indexCount = indexCounter;
+	std::copy(verts.begin(), verts.end(), vertexArray);
+	std::copy(indices.begin(), indices.end(), this->indices);
+
 	CalculateTangents(&verts[0], vertCounter, &indices[0], indexCounter);
 
 	MakeBuffers(&verts[0], vertCounter, &indices[0], indexCounter, device);
@@ -271,7 +291,7 @@ Mesh::Mesh(std::string filename, Microsoft::WRL::ComPtr<ID3D11Device> device, st
 }
 
 void Mesh::MakeBuffers(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, Microsoft::WRL::ComPtr<ID3D11Device> device) {
-	this->indices = indexCount;
+	this->indexCount = indexCount;
 
 	D3D11_BUFFER_DESC vbd;
 	vbd.Usage = D3D11_USAGE_IMMUTABLE;
@@ -406,8 +426,18 @@ Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetIndexBuffer() {
 	return inBuffer;
 }
 
+Vertex* Mesh::GetVertexArray()
+{
+	return vertexArray;
+}
+
+unsigned int* Mesh::GetIndexArray()
+{
+	return indices;
+}
+
 int Mesh::GetIndexCount() {
-	return this->indices;
+	return this->indexCount;
 }
 
 void Mesh::SetMaterialIndex(int matIndex) {

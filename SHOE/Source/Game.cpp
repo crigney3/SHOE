@@ -863,14 +863,66 @@ void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 
 std::shared_ptr<GameEntity> Game::GetClickedEntity()
 {
-	//Gets the clicked screen position
+	//Load necessary vectors and matrices
+	XMMATRIX projectionMatrix = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
+	XMMATRIX viewMatrix = XMLoadFloat4x4(&mainCamera->GetViewMatrix());
 
 	//Convert screen position to ray
+	//Based on https://stackoverflow.com/questions/39376687/mouse-picking-with-ray-casting-in-directx
+	XMVECTOR orig = XMVector3Unproject(
+		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 0)),
+		0,
+		0,
+		width,
+		height,
+		0,
+		1,
+		projectionMatrix,
+		viewMatrix,
+		XMMatrixIdentity());
+
+	XMVECTOR dest = XMVector3Unproject(
+		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 1)),
+		0,
+		0,
+		width,
+		height,
+		0,
+		1,
+		projectionMatrix,
+		viewMatrix,
+		XMMatrixIdentity());
+
+	XMVECTOR direction = XMVector3Normalize(dest - orig);
 
 	//Raycast against MeshRenderer bounds
+	std::shared_ptr<GameEntity> closestHitEntity = nullptr;
+	float distToHit = mainCamera->GetFarDist();
+	float rayLength = mainCamera->GetFarDist();
 
+	for (std::shared_ptr<MeshRenderer> meshRenderer : ComponentManager::GetAllEnabled<MeshRenderer>()) 
+	{
+		if (meshRenderer->GetBounds().Intersects(orig, direction, rayLength)) {
+			XMMATRIX worldMatrix = XMLoadFloat4x4(&meshRenderer->GetTransform()->GetWorldMatrix());
+			std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
+			Vertex* vertices = mesh->GetVertexArray();
+			unsigned int* indices = mesh->GetIndexArray();
+			float distToTri;
+			
+			for (int i = 0; i < mesh->GetIndexCount(); i += 3) {
+				XMVECTOR vertex0 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i]].Position), worldMatrix);
+				XMVECTOR vertex1 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 1]].Position), worldMatrix);
+				XMVECTOR vertex2 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 2]].Position), worldMatrix);
+				if (DirectX::TriangleTests::Intersects(orig, direction, vertex0, vertex1, vertex2, distToTri) && 
+					distToTri < distToHit) {
+					distToHit = distToTri;
+					closestHitEntity = meshRenderer->GetGameEntity();
+				}
+			}
+		}
+	}
 
-	return std::shared_ptr<GameEntity>();
+	return closestHitEntity;
 }
 
 void Game::RenderSky() {
@@ -969,6 +1021,18 @@ void Game::Update(float deltaTime, float totalTime)
 	RenderSky();
 
 	CollisionManager::Update();
+
+	//Click to select an object
+	if (input.MouseRightPress()) {
+		clickedEntityBuffer = GetClickedEntity();
+	}
+	if (clickedEntityBuffer != nullptr && input.MouseRightRelease()) {
+		if (clickedEntityBuffer == GetClickedEntity()) {
+			objWindowEnabled = true;
+			entityUIIndex = globalAssets.GetGameEntityIDByName(clickedEntityBuffer->GetName());
+		}
+		clickedEntityBuffer = nullptr;
+	}
 
 	// Flickering is currently broken
 	/*if (flickeringEnabled) {

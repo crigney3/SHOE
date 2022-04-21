@@ -101,7 +101,6 @@ void Input::Initialize(HWND windowHandle)
 	keybinds[KeyActions::ToggleFlashlight].Bind				(1, new int[] { 'F' });
 	keybinds[KeyActions::ToggleFlashlightFlicker].Bind		(1, new int[] { 'V' });
 	keybinds[KeyActions::QuitGame].Bind						(1, new int[] { VK_ESCAPE });
-	keybinds[KeyActions::ObjectSelectionClickModifier].Bind	(0, 0, 0, 0, 1, new int[] { VK_MENU }); //Alt
 }
 
 // ----------------------------------------------------------

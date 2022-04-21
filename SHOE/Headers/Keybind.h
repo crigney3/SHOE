@@ -17,7 +17,6 @@ enum KeyActions {
     SwitchSkyboxNext,
     ToggleFlashlight,
     ToggleFlashlightFlicker,
-    ObjectSelectionClickModifier,
     Length, //A trick to get the length of an enum
 };
 

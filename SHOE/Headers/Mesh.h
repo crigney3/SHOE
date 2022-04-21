@@ -13,7 +13,9 @@ class Mesh
 private:
 	Microsoft::WRL::ComPtr<ID3D11Buffer> vBuffer;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> inBuffer;
-	int indices;
+	Vertex* vertexArray;
+	unsigned int* indices;
+	int indexCount;
 	int materialIndex;
 	bool enabled;
 	bool needsDepthPrePass;
@@ -38,6 +40,8 @@ public:
 
 	Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexBuffer();
 	Microsoft::WRL::ComPtr<ID3D11Buffer> GetIndexBuffer();
+	Vertex* GetVertexArray();
+	unsigned int* GetIndexArray();
 	int GetIndexCount();
 
 	void SetDepthPrePass(bool prePass);
