@@ -17,6 +17,7 @@ private:
 	std::string name;
 	bool enabled;
 	bool hierarchyIsEnabled;
+	bool transformChangedThisFrame;
 
 	std::vector<std::shared_ptr<IComponent>> rawComponentList;
 	std::vector<std::shared_ptr<ComponentPacket>> componentList;
@@ -33,6 +34,8 @@ public:
 	void Update(float deltaTime, float totalTime);
 	void OnCollisionEnter(std::shared_ptr<GameEntity> other);
 	void OnTriggerEnter(std::shared_ptr<GameEntity> other);
+	void OnTransform();
+	void OnParentTransform();
 	void OnMove(DirectX::XMFLOAT3 delta);
 	void OnRotate(DirectX::XMFLOAT3 delta);
 	void OnScale(DirectX::XMFLOAT3 delta);

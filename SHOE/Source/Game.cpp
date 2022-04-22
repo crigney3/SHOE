@@ -325,6 +325,8 @@ void Game::RenderUI(float deltaTime) {
 				if(meshEnabled != meshRenderer->IsLocallyEnabled())
 					meshRenderer->SetEnabled(meshEnabled);
 
+				ImGui::Checkbox("Render Bounds ", &meshRenderer->DrawBounds);
+
 				// Material changes
 				if (ImGui::CollapsingHeader("Material Swapping")) {
 					static int materialIndex = 0;

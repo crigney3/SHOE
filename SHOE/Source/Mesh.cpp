@@ -17,7 +17,7 @@ Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCo
 	this->needsDepthPrePass = false;
 
 	std::copy(vertexArray, vertexArray + vertices, this->vertexArray);
-	std::copy(indices, indices + vertices, this->indices);
+	std::copy(indices, indices + indexCount, this->indices);
 
 	CalculateTangents(vertexArray, vertices, indices, indexCount);
 
@@ -36,7 +36,7 @@ Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCo
 	this->needsDepthPrePass = false;
 
 	std::copy(vertexArray, vertexArray + vertices, this->vertexArray);
-	std::copy(indices, indices + vertices, this->indices);
+	std::copy(indices, indices + indexCount, this->indices);
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
 

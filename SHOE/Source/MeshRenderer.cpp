@@ -22,6 +22,7 @@ void MeshRenderer::Start()
 {
 	SetMesh(defaultMesh);
 	SetMaterial(defaultMat);
+	DrawBounds = false;
 }
 
 /// <summary>
@@ -33,12 +34,12 @@ void MeshRenderer::OnDestroy()
 	mat = nullptr;
 }
 
-void MeshRenderer::OnRotate(DirectX::XMFLOAT3 delta)
+void MeshRenderer::OnTransform()
 {
 	CalculateBounds();
 }
 
-void MeshRenderer::OnScale(DirectX::XMFLOAT3 delta)
+void MeshRenderer::OnParentTransform()
 {
 	CalculateBounds();
 }

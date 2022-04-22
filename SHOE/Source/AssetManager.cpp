@@ -2386,7 +2386,7 @@ void AssetManager::CreateComplexGeometry() {
 	//ProcessComplexModel(tree1Model->mRootNode, tree1Model);
 
 	if (flashLightModel != NULL) {
-		ProcessComplexModel(flashLightModel->mRootNode, flashLightModel);
+		ProcessComplexModel(flashLightModel->mRootNode, flashLightModel, "Human");
 	}
 
 	const aiScene* hatModel = importer.ReadFile(dxInstance->GetFullPathTo("..\\..\\..\\Assets\\Models\\hat.obj").c_str(),
@@ -2397,15 +2397,15 @@ void AssetManager::CreateComplexGeometry() {
 		aiProcess_CalcTangentSpace);
 
 	if (hatModel != NULL) {
-		ProcessComplexModel(hatModel->mRootNode, hatModel);
+		ProcessComplexModel(hatModel->mRootNode, hatModel, "Hat");
 	}
 	
 }
 
-void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene) {
+void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene, std::string name) {
 	for (unsigned int i = 0; i < node->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		mesh->mName = "ComplexMesh" + std::to_string(i);
+		mesh->mName = name + "CM" + std::to_string(i);
 		std::shared_ptr<Mesh> processedMesh = ProcessComplexMesh(mesh, scene);
 		globalMeshes.push_back(processedMesh);
 		std::shared_ptr<GameEntity> meshEntity = CreateGameEntity(processedMesh, GetMaterialByName("cobbleMat"), mesh->mName.C_Str());
@@ -2414,7 +2414,7 @@ void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene) {
 	}
 
 	for (unsigned int i = 0; i < node->mNumChildren; i++) {
-		ProcessComplexModel(node->mChildren[i], scene);
+		ProcessComplexModel(node->mChildren[i], scene, name + "Child" + std::to_string(i));
 	}
 }
 

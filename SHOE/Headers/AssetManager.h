@@ -280,7 +280,7 @@ private:
 	std::shared_ptr<Mesh> LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale);
 
 	void CreateComplexGeometry();
-	void ProcessComplexModel(aiNode* node, const aiScene* scene);
+	void ProcessComplexModel(aiNode* node, const aiScene* scene, std::string name);
 	std::shared_ptr<Mesh> ProcessComplexMesh(aiMesh* mesh, const aiScene* scene);
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::wstring textureNameToLoad, bool isMultiParticle);
 

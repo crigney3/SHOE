@@ -13,8 +13,10 @@ public:
 	);
 	void Start() override;
 	void OnDestroy() override;
-	void OnRotate(DirectX::XMFLOAT3 delta) override;
-	void OnScale(DirectX::XMFLOAT3 delta) override;
+	void OnTransform() override;
+	void OnParentTransform() override;
+
+	bool DrawBounds;
 
 	std::shared_ptr<Mesh> GetMesh();
 	std::shared_ptr<Material> GetMaterial();
