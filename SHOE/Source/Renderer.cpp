@@ -987,7 +987,6 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		this->currentSky->Draw(context, cam);
 	}
 
-	std::shared_ptr<SimpleVertexShader> fullscreenVS = globalAssets.GetVertexShaderByName("FullscreenVS");
 	fullscreenVS->SetShader();
 
 	// SSAO Rendering
