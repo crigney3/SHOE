@@ -159,7 +159,7 @@ private:
     std::shared_ptr<SimpleVertexShader> VSTerrain;
     std::shared_ptr<SimplePixelShader> PSTerrain;
     std::shared_ptr<Mesh> terrainMesh;
-    std::shared_ptr<TerrainMats> terrainMat;
+    std::shared_ptr<TerrainMaterial> terrainMat;
 
     void InitRenderTargetViews();
 

@@ -291,7 +291,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 
 						// Simple types first
 						matValue.AddMember(MAT_UV_TILING, mat->GetTiling(), allocator);
-						matValue.AddMember(MAT_ENABLED, mat->GetEnableDisable(), allocator);
 						matValue.AddMember(MAT_IS_TRANSPARENT, mat->GetTransparent(), allocator);
 						matValue.AddMember(MAT_IS_REFRACTIVE, mat->GetRefractive(), allocator);
 						matValue.AddMember(MAT_INDEX_OF_REFRACTION, mat->GetIndexOfRefraction(), allocator);
@@ -620,7 +619,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			tmName.SetString(tm->GetName().c_str(), allocator);
 			tmBlendPath.SetString(tm->GetBlendMapFilenameKey().c_str(), allocator);
 
-			terrainMatObj.AddMember(TERRAIN_MATERIAL_ENABLED, tm->GetEnableDisable(), allocator);
 			terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_ENABLED, tm->GetUsingBlendMap(), allocator);
 			terrainMatObj.AddMember(TERRAIN_MATERIAL_NAME, tmName, allocator);
 			terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_PATH, tmBlendPath, allocator);

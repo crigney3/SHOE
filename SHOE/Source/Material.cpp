@@ -159,14 +159,6 @@ std::shared_ptr<SimplePixelShader> Material::GetRefractivePixelShader() {
 	return this->refractivePixShader;
 }
 
-void Material::SetEnableDisable(bool value) {
-	this->enabled = value;
-}
-
-bool Material::GetEnableDisable() {
-	return this->enabled;
-}
-
 #pragma endregion
 
 #pragma region TerrainMaterial
@@ -191,14 +183,6 @@ TerrainMaterial::TerrainMaterial(std::string name, Microsoft::WRL::ComPtr<ID3D11
 
 TerrainMaterial::~TerrainMaterial() {
 
-}
-
-void TerrainMaterial::SetEnableDisable(bool value) {
-	this->enabled = value;
-}
-
-bool TerrainMaterial::GetEnableDisable() {
-	return this->enabled;
 }
 
 void TerrainMaterial::SetUsingBlendMap(bool usingBlendMap) {
