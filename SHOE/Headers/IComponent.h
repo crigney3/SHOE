@@ -13,6 +13,8 @@ public:
 	virtual void OnDestroy();
 	virtual void OnCollisionEnter(std::shared_ptr<GameEntity> other);
 	virtual void OnTriggerEnter(std::shared_ptr<GameEntity> other);
+	virtual void OnTransform();
+	virtual void OnParentTransform();
 	virtual void OnMove(DirectX::XMFLOAT3 delta);
 	virtual void OnRotate(DirectX::XMFLOAT3 delta);
 	virtual void OnScale(DirectX::XMFLOAT3 delta);

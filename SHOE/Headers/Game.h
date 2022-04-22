@@ -117,15 +117,6 @@ private:
 	//Assimp material pointers
 	std::vector<std::shared_ptr<Material>> specialMaterials;
 
-	//Terrain PBR Mat pointers
-	std::shared_ptr<Material> bogMat;
-	std::shared_ptr<Material> forestMat;
-	std::shared_ptr<Material> rockyMat;
-
-	//Terrain pointers
-	std::shared_ptr<Mesh> mainTerrain;
-	std::shared_ptr<TerrainMats> mainTerrainMaterials;
-
 	std::vector<std::shared_ptr<GameEntity>>* Entities;
 
 	//Sky pointers
@@ -139,5 +130,9 @@ private:
 
 	// UI Helper/Recursive Functions
 	void RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity);
+
+	//For selecting objects with a click
+	std::shared_ptr<GameEntity> GetClickedEntity();
+	std::shared_ptr<GameEntity> clickedEntityBuffer;
 };
 

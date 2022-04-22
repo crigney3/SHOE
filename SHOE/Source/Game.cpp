@@ -325,6 +325,8 @@ void Game::RenderUI(float deltaTime) {
 				if(meshEnabled != meshRenderer->IsLocallyEnabled())
 					meshRenderer->SetEnabled(meshEnabled);
 
+				ImGui::Checkbox("Render Bounds ", &meshRenderer->DrawBounds);
+
 				// Material changes
 				if (ImGui::CollapsingHeader("Material Swapping")) {
 					static int materialIndex = 0;
@@ -861,6 +863,70 @@ void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 	}
 }
 
+std::shared_ptr<GameEntity> Game::GetClickedEntity()
+{
+	//Load necessary vectors and matrices
+	XMMATRIX projectionMatrix = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
+	XMMATRIX viewMatrix = XMLoadFloat4x4(&mainCamera->GetViewMatrix());
+
+	//Convert screen position to ray
+	//Based on https://stackoverflow.com/questions/39376687/mouse-picking-with-ray-casting-in-directx
+	XMVECTOR origin = XMVector3Unproject(
+		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 0)),
+		0,
+		0,
+		width,
+		height,
+		0,
+		1,
+		projectionMatrix,
+		viewMatrix,
+		XMMatrixIdentity());
+
+	XMVECTOR destination = XMVector3Unproject(
+		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 1)),
+		0,
+		0,
+		width,
+		height,
+		0,
+		1,
+		projectionMatrix,
+		viewMatrix,
+		XMMatrixIdentity());
+
+	XMVECTOR direction = XMVector3Normalize(destination - origin);
+
+	//Raycast against MeshRenderer bounds
+	std::shared_ptr<GameEntity> closestHitEntity = nullptr;
+	float distToHit = mainCamera->GetFarDist();
+	float rayLength = mainCamera->GetFarDist();
+
+	for (std::shared_ptr<MeshRenderer> meshRenderer : ComponentManager::GetAllEnabled<MeshRenderer>()) 
+	{
+		if (meshRenderer->GetBounds().Intersects(origin, direction, rayLength)) {
+			std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
+			XMMATRIX worldMatrix = XMLoadFloat4x4(&meshRenderer->GetTransform()->GetWorldMatrix());
+			Vertex* vertices = mesh->GetVertexArray();
+			unsigned int* indices = mesh->GetIndexArray();
+			float distToTri;
+			
+			for (int i = 0; i < mesh->GetIndexCount(); i += 3) {
+				XMVECTOR vertex0 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i]].Position), worldMatrix);
+				XMVECTOR vertex1 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 1]].Position), worldMatrix);
+				XMVECTOR vertex2 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 2]].Position), worldMatrix);
+				if (DirectX::TriangleTests::Intersects(origin, direction, vertex0, vertex1, vertex2, distToTri) && distToTri < distToHit)
+				{
+					distToHit = distToTri;
+					closestHitEntity = meshRenderer->GetGameEntity();
+				}
+			}
+		}
+	}
+
+	return closestHitEntity;
+}
+
 void Game::RenderSky() {
 	if (input.KeyPress(VK_RIGHT)) {
 		skyUIIndex++;
@@ -957,6 +1023,22 @@ void Game::Update(float deltaTime, float totalTime)
 	RenderSky();
 
 	CollisionManager::Update();
+
+	//Click to select an object
+	if (input.MouseRightPress()) {
+		clickedEntityBuffer = GetClickedEntity();
+	}
+	if (input.MouseRightRelease()) {
+		if (clickedEntityBuffer != nullptr && clickedEntityBuffer == GetClickedEntity()) {
+			objWindowEnabled = true;
+			entityUIIndex = globalAssets.GetGameEntityIDByName(clickedEntityBuffer->GetName());
+		}
+		else {
+			objWindowEnabled = false;
+			entityUIIndex = -1;
+		}
+		clickedEntityBuffer = nullptr;
+	}
 
 	// Flickering is currently broken
 	/*if (flickeringEnabled) {

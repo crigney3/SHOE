@@ -268,7 +268,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 						// Simple types first
 						meshValue.AddMember(MESH_INDEX_COUNT, mesh->GetIndexCount(), allocator);
 						meshValue.AddMember(MESH_MATERIAL_INDEX, mesh->GetMaterialIndex(), allocator);
-						meshValue.AddMember(MESH_ENABLED, mesh->GetEnableDisable(), allocator);
 						meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, mesh->GetDepthPrePass(), allocator);
 
 						// Strings
@@ -292,7 +291,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 
 						// Simple types first
 						matValue.AddMember(MAT_UV_TILING, mat->GetTiling(), allocator);
-						matValue.AddMember(MAT_ENABLED, mat->GetEnableDisable(), allocator);
 						matValue.AddMember(MAT_IS_TRANSPARENT, mat->GetTransparent(), allocator);
 						matValue.AddMember(MAT_IS_REFRACTIVE, mat->GetRefractive(), allocator);
 						matValue.AddMember(MAT_INDEX_OF_REFRACTION, mat->GetIndexOfRefraction(), allocator);
@@ -621,7 +619,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			tmName.SetString(tm->GetName().c_str(), allocator);
 			tmBlendPath.SetString(tm->GetBlendMapFilenameKey().c_str(), allocator);
 
-			terrainMatObj.AddMember(TERRAIN_MATERIAL_ENABLED, tm->GetEnableDisable(), allocator);
 			terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_ENABLED, tm->GetUsingBlendMap(), allocator);
 			terrainMatObj.AddMember(TERRAIN_MATERIAL_NAME, tmName, allocator);
 			terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_PATH, tmBlendPath, allocator);
@@ -1577,7 +1574,7 @@ void AssetManager::InitializeMeshes() {
 	globalMeshes = std::vector<std::shared_ptr<Mesh>>();
 
 	// Test loading failure
-	CreateMesh("ExceptionTest", "InvalidPath");
+	//CreateMesh("ExceptionTest", "InvalidPath");
 
 	CreateMesh("Cube", "cube.obj");
 	CreateMesh("Cylinder", "cylinder.obj");
@@ -2387,7 +2384,7 @@ void AssetManager::CreateComplexGeometry() {
 	//ProcessComplexModel(tree1Model->mRootNode, tree1Model);
 
 	if (flashLightModel != NULL) {
-		ProcessComplexModel(flashLightModel->mRootNode, flashLightModel);
+		ProcessComplexModel(flashLightModel->mRootNode, flashLightModel, "Human");
 	}
 
 	const aiScene* hatModel = importer.ReadFile(dxInstance->GetFullPathTo("..\\..\\..\\Assets\\Models\\hat.obj").c_str(),
@@ -2398,24 +2395,24 @@ void AssetManager::CreateComplexGeometry() {
 		aiProcess_CalcTangentSpace);
 
 	if (hatModel != NULL) {
-		ProcessComplexModel(hatModel->mRootNode, hatModel);
+		ProcessComplexModel(hatModel->mRootNode, hatModel, "Hat");
 	}
 	
 }
 
-void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene) {
+void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene, std::string name) {
 	for (unsigned int i = 0; i < node->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		std::string newName = "ComplexMesh" + std::to_string(i);
-		mesh->mName = newName;
-		globalMeshes.push_back(ProcessComplexMesh(mesh, scene));
-		CreateGameEntity(GetMeshByName(mesh->mName.C_Str() + std::string("Mesh")), GetMaterialByName("cobbleMat"), mesh->mName.C_Str());
-		GetGameEntityByName(mesh->mName.C_Str())->GetTransform()->SetPosition(0.0f, 3.0f * i, 1.0f);
-		GetGameEntityByName(mesh->mName.C_Str())->GetTransform()->SetScale(0.25f, 0.25f, 0.25f);
+		mesh->mName = name + "CM" + std::to_string(i);
+		std::shared_ptr<Mesh> processedMesh = ProcessComplexMesh(mesh, scene);
+		globalMeshes.push_back(processedMesh);
+		std::shared_ptr<GameEntity> meshEntity = CreateGameEntity(processedMesh, GetMaterialByName("cobbleMat"), mesh->mName.C_Str());
+		meshEntity->GetTransform()->SetPosition(0.0f, 3.0f * i, 1.0f);
+		meshEntity->GetTransform()->SetScale(0.25f, 0.25f, 0.25f);
 	}
 
 	for (unsigned int i = 0; i < node->mNumChildren; i++) {
-		ProcessComplexModel(node->mChildren[i], scene);
+		ProcessComplexModel(node->mChildren[i], scene, name + "Child" + std::to_string(i));
 	}
 }
 

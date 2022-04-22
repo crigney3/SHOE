@@ -30,6 +30,25 @@ Renderer::Renderer(
 	this->mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
 	this->flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 
+	this->sphereMesh = globalAssets.GetMeshByName("Sphere");
+	this->cubeMesh = globalAssets.GetMeshByName("Cube");
+
+	this->basicVS = globalAssets.GetVertexShaderByName("BasicVS");
+	this->perFrameVS = globalAssets.GetVertexShaderByName("NormalsVS");
+	this->fullscreenVS = globalAssets.GetVertexShaderByName("FullscreenVS");
+	this->solidColorPS = globalAssets.GetPixelShaderByName("SolidColorPS");
+	this->perFramePS = globalAssets.GetPixelShaderByName("NormalsPS");
+	this->textureSamplePS = globalAssets.GetPixelShaderByName("TextureSamplePS");
+
+	this->ssaoPS = globalAssets.GetPixelShaderByName("SSAOPS");
+	this->ssaoBlurPS = globalAssets.GetPixelShaderByName("SSAOBlurPS");
+	this->ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
+
+	this->VSTerrain = globalAssets.GetVertexShaderByName("TerrainVS");
+	this->PSTerrain = globalAssets.GetPixelShaderByName("TerrainPS");
+	this->terrainMesh = globalAssets.GetMeshByName("TerrainMesh");
+	this->terrainMat = globalAssets.GetTerrainMaterialByName("Forest TMaterial");
+
 	this->drawColliders = true;
 	this->drawColliderTransforms = true;
 
@@ -381,16 +400,13 @@ void Renderer::PostResize(unsigned int windowHeight,
 // ------------------------------------------------------------------------
 void Renderer::DrawPointLights()
 {
-	std::shared_ptr<SimpleVertexShader> lightVS = globalAssets.GetVertexShaderByName("BasicVS");
-	std::shared_ptr<SimplePixelShader> lightPS = globalAssets.GetPixelShaderByName("SolidColorPS");
-
 	// Turn on these shaders
-	lightVS->SetShader();
-	lightPS->SetShader();
+	basicVS->SetShader();
+	solidColorPS->SetShader();
 
 	// Set up vertex shader
-	lightVS->SetMatrix4x4("view", globalAssets.GetCameraByName("mainCamera")->GetViewMatrix());
-	lightVS->SetMatrix4x4("projection", globalAssets.GetCameraByName("mainCamera")->GetProjectionMatrix());
+	basicVS->SetMatrix4x4("view", mainCamera->GetViewMatrix());
+	basicVS->SetMatrix4x4("projection", mainCamera->GetProjectionMatrix());
 
 	std::vector<std::shared_ptr<Light>> lights = ComponentManager::GetAll<Light>();
 
@@ -405,27 +421,27 @@ void Renderer::DrawPointLights()
 		float scale = lights[i]->GetRange() / 10.0f;
 
 		// Set up the world matrix for this light
-		lightVS->SetMatrix4x4("world", lights[i]->GetTransform()->GetWorldMatrix());
+		basicVS->SetMatrix4x4("world", lights[i]->GetTransform()->GetWorldMatrix());
 
 		// Set up the pixel shader data
 		DirectX::XMFLOAT3 finalColor = lights[i]->GetColor();
 		finalColor.x *= lights[i]->GetIntensity();
 		finalColor.y *= lights[i]->GetIntensity();
 		finalColor.z *= lights[i]->GetIntensity();
-		lightPS->SetFloat3("Color", finalColor);
+		solidColorPS->SetFloat3("Color", finalColor);
 
 		// Copy data
-		lightVS->CopyAllBufferData();
-		lightPS->CopyAllBufferData();
+		basicVS->CopyAllBufferData();
+		solidColorPS->CopyAllBufferData();
 
 		// Draw
 		UINT stride = sizeof(Vertex);
 		UINT offset = 0;
-		context->IASetVertexBuffers(0, 1, globalAssets.GetMeshByName("Sphere")->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-		context->IASetIndexBuffer(globalAssets.GetMeshByName("Sphere")->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+		context->IASetVertexBuffers(0, 1, sphereMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(sphereMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 		context->DrawIndexed(
-			globalAssets.GetMeshByName("Sphere")->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+			sphereMesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
 			0,     // Offset to the first index we want to use
 			0);    // Offset to add to each index when looking up vertices
 	}
@@ -452,8 +468,6 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 	VSShadow->SetMatrix4x4("projection", sourceCam->GetProjectionMatrix());
 
 	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAllEnabled<MeshRenderer>();
-
-	std::shared_ptr<SimplePixelShader> solidColorPS = globalAssets.GetPixelShaderByName("SolidColorPS");
 
 	switch(type) {
 		case MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS:
@@ -589,17 +603,13 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTyp
 
 void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 {
-	// Get what shaders we're using
-	const std::shared_ptr<SimpleVertexShader> collidersVS = globalAssets.GetVertexShaderByName("BasicVS");
-	const std::shared_ptr<SimplePixelShader> collidersPS = globalAssets.GetPixelShaderByName("SolidColorPS");
-
 	// Set the shaders to be used
-	collidersVS->SetShader();
-	collidersPS->SetShader();
+	basicVS->SetShader();
+	solidColorPS->SetShader();
 
 	// Set up vertex shader
-	collidersVS->SetMatrix4x4("view", globalAssets.GetCameraByName("mainCamera")->GetViewMatrix());
-	collidersVS->SetMatrix4x4("projection", globalAssets.GetCameraByName("mainCamera")->GetProjectionMatrix());
+	basicVS->SetMatrix4x4("view", mainCamera->GetViewMatrix());
+	basicVS->SetMatrix4x4("projection", mainCamera->GetProjectionMatrix());
 
 	//Draw in wireframe mode
 	context->RSSetState(colliderRasterizer.Get());
@@ -607,94 +617,125 @@ void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 	// Grab the list of colliders
 	const std::vector<std::shared_ptr<Collider>> colliders = ComponentManager::GetAllEnabled<Collider>();
 
-	for (int i = 0; i < colliders.size(); i++)
+	for (std::shared_ptr<Collider> collider : colliders)
 	{
-		XMFLOAT4X4 world; 
-		XMFLOAT4X4 worldInvTrans;
-
-		// Easy access to what we're working with this loop
-		std::shared_ptr<Collider> c = colliders[i];
-
-		if (c->GetVisibilityStatus()) {
+		if (collider->GetVisibilityStatus()) {
 			//----------------------//
 			// --- Draw the OBB --- //
 			//----------------------//
-			BoundingOrientedBox obb = c->GetOrientedBoundingBox();
+			//Make the world matrix for this collider
+			BoundingOrientedBox obb = collider->GetOrientedBoundingBox();
 			XMMATRIX transMat = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
 			XMMATRIX scaleMat = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
-			XMVECTOR rot = XMLoadFloat4(&obb.Orientation);
-			XMMATRIX rotMat = XMMatrixRotationQuaternion(rot);
-			// Make the transform for this collider
-			XMMATRIX worldMat = scaleMat * rotMat * transMat;
+			XMMATRIX rotMat = XMMatrixRotationQuaternion(XMLoadFloat4(&obb.Orientation));
 
-			// Convert & store as float4x4s
-			XMStoreFloat4x4(&world, worldMat);
-			XMStoreFloat4x4(&worldInvTrans, XMMatrixInverse(0, XMMatrixTranspose(worldMat)));
+			XMFLOAT4X4 world;
+			XMStoreFloat4x4(&world, scaleMat * rotMat * transMat);
 
-			// Set up the world matrix for this light
-			collidersVS->SetMatrix4x4("world", world);
-			collidersVS->SetMatrix4x4("worldInverseTranspose", worldInvTrans);
+			basicVS->SetMatrix4x4("world", world);
 
 			// Set up the pixel shader data
 			XMFLOAT3 finalColor = XMFLOAT3(0.5f, 1.0f, 1.0f);
-			// drawing colliders and triggerboxes as different colors
-			if (c->GetTriggerStatus())
+			// Drawing colliders and triggerboxes as different colors
+			if (collider->GetTriggerStatus())
 			{
 				finalColor = XMFLOAT3(1.0f, 1.0f, 0.0f);
 			}
-			collidersPS->SetFloat3("Color", finalColor);
+			solidColorPS->SetFloat3("Color", finalColor);
 
 			// Copy data
-			collidersVS->CopyAllBufferData();
-			collidersPS->CopyAllBufferData();
+			basicVS->CopyAllBufferData();
+			solidColorPS->CopyAllBufferData();
 
 			// Draw
 			UINT stride = sizeof(Vertex);
 			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, globalAssets.GetMeshByName("Cube")->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(globalAssets.GetMeshByName("Cube")->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			context->IASetVertexBuffers(0, 1, cubeMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(cubeMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 			context->DrawIndexed(
-				globalAssets.GetMeshByName("Cube")->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+				cubeMesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
 				0,     // Offset to the first index we want to use
 				0);    // Offset to add to each index when looking up vertices
 		}
-		
-
 
 		//----------------------------------------//
 		// --- Draw the Colliders' transforms --- //
 		//----------------------------------------//
-		if (drawColliderTransforms && c->GetTransformVisibilityStatus())
+		if (drawColliderTransforms && collider->GetTransformVisibilityStatus())
 		{
-			std::shared_ptr<Transform> t = c->GetTransform();
-			XMFLOAT4X4 world = t->GetWorldMatrix();
-			XMMATRIX worldMat = XMLoadFloat4x4(&world);
-
-			// Convert & store as float4x4s
-			XMStoreFloat4x4(&world, worldMat);
-			XMStoreFloat4x4(&worldInvTrans, XMMatrixInverse(0, XMMatrixTranspose(worldMat)));
-
-			// Set up the world matrix for this light
-			collidersVS->SetMatrix4x4("world", world);
-			collidersVS->SetMatrix4x4("worldInverseTranspose", worldInvTrans);
+			// Set up the world matrix for this collider
+			basicVS->SetMatrix4x4("world", collider->GetTransform()->GetWorldMatrix());
 
 			// Set up the pixel shader data
-			XMFLOAT3 finalColor = XMFLOAT3(1.0f, 0.0f, 1.0f);
-			collidersPS->SetFloat3("Color", finalColor);
+			solidColorPS->SetFloat3("Color", XMFLOAT3(1.0f, 0.0f, 1.0f));
 
 			// Copy data
-			collidersVS->CopyAllBufferData();
-			collidersPS->CopyAllBufferData();
+			basicVS->CopyAllBufferData();
+			solidColorPS->CopyAllBufferData();
 
 			// Draw
 			UINT stride = sizeof(Vertex);
 			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, globalAssets.GetMeshByName("Cube")->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(globalAssets.GetMeshByName("Cube")->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			context->IASetVertexBuffers(0, 1, cubeMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(cubeMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 			context->DrawIndexed(
-				globalAssets.GetMeshByName("Cube")->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+				cubeMesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+				0,     // Offset to the first index we want to use
+				0);    // Offset to add to each index when looking up vertices
+		}
+	}
+
+	// Put the RS State back to normal (/non wireframe)
+	context->RSSetState(0);
+}
+
+void Renderer::RenderMeshBounds(std::shared_ptr<Camera> cam)
+{
+	// Set the shaders to be used
+	basicVS->SetShader();
+	solidColorPS->SetShader();
+
+	// Set up vertex shader
+	basicVS->SetMatrix4x4("view", mainCamera->GetViewMatrix());
+	basicVS->SetMatrix4x4("projection", mainCamera->GetProjectionMatrix());
+
+	//Draw in wireframe mode
+	context->RSSetState(colliderRasterizer.Get());
+
+	// Grab the list of meshes
+	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAllEnabled<MeshRenderer>();
+
+	for (std::shared_ptr<MeshRenderer> mesh : activeMeshes)
+	{
+		if (mesh->DrawBounds) {
+			//Make the world matrix for this bounds box
+			BoundingOrientedBox obb = mesh->GetBounds();
+			XMMATRIX transMat = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
+			XMMATRIX scaleMat = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
+			XMMATRIX rotMat = XMMatrixRotationQuaternion(XMLoadFloat4(&obb.Orientation));
+
+			XMFLOAT4X4 world;
+			XMStoreFloat4x4(&world, scaleMat * rotMat * transMat);
+
+			basicVS->SetMatrix4x4("world", world);
+
+			// Set up the pixel shader data
+			solidColorPS->SetFloat3("Color", XMFLOAT3(0.5f, 1.0f, 0.5f));
+
+			// Copy data
+			basicVS->CopyAllBufferData();
+			solidColorPS->CopyAllBufferData();
+
+			// Draw
+			UINT stride = sizeof(Vertex);
+			UINT offset = 0;
+			context->IASetVertexBuffers(0, 1, cubeMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(cubeMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+			context->DrawIndexed(
+				cubeMesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
 				0,     // Offset to the first index we want to use
 				0);    // Offset to add to each index when looking up vertices
 		}
@@ -751,8 +792,6 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	// PBR+IBL shader
 	unsigned int lightCount = Light::GetLightArrayCount();
 
-	std::shared_ptr<SimpleVertexShader> perFrameVS = globalAssets.GetVertexShaderByName("NormalsVS");
-
 	perFrameVS->SetMatrix4x4("view", cam->GetViewMatrix());
 	perFrameVS->SetMatrix4x4("projection", cam->GetProjectionMatrix());
 	perFrameVS->SetMatrix4x4("lightView", flashShadowCamera->GetViewMatrix());
@@ -760,8 +799,6 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	perFrameVS->SetMatrix4x4("envLightView", mainShadowCamera->GetViewMatrix());
 	perFrameVS->SetMatrix4x4("envLightProjection", mainShadowCamera->GetProjectionMatrix());
-
-	std::shared_ptr<SimplePixelShader> perFramePS = globalAssets.GetPixelShaderByName("NormalsPS");
 
 	perFramePS->SetData("lights", Light::GetLightArray(), sizeof(LightData) * MAX_LIGHTS);
 	perFramePS->SetData("lightCount", &lightCount, sizeof(lightCount));
@@ -882,11 +919,6 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	//Now deal with rendering the terrain, PS data first
 	std::vector<std::shared_ptr<Terrain>> terrains = ComponentManager::GetAll<Terrain>();
-	if (terrains.size() > 0) {
-		std::shared_ptr<SimplePixelShader> PSTerrain = globalAssets.GetPixelShaderByName("TerrainPS");
-		std::shared_ptr<SimpleVertexShader> VSTerrain = globalAssets.GetVertexShaderByName("TerrainVS");
-		std::shared_ptr<Mesh> terrainMesh = globalAssets.GetMeshByName("TerrainMesh");
-
 		for (int i = 0; i < terrains.size(); i++) {
 			if (!terrains[i]->IsEnabled()) continue;
 
@@ -948,13 +980,13 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 				0,     // Offset to the first index we want to use
 				0);    // Offset to add to each index when looking up vertices
 		}
-	}
+
+	RenderMeshBounds(cam);
 
 	if (this->currentSky->GetEnableDisable()) {
 		this->currentSky->Draw(context, cam);
 	}
 
-	std::shared_ptr<SimpleVertexShader> fullscreenVS = globalAssets.GetVertexShaderByName("FullscreenVS");
 	fullscreenVS->SetShader();
 
 	// SSAO Rendering
@@ -965,18 +997,16 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	renderTargets[3] = 0;
 	context->OMSetRenderTargets(4, renderTargets, 0);
 
-	std::shared_ptr<SimplePixelShader> ssaoPS = globalAssets.GetPixelShaderByName("SSAOPS");
 	ssaoPS->SetShader();
 
 	// Inverse projection matrix
-	XMFLOAT4X4 invProj;
-	XMFLOAT4X4 view = mainCamera->GetViewMatrix();
 	XMFLOAT4X4 proj = mainCamera->GetProjectionMatrix();
+	XMFLOAT4X4 invProj;
 
 	XMStoreFloat4x4(&invProj, XMMatrixInverse(0, XMLoadFloat4x4(&proj)));
 	ssaoPS->SetMatrix4x4("invProjection", invProj);
 	ssaoPS->SetMatrix4x4("projection", proj);
-	ssaoPS->SetMatrix4x4("view", view);
+	ssaoPS->SetMatrix4x4("view", mainCamera->GetViewMatrix());
 	ssaoPS->SetData("offsets", ssaoOffsets, sizeof(XMFLOAT4) * ARRAYSIZE(ssaoOffsets));
 	ssaoPS->SetFloat("ssaoRadius", ssaoRadius);
 	ssaoPS->SetInt("ssaoSamples", ssaoSamples);
@@ -992,7 +1022,6 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	renderTargets[0] = renderTargetRTVs[RTVTypes::SSAO_BLUR].Get();
 	context->OMSetRenderTargets(1, renderTargets, 0);
 
-	std::shared_ptr<SimplePixelShader> ssaoBlurPS = globalAssets.GetPixelShaderByName("SSAOBlurPS");
 	ssaoBlurPS->SetShader();
 	ssaoBlurPS->SetShaderResourceView("SSAO", renderTargetSRVs[RTVTypes::SSAO_RAW].Get());
 	ssaoBlurPS->SetFloat2("pixelSize", XMFLOAT2(1.0f / windowWidth, 1.0f / windowHeight));
@@ -1017,7 +1046,6 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 	context->OMSetRenderTargets(1, renderTargets, 0);
 
 	// Combine all results into the Composite buffer
-	std::shared_ptr<SimplePixelShader> ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
 	ssaoCombinePS->SetShader();
 	ssaoCombinePS->SetShaderResourceView("sceneColorsNoAmbient", renderTargetSRVs[RTVTypes::COLORS_NO_AMBIENT].Get());
 	ssaoCombinePS->SetShaderResourceView("ambient", renderTargetSRVs[RTVTypes::COLORS_AMBIENT].Get());
@@ -1054,10 +1082,10 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		// to a buffer that can be read by the GPU
 		renderTargets[0] = backBufferRTV.Get();
 		context->OMSetRenderTargets(1, renderTargets, 0);
-		std::shared_ptr<SimplePixelShader> ps = globalAssets.GetPixelShaderByName("TextureSamplePS");
-		ps->SetShader();
-		ps->SetShaderResourceView("Pixels", renderTargetSRVs[RTVTypes::COMPOSITE].Get());
-		ps->SetSamplerState("BasicSampler", activeMeshes[meshIt]->GetMaterial()->GetSamplerState());
+		
+		textureSamplePS->SetShader();
+		textureSamplePS->SetShaderResourceView("Pixels", renderTargetSRVs[RTVTypes::COMPOSITE].Get());
+		textureSamplePS->SetSamplerState("BasicSampler", activeMeshes[meshIt]->GetMaterial()->GetSamplerState());
 		context->Draw(3, 0);
 
 		// First, create the refraction silhouette

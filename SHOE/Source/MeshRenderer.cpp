@@ -20,8 +20,9 @@ void MeshRenderer::SetDefaults(std::shared_ptr<Mesh> mesh, std::shared_ptr<Mater
 /// </summary>
 void MeshRenderer::Start()
 {
-	mesh = defaultMesh;
-	mat = defaultMat;
+	SetMesh(defaultMesh);
+	SetMaterial(defaultMat);
+	DrawBounds = false;
 }
 
 /// <summary>
@@ -31,6 +32,16 @@ void MeshRenderer::OnDestroy()
 {
 	mesh = nullptr;
 	mat = nullptr;
+}
+
+void MeshRenderer::OnTransform()
+{
+	CalculateBounds();
+}
+
+void MeshRenderer::OnParentTransform()
+{
+	CalculateBounds();
 }
 
 /// <summary>
@@ -55,6 +66,7 @@ std::shared_ptr<Material> MeshRenderer::GetMaterial() {
 /// <param name="newMesh">New mesh to render</param>
 void MeshRenderer::SetMesh(std::shared_ptr<Mesh> newMesh) {
 	this->mesh = newMesh;
+	CalculateBounds();
 }
 
 /// <summary>
@@ -64,4 +76,15 @@ void MeshRenderer::SetMesh(std::shared_ptr<Mesh> newMesh) {
 void MeshRenderer::SetMaterial(std::shared_ptr<Material> newMaterial) {
 	AssetManager::materialSortDirty = true;
 	this->mat = newMaterial;
+}
+
+DirectX::BoundingOrientedBox MeshRenderer::GetBounds()
+{
+	return bounds;
+}
+
+void MeshRenderer::CalculateBounds()
+{
+	bounds = DirectX::BoundingOrientedBox(mesh->GetBounds());
+	bounds.Transform(bounds, DirectX::XMLoadFloat4x4(&GetTransform()->GetWorldMatrix()));
 }

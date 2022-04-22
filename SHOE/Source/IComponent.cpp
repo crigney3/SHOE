@@ -42,6 +42,20 @@ void IComponent::OnTriggerEnter(std::shared_ptr<GameEntity> other)
 }
 
 /**
+ * \brief Called when this entity's transform is changed
+ */
+void IComponent::OnTransform()
+{
+}
+
+/**
+ * \brief Called when this parent's transform is changed
+ */
+void IComponent::OnParentTransform()
+{
+}
+
+/**
  * \brief Called when this entity's position is changed
  * \param delta DirectX::XMFLOAT3 The delta of this move
  */

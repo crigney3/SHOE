@@ -81,9 +81,6 @@ public:
 
 	void SetRefractivePixelShader(std::shared_ptr<SimplePixelShader> refractPix);
 	std::shared_ptr<SimplePixelShader> GetRefractivePixelShader();
-
-	void SetEnableDisable(bool value);
-	bool GetEnableDisable();
 };
 
 class TerrainMaterial {
@@ -106,9 +103,6 @@ public:
 
 	void RemoveMaterialByName(std::string name);
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
-
-	void SetEnableDisable(bool value);
-	bool GetEnableDisable();
 
 	void SetUsingBlendMap(bool usingBlendMap);
 	bool GetUsingBlendMap();

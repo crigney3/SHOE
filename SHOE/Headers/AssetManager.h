@@ -54,7 +54,6 @@
 // Material Data:
 #define MAT_UV_TILING "aUT"
 #define MAT_NAME "aN"
-#define MAT_ENABLED "aE"
 #define MAT_IS_TRANSPARENT "aIT"
 #define MAT_IS_REFRACTIVE "aIR"
 #define MAT_INDEX_OF_REFRACTION "aOR"
@@ -139,7 +138,6 @@
 
 // Terrain Material Data:
 #define TERRAIN_MATERIAL_NAME "tN"
-#define TERRAIN_MATERIAL_ENABLED "tE"
 #define TERRAIN_MATERIAL_BLEND_MAP_PATH "tBP"
 #define TERRAIN_MATERIAL_BLEND_MAP_ENABLED "tBE"
 #define TERRAIN_MATERIAL_MATERIAL_ARRAY "tMA"
@@ -280,7 +278,7 @@ private:
 	std::shared_ptr<Mesh> LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale);
 
 	void CreateComplexGeometry();
-	void ProcessComplexModel(aiNode* node, const aiScene* scene);
+	void ProcessComplexModel(aiNode* node, const aiScene* scene, std::string name);
 	std::shared_ptr<Mesh> ProcessComplexMesh(aiMesh* mesh, const aiScene* scene);
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::wstring textureNameToLoad, bool isMultiParticle);
 
