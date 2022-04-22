@@ -3,7 +3,7 @@
 
 using namespace DirectX;
 
-Camera::Camera(float x, float y, float z, float aspectRatio, bool type, std::string name)
+Camera::Camera(float x, float y, float z, float aspectRatio, bool projMatrixType, std::string name, CameraType cameraTag)
 {
 	this->transform = ComponentManager::Instantiate<Transform>(nullptr, true);
 	transform->SetPosition(x, y, z);
@@ -15,12 +15,13 @@ Camera::Camera(float x, float y, float z, float aspectRatio, bool type, std::str
 	this->moveSpeed = 10.0f;
 	this->enabled = true;
 	this->name = name;
+	this->tag = cameraTag;
 
 	UpdateViewMatrix();
-	UpdateProjectionMatrix(aspectRatio, type);
+	UpdateProjectionMatrix(aspectRatio, projMatrixType);
 }
 
-Camera::Camera(DirectX::XMFLOAT3 pos, float aspectRatio, bool type, std::string name)
+Camera::Camera(DirectX::XMFLOAT3 pos, float aspectRatio, bool projMatrixType, std::string name, CameraType cameraTag)
 {
 	this->transform = ComponentManager::Instantiate<Transform>(nullptr, true);
 	transform->SetPosition(pos);
@@ -32,9 +33,10 @@ Camera::Camera(DirectX::XMFLOAT3 pos, float aspectRatio, bool type, std::string 
 	this->moveSpeed = 10.0f;
 	this->enabled = true;
 	this->name = name;
+	this->tag = cameraTag;
 
 	UpdateViewMatrix();
-	UpdateProjectionMatrix(aspectRatio, type);
+	UpdateProjectionMatrix(aspectRatio, projMatrixType);
 }
 
 Camera::~Camera()
@@ -98,15 +100,15 @@ void Camera::UpdateViewMatrix()
 	XMStoreFloat4x4(&vMatrix, view);
 }
 
-void Camera::UpdateProjectionMatrix(float aspectRatio, bool type)
+void Camera::UpdateProjectionMatrix(float aspectRatio, bool projMatrixType)
 {
 	XMMATRIX proj;
-	if(type) proj = XMMatrixPerspectiveFovLH(this->fov, aspectRatio, this->nearDist, this->farDist);
+	if(projMatrixType) proj = XMMatrixPerspectiveFovLH(this->fov, aspectRatio, this->nearDist, this->farDist);
 	else proj = XMMatrixOrthographicLH(10.0f, 10.0f, this->nearDist, this->farDist);
 
 	XMStoreFloat4x4(&projMatrix, proj);
 
-	this->prevAspectRatio = aspectRatio;
+	this->aspectRatio = aspectRatio;
 }
 
 std::string Camera::GetName() {
@@ -154,7 +156,7 @@ float Camera::GetMoveSpeed() {
 void Camera::SetFOV(float fov) {
 	this->fov = fov;
 
-	UpdateProjectionMatrix(prevAspectRatio, this->type);
+	UpdateProjectionMatrix(aspectRatio, this->projMatrixType);
 }
 
 void Camera::SetLookSpeed(float lookSpeed) {
@@ -168,13 +170,31 @@ void Camera::SetMoveSpeed(float moveSpeed) {
 void Camera::SetNearDist(float nearDist) {
 	this->nearDist = nearDist;
 
-	UpdateProjectionMatrix(prevAspectRatio, this->type);
+	UpdateProjectionMatrix(aspectRatio, this->projMatrixType);
 }
 
 void Camera::SetFarDist(float farDist) {
 	this->farDist = farDist;
 
-	UpdateProjectionMatrix(prevAspectRatio, this->type);
+	UpdateProjectionMatrix(aspectRatio, this->projMatrixType);
+}
+
+float Camera::GetAspectRatio() {
+	return this->aspectRatio;
+}
+
+void Camera::SetAspectRatio(float newAspectRatio) {
+	UpdateProjectionMatrix(newAspectRatio, this->projMatrixType);
+}
+
+bool Camera::GetProjectionMatrixType() {
+	return this->projMatrixType;
+}
+
+void Camera::SetProjectionMatrixType(bool newProjMatrixType) {
+	this->projMatrixType = newProjMatrixType;
+
+	UpdateProjectionMatrix(this->aspectRatio, this->projMatrixType);
 }
 
 void Camera::SetEnableDisable(bool value) {
@@ -183,4 +203,18 @@ void Camera::SetEnableDisable(bool value) {
 
 bool Camera::GetEnableDisable() {
 	return this->enabled;
+}
+
+CameraType Camera::GetTag() {
+	return this->tag;
+}
+
+/// <summary>
+/// Be wary of calling this directly, as giving multiple cameras the 
+/// Main or Play tags results in undefined behavior! Prefer
+///	AssetManager's SetCameraTag, which handles these cases.
+/// </summary>
+/// <param name="tag"></param>
+void Camera::SetTag(CameraType tag) {
+	this->tag = tag;
 }

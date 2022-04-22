@@ -16,6 +16,12 @@
 #define VERTEX_SHADERS "vS"
 #define PIXEL_SHADERS "pS"
 #define COMPUTE_SHADERS "cS"
+#define FONTS "fn"
+#define TEXTURE_SAMPLE_STATES "eS"
+#define CAMERAS "ca"
+#define SKIES "s"
+#define SOUNDS "sO"
+#define TERRAIN_MATERIALS "tM"
 
 // Entities:
 #define ENTITY_NAME "n"
@@ -47,6 +53,44 @@
 
 // Material Data:
 #define MAT_UV_TILING "aUT"
+#define MAT_NAME "aN"
+#define MAT_ENABLED "aE"
+#define MAT_IS_TRANSPARENT "aIT"
+#define MAT_IS_REFRACTIVE "aIR"
+#define MAT_INDEX_OF_REFRACTION "aOR"
+#define MAT_REFRACTION_SCALE "aRS"
+#define MAT_COLOR_TINT "aCT"
+#define MAT_PIXEL_SHADER "aPS"
+#define MAT_REFRACTION_PIXEL_SHADER "aRS"
+#define MAT_VERTEX_SHADER "aVS"
+#define MAT_TEXTURE_OR_ALBEDO_MAP "aAM"
+#define MAT_NORMAL_MAP "aNM"
+#define MAT_METAL_MAP "aMM"
+#define MAT_ROUGNESS_MAP "aRM"
+#define MAT_TEXTURE_SAMPLER_STATE "aTS"
+#define MAT_CLAMP_SAMPLER_STATE "aCS"
+
+// Material data subsection - 
+// Sampler description data:
+#define SAMPLER_ADDRESS_U "sAU"
+#define SAMPLER_ADDRESS_V "sAV"
+#define SAMPLER_ADDRESS_W "sAW"
+#define SAMPLER_BORDER_COLOR "sBC"
+#define SAMPLER_COMPARISON_FUNCTION "sCF"
+#define SAMPLER_FILTER "sF"
+#define SAMPLER_MAX_ANISOTROPY "sMA"
+#define SAMPLER_MAX_LOD "sML"
+#define SAMPLER_MIN_LOD "sIL"
+#define SAMPLER_MIP_LOD_BIAS "sPB"
+
+// Font Data:
+#define FONT_FILENAME_KEY "fFK"
+#define FONT_NAME "fN"
+
+// Transform Data:
+#define TRANSFORM_LOCAL_POSITION "tLP"
+#define TRANSFORM_LOCAL_SCALE "tLS"
+#define TRANSFORM_LOCAL_ROTATION "tLR"
 
 // Generic Shader Data:
 #define SHADER_NAME "sN"
@@ -58,8 +102,47 @@
 // Pixel Shader Data:
 #define PIXEL_SHADER_OBJECT "pSO"
 
-// Compute Shader DAta:
+// Compute Shader Data:
 #define COMPUTE_SHADER_OBJECT "cSO"
+
+// Camera Data:
+#define CAMERA_NAME "cN"
+#define CAMERA_TRANSFORM "cT"
+#define CAMERA_ASPECT_RATIO "cAR"
+#define CAMERA_PROJECTION_MATRIX_TYPE "cPM"
+#define CAMERA_TAG "cG"
+#define CAMERA_LOOK_SPEED "cLS"
+#define CAMERA_MOVE_SPEED "cMS"
+#define CAMERA_ENABLED "cE"
+#define CAMERA_NEAR_DISTANCE "cND"
+#define CAMERA_FAR_DISTANCE "cFD"
+#define CAMERA_FIELD_OF_VIEW "cF"
+
+// Sky Data:
+#define SKY_NAME "sN"
+#define SKY_FILENAME_KEY_TYPE "sFT"
+#define SKY_FILENAME_KEY "sFK"
+#define SKY_FILENAME_EXTENSION "sFE"
+
+// Collider Data:
+// Fairly sparse for now
+#define COLLIDER_TYPE "cT"
+#define COLLIDER_ENABLED "cE"
+#define COLLIDER_IS_VISIBLE "cIV"
+#define COLLIDER_IS_TRANSFORM_VISIBLE "cIT"
+
+// Sound Data:
+// Just a filenameKey and a name
+#define SOUND_FILENAME_KEY "oFK"
+#define SOUND_NAME "oN"
+#define SOUND_FMOD_MODE "oFM"
+
+// Terrain Material Data:
+#define TERRAIN_MATERIAL_NAME "tN"
+#define TERRAIN_MATERIAL_ENABLED "tE"
+#define TERRAIN_MATERIAL_BLEND_MAP_PATH "tBP"
+#define TERRAIN_MATERIAL_BLEND_MAP_ENABLED "tBE"
+#define TERRAIN_MATERIAL_MATERIAL_ARRAY "tMA"
 
 #pragma endregion
 
@@ -85,7 +168,6 @@
 #include <mutex>
 #include <exception>
 #include "SpriteBatch.h"
-#include "SpriteFont.h"
 #include "CollisionManager.h"
 #include "rapidjson\document.h"
 #include "rapidjson\filereadstream.h"
@@ -99,6 +181,11 @@ struct LoadingNotifications {
 	std::string category;
 	std::string object;
 	std::exception_ptr errorCode;
+};
+
+struct FMODUserData {
+	std::string name;
+	std::string filenameKey;
 };
 
 // State machine used to track what type of load
@@ -128,6 +215,13 @@ enum ComponentTypes {
 	LIGHT,
 	// Must always be the final enum
 	COMPONENT_TYPE_COUNT
+};
+
+enum PBRTextureTypes {
+	ALBEDO,
+	NORMAL,
+	METAL,
+	ROUGH
 };
 
 class AssetManager
@@ -164,6 +258,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
 
+	std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>> textureSampleStates;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState;
 
@@ -189,6 +284,7 @@ private:
 	std::shared_ptr<Mesh> ProcessComplexMesh(aiMesh* mesh, const aiScene* scene);
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::wstring textureNameToLoad, bool isMultiParticle);
 
+	void InitializeTextureSampleStates();
 	void InitializeMeshes();
 	void InitializeMaterials();
 	void InitializeShaders();
@@ -211,9 +307,9 @@ private:
 	std::vector<std::shared_ptr<Mesh>> globalMeshes;
 	std::vector<std::shared_ptr<Material>> globalMaterials;
 	std::vector<std::shared_ptr<GameEntity>> globalEntities;
-	std::vector<std::shared_ptr<TerrainMats>> globalTerrainMaterials;
+	std::vector<std::shared_ptr<TerrainMaterial>> globalTerrainMaterials;
 	std::vector<FMOD::Sound*> globalSounds;
-	std::map<std::string, std::shared_ptr<DirectX::SpriteFont>> globalFonts;
+	std::vector<std::shared_ptr<SHOEFont>> globalFonts;
 
 	std::condition_variable* threadNotifier;
 	std::mutex* threadLock;
@@ -261,11 +357,26 @@ public:
 
 	ComponentTypes GetAllCurrentComponentTypes();
 
+	// Camera Tag Functions
+	std::shared_ptr<Camera> GetMainCamera();
+	std::shared_ptr<Camera> GetPlayCamera();
+	std::vector<std::shared_ptr<Camera>> GetCamerasByTag(CameraType type);
+	void SetCameraTag(std::shared_ptr<Camera> cam, CameraType tag);
+
 	// Methods to create new assets
 
 	std::shared_ptr<GameEntity> CreateGameEntity(std::string name = "GameEntity");
 	std::shared_ptr<GameEntity> CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name = "GameEntity");
-	std::shared_ptr<Sky> CreateSky(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, std::string name);
+
+	/// <summary>
+	/// Creates a new skybox object with the given texture.
+	/// </summary>
+	/// <param name="filepath">If a .dds, this is the name of that file. If 6 textures, this is a directory path.</param>
+	/// <param name="fileType">0 for .dds, 1 for directory path.</param>
+	/// <param name="name"></param>
+	/// <param name="fileExtension">Only needed if fileType is 1</param>
+	/// <returns></returns>
+	std::shared_ptr<Sky> CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension = ".png");
 	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::string nameToLoad);
 	std::shared_ptr<SimplePixelShader> CreatePixelShader(std::string id, std::string nameToLoad);
 	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::string nameToLoad);
@@ -275,10 +386,11 @@ public:
 	std::shared_ptr<Light> CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Light> CreateSpotLight(std::string name, DirectX::XMFLOAT3 direction, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Material> CreatePBRMaterial(std::string id,
-											    std::wstring albedoNameToLoad,
-											    std::wstring normalNameToLoad,
-											    std::wstring metalnessNameToLoad,
-											    std::wstring roughnessNameToLoad);
+											    std::string albedoNameToLoad,
+											    std::string normalNameToLoad,
+											    std::string metalnessNameToLoad,
+											    std::string roughnessNameToLoad,
+												bool addToGlobalList = true);
 	std::shared_ptr<Terrain> CreateTerrainEntity(std::string name = "Terrain");
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
 													std::wstring textureNameToLoad,
@@ -290,8 +402,11 @@ public:
 												   float particlesPerSecond,
 												   bool isMultiParticle = false,
 												   bool additiveBlendState = true);
-	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode);
-	std::shared_ptr<DirectX::SpriteFont> CreateSHOEFont(std::string name, std::wstring filePath, bool preInitializing = false);
+	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode, std::string name = "");
+	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false);
+
+	// Creation Helper Methods
+	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType);
 
 	// Helper methods to add components to objects
 
@@ -335,9 +450,9 @@ public:
 	std::shared_ptr<Mesh> GetMeshByName(std::string name);
 	std::shared_ptr<Camera> GetCameraByName(std::string name);
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
-	std::shared_ptr<TerrainMats> GetTerrainMaterialByName(std::string name);
+	std::shared_ptr<TerrainMaterial> GetTerrainMaterialByName(std::string name);
 	FMOD::Sound* GetSoundByName();
-	std::shared_ptr<DirectX::SpriteFont> GetFontByName(std::string name);
+	std::shared_ptr<SHOEFont> GetFontByName(std::string name);
 
 	int GetGameEntityIDByName(std::string name);
 	int GetSkyIDByName(std::string name);

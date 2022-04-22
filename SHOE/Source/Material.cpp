@@ -1,6 +1,8 @@
 #include "../Headers/Material.h"
 #include "..\Headers\AssetManager.h"
 
+#pragma region Material
+
 Material::Material(DirectX::XMFLOAT4 tint, 
 				   std::shared_ptr<SimplePixelShader> pix, 
 				   std::shared_ptr<SimpleVertexShader> vert, 
@@ -42,6 +44,10 @@ std::string Material::GetName() {
 	return this->name;
 }
 
+void Material::SetName(std::string name) {
+	this->name = name;
+}
+
 DirectX::XMFLOAT4 Material::GetTint() {
 	return this->colorTint;
 }
@@ -57,10 +63,6 @@ std::shared_ptr<SimplePixelShader> Material::GetPixShader() {
 std::shared_ptr<SimpleVertexShader> Material::GetVertShader() {
 	return this->vertShader;
 }
-
-/*float Material::GetSpecExponent() {
-	return this->specularExponent;
-}*/
 
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetNormalMap() {
 	return this->normalMap;
@@ -164,3 +166,109 @@ void Material::SetEnableDisable(bool value) {
 bool Material::GetEnableDisable() {
 	return this->enabled;
 }
+
+#pragma endregion
+
+#pragma region TerrainMaterial
+
+TerrainMaterial::TerrainMaterial(std::string name) {
+	this->blendMap = nullptr;
+	this->allMaterials = std::vector<std::shared_ptr<Material>>();
+	this->name = name;
+
+	this->enabled = true;
+	this->blendMapEnabled = false;
+}
+
+TerrainMaterial::TerrainMaterial(std::string name, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap) {
+	this->blendMap = blendMap;
+	this->allMaterials = std::vector<std::shared_ptr<Material>>();
+	this->name = name;
+
+	this->enabled = true;
+	this->blendMapEnabled = true;
+}
+
+TerrainMaterial::~TerrainMaterial() {
+
+}
+
+void TerrainMaterial::SetEnableDisable(bool value) {
+	this->enabled = value;
+}
+
+bool TerrainMaterial::GetEnableDisable() {
+	return this->enabled;
+}
+
+void TerrainMaterial::SetUsingBlendMap(bool usingBlendMap) {
+	this->blendMapEnabled = usingBlendMap;
+}
+
+bool TerrainMaterial::GetUsingBlendMap() {
+	return this->blendMapEnabled;
+}
+
+void TerrainMaterial::SetBlendMapFilenameKey(std::string filenameKey) {
+	this->blendMapFilenameKey = filenameKey;
+}
+
+std::string TerrainMaterial::GetBlendMapFilenameKey() {
+	return this->blendMapFilenameKey;
+}
+
+std::string TerrainMaterial::GetName() {
+	return this->name;
+}
+
+void TerrainMaterial::SetName(std::string name) {
+	this->name = name;
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> TerrainMaterial::GetBlendMap() {
+	return this->blendMap;
+}
+
+void TerrainMaterial::SetBlendMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newBlendMap) {
+	this->blendMap = newBlendMap;
+	this->blendMapEnabled = true;
+}
+
+void TerrainMaterial::AddMaterial(std::shared_ptr<Material> materialToAdd) {
+	this->allMaterials.push_back(materialToAdd);
+}
+
+void TerrainMaterial::SetMaterialAtID(std::shared_ptr<Material> materialToSet, int id) {
+	this->allMaterials[id] = materialToSet;
+}
+
+void TerrainMaterial::RemoveMaterialAtID(int id) {
+	this->allMaterials[id] = nullptr;
+}
+
+std::shared_ptr<Material> TerrainMaterial::GetMaterialAtID(int id) {
+	return this->allMaterials[id];
+}
+
+void TerrainMaterial::RemoveMaterialByName(std::string name) {
+	for (auto tm : allMaterials) {
+		if (tm->GetName() == name) {
+			tm.reset();
+			return;
+		}
+	}
+}
+
+std::shared_ptr<Material> TerrainMaterial::GetMaterialByName(std::string name) {
+	for (auto tm : allMaterials) {
+		if (tm->GetName() == name) {
+			return tm;
+		}
+	}
+}
+
+size_t TerrainMaterial::GetMaterialCount() {
+	return this->allMaterials.size();
+}
+
+#pragma endregion
