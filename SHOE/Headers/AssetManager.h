@@ -217,6 +217,13 @@ enum ComponentTypes {
 	COMPONENT_TYPE_COUNT
 };
 
+enum PBRTextureTypes {
+	ALBEDO,
+	NORMAL,
+	METAL,
+	ROUGH
+};
+
 class AssetManager
 {
 #pragma region Singleton
@@ -382,7 +389,8 @@ public:
 											    std::string albedoNameToLoad,
 											    std::string normalNameToLoad,
 											    std::string metalnessNameToLoad,
-											    std::string roughnessNameToLoad);
+											    std::string roughnessNameToLoad,
+												bool addToGlobalList = true);
 	std::shared_ptr<Terrain> CreateTerrainEntity(std::string name = "Terrain");
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
 													std::wstring textureNameToLoad,
@@ -398,7 +406,7 @@ public:
 	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false);
 
 	// Creation Helper Methods
-	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture);
+	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType);
 
 	// Helper methods to add components to objects
 

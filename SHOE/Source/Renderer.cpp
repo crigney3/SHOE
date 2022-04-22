@@ -890,6 +890,8 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 		for (int i = 0; i < terrains.size(); i++) {
 			if (!terrains[i]->IsEnabled()) continue;
 
+			std::shared_ptr<TerrainMaterial> terrainMat = globalAssets.GetTerrainMaterialByName("Forest Terrain Material");
+
 			PSTerrain->SetShader();
 			PSTerrain->SetData("lights", Light::GetLightArray(), sizeof(Light) * 64);
 			PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
@@ -897,20 +899,20 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 			PSTerrain->SetFloat("uvMultNear", 50.0f);
 			PSTerrain->SetFloat("uvMultFar", 150.0f);
 			PSTerrain->SetShaderResourceView("shadowMap", miscEffectSRVs[MiscEffectSRVTypes::FLASHLIGHT_SHADOW].Get());
-			PSTerrain->SetShaderResourceView("blendMap", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMap.Get());
+			PSTerrain->SetShaderResourceView("blendMap", terrainMat->GetBlendMap().Get());
 			PSTerrain->SetSamplerState("shadowState", shadowSampler.Get());
-			PSTerrain->SetSamplerState("clampSampler", globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[0].GetClampSamplerState().Get());
+			PSTerrain->SetSamplerState("clampSampler", terrainMat->GetMaterialAtID(0)->GetClampSamplerState().Get());
 			PSTerrain->SetShaderResourceView("envShadowMap", miscEffectSRVs[MiscEffectSRVTypes::ENV_SHADOW].Get());
 
-			for (int i = 0; i < globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials.size(); i++) {
+			for (int i = 0; i < terrainMat->GetMaterialCount(); i++) {
 				std::string a = "texture" + std::to_string(i + 1) + "Albedo";
 				std::string n = "texture" + std::to_string(i + 1) + "Normal";
 				std::string r = "texture" + std::to_string(i + 1) + "Rough";
 				std::string m = "texture" + std::to_string(i + 1) + "Metal";
-				PSTerrain->SetShaderResourceView(a, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetTexture().Get());
-				PSTerrain->SetShaderResourceView(n, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetNormalMap().Get());
-				PSTerrain->SetShaderResourceView(r, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetRoughMap().Get());
-				PSTerrain->SetShaderResourceView(m, globalAssets.GetTerrainMaterialByName("Forest TMaterial")->blendMaterials[i].GetMetalMap().Get());
+				PSTerrain->SetShaderResourceView(a, terrainMat->GetMaterialAtID(i)->GetTexture().Get());
+				PSTerrain->SetShaderResourceView(n, terrainMat->GetMaterialAtID(i)->GetNormalMap().Get());
+				PSTerrain->SetShaderResourceView(r, terrainMat->GetMaterialAtID(i)->GetRoughMap().Get());
+				PSTerrain->SetShaderResourceView(m, terrainMat->GetMaterialAtID(i)->GetMetalMap().Get());
 			}
 
 			if (this->currentSky->GetEnableDisable()) {

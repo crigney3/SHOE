@@ -925,25 +925,43 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 	}
 }
 
-HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture) {
+HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType) {
+	HRESULT hr;
 	std::string assetPath;
 
-	assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR);
+	switch (textureType) {
+		case PBRTextureTypes::ALBEDO:
+			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_ALBEDO);
+			break;
+		case PBRTextureTypes::NORMAL:
+			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_NORMALS);
+			break;
+		case PBRTextureTypes::METAL:
+			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_METALNESS);
+			break;
+		case PBRTextureTypes::ROUGH:
+			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+			break;
+	};
+
 	std::string namePath = assetPath + nameToLoad;
 	std::wstring widePath;
 	char pathBuf[1024];
 
 	GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
-	ISimpleShader::ConvertToWide(pathBuf, widePath);
+	hr = ISimpleShader::ConvertToWide(pathBuf, widePath);
 
-	CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, &texture);
+	CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, texture->GetAddressOf());
+
+	return hr;
 }
 
 std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 														  std::string albedoNameToLoad,
 														  std::string normalNameToLoad,
 														  std::string metalnessNameToLoad,
-														  std::string roughnessNameToLoad) {
+														  std::string roughnessNameToLoad,
+														  bool addToGlobalList) {
 	try {
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
@@ -954,10 +972,10 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 		std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
 		std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
 
-		LoadPBRTexture(albedoNameToLoad, albedo);
-		LoadPBRTexture(normalNameToLoad, normals);
-		LoadPBRTexture(metalnessNameToLoad, metalness);
-		LoadPBRTexture(roughnessNameToLoad, roughness);
+		LoadPBRTexture(albedoNameToLoad, &albedo, PBRTextureTypes::ALBEDO);
+		LoadPBRTexture(normalNameToLoad, &normals, PBRTextureTypes::NORMAL);
+		LoadPBRTexture(metalnessNameToLoad, &metalness, PBRTextureTypes::METAL);
+		LoadPBRTexture(roughnessNameToLoad, &roughness, PBRTextureTypes::ROUGH);
 
 		newMat = std::make_shared<Material>(whiteTint,
 			PSNormal,
@@ -970,7 +988,7 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 			metalness,
 			id);
 
-		globalMaterials.push_back(newMat);
+		if (addToGlobalList) globalMaterials.push_back(newMat);
 
 		SetLoadedAndWait("PBR Materials", id);
 
@@ -1659,7 +1677,7 @@ void AssetManager::InitializeTerrainMaterials() {
 		if (dirPos != std::string::npos) {
 			// File is in the assets folder
 			baseFilename = "t";
-			baseFilename += pathBufString.substr(dirPos + sizeof(assetPathStr));
+			baseFilename += pathBufString.substr(dirPos + assetPathStr.size() + 1);
 		}
 		else {
 			baseFilename = "f";
