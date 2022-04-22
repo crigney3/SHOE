@@ -216,7 +216,83 @@ void AssetManager::LoadScene(std::string filepath) {
 		textureState = textureSampleStates[0];
 		clampState = textureSampleStates[1];
 
+		// Pixel Shaders
+		const rapidjson::Value& pixelShaderBlock = sceneDoc[PIXEL_SHADERS];
+		assert(pixelShaderBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < pixelShaderBlock.Size(); i++) {
+			std::string fileKey = DeSerializeFileName(pixelShaderBlock[i].FindMember(SHADER_FILE_PATH)->value.GetString());
+			CreatePixelShader(pixelShaderBlock[i].FindMember(SHADER_NAME)->value.GetString(), fileKey);
+		}
+
+		// Vertex Shaders
+		const rapidjson::Value& vertexShaderBlock = sceneDoc[VERTEX_SHADERS];
+		assert(vertexShaderBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < vertexShaderBlock.Size(); i++) {
+			std::string fileKey = DeSerializeFileName(vertexShaderBlock[i].FindMember(SHADER_FILE_PATH)->value.GetString());
+			CreateVertexShader(vertexShaderBlock[i].FindMember(SHADER_NAME)->value.GetString(), fileKey);
+		}
+
+		// Compute Shaders
+		const rapidjson::Value& computeShaderBlock = sceneDoc[COMPUTE_SHADERS];
+		assert(computeShaderBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < computeShaderBlock.Size(); i++) {
+			std::string fileKey = DeSerializeFileName(computeShaderBlock[i].FindMember(SHADER_FILE_PATH)->value.GetString());
+			CreateComputeShader(computeShaderBlock[i].FindMember(SHADER_NAME)->value.GetString(), fileKey);
+		}
+
+		// Cameras
+		const rapidjson::Value& cameraBlock = sceneDoc[CAMERAS];
+		assert(cameraBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < cameraBlock.Size(); i++) {
+			DirectX::XMFLOAT3 cameraPos;
+			DirectX::XMFLOAT4 cameraRot;
+			DirectX::XMFLOAT3 cameraScale;
+
+			const rapidjson::Value& cameraTransformBlock = cameraBlock[i].FindMember(CAMERA_TRANSFORM)->value;
+			const rapidjson::Value& transformPosBlock = cameraTransformBlock[i].FindMember(TRANSFORM_LOCAL_POSITION)->value;
+			const rapidjson::Value& transformRotBlock = cameraTransformBlock[i].FindMember(TRANSFORM_LOCAL_ROTATION)->value;
+			const rapidjson::Value& transformScaleBlock = cameraTransformBlock[i].FindMember(TRANSFORM_LOCAL_SCALE)->value;
+
+			cameraPos.x = transformPosBlock[0].GetDouble();
+			cameraPos.y = transformPosBlock[1].GetDouble();
+			cameraPos.z = transformPosBlock[2].GetDouble();
+
+			cameraRot.x = transformRotBlock[0].GetDouble();
+			cameraRot.y = transformRotBlock[1].GetDouble();
+			cameraRot.z = transformRotBlock[2].GetDouble();
+			cameraRot.w = transformRotBlock[3].GetDouble();
+
+			cameraScale.x = transformScaleBlock[0].GetDouble();
+			cameraScale.y = transformScaleBlock[1].GetDouble();
+			cameraScale.z = transformScaleBlock[2].GetDouble();
+
+			std::shared_ptr<Camera> loadedCam = CreateCamera(cameraBlock[i].FindMember(CAMERA_NAME)->value.GetString(),
+															 cameraPos,
+															 cameraBlock[i].FindMember(CAMERA_ASPECT_RATIO)->value.GetDouble(),
+															 cameraBlock[i].FindMember(CAMERA_PROJECTION_MATRIX_TYPE)->value.GetInt());
+
+			loadedCam->GetTransform()->SetRotation(cameraRot.x, cameraRot.y, cameraRot.z);
+
+			loadedCam->GetTransform()->SetScale(cameraScale);
+
+			loadedCam->SetTag((CameraType)cameraBlock[i].FindMember(CAMERA_TAG)->value.GetInt());
+
+			loadedCam->SetLookSpeed(cameraBlock[i].FindMember(CAMERA_LOOK_SPEED)->value.GetDouble());
+
+			loadedCam->SetMoveSpeed(cameraBlock[i].FindMember(CAMERA_MOVE_SPEED)->value.GetDouble());
+
+			loadedCam->SetNearDist(cameraBlock[i].FindMember(CAMERA_NEAR_DISTANCE)->value.GetDouble());
+
+			loadedCam->SetFarDist(cameraBlock[i].FindMember(CAMERA_FAR_DISTANCE)->value.GetDouble());
+
+			loadedCam->SetFOV(cameraBlock[i].FindMember(CAMERA_FIELD_OF_VIEW)->value.GetDouble());
+
+			loadedCam->SetEnableDisable(cameraBlock[i].FindMember(CAMERA_ENABLED)->value.GetBool());
+		}
+
 		fclose(file);
+
+		SetAMLoadState(NOT_LOADING);
 	}
 	catch (...) {
 
@@ -419,14 +495,28 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 						rapidjson::Value pixShader;
 						rapidjson::Value vertShader;
 						rapidjson::Value refractivePixShader;
+						rapidjson::Value albedoMap;
+						rapidjson::Value normalMap;
+						rapidjson::Value metalMap;
+						rapidjson::Value roughnessMap;
 
 						matName.SetString(mat->GetName().c_str(), allocator);
 						pixShader.SetString(mat->GetPixShader()->GetFileNameKey().c_str(), allocator);
 						vertShader.SetString(mat->GetVertShader()->GetFileNameKey().c_str(), allocator);
 
+						albedoMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::ALBEDO).c_str(), allocator);
+						normalMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::NORMAL).c_str(), allocator);
+						metalMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::METAL).c_str(), allocator);
+						roughnessMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::ROUGH).c_str(), allocator);
+
 						matValue.AddMember(MAT_NAME, matName, allocator);
 						matValue.AddMember(MAT_PIXEL_SHADER, pixShader, allocator);
 						matValue.AddMember(MAT_VERTEX_SHADER, vertShader, allocator);
+
+						matValue.AddMember(MAT_TEXTURE_OR_ALBEDO_MAP, albedoMap, allocator);
+						matValue.AddMember(MAT_NORMAL_MAP, normalMap, allocator);
+						matValue.AddMember(MAT_METAL_MAP, metalMap, allocator);
+						matValue.AddMember(MAT_ROUGHNESS_MAP, roughnessMap, allocator);
 
 						if (mat->GetRefractive()) {
 							refractivePixShader.SetString(mat->GetRefractivePixelShader()->GetFileNameKey().c_str(), allocator);
@@ -1071,6 +1161,37 @@ HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL:
 	return hr;
 }
 
+void AssetManager::SetMaterialTextureFileKey(std::string textureFilename, std::shared_ptr<Material> mat, PBRTextureTypes textureType) {
+	std::string assetPath;
+	std::string directAssetPath;
+
+	switch (textureType) {
+		case PBRTextureTypes::ALBEDO:
+			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_ALBEDO);
+			directAssetPath = "Assets\\PBR\\Albedo\\";
+			break;
+		case PBRTextureTypes::NORMAL:
+			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_NORMALS);
+			directAssetPath = "Assets\\PBR\\Normals\\";
+			break;
+		case PBRTextureTypes::METAL:
+			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_METALNESS);
+			directAssetPath = "Assets\\PBR\\Metalness\\";
+			break;
+		case PBRTextureTypes::ROUGH:
+			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+			directAssetPath = "Assets\\PBR\\Roughness\\";
+			break;
+	};
+
+	std::string namePath = assetPath + textureFilename;
+	char pathBuf[1024];
+
+	GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+	mat->SetTextureFilenameKey(textureType, SerializeFileName(directAssetPath, pathBuf));
+}
+
 std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 														  std::string albedoNameToLoad,
 														  std::string normalNameToLoad,
@@ -1102,6 +1223,11 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 			roughness,
 			metalness,
 			id);
+
+		SetMaterialTextureFileKey(albedoNameToLoad, newMat, PBRTextureTypes::ALBEDO);
+		SetMaterialTextureFileKey(normalNameToLoad, newMat, PBRTextureTypes::NORMAL);
+		SetMaterialTextureFileKey(metalnessNameToLoad, newMat, PBRTextureTypes::METAL);
+		SetMaterialTextureFileKey(roughnessNameToLoad, newMat, PBRTextureTypes::ROUGH);
 
 		if (addToGlobalList) globalMaterials.push_back(newMat);
 

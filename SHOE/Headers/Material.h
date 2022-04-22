@@ -7,6 +7,13 @@
 #include <memory>
 #include <vector>
 
+enum PBRTextureTypes {
+	ALBEDO,
+	NORMAL,
+	METAL,
+	ROUGH
+};
+
 class Material
 {
 private:
@@ -31,6 +38,11 @@ private:
 
 	float indexOfRefraction;
 	float refractionScale;
+
+	std::string albedoFileKey;
+	std::string normalsFileKey;
+	std::string metalFileKey;
+	std::string roughnessFileKey;
 
 public:
 	Material(DirectX::XMFLOAT4 tint,
@@ -84,6 +96,9 @@ public:
 
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();
+
+	std::string GetTextureFilenameKey(PBRTextureTypes textureType);
+	void SetTextureFilenameKey(PBRTextureTypes textureType, std::string newFileKey);
 };
 
 class TerrainMaterial {

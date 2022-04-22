@@ -92,6 +92,45 @@ void Material::SetTiling(float uv) {
 	this->uvTiling = uv;
 }
 
+std::string Material::GetTextureFilenameKey(PBRTextureTypes textureType) {
+	switch (textureType) {
+		case PBRTextureTypes::ALBEDO:
+			return this->albedoFileKey;
+			break;
+		case PBRTextureTypes::NORMAL:
+			return this->normalsFileKey;
+			break;
+		case PBRTextureTypes::METAL:
+			return this->metalFileKey;
+			break;
+		case PBRTextureTypes::ROUGH:
+			return this->roughnessFileKey;
+			break;
+		default:
+			return "";
+			break;
+	}
+}
+
+void Material::SetTextureFilenameKey(PBRTextureTypes textureType, std::string newFileKey) {
+	switch (textureType) {
+		case PBRTextureTypes::ALBEDO:
+			this->albedoFileKey = newFileKey;
+			break;
+		case PBRTextureTypes::NORMAL:
+			this->normalsFileKey = newFileKey;
+			break;
+		case PBRTextureTypes::METAL:
+			this->metalFileKey = newFileKey;
+			break;
+		case PBRTextureTypes::ROUGH:
+			this->roughnessFileKey = newFileKey;
+			break;
+		default:
+			break;
+	}
+}
+
 Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetClampSamplerState() {
 	return this->clampState;
 }

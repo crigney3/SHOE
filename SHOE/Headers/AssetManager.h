@@ -7,75 +7,75 @@
 #pragma region saveLoadIdentifiers
 // Saving and loading shorthand identifiers
 // General:
-#define VALID_SHOE_SCENE "ivs"
-#define SCENE_NAME "sN"
+#define VALID_SHOE_SCENE "ivs" // bool
+#define SCENE_NAME "sN" // string
 
 // Categories:
-#define ENTITIES "en"
-#define COMPONENTS "cm"
-#define VERTEX_SHADERS "vS"
-#define PIXEL_SHADERS "pS"
-#define COMPUTE_SHADERS "cS"
-#define FONTS "fn"
-#define TEXTURE_SAMPLE_STATES "eS"
-#define CAMERAS "ca"
-#define SKIES "s"
-#define SOUNDS "sO"
-#define TERRAIN_MATERIALS "tM"
+#define ENTITIES "en" // category - only used to fetch actual data
+#define COMPONENTS "cm" // category - only used to fetch actual data
+#define VERTEX_SHADERS "vS" // category - only used to fetch actual data
+#define PIXEL_SHADERS "pS" // category - only used to fetch actual data
+#define COMPUTE_SHADERS "cS" // category - only used to fetch actual data
+#define FONTS "fn" // category - only used to fetch actual data
+#define TEXTURE_SAMPLE_STATES "eS" // category - only used to fetch actual data
+#define CAMERAS "ca" // category - only used to fetch actual data
+#define SKIES "s" // category - only used to fetch actual data
+#define SOUNDS "sO" // category - only used to fetch actual data
+#define TERRAIN_MATERIALS "tM" // category - only used to fetch actual data
 
 // Entities:
-#define ENTITY_NAME "n"
-#define ENTITY_ENABLED "e"
-#define ENTITY_HIERARCHY_ENABLED "hE"
-#define ENTITY_ATTACHED_LIGHTS "aL"
-#define COMPONENT_TYPE "ct"
+#define ENTITY_NAME "n" // string
+#define ENTITY_ENABLED "e" // bool
+#define ENTITY_HIERARCHY_ENABLED "hE" // bool
+#define ENTITY_ATTACHED_LIGHTS "aL" // deprecated
+#define COMPONENT_TYPE "ct" // int
 
 // Light Components:
-#define LIGHT_TYPE "lT"
-#define LIGHT_INTENSITY "i"
-#define LIGHT_ENABLED "lE"
-#define LIGHT_RANGE "lR"
-#define LIGHT_COLOR "lC"
-#define LIGHT_DIRECTION "lD"
+#define LIGHT_TYPE "lT" // int
+#define LIGHT_INTENSITY "i" // float
+#define LIGHT_ENABLED "lE" // bool
+#define LIGHT_RANGE "lR" // float
+#define LIGHT_COLOR "lC" // float array 4
+#define LIGHT_DIRECTION "lD" // float array 3
 
 // Mesh Renderer Components:
-#define MESH_OBJECT "mO"
-#define MATERIAL_OBJECT "mA"
+#define MESH_OBJECT "mO" // category - only used to fetch actual data
+#define MATERIAL_OBJECT "mA" // category - only used to fetch actual data
 
 // Mesh Data:
 
-#define MESH_INDEX_COUNT "iC"
-#define MESH_MATERIAL_INDEX "mI"
-#define MESH_ENABLED "mE"
-#define MESH_NEEDS_DEPTH_PREPASS "nDP"
-#define MESH_NAME "mN"
-#define MESH_FILENAME_KEY "mFK"
+#define MESH_INDEX_COUNT "iC" // int
+#define MESH_MATERIAL_INDEX "mI" // int
+#define MESH_ENABLED "mE" // bool
+#define MESH_NEEDS_DEPTH_PREPASS "nDP" // bool
+#define MESH_NAME "mN" // string
+#define MESH_FILENAME_KEY "mFK" // string
 
 // Material Data:
-#define MAT_UV_TILING "aUT"
-#define MAT_NAME "aN"
-#define MAT_ENABLED "aE"
-#define MAT_IS_TRANSPARENT "aIT"
-#define MAT_IS_REFRACTIVE "aIR"
-#define MAT_INDEX_OF_REFRACTION "aOR"
-#define MAT_REFRACTION_SCALE "aRS"
-#define MAT_COLOR_TINT "aCT"
-#define MAT_PIXEL_SHADER "aPS"
-#define MAT_REFRACTION_PIXEL_SHADER "aRS"
-#define MAT_VERTEX_SHADER "aVS"
-#define MAT_TEXTURE_OR_ALBEDO_MAP "aAM"
-#define MAT_NORMAL_MAP "aNM"
-#define MAT_METAL_MAP "aMM"
-#define MAT_ROUGNESS_MAP "aRM"
-#define MAT_TEXTURE_SAMPLER_STATE "aTS"
-#define MAT_CLAMP_SAMPLER_STATE "aCS"
+#define MAT_UV_TILING "aUT" // float
+#define MAT_NAME "aN" //string
+#define MAT_ENABLED "aE" // bool
+#define MAT_IS_TRANSPARENT "aIT" // bool
+#define MAT_IS_REFRACTIVE "aIR" // bool
+#define MAT_INDEX_OF_REFRACTION "aOR" // float
+#define MAT_REFRACTION_SCALE "aRS" // float
+#define MAT_COLOR_TINT "aCT" // float array 4
+#define MAT_PIXEL_SHADER "aPS" // string
+#define MAT_REFRACTION_PIXEL_SHADER "aRS" // string
+#define MAT_VERTEX_SHADER "aVS" // string
+#define MAT_TEXTURE_OR_ALBEDO_MAP "aAM" // string 
+#define MAT_NORMAL_MAP "aNM" // string
+#define MAT_METAL_MAP "aMM" // string
+#define MAT_ROUGHNESS_MAP "aRM" // string
+#define MAT_TEXTURE_SAMPLER_STATE "aTS" // int
+#define MAT_CLAMP_SAMPLER_STATE "aCS" // int
 
 // Material data subsection - 
 // Sampler description data:
 #define SAMPLER_ADDRESS_U "sAU" // int
 #define SAMPLER_ADDRESS_V "sAV" // int
 #define SAMPLER_ADDRESS_W "sAW" // int
-#define SAMPLER_BORDER_COLOR "sBC" // float array
+#define SAMPLER_BORDER_COLOR "sBC" // float array 4
 #define SAMPLER_COMPARISON_FUNCTION "sCF" // int?
 #define SAMPLER_FILTER "sF" // int
 #define SAMPLER_MAX_ANISOTROPY "sMA" // int
@@ -88,73 +88,72 @@
 #define FONT_NAME "fN" // string
 
 // Transform Data:
-#define TRANSFORM_LOCAL_POSITION "tLP"
-#define TRANSFORM_LOCAL_SCALE "tLS"
-#define TRANSFORM_LOCAL_ROTATION "tLR"
+#define TRANSFORM_LOCAL_POSITION "tLP" // float array 3
+#define TRANSFORM_LOCAL_SCALE "tLS" // float array 3
+#define TRANSFORM_LOCAL_ROTATION "tLR" // float array 4
 
 // Generic Shader Data:
-#define SHADER_NAME "sN"
-#define SHADER_FILE_PATH "sK"
+#define SHADER_NAME "sN" // string
+#define SHADER_FILE_PATH "sK" // string
 
 // Vertex Shader Data:
-#define VERTEX_SHADER_OBJECT "vSO"
+#define VERTEX_SHADER_OBJECT "vSO" // category - only used to fetch actual data
 
 // Pixel Shader Data:
-#define PIXEL_SHADER_OBJECT "pSO"
+#define PIXEL_SHADER_OBJECT "pSO" // category - only used to fetch actual data
 
 // Compute Shader Data:
-#define COMPUTE_SHADER_OBJECT "cSO"
+#define COMPUTE_SHADER_OBJECT "cSO" // category - only used to fetch actual data
 
 // Camera Data:
-#define CAMERA_NAME "cN"
-#define CAMERA_TRANSFORM "cT"
-#define CAMERA_ASPECT_RATIO "cAR"
-#define CAMERA_PROJECTION_MATRIX_TYPE "cPM"
-#define CAMERA_TAG "cG"
-#define CAMERA_LOOK_SPEED "cLS"
-#define CAMERA_MOVE_SPEED "cMS"
-#define CAMERA_ENABLED "cE"
-#define CAMERA_NEAR_DISTANCE "cND"
-#define CAMERA_FAR_DISTANCE "cFD"
-#define CAMERA_FIELD_OF_VIEW "cF"
+#define CAMERA_NAME "cN" // string
+#define CAMERA_TRANSFORM "cT" // category - only used to fetch actual data
+#define CAMERA_ASPECT_RATIO "cAR" // float
+#define CAMERA_PROJECTION_MATRIX_TYPE "cPM" // int
+#define CAMERA_TAG "cG" // int
+#define CAMERA_LOOK_SPEED "cLS" // float
+#define CAMERA_MOVE_SPEED "cMS" // float
+#define CAMERA_ENABLED "cE" // bool
+#define CAMERA_NEAR_DISTANCE "cND" // float
+#define CAMERA_FAR_DISTANCE "cFD" // float
+#define CAMERA_FIELD_OF_VIEW "cF" //float
 
 // Sky Data:
-#define SKY_NAME "sN"
-#define SKY_FILENAME_KEY_TYPE "sFT"
-#define SKY_FILENAME_KEY "sFK"
-#define SKY_FILENAME_EXTENSION "sFE"
+#define SKY_NAME "sN" // string
+#define SKY_FILENAME_KEY_TYPE "sFT" // bool
+#define SKY_FILENAME_KEY "sFK" // string
+#define SKY_FILENAME_EXTENSION "sFE" //string
 
 // Collider Data:
 // Fairly sparse for now
-#define COLLIDER_TYPE "cT"
-#define COLLIDER_ENABLED "cE"
-#define COLLIDER_IS_VISIBLE "cIV"
-#define COLLIDER_IS_TRANSFORM_VISIBLE "cIT"
+#define COLLIDER_TYPE "cT" // bool
+#define COLLIDER_ENABLED "cE" // bool
+#define COLLIDER_IS_VISIBLE "cIV" // bool
+#define COLLIDER_IS_TRANSFORM_VISIBLE "cIT" // bool
 
 // Sound Data:
-// Just a filenameKey and a name
-#define SOUND_FILENAME_KEY "oFK"
-#define SOUND_NAME "oN"
-#define SOUND_FMOD_MODE "oFM"
+#define SOUND_FILENAME_KEY "oFK" // string
+#define SOUND_NAME "oN" // string
+#define SOUND_FMOD_MODE "oFM" // int
 
 // Terrain Material Data:
-#define TERRAIN_MATERIAL_NAME "tN"
-#define TERRAIN_MATERIAL_ENABLED "tE"
-#define TERRAIN_MATERIAL_BLEND_MAP_PATH "tBP"
-#define TERRAIN_MATERIAL_BLEND_MAP_ENABLED "tBE"
-#define TERRAIN_MATERIAL_MATERIAL_ARRAY "tMA"
+#define TERRAIN_MATERIAL_NAME "tN" // string
+#define TERRAIN_MATERIAL_ENABLED "tE" // bool
+#define TERRAIN_MATERIAL_BLEND_MAP_PATH "tBP" // string
+#define TERRAIN_MATERIAL_BLEND_MAP_ENABLED "tBE" // bool
+#define TERRAIN_MATERIAL_MATERIAL_ARRAY "tMA" // array of Materials
 
 // Particle System Data:
-#define PARTICLE_SYSTEM_MAX_PARTICLES "pMP"
-#define PARTICLE_SYSTEM_FILENAME_KEY "pFK"
-#define PARTICLE_SYSTEM_IS_MULTI_PARTICLE "pIP"
-#define PARTICLE_SYSTEM_ADDITIVE_BLEND "pAB"
-#define PARTICLE_SYSTEM_COLOR_TINT "pCT"
-#define PARTICLE_SYSTEM_SCALE "pS"
-#define PARTICLE_SYSTEM_SPEED "pE"
-#define PARTICLE_SYSTEM_DESTINATION "pD"
-#define PARTICLE_SYSTEM_PARTICLES_PER_SECOND "pPS"
-#define PARTICLE_SYSTEM_PARTICLE_LIFETIME "pL"
+#define PARTICLE_SYSTEM_MAX_PARTICLES "pMP" // int
+#define PARTICLE_SYSTEM_FILENAME_KEY "pFK" // string
+#define PARTICLE_SYSTEM_IS_MULTI_PARTICLE "pIP" // bool
+#define PARTICLE_SYSTEM_ADDITIVE_BLEND "pAB" // bool
+#define PARTICLE_SYSTEM_COLOR_TINT "pCT" // float array 4
+#define PARTICLE_SYSTEM_SCALE "pS" // float
+#define PARTICLE_SYSTEM_SPEED "pE" //float
+#define PARTICLE_SYSTEM_DESTINATION "pD" //float array 3
+#define PARTICLE_SYSTEM_PARTICLES_PER_SECOND "pPS" //float
+#define PARTICLE_SYSTEM_PARTICLE_LIFETIME "pL" //float
 
 #pragma endregion
 
@@ -227,13 +226,6 @@ enum ComponentTypes {
 	LIGHT,
 	// Must always be the final enum
 	COMPONENT_TYPE_COUNT
-};
-
-enum PBRTextureTypes {
-	ALBEDO,
-	NORMAL,
-	METAL,
-	ROUGH
 };
 
 class AssetManager
@@ -420,6 +412,7 @@ public:
 
 	// Creation Helper Methods
 	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType);
+	void SetMaterialTextureFileKey(std::string textureFilename, std::shared_ptr<Material> mat, PBRTextureTypes textureType);
 	std::string SerializeFileName(std::string assetFolderPath, std::string fullPathToAsset);
 	std::string DeSerializeFileName(std::string assetPath);
 
