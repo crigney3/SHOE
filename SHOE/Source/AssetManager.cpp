@@ -7,7 +7,16 @@ AssetManager* AssetManager::instance;
 
 AssetManager::~AssetManager() {
 	// Everything should be smart-pointer managed
-	// Except sounds
+	// Except sounds, which have to have UserData cleared
+	// manually (and can't use auto, iterator isn't built)
+	for (int i = 0; i < globalSounds.size(); i++) {
+		FMODUserData* uData;
+		globalSounds[i]->getUserData((void**)&uData);
+		uData->filenameKey.reset();
+		uData->name.reset();
+		delete uData;
+	}
+
 	globalSounds.clear();
 
 	// And components
@@ -249,6 +258,34 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 				if (std::dynamic_pointer_cast<ParticleSystem>(co) != nullptr) {
 					componentType.SetString("ParticleSystem");
 					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+					std::shared_ptr<ParticleSystem> ps = std::dynamic_pointer_cast<ParticleSystem>(co);
+
+					coValue.AddMember(PARTICLE_SYSTEM_MAX_PARTICLES, ps->GetMaxParticles(), allocator);
+					coValue.AddMember(PARTICLE_SYSTEM_IS_MULTI_PARTICLE, ps->IsMultiParticle(), allocator);
+					coValue.AddMember(PARTICLE_SYSTEM_ADDITIVE_BLEND, ps->GetBlendState(), allocator);
+					coValue.AddMember(PARTICLE_SYSTEM_SCALE, ps->GetScale(), allocator);
+					coValue.AddMember(PARTICLE_SYSTEM_SPEED, ps->GetSpeed(), allocator);
+					coValue.AddMember(PARTICLE_SYSTEM_PARTICLES_PER_SECOND, ps->GetParticlesPerSecond(), allocator);
+					coValue.AddMember(PARTICLE_SYSTEM_PARTICLE_LIFETIME, ps->GetParticleLifetime(), allocator);
+
+					// Float arrays
+					rapidjson::Value psDestination(rapidjson::kArrayType);
+					psDestination.PushBack(ps->GetDestination().x, allocator);
+					psDestination.PushBack(ps->GetDestination().y, allocator);
+					psDestination.PushBack(ps->GetDestination().z, allocator);
+					coValue.AddMember(PARTICLE_SYSTEM_DESTINATION, psDestination, allocator);
+
+					rapidjson::Value psColorTint(rapidjson::kArrayType);
+					psColorTint.PushBack(ps->GetColorTint().x, allocator);
+					psColorTint.PushBack(ps->GetColorTint().y, allocator);
+					psColorTint.PushBack(ps->GetColorTint().z, allocator);
+					psColorTint.PushBack(ps->GetColorTint().w, allocator);
+					coValue.AddMember(PARTICLE_SYSTEM_COLOR_TINT, psColorTint, allocator);
+
+					// Strings
+					rapidjson::Value psFileKey;
+					psFileKey.SetString(ps->GetFilenameKey().c_str(), allocator);
+					coValue.AddMember(PARTICLE_SYSTEM_FILENAME_KEY, psFileKey, allocator);
 				}
 
 				// Is it a MeshRenderer?
@@ -564,7 +601,7 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			rapidjson::Value skyFilenameExtension;
 			skyName.SetString(sy->GetName().c_str(), allocator);
 			skyFilenameKey.SetString(sy->GetFilenameKey().c_str(), allocator);
-			skyFilenameKey.SetString(sy->GetFileExtension().c_str(), allocator);
+			skyFilenameExtension.SetString(sy->GetFileExtension().c_str(), allocator);
 
 			skyObject.AddMember(SKY_NAME, skyName, allocator);
 			skyObject.AddMember(SKY_FILENAME_KEY_TYPE, sy->GetFilenameKeyType(), allocator);
@@ -577,12 +614,12 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 		sceneDocToSave.AddMember(SKIES, skyBlock, allocator);
 
 		rapidjson::Value soundBlock(rapidjson::kArrayType);
-		for (auto so : globalSounds) {
+		for (int i = 0; i < globalSounds.size(); i++) {
 			rapidjson::Value soundObject(rapidjson::kObjectType);
 			FMODUserData* uData;
 			FMOD_MODE sMode;
 
-			FMOD_RESULT uDataResult = so->getUserData((void**)&uData);
+			FMOD_RESULT uDataResult = globalSounds[i]->getUserData((void**)&uData);
 
 #if defined(DEBUG) || defined(_DEBUG)
 			if (uDataResult != FMOD_OK) {
@@ -590,7 +627,7 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			}	
 #endif
 
-			uDataResult = so->getMode(&sMode);
+			uDataResult = globalSounds[i]->getMode(&sMode);
 
 #if defined(DEBUG) || defined(_DEBUG)
 			if (uDataResult != FMOD_OK) {
@@ -601,8 +638,8 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			rapidjson::Value soundFK;
 			rapidjson::Value soundN;
 
-			soundFK.SetString(uData->filenameKey.c_str(), allocator);
-			soundN.SetString(uData->name.c_str(), allocator);
+			soundFK.SetString(uData->filenameKey->c_str(), allocator);
+			soundN.SetString(uData->name->c_str(), allocator);
 
 			soundObject.AddMember(SOUND_FILENAME_KEY, soundFK, allocator);
 			soundObject.AddMember(SOUND_NAME, soundN, allocator);
@@ -693,7 +730,7 @@ bool AssetManager::materialSortDirty = false;
 FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::string name) {
 	try
 	{
-		std::shared_ptr<FMODUserData> uData = std::make_shared<FMODUserData>();
+		FMODUserData* uData = new FMODUserData;
 		FMOD::Sound* sound;
 		std::string assetPath;
 
@@ -706,25 +743,19 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 		sound = audioInstance.LoadSound(pathBuf, mode);
 
 		// Serialize the filename if it's in the right folder
-		std::string baseFilename = "";
-		std::string assetPathStr = "Assets\\Sounds";
-		std::string pathBufString = std::string(pathBuf);
-		size_t dirPos = pathBufString.find(assetPathStr);
-		if (dirPos != std::string::npos) {
-			// File is in the assets folder
-			baseFilename = "t";
-			baseFilename += pathBufString.substr(dirPos + sizeof(assetPathStr));
-		}
-		else {
-			baseFilename = "f";
-			baseFilename += pathBufString;
-		}
+		std::string baseFilename;
+		std::string assetPathStr = "Assets\\Sounds\\";
 
-		uData->filenameKey = baseFilename;
-		uData->name = name;
+		baseFilename = SerializeFileName(assetPathStr, pathBuf);
+
+		std::shared_ptr<std::string> fileKey = std::make_shared<std::string>(baseFilename);
+		std::shared_ptr<std::string> fileName = std::make_shared<std::string>(name);
+
+		uData->filenameKey = fileKey;
+		uData->name = fileName;
 
 		// On getUserData, we will receive the whole struct
-		sound->setUserData(uData.get());
+		sound->setUserData(uData);
 
 		globalSounds.push_back(sound);
 
@@ -773,18 +804,10 @@ std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string
 		newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), pathBuf, id);
 
 		// Serialize the filename if it's in the right folder
-		std::string baseFilename = "";
-		std::string assetPathStr = "Assets\\Shaders";
-		size_t dirPos = nameToLoad.find(assetPathStr);
-		if (dirPos != std::string::npos) {
-			// File is in the assets folder
-			baseFilename = "t";
-			baseFilename += nameToLoad.substr(dirPos + sizeof(assetPathStr));
-		}
-		else {
-			baseFilename = "f";
-			baseFilename += nameToLoad;
-		}
+		std::string baseFilename;
+		std::string assetPathStr = "Assets\\Shaders\\";
+
+		baseFilename = SerializeFileName(assetPathStr, pathBuf);
 
 		newVS->SetFileNameKey(baseFilename);
 
@@ -815,18 +838,10 @@ std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string i
 		newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), pathBuf, id);
 
 		// Serialize the filename if it's in the right folder
-		std::string baseFilename = "";
-		std::string assetPathStr = "Assets\\Shaders";
-		size_t dirPos = nameToLoad.find(assetPathStr);
-		if (dirPos != std::string::npos) {
-			// File is in the assets folder
-			baseFilename = "t";
-			baseFilename += nameToLoad.substr(dirPos + sizeof(assetPathStr));
-		}
-		else {
-			baseFilename = "f";
-			baseFilename += nameToLoad;
-		}
+		std::string baseFilename;
+		std::string assetPathStr = "Assets\\Shaders\\";
+
+		baseFilename = SerializeFileName(assetPathStr, pathBuf);
 
 		newPS->SetFileNameKey(baseFilename);
 
@@ -857,18 +872,10 @@ std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::stri
 		newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), pathBuf, id);
 
 		// Serialize the filename if it's in the right folder
-		std::string baseFilename = "";
-		std::string assetPathStr = "Assets\\Shaders";
-		size_t dirPos = nameToLoad.find(assetPathStr);
-		if (dirPos != std::string::npos) {
-			// File is in the assets folder
-			baseFilename = "t";
-			baseFilename += nameToLoad.substr(dirPos + sizeof(assetPathStr));
-		}
-		else {
-			baseFilename = "f";
-			baseFilename += nameToLoad;
-		}
+		std::string baseFilename;
+		std::string assetPathStr = "Assets\\Shaders\\";
+		
+		baseFilename = SerializeFileName(assetPathStr, pathBuf);
 
 		newCS->SetFileNameKey(baseFilename);
 
@@ -923,6 +930,33 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 
 		return NULL;
 	}
+}
+
+/// <summary>
+/// Given a path within the Assets/ dir, checks if the fullPathToAsset contains
+/// that subpath. If so, it returns a serialized filepath string to be used as
+/// a filename key. If not, it returns the full path to the asset.
+/// </summary>
+/// <param name="assetFolderPath">Include slashes or important info may be lost in serialization.</param>
+/// <param name="fullPathToAsset">Full path from GetFullPathNameA preferred, but all full paths
+/// should work.</param>
+/// <returns>Either a serialized file key string or the full path.</returns>
+std::string AssetManager::SerializeFileName(std::string assetFolderPath, std::string fullPathToAsset) {
+	std::string filenameKey;
+
+	// Serialize the filename if it's in the right folder
+	size_t dirPos = fullPathToAsset.find(assetFolderPath);
+	if (dirPos != std::string::npos) {
+		// File is in the assets folder
+		filenameKey = "t";
+		filenameKey += fullPathToAsset.substr(dirPos + assetFolderPath.size());
+	}
+	else {
+		filenameKey = "f";
+		filenameKey += fullPathToAsset;
+	}
+
+	return filenameKey;
 }
 
 HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType) {
@@ -1157,39 +1191,27 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 		char pathBuf[1024];
 		std::string stringifiedPathBuf;
 
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
 		if (fileType) {
 			// Process as 6 textures in a directory
-			GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
 
-			std::wstring skyDDSWide;
+			std::wstring skyDirWide;
 			std::wstring fileExtensionW;
-			ISimpleShader::ConvertToWide(pathBuf, skyDDSWide);
+			ISimpleShader::ConvertToWide(pathBuf, skyDirWide);
 			ISimpleShader::ConvertToWide(fileExtension, fileExtensionW);
 
-			newSkyTexture = CreateCubemap((skyDDSWide + L"right" + fileExtensionW).c_str(),
-				(skyDDSWide + L"left" + fileExtensionW).c_str(),
-				(skyDDSWide + L"up" + fileExtensionW).c_str(),
-				(skyDDSWide + L"down" + fileExtensionW).c_str(),
-				(skyDDSWide + L"forward" + fileExtensionW).c_str(),
-				(skyDDSWide + L"back" + fileExtensionW).c_str());
+			newSkyTexture = CreateCubemap((skyDirWide + L"right" + fileExtensionW).c_str(),
+				(skyDirWide + L"left" + fileExtensionW).c_str(),
+				(skyDirWide + L"up" + fileExtensionW).c_str(),
+				(skyDirWide + L"down" + fileExtensionW).c_str(),
+				(skyDirWide + L"forward" + fileExtensionW).c_str(),
+				(skyDirWide + L"back" + fileExtensionW).c_str());
 
 			stringifiedPathBuf = pathBuf;
-
-			// Serialize the filename if it's in the right folder
-			size_t dirPos = stringifiedPathBuf.find("Assets\\Textures\\Skies");
-			if (dirPos != std::string::npos) {
-				// File is in the assets folder
-				filenameKey = "t";
-				filenameKey += stringifiedPathBuf.substr(dirPos + sizeof("Assets\\Textures\\Skies"));
-			}
-			else {
-				filenameKey = "f";
-				filenameKey += stringifiedPathBuf;
-			}
 		}
 		else {
 			// Process as a .dds
-			GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
 
 			std::wstring skyDDSWide;
 			ISimpleShader::ConvertToWide(pathBuf, skyDDSWide);
@@ -1197,19 +1219,11 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 			CreateDDSTextureFromFile(device.Get(), context.Get(), skyDDSWide.c_str(), nullptr, &newSkyTexture);
 
 			stringifiedPathBuf = pathBuf;
-
-			// Serialize the filename if it's in the right folder
-			size_t dirPos = stringifiedPathBuf.find("Assets\\Textures\\Skies");
-			if (dirPos != std::string::npos) {
-				// File is in the assets folder
-				filenameKey = "t";
-				filenameKey += stringifiedPathBuf.substr(dirPos + sizeof("Assets\\Textures\\Skies"));
-			}
-			else {
-				filenameKey = "f";
-				filenameKey += stringifiedPathBuf;
-			}
 		}
+
+		std::string assetPathStr = "Assets\\Textures\\Skies\\";
+
+		filenameKey = SerializeFileName(assetPathStr, pathBuf);
 
 		std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, newSkyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
 
@@ -1238,7 +1252,7 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 /// <param name="isMultiParticle">True to recursively load textures from the file path</param>
 /// <returns>Pointer to the new GameEntity</returns>
 std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string name,
-	std::wstring textureNameToLoad,
+	std::string textureNameToLoad,
 	bool isMultiParticle)
 {
 	try {
@@ -1247,6 +1261,12 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 
 		newEmitter->SetIsMultiParticle(isMultiParticle);
 		newEmitter->SetParticleTextureSRV(LoadParticleTexture(textureNameToLoad, isMultiParticle));
+
+		std::string assets = dxInstance->GetAssetPathString(ASSET_PARTICLE_PATH) + textureNameToLoad;
+		char pathBuf[1024];
+		GetFullPathNameA(assets.c_str(), sizeof(pathBuf), pathBuf, NULL);
+
+		newEmitter->SetFilenameKey(SerializeFileName("Assets\\Particles\\", pathBuf));
 
 		// Set all the compute shaders here
 		newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleEmitCS"), Emit);
@@ -1275,7 +1295,7 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 /// <param name="additiveBlendState">Whether to use an additive blend state when rendering</param>
 /// <returns></returns>
 std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string name,
-															 std::wstring textureNameToLoad,
+															 std::string textureNameToLoad,
 															 int maxParticles,
 															 float particleLifeTime,
 															 float particlesPerSecond,
@@ -1301,18 +1321,10 @@ std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::st
 
 		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
 
-		// Serialize the filename if it's in the right folder
-		std::string baseFilename = "";
-		size_t dirPos = filePath.find("Assets\\Fonts");
-		if (dirPos != std::string::npos) {
-			// File is in the assets folder
-			baseFilename = "t";
-			baseFilename += filePath.substr(dirPos + sizeof("Assets\\Fonts"));
-		}
-		else {
-			baseFilename = "f";
-			baseFilename += filePath;
-		}
+		std::string baseFilename;
+		std::string assetPathStr = "Assets\\Fonts\\";
+
+		baseFilename = SerializeFileName(assetPathStr, pathBuf);
 
 		ISimpleShader::ConvertToWide(pathBuf, wPathBuf);
 
@@ -1669,20 +1681,10 @@ void AssetManager::InitializeTerrainMaterials() {
 
 		CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, defaultBlendMap.GetAddressOf());
 
-		// Serialize the filename if it's in the right folder
-		std::string baseFilename = "";
-		std::string assetPathStr = "Assets\\Textures";
-		std::string pathBufString = std::string(pathBuf);
-		size_t dirPos = pathBufString.find(assetPathStr);
-		if (dirPos != std::string::npos) {
-			// File is in the assets folder
-			baseFilename = "t";
-			baseFilename += pathBufString.substr(dirPos + assetPathStr.size() + 1);
-		}
-		else {
-			baseFilename = "f";
-			baseFilename += pathBufString;
-		}
+		std::string baseFilename;
+		std::string assetPathStr = "Assets\\Textures\\";
+
+		baseFilename = SerializeFileName(assetPathStr, pathBuf);
 
 		SetLoadedAndWait("Terrain", "Height and Blend Maps");
 
@@ -1774,7 +1776,7 @@ void AssetManager::InitializeEmitters() {
 	ParticleSystem::SetDefaults(
 		GetPixelShaderByName("ParticlesPS"),
 		GetVertexShaderByName("ParticlesVS"),
-		LoadParticleTexture(L"Smoke/", true),
+		LoadParticleTexture("Smoke/", true),
 		GetComputeShaderByName("ParticleEmitCS"),
 		GetComputeShaderByName("ParticleMoveCS"),
 		GetComputeShaderByName("ParticleCopyCS"),
@@ -1782,25 +1784,25 @@ void AssetManager::InitializeEmitters() {
 		device,
 		context);
 
-	std::shared_ptr<ParticleSystem> basicEmitter = CreateParticleEmitter("basicParticle", L"Smoke/smoke_01.png", 20, 1.0f, 1.0f);
+	std::shared_ptr<ParticleSystem> basicEmitter = CreateParticleEmitter("basicParticle", "Smoke/smoke_01.png", 20, 1.0f, 1.0f);
 	basicEmitter->GetTransform()->SetPosition(XMFLOAT3(1.0f, 0.0f, 0.0f));
 	basicEmitter->SetEnabled(false);
 
-	std::shared_ptr<ParticleSystem> basicMultiEmitter = CreateParticleEmitter("basicParticles", L"Smoke/", true);
+	std::shared_ptr<ParticleSystem> basicMultiEmitter = CreateParticleEmitter("basicParticles", "Smoke/", true);
 	basicMultiEmitter->SetScale(1.0f);
 	basicMultiEmitter->SetEnabled(false);
 
-	std::shared_ptr<ParticleSystem> flameEmitter = CreateParticleEmitter("flameParticles", L"Flame/", 10, 2.0f, 5.0f, true);
+	std::shared_ptr<ParticleSystem> flameEmitter = CreateParticleEmitter("flameParticles", "Flame/", 10, 2.0f, 5.0f, true);
 	flameEmitter->GetTransform()->SetPosition(XMFLOAT3(-1.0f, 0.0f, 0.0f));
 	flameEmitter->SetColorTint(XMFLOAT4(0.8f, 0.3f, 0.2f, 1.0f));
 	flameEmitter->SetEnabled(false);
 
-	std::shared_ptr<ParticleSystem> starMultiEmitter = CreateParticleEmitter("starParticles", L"Star/", 300, 2.0f, 80.0f, true);
+	std::shared_ptr<ParticleSystem> starMultiEmitter = CreateParticleEmitter("starParticles", "Star/", 300, 2.0f, 80.0f, true);
 	starMultiEmitter->GetTransform()->SetPosition(XMFLOAT3(-2.0f, 0.0f, 0.0f));
 	starMultiEmitter->SetColorTint(XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
 	starMultiEmitter->SetEnabled(false);
 
-	std::shared_ptr<ParticleSystem> starEmitter = CreateParticleEmitter("starParticle", L"Star/star_08.png", 300, 2.0f, 80.0f);
+	std::shared_ptr<ParticleSystem> starEmitter = CreateParticleEmitter("starParticle", "Star/star_08.png", 300, 2.0f, 80.0f);
 	starEmitter->GetTransform()->SetPosition(XMFLOAT3(-3.0f, 0.0f, 0.0f));
 	starEmitter->SetColorTint(XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
 	starEmitter->SetScale(0.75f);
@@ -2298,21 +2300,20 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::CreateCubemap(
 /// <param name="textureNameToLoad">Name of the file or file path to load the texture(s) from</param>
 /// <param name="isMultiParticle">True to recursively load from the file path</param>
 /// <returns>An SRV for the loaded textures</returns>
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTexture(std::wstring textureNameToLoad, bool isMultiParticle)
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTexture(std::string textureNameToLoad, bool isMultiParticle)
 {
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;
 
 	if (isMultiParticle) {
 		// Load all particle textures in a specific subfolder
-		std::string assets = "../../../Assets/Particles/";
-		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-		std::string subfolderPath = converter.to_bytes(textureNameToLoad);
+		std::string assets = dxInstance->GetAssetPathString(ASSET_PARTICLE_PATH) + textureNameToLoad;
+		char pathBuf[1024];
+		GetFullPathNameA(assets.c_str(), sizeof(pathBuf), pathBuf, NULL);
 
 		std::vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>> textures;
 		int i = 0;
-		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(dxInstance->GetFullPathTo(assets + subfolderPath))) {
+		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(pathBuf)) {
 			textures.push_back(nullptr);
-			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
 			std::wstring path = L"";
 			ISimpleShader::ConvertToWide(p.path().string().c_str(), path);
 
@@ -2358,8 +2359,12 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 		outputTexture->Release();
 	}
 	else {
-		std::wstring assetPathString = L"../../../Assets/Particles/";
-		CreateWICTextureFromFile(device.Get(), context.Get(), dxInstance->GetFullPathTo_Wide(assetPathString + textureNameToLoad).c_str(), nullptr, &particleTextureSRV);
+		std::string assetPathString = dxInstance->GetAssetPathString(ASSET_PARTICLE_PATH);
+		assetPathString += textureNameToLoad;
+		std::wstring wAssetString;
+		ISimpleShader::ConvertToWide(assetPathString, wAssetString);
+
+		CreateWICTextureFromFile(device.Get(), context.Get(), wAssetString.c_str(), nullptr, &particleTextureSRV);
 	}
 
 	return particleTextureSRV;

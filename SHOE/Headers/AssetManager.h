@@ -144,6 +144,18 @@
 #define TERRAIN_MATERIAL_BLEND_MAP_ENABLED "tBE"
 #define TERRAIN_MATERIAL_MATERIAL_ARRAY "tMA"
 
+// Particle System Data:
+#define PARTICLE_SYSTEM_MAX_PARTICLES "pMP"
+#define PARTICLE_SYSTEM_FILENAME_KEY "pFK"
+#define PARTICLE_SYSTEM_IS_MULTI_PARTICLE "pIP"
+#define PARTICLE_SYSTEM_ADDITIVE_BLEND "pAB"
+#define PARTICLE_SYSTEM_COLOR_TINT "pCT"
+#define PARTICLE_SYSTEM_SCALE "pS"
+#define PARTICLE_SYSTEM_SPEED "pE"
+#define PARTICLE_SYSTEM_DESTINATION "pD"
+#define PARTICLE_SYSTEM_PARTICLES_PER_SECOND "pPS"
+#define PARTICLE_SYSTEM_PARTICLE_LIFETIME "pL"
+
 #pragma endregion
 
 #include "Light.h"
@@ -184,8 +196,8 @@ struct LoadingNotifications {
 };
 
 struct FMODUserData {
-	std::string name;
-	std::string filenameKey;
+	std::shared_ptr<std::string> name;
+	std::shared_ptr<std::string> filenameKey;
 };
 
 // State machine used to track what type of load
@@ -282,7 +294,7 @@ private:
 	void CreateComplexGeometry();
 	void ProcessComplexModel(aiNode* node, const aiScene* scene);
 	std::shared_ptr<Mesh> ProcessComplexMesh(aiMesh* mesh, const aiScene* scene);
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::wstring textureNameToLoad, bool isMultiParticle);
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::string textureNameToLoad, bool isMultiParticle);
 
 	void InitializeTextureSampleStates();
 	void InitializeMeshes();
@@ -393,10 +405,10 @@ public:
 												bool addToGlobalList = true);
 	std::shared_ptr<Terrain> CreateTerrainEntity(std::string name = "Terrain");
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
-													std::wstring textureNameToLoad,
+													std::string textureNameToLoad,
 													bool isMultiParticle);
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
-												   std::wstring textureNameToLoad,
+												   std::string textureNameToLoad,
 												   int maxParticles,
 												   float particleLifeTime,
 												   float particlesPerSecond,
@@ -407,6 +419,7 @@ public:
 
 	// Creation Helper Methods
 	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType);
+	std::string SerializeFileName(std::string assetFolderPath, std::string fullPathToAsset);
 
 	// Helper methods to add components to objects
 

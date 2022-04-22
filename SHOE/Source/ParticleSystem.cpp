@@ -121,6 +121,14 @@ DirectX::XMFLOAT3 ParticleSystem::GetDestination() {
 	return this->destination;
 }
 
+void ParticleSystem::SetFilenameKey(std::string filenameKey) {
+	this->filenameKey = filenameKey;
+}
+
+std::string ParticleSystem::GetFilenameKey() {
+	return this->filenameKey;
+}
+
 void ParticleSystem::SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> computeShader, ParticleComputeShaderType type) {
 	switch (type) {
 	case 0:
