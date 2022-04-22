@@ -72,20 +72,20 @@
 
 // Material data subsection - 
 // Sampler description data:
-#define SAMPLER_ADDRESS_U "sAU"
-#define SAMPLER_ADDRESS_V "sAV"
-#define SAMPLER_ADDRESS_W "sAW"
-#define SAMPLER_BORDER_COLOR "sBC"
-#define SAMPLER_COMPARISON_FUNCTION "sCF"
-#define SAMPLER_FILTER "sF"
-#define SAMPLER_MAX_ANISOTROPY "sMA"
-#define SAMPLER_MAX_LOD "sML"
-#define SAMPLER_MIN_LOD "sIL"
-#define SAMPLER_MIP_LOD_BIAS "sPB"
+#define SAMPLER_ADDRESS_U "sAU" // int
+#define SAMPLER_ADDRESS_V "sAV" // int
+#define SAMPLER_ADDRESS_W "sAW" // int
+#define SAMPLER_BORDER_COLOR "sBC" // float array
+#define SAMPLER_COMPARISON_FUNCTION "sCF" // int?
+#define SAMPLER_FILTER "sF" // int
+#define SAMPLER_MAX_ANISOTROPY "sMA" // int
+#define SAMPLER_MAX_LOD "sML" // float
+#define SAMPLER_MIN_LOD "sIL" // float
+#define SAMPLER_MIP_LOD_BIAS "sPB" // float
 
 // Font Data:
-#define FONT_FILENAME_KEY "fFK"
-#define FONT_NAME "fN"
+#define FONT_FILENAME_KEY "fFK" // string
+#define FONT_NAME "fN" // string
 
 // Transform Data:
 #define TRANSFORM_LOCAL_POSITION "tLP"
@@ -336,6 +336,7 @@ private:
 	ComponentTypes allCurrentComponentTypes;
 
 	std::string currentSceneName;
+	std::string loadingSceneName;
 
 public:
 	static bool materialSortDirty;
@@ -420,6 +421,7 @@ public:
 	// Creation Helper Methods
 	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType);
 	std::string SerializeFileName(std::string assetFolderPath, std::string fullPathToAsset);
+	std::string DeSerializeFileName(std::string assetPath);
 
 	// Helper methods to add components to objects
 
@@ -444,6 +446,8 @@ public:
 	void RemoveMaterial(int id);
 	void RemoveTerrainMaterial(std::string name);
 	void RemoveTerrainMaterial(int id);
+
+	void CleanAllVectors();
 
 	// Methods to disable and enable assets for rendering
 	// Currently not implemented except for lights

@@ -126,23 +126,101 @@ void AssetManager::SetLoadedAndWait(std::string category, std::string object, st
 }
 
 std::string AssetManager::GetLoadingSceneName() {
-	return "";
+	return loadingSceneName;
+}
+
+std::string AssetManager::GetCurrentSceneName() {
+	return currentSceneName;
 }
 
 void AssetManager::LoadScene(std::string filepath) {
-	rapidjson::Document sceneDoc;
+	try {
+		rapidjson::Document sceneDoc;
 
-	std::string fullPath = "../../../Assets/Scenes/" + filepath;
-	fullPath = dxInstance->GetFullPathTo(fullPath);
-	FILE* file;
-	fopen_s(&file, fullPath.c_str(), "rb");
+		std::string assetPath = dxInstance->GetAssetPathString(ASSET_SCENE_PATH);
+		std::string namePath = assetPath + filepath;
+		char pathBuf[1024];
 
-	char readBuffer[FILE_BUFFER_SIZE];
-	rapidjson::FileReadStream sceneFileStream(file, readBuffer, sizeof(readBuffer));
+		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
 
-	sceneDoc.ParseStream(sceneFileStream);
+		FILE* file;
+		fopen_s(&file, namePath.c_str(), "rb");
 
-	fclose(file);
+		char readBuffer[FILE_BUFFER_SIZE];
+		rapidjson::FileReadStream sceneFileStream(file, readBuffer, sizeof(readBuffer));
+
+		sceneDoc.ParseStream(sceneFileStream);
+
+		// Check if this is a valid SHOE scene
+		assert(sceneDoc[VALID_SHOE_SCENE].GetBool());
+
+		// Get the scene name for loading purposes
+		loadingSceneName = sceneDoc[SCENE_NAME].GetString();
+
+		SetAMLoadState(SCENE_LOAD);
+
+		// Remove the current scene from memory
+		CleanAllVectors();
+
+		// Load order:
+		// Fonts
+		// Texture Sample States
+		// Shaders
+		// Cameras
+		// Materials
+		// Meshes
+		// Terrain Materials
+		// Entities
+		// Emitters
+		// Lights
+		// Skies
+		// Audio
+		// IMGUI?
+
+		// Fonts
+		const rapidjson::Value& fontBlock = sceneDoc[FONTS];
+		assert(fontBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < fontBlock.Size(); i++) {
+			std::string fileKey = DeSerializeFileName(fontBlock[i].FindMember(FONT_FILENAME_KEY)->value.GetString());
+			CreateSHOEFont(fontBlock[i].FindMember(FONT_NAME)->value.GetString(), fileKey);
+		}
+
+		// Texture Sampler States
+		const rapidjson::Value& sampleStateBlock = sceneDoc[TEXTURE_SAMPLE_STATES];
+		assert(sampleStateBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < sampleStateBlock.Size(); i++) {
+			Microsoft::WRL::ComPtr<ID3D11SamplerState> loadedSampler;
+
+			D3D11_SAMPLER_DESC loadDesc;
+			loadDesc.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_U)->value.GetInt());
+			loadDesc.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_V)->value.GetInt());
+			loadDesc.AddressW = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_W)->value.GetInt());
+			loadDesc.Filter = (D3D11_FILTER)(sampleStateBlock[i].FindMember(SAMPLER_FILTER)->value.GetInt());
+			loadDesc.MaxAnisotropy = (sampleStateBlock[i].FindMember(SAMPLER_MAX_ANISOTROPY)->value.GetInt());
+			loadDesc.MinLOD = (sampleStateBlock[i].FindMember(SAMPLER_MIN_LOD)->value.GetDouble());
+			loadDesc.MaxLOD = (sampleStateBlock[i].FindMember(SAMPLER_MAX_LOD)->value.GetDouble());
+			loadDesc.MipLODBias = (sampleStateBlock[i].FindMember(SAMPLER_MIP_LOD_BIAS)->value.GetDouble());
+			loadDesc.ComparisonFunc = (D3D11_COMPARISON_FUNC)(sampleStateBlock[i].FindMember(SAMPLER_COMPARISON_FUNCTION)->value.GetInt());
+
+			float borderColor[4];
+			const rapidjson::Value& borderColorBlock = sampleStateBlock[i].FindMember(SAMPLER_BORDER_COLOR)->value;
+			for (int j = 0; j < 4; j++) {
+				loadDesc.BorderColor[j] = borderColorBlock[j].GetDouble();
+			}
+
+			device->CreateSamplerState(&loadDesc, &loadedSampler);
+
+			textureSampleStates.push_back(loadedSampler);
+		}
+
+		textureState = textureSampleStates[0];
+		clampState = textureSampleStates[1];
+
+		fclose(file);
+	}
+	catch (...) {
+
+	}	
 }
 
 void AssetManager::LoadScene(FILE* file) {
@@ -743,16 +821,12 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 		sound = audioInstance.LoadSound(pathBuf, mode);
 
 		// Serialize the filename if it's in the right folder
-		std::string baseFilename;
 		std::string assetPathStr = "Assets\\Sounds\\";
 
-		baseFilename = SerializeFileName(assetPathStr, pathBuf);
+		std::string baseFilename = SerializeFileName(assetPathStr, pathBuf);
 
-		std::shared_ptr<std::string> fileKey = std::make_shared<std::string>(baseFilename);
-		std::shared_ptr<std::string> fileName = std::make_shared<std::string>(name);
-
-		uData->filenameKey = fileKey;
-		uData->name = fileName;
+		uData->filenameKey = std::make_shared<std::string>(baseFilename);
+		uData->name = std::make_shared<std::string>(name);
 
 		// On getUserData, we will receive the whole struct
 		sound->setUserData(uData);
@@ -804,10 +878,9 @@ std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string
 		newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), pathBuf, id);
 
 		// Serialize the filename if it's in the right folder
-		std::string baseFilename;
 		std::string assetPathStr = "Assets\\Shaders\\";
 
-		baseFilename = SerializeFileName(assetPathStr, pathBuf);
+		std::string baseFilename = SerializeFileName(assetPathStr, pathBuf);
 
 		newVS->SetFileNameKey(baseFilename);
 
@@ -838,10 +911,9 @@ std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string i
 		newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), pathBuf, id);
 
 		// Serialize the filename if it's in the right folder
-		std::string baseFilename;
 		std::string assetPathStr = "Assets\\Shaders\\";
 
-		baseFilename = SerializeFileName(assetPathStr, pathBuf);
+		std::string baseFilename = SerializeFileName(assetPathStr, pathBuf);
 
 		newPS->SetFileNameKey(baseFilename);
 
@@ -948,15 +1020,24 @@ std::string AssetManager::SerializeFileName(std::string assetFolderPath, std::st
 	size_t dirPos = fullPathToAsset.find(assetFolderPath);
 	if (dirPos != std::string::npos) {
 		// File is in the assets folder
-		filenameKey = "t";
-		filenameKey += fullPathToAsset.substr(dirPos + assetFolderPath.size());
+		filenameKey = "t" + fullPathToAsset.substr(dirPos + assetFolderPath.size());;
 	}
 	else {
-		filenameKey = "f";
-		filenameKey += fullPathToAsset;
+		filenameKey = "f" + fullPathToAsset;
 	}
 
 	return filenameKey;
+}
+
+std::string AssetManager::DeSerializeFileName(std::string assetPath) {
+	char t[2] = "t";
+	if (assetPath[0] == t[0]) {
+		// Return the assetPath and remove the t
+		return assetPath.substr(1);
+	}
+	else {
+		return assetPath;
+	}
 }
 
 HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType) {
@@ -1182,11 +1263,10 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 		importantSkyVertexShaders.push_back(GetVertexShaderByName("SkyVS"));
 		importantSkyVertexShaders.push_back(GetVertexShaderByName("FullscreenVS"));
 
-		std::string assetPath;
 		std::string filenameKey;
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newSkyTexture;
 
-		assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_SKIES);
+		std::string assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_SKIES);
 		std::string namePath = assetPath + filepath;
 		char pathBuf[1024];
 		std::string stringifiedPathBuf;
@@ -1321,10 +1401,9 @@ std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::st
 
 		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
 
-		std::string baseFilename;
 		std::string assetPathStr = "Assets\\Fonts\\";
 
-		baseFilename = SerializeFileName(assetPathStr, pathBuf);
+		std::string baseFilename = SerializeFileName(assetPathStr, pathBuf);
 
 		ISimpleShader::ConvertToWide(pathBuf, wPathBuf);
 
@@ -1681,10 +1760,9 @@ void AssetManager::InitializeTerrainMaterials() {
 
 		CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, defaultBlendMap.GetAddressOf());
 
-		std::string baseFilename;
 		std::string assetPathStr = "Assets\\Textures\\";
 
-		baseFilename = SerializeFileName(assetPathStr, pathBuf);
+		std::string baseFilename = SerializeFileName(assetPathStr, pathBuf);
 
 		SetLoadedAndWait("Terrain", "Height and Blend Maps");
 
@@ -2359,10 +2437,8 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 		outputTexture->Release();
 	}
 	else {
-		std::string assetPathString = dxInstance->GetAssetPathString(ASSET_PARTICLE_PATH);
-		assetPathString += textureNameToLoad;
 		std::wstring wAssetString;
-		ISimpleShader::ConvertToWide(assetPathString, wAssetString);
+		ISimpleShader::ConvertToWide(dxInstance->GetAssetPathString(ASSET_PARTICLE_PATH) + textureNameToLoad, wAssetString);
 
 		CreateWICTextureFromFile(device.Get(), context.Get(), wAssetString.c_str(), nullptr, &particleTextureSRV);
 	}
@@ -2492,6 +2568,35 @@ std::shared_ptr<Mesh> AssetManager::ProcessComplexMesh(aiMesh* mesh, const aiSce
 //
 // Asset Removal methods
 //
+
+void AssetManager::CleanAllVectors() {
+	for (auto ge : globalEntities) {
+		ge->Release();
+	}
+
+	for (int i = 0; i < globalSounds.size(); i++) {
+		FMODUserData* uData;
+		globalSounds[i]->getUserData((void**)&uData);
+		uData->filenameKey.reset();
+		uData->name.reset();
+		delete uData;
+	}
+
+	pixelShaders.clear();
+	vertexShaders.clear();
+	computeShaders.clear();
+	skies.clear();
+	globalCameras.clear();
+	globalMeshes.clear();
+	globalMaterials.clear();
+	globalEntities.clear();
+	globalTerrainMaterials.clear();
+	globalSounds.clear();
+	globalFonts.clear();
+	textureSampleStates.clear();
+	textureState = nullptr;
+	clampState = nullptr;
+}
 
 void AssetManager::RemoveGameEntity(std::string name) {
 	RemoveGameEntity(GetGameEntityIDByName(name));
