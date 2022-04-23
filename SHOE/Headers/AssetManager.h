@@ -489,6 +489,9 @@ public:
 	std::shared_ptr<GameEntity> GetGameEntityByID(int id);
 	std::shared_ptr<Sky> GetSkyAtID(int id);
 
+	void BroadcastGlobalEntityEvent(EntityEventType event);
+	void BroadcastGlobalEntityEvent(EntityEventType event, std::shared_ptr<void> message);
+
 	// Moved to simpleshader for global use
 	//inline std::wstring ConvertToWide(const std::string& as);
 
