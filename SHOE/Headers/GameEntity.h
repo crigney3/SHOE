@@ -10,23 +10,6 @@
 #include "ComponentManager.h"
 #include "ComponentPacket.h"
 
-enum EntityEventType {
-	Update,
-	OnTransform,
-	OnMove,
-	OnRotate,
-	OnScale,
-	OnEnabledChanged,
-	OnParentTransform,
-	OnParentMove,
-	OnParentRotate,
-	OnParentScale,
-	OnParentEnabledChanged,
-	AudioPlay,
-	AudioStop,
-	REQUIRES_MESSAGE = 0b1111111111100
-};
-
 class GameEntity : public std::enable_shared_from_this<GameEntity>
 {
 private:
@@ -39,7 +22,7 @@ private:
 	std::vector<std::shared_ptr<IComponent>> rawComponentList;
 	std::vector<std::shared_ptr<ComponentPacket>> componentList;
 
-	void RecieveEntityEvent(EntityEventType event);
+	void PropogateEvent(EntityEventType event, std::shared_ptr<void> message = nullptr);
 
 	void UpdateHierarchyIsEnabled(bool active, bool head = false);
 

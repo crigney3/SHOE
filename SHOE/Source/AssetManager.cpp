@@ -1981,10 +1981,10 @@ std::shared_ptr<Sky> AssetManager::GetSkyAtID(int id) {
 	return this->skies[id];
 }
 
-void AssetManager::BroadcastGlobalEntityEvent(EntityEventType event)
+void AssetManager::BroadcastGlobalEntityEvent(EntityEventType event, std::shared_ptr<void> message)
 {
 	for (std::shared_ptr<GameEntity> entity : globalEntities) {
-		entity->RecieveEntityEvent(event);
+		entity->PropogateEvent(event);
 	}
 }
 

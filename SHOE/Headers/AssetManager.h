@@ -477,7 +477,6 @@ public:
 	size_t GetSoundArraySize();
 	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
 	std::vector<std::shared_ptr<Sky>>* GetSkyArray();
-	Light* GetFlashlight();
 
 	FMOD::Sound* GetSoundAtID(int id);
 	std::shared_ptr<Camera> GetCameraAtID(int id);
@@ -489,8 +488,7 @@ public:
 	std::shared_ptr<GameEntity> GetGameEntityByID(int id);
 	std::shared_ptr<Sky> GetSkyAtID(int id);
 
-	void BroadcastGlobalEntityEvent(EntityEventType event);
-	void BroadcastGlobalEntityEvent(EntityEventType event, std::shared_ptr<void> message);
+	void BroadcastGlobalEntityEvent(EntityEventType event, std::shared_ptr<void> message = nullptr);
 
 	// Moved to simpleshader for global use
 	//inline std::wstring ConvertToWide(const std::string& as);

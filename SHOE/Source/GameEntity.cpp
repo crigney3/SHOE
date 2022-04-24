@@ -61,6 +61,22 @@ void GameEntity::Update(float deltaTime, float totalTime)
 	}
 }
 
+void GameEntity::PropogateEvent(EntityEventType event, std::shared_ptr<void> message)
+{
+	//If the event type requires there to be a message and there isn't one, fail
+	if ((EntityEventType::REQUIRES_MESSAGE & 1 << event) && message == nullptr) {
+		//Probably should throw but I'll silently fail for now
+		return;
+	}
+	bool runEvenIfDisabled = EntityEventType::IGNORES_ENABLED_STATE & 1 << event;
+	if (runEvenIfDisabled || GetEnableDisable()){
+		for (std::shared_ptr<ComponentPacket> packet : componentList) {
+			if (runEvenIfDisabled || packet->component->IsEnabled())
+				packet->component->RecieveEvent(event, message);
+		}
+	}
+}
+
 /**
  * \brief Called on entering a collision with another GameEntity with a collider attached
  * \param other Entity collided with

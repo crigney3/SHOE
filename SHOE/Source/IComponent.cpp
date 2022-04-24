@@ -18,6 +18,45 @@ void IComponent::Update(float deltaTime, float totalTime)
 {
 }
 
+void IComponent::RecieveEvent(EntityEventType event, std::shared_ptr<void> message)
+{
+	switch (event) {
+	case EntityEventType::OnParentEnabledChanged:
+		hierarchyIsEnabled = std::dynamic_pointer_cast<bool>(message).get();
+		break;
+	case EntityEventType::OnTransform:
+		OnTransform();
+		break;
+	case EntityEventType::OnMove:
+		OnMove(*std::dynamic_pointer_cast<DirectX::XMFLOAT3>(message));
+		break;
+	case EntityEventType::OnRotate:
+		OnRotate(*std::dynamic_pointer_cast<DirectX::XMFLOAT3>(message));
+		break;
+	case EntityEventType::OnScale:
+		OnScale(*std::dynamic_pointer_cast<DirectX::XMFLOAT3>(message));
+		break;
+	case EntityEventType::OnParentTransform:
+		OnParentTransform(std::dynamic_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnParentMove:
+		OnParentMove(std::dynamic_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnParentRotate:
+		OnParentRotate(std::dynamic_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnParentScale:
+		OnParentScale(std::dynamic_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnCollisionEnter:
+		OnCollisionEnter(std::dynamic_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnTriggerEnter:
+		OnTriggerEnter(std::dynamic_pointer_cast<GameEntity>(message));
+		break;
+	}
+}
+
 /**
  * \brief Called when component is detached from a GameEntity
  */
@@ -49,13 +88,6 @@ void IComponent::OnTransform()
 }
 
 /**
- * \brief Called when this parent's transform is changed
- */
-void IComponent::OnParentTransform()
-{
-}
-
-/**
  * \brief Called when this entity's position is changed
  * \param delta DirectX::XMFLOAT3 The delta of this move
  */
@@ -76,6 +108,38 @@ void IComponent::OnRotate(DirectX::XMFLOAT3 delta)
  * \param delta DirectX::XMFLOAT3 The delta of this scale
  */
 void IComponent::OnScale(DirectX::XMFLOAT3 delta)
+{
+}
+
+/**
+ * \brief Called when a parent's transform is changed
+ * \param parent std::shared_ptr<GameEntity> The parent whose transform was changed
+ */
+void IComponent::OnParentTransform(std::shared_ptr<GameEntity> parent)
+{
+}
+
+/**
+ * \brief Called when a parent is moved
+ * \param parent std::shared_ptr<GameEntity> The parent who moved
+ */
+void IComponent::OnParentMove(std::shared_ptr<GameEntity> parent)
+{
+}
+
+/**
+ * \brief Called when a parent is rotated
+ * \param parent std::shared_ptr<GameEntity> The parent who rotated
+ */
+void IComponent::OnParentRotate(std::shared_ptr<GameEntity> parent)
+{
+}
+
+/**
+ * \brief Called when a parent is scaled
+ * \param parent std::shared_ptr<GameEntity> The parent who scaled
+ */
+void IComponent::OnParentScale(std::shared_ptr<GameEntity> parent)
 {
 }
 
