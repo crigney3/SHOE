@@ -11,26 +11,23 @@
 
 #pragma region paths
 
-// We gotta do some crazy preprocessor stuff
-// To check if this is a visual studio run
-// or an executable run
-
-#define ASSET_PATH_COUNT 14
-
-#define ASSET_MODEL_PATH 0
-#define ASSET_SCENE_PATH 1
-#define ASSET_HEIGHTMAP_PATH 2
-#define ASSET_FONT_PATH 3
-#define ASSET_PARTICLE_PATH 4
-#define ASSET_SOUND_PATH 5
-#define ASSET_TEXTURE_PATH_BASIC 6
-#define ASSET_TEXTURE_PATH_SKIES 7
-#define ASSET_TEXTURE_PATH_PBR 8
-#define ASSET_TEXTURE_PATH_PBR_ALBEDO 9
-#define ASSET_TEXTURE_PATH_PBR_NORMALS 10
-#define ASSET_TEXTURE_PATH_PBR_METALNESS 11
-#define ASSET_TEXTURE_PATH_PBR_ROUGHNESS 12
-#define ASSET_SHADER_PATH 13
+enum AssetPathIndex {
+	ASSET_MODEL_PATH,
+	ASSET_SCENE_PATH,
+	ASSET_HEIGHTMAP_PATH,
+	ASSET_FONT_PATH,
+	ASSET_PARTICLE_PATH,
+	ASSET_SOUND_PATH,
+	ASSET_TEXTURE_PATH_BASIC,
+	ASSET_TEXTURE_PATH_SKIES,
+	ASSET_TEXTURE_PATH_PBR,
+	ASSET_TEXTURE_PATH_PBR_ALBEDO,
+	ASSET_TEXTURE_PATH_PBR_NORMALS,
+	ASSET_TEXTURE_PATH_PBR_METALNESS,
+	ASSET_TEXTURE_PATH_PBR_ROUGHNESS,
+	ASSET_SHADER_PATH,
+	ASSET_PATH_COUNT
+};
 
 #pragma endregion
 
@@ -83,7 +80,7 @@ public:
 	unsigned int width;
 	unsigned int height;
 
-	std::string GetAssetPathString(int index);
+	std::string GetAssetPathString(AssetPathIndex index);
 
 protected:
 	HINSTANCE	hInstance;		// The handle to the application

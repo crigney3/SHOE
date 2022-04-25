@@ -68,8 +68,13 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRoughMap();
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture();
+
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
+	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState);
+
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetClampSamplerState();
+	void SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState);
+
 	float GetTiling();
 	void SetTiling(float uv);
 

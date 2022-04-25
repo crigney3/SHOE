@@ -137,14 +137,14 @@ void AssetManager::LoadScene(std::string filepath) {
 	try {
 		rapidjson::Document sceneDoc;
 
-		std::string assetPath = dxInstance->GetAssetPathString(ASSET_SCENE_PATH);
-		std::string namePath = assetPath + filepath;
-		char pathBuf[1024];
-
-		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SCENE_PATH, filepath);
 
 		FILE* file;
 		fopen_s(&file, namePath.c_str(), "rb");
+
+		if (file == NULL) {
+			return;
+		}
 
 		char readBuffer[FILE_BUFFER_SIZE];
 		rapidjson::FileReadStream sceneFileStream(file, readBuffer, sizeof(readBuffer));
@@ -245,13 +245,13 @@ void AssetManager::LoadScene(std::string filepath) {
 		assert(cameraBlock.IsArray());
 		for (rapidjson::SizeType i = 0; i < cameraBlock.Size(); i++) {
 			DirectX::XMFLOAT3 cameraPos;
-			DirectX::XMFLOAT4 cameraRot;
+			DirectX::XMFLOAT3 cameraRot;
 			DirectX::XMFLOAT3 cameraScale;
 
 			const rapidjson::Value& cameraTransformBlock = cameraBlock[i].FindMember(CAMERA_TRANSFORM)->value;
-			const rapidjson::Value& transformPosBlock = cameraTransformBlock[i].FindMember(TRANSFORM_LOCAL_POSITION)->value;
-			const rapidjson::Value& transformRotBlock = cameraTransformBlock[i].FindMember(TRANSFORM_LOCAL_ROTATION)->value;
-			const rapidjson::Value& transformScaleBlock = cameraTransformBlock[i].FindMember(TRANSFORM_LOCAL_SCALE)->value;
+			const rapidjson::Value& transformPosBlock = cameraTransformBlock.FindMember(TRANSFORM_LOCAL_POSITION)->value;
+			const rapidjson::Value& transformRotBlock = cameraTransformBlock.FindMember(TRANSFORM_LOCAL_ROTATION)->value;
+			const rapidjson::Value& transformScaleBlock = cameraTransformBlock.FindMember(TRANSFORM_LOCAL_SCALE)->value;
 
 			cameraPos.x = transformPosBlock[0].GetDouble();
 			cameraPos.y = transformPosBlock[1].GetDouble();
@@ -260,7 +260,6 @@ void AssetManager::LoadScene(std::string filepath) {
 			cameraRot.x = transformRotBlock[0].GetDouble();
 			cameraRot.y = transformRotBlock[1].GetDouble();
 			cameraRot.z = transformRotBlock[2].GetDouble();
-			cameraRot.w = transformRotBlock[3].GetDouble();
 
 			cameraScale.x = transformScaleBlock[0].GetDouble();
 			cameraScale.y = transformScaleBlock[1].GetDouble();
@@ -269,9 +268,9 @@ void AssetManager::LoadScene(std::string filepath) {
 			std::shared_ptr<Camera> loadedCam = CreateCamera(cameraBlock[i].FindMember(CAMERA_NAME)->value.GetString(),
 															 cameraPos,
 															 cameraBlock[i].FindMember(CAMERA_ASPECT_RATIO)->value.GetDouble(),
-															 cameraBlock[i].FindMember(CAMERA_PROJECTION_MATRIX_TYPE)->value.GetInt());
+															 (int)cameraBlock[i].FindMember(CAMERA_PROJECTION_MATRIX_TYPE)->value.GetBool());
 
-			loadedCam->GetTransform()->SetRotation(cameraRot.x, cameraRot.y, cameraRot.z);
+			loadedCam->GetTransform()->SetRotation(cameraRot);
 
 			loadedCam->GetTransform()->SetScale(cameraScale);
 
@@ -288,6 +287,73 @@ void AssetManager::LoadScene(std::string filepath) {
 			loadedCam->SetFOV(cameraBlock[i].FindMember(CAMERA_FIELD_OF_VIEW)->value.GetDouble());
 
 			loadedCam->SetEnableDisable(cameraBlock[i].FindMember(CAMERA_ENABLED)->value.GetBool());
+		}
+
+		const rapidjson::Value& materialBlock = sceneDoc[MATERIALS];
+		assert(materialBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < materialBlock.Size(); i++) {
+			std::string name = DeSerializeFileName(materialBlock[i].FindMember(MAT_NAME)->value.GetString());
+			std::string albedo = DeSerializeFileName(materialBlock[i].FindMember(MAT_TEXTURE_OR_ALBEDO_MAP)->value.GetString());
+			std::string normal = DeSerializeFileName(materialBlock[i].FindMember(MAT_NAME)->value.GetString());
+			std::string metal = DeSerializeFileName(materialBlock[i].FindMember(MAT_NAME)->value.GetString());
+			std::string rough = DeSerializeFileName(materialBlock[i].FindMember(MAT_NAME)->value.GetString());
+
+			std::shared_ptr<Material> newMaterial = CreatePBRMaterial(name, albedo, normal, metal, rough);
+
+			newMaterial->SetEnableDisable(materialBlock[i].FindMember(MAT_ENABLED)->value.GetBool());
+
+			newMaterial->SetTransparent(materialBlock[i].FindMember(MAT_IS_TRANSPARENT)->value.GetBool());
+
+			newMaterial->SetRefractive(materialBlock[i].FindMember(MAT_IS_REFRACTIVE)->value.GetBool());
+
+			newMaterial->SetTiling(materialBlock[i].FindMember(MAT_UV_TILING)->value.GetDouble());
+
+			newMaterial->SetIndexOfRefraction(materialBlock[i].FindMember(MAT_INDEX_OF_REFRACTION)->value.GetDouble());
+
+			newMaterial->SetRefractionScale(materialBlock[i].FindMember(MAT_REFRACTION_SCALE)->value.GetDouble());
+
+			newMaterial->SetSamplerState(textureSampleStates[materialBlock[i].FindMember(MAT_TEXTURE_SAMPLER_STATE)->value.GetInt()]);
+
+			newMaterial->SetSamplerState(textureSampleStates[materialBlock[i].FindMember(MAT_CLAMP_SAMPLER_STATE)->value.GetInt()]);
+
+			newMaterial->SetVertexShader(vertexShaders[materialBlock[i].FindMember(MAT_VERTEX_SHADER)->value.GetInt()]);
+
+			newMaterial->SetPixelShader(pixelShaders[materialBlock[i].FindMember(MAT_PIXEL_SHADER)->value.GetInt()]);
+
+			if (newMaterial->GetRefractive()) {
+				newMaterial->SetRefractivePixelShader(pixelShaders[materialBlock[i].FindMember(MAT_REFRACTION_PIXEL_SHADER)->value.GetInt()]);
+			}
+
+			DirectX::XMFLOAT4 tint;
+			tint.x = materialBlock[i].FindMember(MAT_COLOR_TINT)->value[0].GetDouble();
+			tint.y = materialBlock[i].FindMember(MAT_COLOR_TINT)->value[1].GetDouble();
+			tint.z = materialBlock[i].FindMember(MAT_COLOR_TINT)->value[2].GetDouble();
+			tint.w = materialBlock[i].FindMember(MAT_COLOR_TINT)->value[3].GetDouble();
+			newMaterial->SetTint(tint);
+		}
+
+		const rapidjson::Value& meshBlock = sceneDoc[MESHES];
+		for (rapidjson::SizeType i = 0; i < meshBlock.Size(); i++) {
+			std::string mFilename = DeSerializeFileName(meshBlock[i].FindMember(MESH_FILENAME_KEY)->value.GetString());
+			std::shared_ptr<Mesh> newMesh = CreateMesh(meshBlock[i].FindMember(MESH_NAME)->value.GetString(), mFilename);
+
+			newMesh->SetEnableDisable(meshBlock[i].FindMember(MESH_ENABLED)->value.GetBool());
+
+			newMesh->SetDepthPrePass(meshBlock[i].FindMember(MESH_NEEDS_DEPTH_PREPASS)->value.GetBool());
+
+			newMesh->SetMaterialIndex(meshBlock[i].FindMember(MESH_MATERIAL_INDEX)->value.GetInt());
+
+			// This is currently generated automatically. Would need to change
+			// if storing meshes built through code arrays becomes supported.
+			// newMesh->SetIndexCount(meshBlock[i].FindMember(MESH_INDEX_COUNT)->value.GetInt());
+
+			// 
+		}
+
+		const rapidjson::Value& terrainMaterialBlock = sceneDoc[TERRAIN_MATERIALS];
+		assert(terrainMaterialBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < terrainMaterialBlock.Size(); i++) {
+
 		}
 
 		fclose(file);
@@ -328,6 +394,113 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 		rapidjson::Value sceneNameValue;
 		sceneNameValue.SetString("Test");
 		sceneDocToSave.AddMember(SCENE_NAME, sceneNameValue, allocator);
+
+		rapidjson::Value meshBlock(rapidjson::kArrayType);
+		for (auto me : this->globalMeshes) {
+			// Mesh
+			rapidjson::Value meshValue(rapidjson::kObjectType);
+
+			// Simple types first
+			meshValue.AddMember(MESH_INDEX_COUNT, me->GetIndexCount(), allocator);
+			meshValue.AddMember(MESH_MATERIAL_INDEX, me->GetMaterialIndex(), allocator);
+			meshValue.AddMember(MESH_ENABLED, me->GetEnableDisable(), allocator);
+			meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, me->GetDepthPrePass(), allocator);
+
+			// Strings
+			rapidjson::Value meshName;
+			meshName.SetString(me->GetName().c_str(), allocator);
+			meshValue.AddMember(MESH_NAME, meshName, allocator);
+
+			// Complex data - filename string key
+			rapidjson::Value fileKeyValue;
+			fileKeyValue.SetString(me->GetFileNameKey().c_str(), allocator);
+
+			meshValue.AddMember(MESH_FILENAME_KEY, fileKeyValue, allocator);
+
+			meshBlock.PushBack(meshValue, allocator);
+		}
+
+		sceneDocToSave.AddMember(MESHES, meshBlock, allocator);
+
+		rapidjson::Value materialBlock(rapidjson::kArrayType);
+		for(auto mat : this->globalMaterials) {
+			// Material
+			rapidjson::Value matValue(rapidjson::kObjectType);
+
+			// Simple types first
+			matValue.AddMember(MAT_UV_TILING, mat->GetTiling(), allocator);
+			matValue.AddMember(MAT_ENABLED, mat->GetEnableDisable(), allocator);
+			matValue.AddMember(MAT_IS_TRANSPARENT, mat->GetTransparent(), allocator);
+			matValue.AddMember(MAT_IS_REFRACTIVE, mat->GetRefractive(), allocator);
+			matValue.AddMember(MAT_INDEX_OF_REFRACTION, mat->GetIndexOfRefraction(), allocator);
+			matValue.AddMember(MAT_REFRACTION_SCALE, mat->GetRefractionScale(), allocator);
+
+			// String types
+			rapidjson::Value matName;
+			rapidjson::Value pixShader;
+			rapidjson::Value vertShader;
+			rapidjson::Value refractivePixShader;
+			rapidjson::Value albedoMap;
+			rapidjson::Value normalMap;
+			rapidjson::Value metalMap;
+			rapidjson::Value roughnessMap;
+
+			matName.SetString(mat->GetName().c_str(), allocator);
+			pixShader.SetInt(GetPixelShaderIDByPointer(mat->GetPixShader()));
+			vertShader.SetInt(GetVertexShaderIDByPointer(mat->GetVertShader()));
+
+			albedoMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::ALBEDO).c_str(), allocator);
+			normalMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::NORMAL).c_str(), allocator);
+			metalMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::METAL).c_str(), allocator);
+			roughnessMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::ROUGH).c_str(), allocator);
+
+			matValue.AddMember(MAT_NAME, matName, allocator);
+			matValue.AddMember(MAT_PIXEL_SHADER, pixShader, allocator);
+			matValue.AddMember(MAT_VERTEX_SHADER, vertShader, allocator);
+
+			matValue.AddMember(MAT_TEXTURE_OR_ALBEDO_MAP, albedoMap, allocator);
+			matValue.AddMember(MAT_NORMAL_MAP, normalMap, allocator);
+			matValue.AddMember(MAT_METAL_MAP, metalMap, allocator);
+			matValue.AddMember(MAT_ROUGHNESS_MAP, roughnessMap, allocator);
+
+			if (mat->GetRefractive()) {
+				refractivePixShader.SetInt(GetPixelShaderIDByPointer(mat->GetRefractivePixelShader()));
+				matValue.AddMember(MAT_REFRACTION_PIXEL_SHADER, refractivePixShader, allocator);
+			}
+
+			// Array and Color types
+			rapidjson::Value colorTintValue(rapidjson::kArrayType);
+
+			colorTintValue.PushBack(mat->GetTint().x, allocator);
+			colorTintValue.PushBack(mat->GetTint().y, allocator);
+			colorTintValue.PushBack(mat->GetTint().z, allocator);
+			colorTintValue.PushBack(mat->GetTint().w, allocator);
+
+			matValue.AddMember(MAT_COLOR_TINT, colorTintValue, allocator);
+
+			// Complex types - Sampler States
+			// Store the index of the state being used.
+			// States are stored in the scene file.
+			// Index is determined by a pointer-match search
+			for (int i = 0; i < textureSampleStates.size(); i++) {
+				if (mat->GetSamplerState() == textureSampleStates[i]) {
+					matValue.AddMember(MAT_TEXTURE_SAMPLER_STATE, i, allocator);
+					break;
+				}
+			}
+
+			for (int i = 0; i < textureSampleStates.size(); i++) {
+				if (mat->GetClampSamplerState() == textureSampleStates[i]) {
+					matValue.AddMember(MAT_CLAMP_SAMPLER_STATE, i, allocator);
+					break;
+				}
+			}
+
+			// Add everything to the material
+			materialBlock.PushBack(matValue, allocator);
+		}
+
+		sceneDocToSave.AddMember(MATERIALS, materialBlock, allocator);
 
 		rapidjson::Value gameEntityBlock(rapidjson::kArrayType);
 		for (auto ge : this->globalEntities) {
@@ -450,110 +623,26 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 					std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(co);
 
 					// Mesh Renderers are really just storage for a Mesh
-					// and a Material, so store those in an object
+					// and a Material, so get the indices for those in the 
+					// stored list
 
-					{
-						// Mesh
-						rapidjson::Value meshValue(rapidjson::kObjectType);
-						std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
-
-						// Simple types first
-						meshValue.AddMember(MESH_INDEX_COUNT, mesh->GetIndexCount(), allocator);
-						meshValue.AddMember(MESH_MATERIAL_INDEX, mesh->GetMaterialIndex(), allocator);
-						meshValue.AddMember(MESH_ENABLED, mesh->GetEnableDisable(), allocator);
-						meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, mesh->GetDepthPrePass(), allocator);
-
-						// Strings
-						rapidjson::Value meshName;
-						meshName.SetString(mesh->GetName().c_str(), allocator);
-						meshValue.AddMember(MESH_NAME, meshName, allocator);
-
-						// Complex data - filename string key
-						rapidjson::Value fileKeyValue;
-						fileKeyValue.SetString(mesh->GetFileNameKey().c_str(), allocator);
-
-						meshValue.AddMember(MESH_FILENAME_KEY, fileKeyValue, allocator);
-
-						coValue.AddMember(MESH_OBJECT, meshValue, allocator);
+					rapidjson::Value meshIndex;
+					for (int i = 0; i < globalMeshes.size(); i++) {
+						if (globalMeshes[i] == meshRenderer->GetMesh()) {
+							meshIndex.SetInt(i);
+							break;
+						}
 					}
+					coValue.AddMember(MESH_COMPONENT_INDEX, meshIndex, allocator);
 
-					{
-						// Material
-						rapidjson::Value matValue(rapidjson::kObjectType);
-						std::shared_ptr<Material> mat = meshRenderer->GetMaterial();
-
-						// Simple types first
-						matValue.AddMember(MAT_UV_TILING, mat->GetTiling(), allocator);
-						matValue.AddMember(MAT_ENABLED, mat->GetEnableDisable(), allocator);
-						matValue.AddMember(MAT_IS_TRANSPARENT, mat->GetTransparent(), allocator);
-						matValue.AddMember(MAT_IS_REFRACTIVE, mat->GetRefractive(), allocator);
-						matValue.AddMember(MAT_INDEX_OF_REFRACTION, mat->GetIndexOfRefraction(), allocator);
-						matValue.AddMember(MAT_REFRACTION_SCALE, mat->GetRefractionScale(), allocator);
-
-						// String types
-						rapidjson::Value matName;
-						rapidjson::Value pixShader;
-						rapidjson::Value vertShader;
-						rapidjson::Value refractivePixShader;
-						rapidjson::Value albedoMap;
-						rapidjson::Value normalMap;
-						rapidjson::Value metalMap;
-						rapidjson::Value roughnessMap;
-
-						matName.SetString(mat->GetName().c_str(), allocator);
-						pixShader.SetString(mat->GetPixShader()->GetFileNameKey().c_str(), allocator);
-						vertShader.SetString(mat->GetVertShader()->GetFileNameKey().c_str(), allocator);
-
-						albedoMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::ALBEDO).c_str(), allocator);
-						normalMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::NORMAL).c_str(), allocator);
-						metalMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::METAL).c_str(), allocator);
-						roughnessMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::ROUGH).c_str(), allocator);
-
-						matValue.AddMember(MAT_NAME, matName, allocator);
-						matValue.AddMember(MAT_PIXEL_SHADER, pixShader, allocator);
-						matValue.AddMember(MAT_VERTEX_SHADER, vertShader, allocator);
-
-						matValue.AddMember(MAT_TEXTURE_OR_ALBEDO_MAP, albedoMap, allocator);
-						matValue.AddMember(MAT_NORMAL_MAP, normalMap, allocator);
-						matValue.AddMember(MAT_METAL_MAP, metalMap, allocator);
-						matValue.AddMember(MAT_ROUGHNESS_MAP, roughnessMap, allocator);
-
-						if (mat->GetRefractive()) {
-							refractivePixShader.SetString(mat->GetRefractivePixelShader()->GetFileNameKey().c_str(), allocator);
-							matValue.AddMember(MAT_REFRACTION_PIXEL_SHADER, refractivePixShader, allocator);
+					rapidjson::Value materialIndex;
+					for (int i = 0; i < globalMaterials.size(); i++) {
+						if (globalMaterials[i] == meshRenderer->GetMaterial()) {
+							materialIndex.SetInt(i);
+							break;
 						}
-
-						// Array and Color types
-						rapidjson::Value colorTintValue(rapidjson::kArrayType);
-
-						colorTintValue.PushBack(mat->GetTint().x, allocator);
-						colorTintValue.PushBack(mat->GetTint().y, allocator);
-						colorTintValue.PushBack(mat->GetTint().z, allocator);
-						colorTintValue.PushBack(mat->GetTint().w, allocator);
-
-						matValue.AddMember(MAT_COLOR_TINT, colorTintValue, allocator);
-
-						// Complex types - Sampler States
-						// Store the index of the state being used.
-						// States are stored in the scene file.
-						// Index is determined by a pointer-match search
-						for (int i = 0; i < textureSampleStates.size(); i++) {
-							if (mat->GetSamplerState() == textureSampleStates[i]) {
-								matValue.AddMember(MAT_TEXTURE_SAMPLER_STATE, i, allocator);
-								break;
-							}
-						}
-
-						for (int i = 0; i < textureSampleStates.size(); i++) {
-							if (mat->GetClampSamplerState() == textureSampleStates[i]) {
-								matValue.AddMember(MAT_CLAMP_SAMPLER_STATE, i, allocator);
-								break;
-							}
-						}
-
-						// Add everything to the component
-						coValue.AddMember(MATERIAL_OBJECT, matValue, allocator);
 					}
+					coValue.AddMember(MATERIAL_COMPONENT_INDEX, materialIndex, allocator);
 				}
 
 				// Is it a Transform?
@@ -853,14 +942,10 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 		// to the appropriate file
 		std::string assetPath;
 
-		assetPath = dxInstance->GetAssetPathString(ASSET_SCENE_PATH);
-		std::string namePath = assetPath + filepath;
-		char pathBuf[1024];
-
-		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SCENE_PATH, filepath);
 
 		FILE* file;
-		fopen_s(&file, pathBuf, "w");
+		fopen_s(&file, namePath.c_str(), "w");
 
 		char writeBuffer[FILE_BUFFER_SIZE];
 		rapidjson::FileWriteStream sceneFileStream(file, writeBuffer, sizeof(writeBuffer));
@@ -900,20 +985,15 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 	{
 		FMODUserData* uData = new FMODUserData;
 		FMOD::Sound* sound;
-		std::string assetPath;
 
-		assetPath = dxInstance->GetAssetPathString(ASSET_SOUND_PATH);
-		std::string namePath = assetPath + path;
-		char pathBuf[1024];
+		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
 
-		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
-
-		sound = audioInstance.LoadSound(pathBuf, mode);
+		sound = audioInstance.LoadSound(namePath, mode);
 
 		// Serialize the filename if it's in the right folder
 		std::string assetPathStr = "Assets\\Sounds\\";
 
-		std::string baseFilename = SerializeFileName(assetPathStr, pathBuf);
+		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
 		uData->filenameKey = std::make_shared<std::string>(baseFilename);
 		uData->name = std::make_shared<std::string>(name);
@@ -957,20 +1037,15 @@ std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFL
 std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::string nameToLoad) {
 	try {
 		std::shared_ptr<SimpleVertexShader> newVS;
-		std::string assetPath;
 
-		assetPath = dxInstance->GetAssetPathString(ASSET_SHADER_PATH);
-		std::string namePath = assetPath + nameToLoad;
-		char pathBuf[1024];
+		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
-
-		newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), pathBuf, id);
+		newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), namePath, id);
 
 		// Serialize the filename if it's in the right folder
 		std::string assetPathStr = "Assets\\Shaders\\";
 
-		std::string baseFilename = SerializeFileName(assetPathStr, pathBuf);
+		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
 		newVS->SetFileNameKey(baseFilename);
 
@@ -990,20 +1065,15 @@ std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string
 std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string id, std::string nameToLoad) {
 	try {
 		std::shared_ptr<SimplePixelShader> newPS;
-		std::string assetPath;
 
-		assetPath = dxInstance->GetAssetPathString(ASSET_SHADER_PATH);
-		std::string namePath = assetPath + nameToLoad;
-		char pathBuf[1024];
+		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
-
-		newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), pathBuf, id);
+		newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), namePath, id);
 
 		// Serialize the filename if it's in the right folder
 		std::string assetPathStr = "Assets\\Shaders\\";
 
-		std::string baseFilename = SerializeFileName(assetPathStr, pathBuf);
+		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
 		newPS->SetFileNameKey(baseFilename);
 
@@ -1023,21 +1093,16 @@ std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string i
 std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::string nameToLoad) {
 	try {
 		std::shared_ptr<SimpleComputeShader> newCS;
-		std::string assetPath;
 
-		assetPath = dxInstance->GetAssetPathString(ASSET_SHADER_PATH);
-		std::string namePath = assetPath + nameToLoad;
-		char pathBuf[1024];
+		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
-
-		newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), pathBuf, id);
+		newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), namePath.c_str(), id);
 
 		// Serialize the filename if it's in the right folder
 		std::string baseFilename;
 		std::string assetPathStr = "Assets\\Shaders\\";
 		
-		baseFilename = SerializeFileName(assetPathStr, pathBuf);
+		baseFilename = SerializeFileName(assetPathStr, namePath);
 
 		newCS->SetFileNameKey(baseFilename);
 
@@ -1071,15 +1136,10 @@ std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::stri
 std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameToLoad) {
 	try {
 		std::shared_ptr<Mesh> newMesh;
-		std::string assetPath;
 
-		assetPath = dxInstance->GetAssetPathString(ASSET_MODEL_PATH);
-		std::string namePath = assetPath + nameToLoad;
-		char pathBuf[1024];
+		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, nameToLoad);
 
-		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
-
-		newMesh = std::make_shared<Mesh>(pathBuf, device, id);
+		newMesh = std::make_shared<Mesh>(namePath.c_str(), device, id);
 
 		globalMeshes.push_back(newMesh);
 
@@ -1132,29 +1192,27 @@ std::string AssetManager::DeSerializeFileName(std::string assetPath) {
 
 HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType) {
 	HRESULT hr;
-	std::string assetPath;
+	AssetPathIndex assetPath;
 
 	switch (textureType) {
 		case PBRTextureTypes::ALBEDO:
-			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_ALBEDO);
+			assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
 			break;
 		case PBRTextureTypes::NORMAL:
-			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_NORMALS);
+			assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
 			break;
 		case PBRTextureTypes::METAL:
-			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_METALNESS);
+			assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
 			break;
 		case PBRTextureTypes::ROUGH:
-			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+			assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
 			break;
 	};
 
-	std::string namePath = assetPath + nameToLoad;
+	std::string namePath = GetFullPathToAssetFile(assetPath, nameToLoad);
 	std::wstring widePath;
-	char pathBuf[1024];
 
-	GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
-	hr = ISimpleShader::ConvertToWide(pathBuf, widePath);
+	hr = ISimpleShader::ConvertToWide(namePath, widePath);
 
 	CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, texture->GetAddressOf());
 
@@ -1162,34 +1220,31 @@ HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL:
 }
 
 void AssetManager::SetMaterialTextureFileKey(std::string textureFilename, std::shared_ptr<Material> mat, PBRTextureTypes textureType) {
-	std::string assetPath;
+	AssetPathIndex assetPath;
 	std::string directAssetPath;
 
 	switch (textureType) {
 		case PBRTextureTypes::ALBEDO:
-			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_ALBEDO);
+			assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
 			directAssetPath = "Assets\\PBR\\Albedo\\";
 			break;
 		case PBRTextureTypes::NORMAL:
-			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_NORMALS);
+			assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
 			directAssetPath = "Assets\\PBR\\Normals\\";
 			break;
 		case PBRTextureTypes::METAL:
-			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_METALNESS);
+			assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
 			directAssetPath = "Assets\\PBR\\Metalness\\";
 			break;
 		case PBRTextureTypes::ROUGH:
-			assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+			assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
 			directAssetPath = "Assets\\PBR\\Roughness\\";
 			break;
 	};
 
-	std::string namePath = assetPath + textureFilename;
-	char pathBuf[1024];
+	std::string namePath = GetFullPathToAssetFile(assetPath, textureFilename);
 
-	GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
-
-	mat->SetTextureFilenameKey(textureType, SerializeFileName(directAssetPath, pathBuf));
+	mat->SetTextureFilenameKey(textureType, SerializeFileName(directAssetPath, namePath));
 }
 
 std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
@@ -1392,19 +1447,14 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 		std::string filenameKey;
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newSkyTexture;
 
-		std::string assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_SKIES);
-		std::string namePath = assetPath + filepath;
-		char pathBuf[1024];
-		std::string stringifiedPathBuf;
-
-		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+		std::string assetPath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
 
 		if (fileType) {
 			// Process as 6 textures in a directory
 
 			std::wstring skyDirWide;
 			std::wstring fileExtensionW;
-			ISimpleShader::ConvertToWide(pathBuf, skyDirWide);
+			ISimpleShader::ConvertToWide(assetPath, skyDirWide);
 			ISimpleShader::ConvertToWide(fileExtension, fileExtensionW);
 
 			newSkyTexture = CreateCubemap((skyDirWide + L"right" + fileExtensionW).c_str(),
@@ -1413,23 +1463,17 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 				(skyDirWide + L"down" + fileExtensionW).c_str(),
 				(skyDirWide + L"forward" + fileExtensionW).c_str(),
 				(skyDirWide + L"back" + fileExtensionW).c_str());
-
-			stringifiedPathBuf = pathBuf;
 		}
 		else {
 			// Process as a .dds
 
 			std::wstring skyDDSWide;
-			ISimpleShader::ConvertToWide(pathBuf, skyDDSWide);
+			ISimpleShader::ConvertToWide(assetPath, skyDDSWide);
 
 			CreateDDSTextureFromFile(device.Get(), context.Get(), skyDDSWide.c_str(), nullptr, &newSkyTexture);
-
-			stringifiedPathBuf = pathBuf;
 		}
 
-		std::string assetPathStr = "Assets\\Textures\\Skies\\";
-
-		filenameKey = SerializeFileName(assetPathStr, pathBuf);
+		filenameKey = SerializeFileName("Assets\\Textures\\Skies\\", assetPath);
 
 		std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, newSkyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
 
@@ -1468,11 +1512,9 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 		newEmitter->SetIsMultiParticle(isMultiParticle);
 		newEmitter->SetParticleTextureSRV(LoadParticleTexture(textureNameToLoad, isMultiParticle));
 
-		std::string assets = dxInstance->GetAssetPathString(ASSET_PARTICLE_PATH) + textureNameToLoad;
-		char pathBuf[1024];
-		GetFullPathNameA(assets.c_str(), sizeof(pathBuf), pathBuf, NULL);
+		std::string asset = GetFullPathToAssetFile(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
 
-		newEmitter->SetFilenameKey(SerializeFileName("Assets\\Particles\\", pathBuf));
+		newEmitter->SetFilenameKey(SerializeFileName("Assets\\Particles\\", asset));
 
 		// Set all the compute shaders here
 		newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleEmitCS"), Emit);
@@ -1520,18 +1562,12 @@ std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::st
 	try {
 		std::string assetPath;
 
-		assetPath = dxInstance->GetAssetPathString(ASSET_FONT_PATH);
-		std::string namePath = assetPath + filePath;
+		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_FONT_PATH, filePath);
 		std::wstring wPathBuf;
-		char pathBuf[1024];
 
-		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+		std::string baseFilename = SerializeFileName("Assets\\Fonts\\", namePath);
 
-		std::string assetPathStr = "Assets\\Fonts\\";
-
-		std::string baseFilename = SerializeFileName(assetPathStr, pathBuf);
-
-		ISimpleShader::ConvertToWide(pathBuf, wPathBuf);
+		ISimpleShader::ConvertToWide(namePath, wPathBuf);
 
 		std::shared_ptr<DirectX::SpriteFont> sFont = std::make_shared<DirectX::SpriteFont>(device.Get(), wPathBuf.c_str());
 
@@ -1865,30 +1901,23 @@ void AssetManager::InitializeTerrainMaterials() {
 
 		//Load terrain and add a blend map
 
-		std::string assetPath;
+		std::string namePath;
 
-		assetPath = dxInstance->GetAssetPathString(ASSET_HEIGHTMAP_PATH);
-		std::string namePath = assetPath + "valley.raw16";
-		char pathBuf[1024];
+		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_HEIGHTMAP_PATH, "valley.raw16");
 
-		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
-
-		std::shared_ptr<Mesh> mainTerrain = LoadTerrain(pathBuf, 512, 512, 25.0f);
+		std::shared_ptr<Mesh> mainTerrain = LoadTerrain(namePath.c_str(), 512, 512, 25.0f);
 		globalMeshes.push_back(mainTerrain);
 
-		assetPath = dxInstance->GetAssetPathString(ASSET_TEXTURE_PATH_BASIC);
-		namePath = assetPath + "blendMap.png";
-
-		GetFullPathNameA(namePath.c_str(), sizeof(pathBuf), pathBuf, NULL);
+		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, "blendMap.png");
 
 		std::wstring wPath;
-		ISimpleShader::ConvertToWide(pathBuf, wPath);
+		ISimpleShader::ConvertToWide(namePath, wPath);
 
 		CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, defaultBlendMap.GetAddressOf());
 
 		std::string assetPathStr = "Assets\\Textures\\";
 
-		std::string baseFilename = SerializeFileName(assetPathStr, pathBuf);
+		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
 		SetLoadedAndWait("Terrain", "Height and Blend Maps");
 
@@ -2510,13 +2539,11 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 
 	if (isMultiParticle) {
 		// Load all particle textures in a specific subfolder
-		std::string assets = dxInstance->GetAssetPathString(ASSET_PARTICLE_PATH) + textureNameToLoad;
-		char pathBuf[1024];
-		GetFullPathNameA(assets.c_str(), sizeof(pathBuf), pathBuf, NULL);
+		std::string assets = GetFullPathToAssetFile(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
 
 		std::vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>> textures;
 		int i = 0;
-		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(pathBuf)) {
+		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(assets)) {
 			textures.push_back(nullptr);
 			std::wstring path = L"";
 			ISimpleShader::ConvertToWide(p.path().string().c_str(), path);
@@ -2577,13 +2604,8 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 void AssetManager::CreateComplexGeometry() {
 	Assimp::Importer importer;
 	std::vector<std::shared_ptr<Material>> specialMaterials = std::vector<std::shared_ptr<Material>>();
-
-	/*const aiScene* tree1Model = importer.ReadFile(GetFullPathTo("..\\..\\..\\Assets\\Models\\trees9.obj").c_str(),
-		aiProcess_Triangulate			|
-		aiProcess_JoinIdenticalVertices	|
-		aiProcess_GenNormals			|
-		aiProcess_ConvertToLeftHanded	|
-		aiProcess_CalcTangentSpace		);*/
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, "human.obj");
+	std::string serializedKey = SerializeFileName("Assets\\Models\\", namePath);
 
 	const aiScene* flashLightModel = importer.ReadFile(dxInstance->GetFullPathTo("..\\..\\..\\Assets\\Models\\human.obj").c_str(),
 		aiProcess_Triangulate |
@@ -2592,11 +2614,12 @@ void AssetManager::CreateComplexGeometry() {
 		aiProcess_ConvertToLeftHanded |
 		aiProcess_CalcTangentSpace);
 
-	//ProcessComplexModel(tree1Model->mRootNode, tree1Model);
-
 	if (flashLightModel != NULL) {
-		ProcessComplexModel(flashLightModel->mRootNode, flashLightModel);
+		ProcessComplexModel(flashLightModel->mRootNode, flashLightModel, serializedKey);
 	}
+
+	namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, "hat.obj");
+	serializedKey = SerializeFileName("Assets\\Models\\", namePath);
 
 	const aiScene* hatModel = importer.ReadFile(dxInstance->GetFullPathTo("..\\..\\..\\Assets\\Models\\hat.obj").c_str(),
 		aiProcess_Triangulate |
@@ -2606,24 +2629,30 @@ void AssetManager::CreateComplexGeometry() {
 		aiProcess_CalcTangentSpace);
 
 	if (hatModel != NULL) {
-		ProcessComplexModel(hatModel->mRootNode, hatModel);
+		ProcessComplexModel(hatModel->mRootNode, hatModel, serializedKey);
 	}
 	
 }
 
-void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene) {
+void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey) {
 	for (unsigned int i = 0; i < node->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
 		std::string newName = "ComplexMesh" + std::to_string(i);
 		mesh->mName = newName;
-		globalMeshes.push_back(ProcessComplexMesh(mesh, scene));
-		CreateGameEntity(GetMeshByName(mesh->mName.C_Str() + std::string("Mesh")), GetMaterialByName("cobbleMat"), mesh->mName.C_Str());
-		GetGameEntityByName(mesh->mName.C_Str())->GetTransform()->SetPosition(0.0f, 3.0f * i, 1.0f);
-		GetGameEntityByName(mesh->mName.C_Str())->GetTransform()->SetScale(0.25f, 0.25f, 0.25f);
+
+		std::shared_ptr<Mesh> newMesh = ProcessComplexMesh(mesh, scene);
+		std::shared_ptr<GameEntity> newEntity = CreateGameEntity(newMesh, GetMaterialByName("cobbleMat"), mesh->mName.C_Str());;
+
+		globalMeshes.push_back(newMesh);
+		
+		newEntity->GetTransform()->SetPosition(0.0f, 3.0f * i, 1.0f);
+		newEntity->GetTransform()->SetScale(0.25f, 0.25f, 0.25f);
+
+		newMesh->SetFileNameKey(serializedFilenameKey);
 	}
 
 	for (unsigned int i = 0; i < node->mNumChildren; i++) {
-		ProcessComplexModel(node->mChildren[i], scene);
+		ProcessComplexModel(node->mChildren[i], scene, serializedFilenameKey);
 	}
 }
 
@@ -3004,6 +3033,24 @@ int AssetManager::GetMaterialIDByName(std::string name) {
 	return -1;
 }
 
+int AssetManager::GetPixelShaderIDByPointer(std::shared_ptr<SimplePixelShader> pixelPointer) {
+	for (int i = 0; i < pixelShaders.size(); i++) {
+		if (pixelPointer == pixelShaders[i]) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int AssetManager::GetVertexShaderIDByPointer(std::shared_ptr<SimpleVertexShader> vertexPointer) {
+	for (int i = 0; i < vertexShaders.size(); i++) {
+		if (vertexPointer == vertexShaders[i]) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 // Same as above
 //int AssetManager::GetTerrainMaterialIDByName(std::string name) {
 //	for (int i = 0; i < globalTerrainMaterials.size(); i++) {
@@ -3030,6 +3077,18 @@ int AssetManager::GetMaterialIDByName(std::string name) {
 //	return -1;
 //}
 
+std::string AssetManager::GetFullPathToAssetFile(AssetPathIndex index, std::string filename) {
+	std::string asset = dxInstance->GetAssetPathString(index) + filename;
+	char pathBuf[1024];
+	GetFullPathNameA(asset.c_str(), sizeof(pathBuf), pathBuf, NULL);
+	return pathBuf;
+}
+
+std::string AssetManager::GetFullPathToExternalAssetFile(std::string filename) {
+	char pathBuf[1024];
+	GetFullPathNameA(filename.c_str(), sizeof(pathBuf), pathBuf, NULL);
+	return pathBuf;
+}
 
 #pragma endregion
 

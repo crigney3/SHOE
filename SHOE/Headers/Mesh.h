@@ -46,7 +46,10 @@ public:
 	int GetMaterialIndex();
 
 	std::string GetName();
+	void SetName(std::string name);
+
 	std::string GetFileNameKey();
+	void SetFileNameKey(std::string newKey);
 
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();

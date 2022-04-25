@@ -13,6 +13,8 @@
 // Categories:
 #define ENTITIES "en" // category - only used to fetch actual data
 #define COMPONENTS "cm" // category - only used to fetch actual data
+#define MESHES "m" // category - only used to fetch actual data
+#define MATERIALS "a" // category - only used to fetch actual data
 #define VERTEX_SHADERS "vS" // category - only used to fetch actual data
 #define PIXEL_SHADERS "pS" // category - only used to fetch actual data
 #define COMPUTE_SHADERS "cS" // category - only used to fetch actual data
@@ -29,6 +31,8 @@
 #define ENTITY_HIERARCHY_ENABLED "hE" // bool
 #define ENTITY_ATTACHED_LIGHTS "aL" // deprecated
 #define COMPONENT_TYPE "ct" // int
+#define MESH_COMPONENT_INDEX "mCI" // int
+#define MATERIAL_COMPONENT_INDEX "aCI" // int
 
 // Light Components:
 #define LIGHT_TYPE "lT" // int
@@ -60,9 +64,9 @@
 #define MAT_INDEX_OF_REFRACTION "aOR" // float
 #define MAT_REFRACTION_SCALE "aRS" // float
 #define MAT_COLOR_TINT "aCT" // float array 4
-#define MAT_PIXEL_SHADER "aPS" // string
-#define MAT_REFRACTION_PIXEL_SHADER "aRS" // string
-#define MAT_VERTEX_SHADER "aVS" // string
+#define MAT_PIXEL_SHADER "aPS" // int
+#define MAT_REFRACTION_PIXEL_SHADER "aPS" // int
+#define MAT_VERTEX_SHADER "aVS" // int
 #define MAT_TEXTURE_OR_ALBEDO_MAP "aAM" // string 
 #define MAT_NORMAL_MAP "aNM" // string
 #define MAT_METAL_MAP "aMM" // string
@@ -70,8 +74,7 @@
 #define MAT_TEXTURE_SAMPLER_STATE "aTS" // int
 #define MAT_CLAMP_SAMPLER_STATE "aCS" // int
 
-// Material data subsection - 
-// Sampler description data:
+// Texture Sampler data:
 #define SAMPLER_ADDRESS_U "sAU" // int
 #define SAMPLER_ADDRESS_V "sAV" // int
 #define SAMPLER_ADDRESS_W "sAW" // int
@@ -284,7 +287,7 @@ private:
 	std::shared_ptr<Mesh> LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale);
 
 	void CreateComplexGeometry();
-	void ProcessComplexModel(aiNode* node, const aiScene* scene);
+	void ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey);
 	std::shared_ptr<Mesh> ProcessComplexMesh(aiMesh* mesh, const aiScene* scene);
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::string textureNameToLoad, bool isMultiParticle);
 
@@ -361,6 +364,22 @@ public:
 	std::string GetCurrentSceneName();
 
 	ComponentTypes GetAllCurrentComponentTypes();
+
+	/// <summary>
+	/// Gets the full path to an asset that is inside the Assets/ dir.
+	/// </summary>
+	/// <param name="index"></param>
+	/// <param name="filename"></param>
+	/// <returns></returns>
+	std::string GetFullPathToAssetFile(AssetPathIndex index, std::string filename);
+
+	/// <summary>
+	/// Gets the full path to an asset that is outside the Assets/ dir.
+	/// </summary>
+	/// <param name="index"></param>
+	/// <param name="filename"></param>
+	/// <returns></returns>
+	std::string GetFullPathToExternalAssetFile(std::string filename);
 
 	// Camera Tag Functions
 	std::shared_ptr<Camera> GetMainCamera();
@@ -501,8 +520,8 @@ public:
 	std::shared_ptr<GameEntity> GetGameEntityByID(int id);
 	std::shared_ptr<Sky> GetSkyAtID(int id);
 
-	// Moved to simpleshader for global use
-	//inline std::wstring ConvertToWide(const std::string& as);
+	int GetPixelShaderIDByPointer(std::shared_ptr<SimplePixelShader> pixelPointer);
+	int GetVertexShaderIDByPointer(std::shared_ptr<SimpleVertexShader> vertexPointer);
 
 	std::shared_ptr<Sky> currentSky;
 };

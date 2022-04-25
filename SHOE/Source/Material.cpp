@@ -84,6 +84,10 @@ Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetSamplerState() {
 	return this->textureState;
 }
 
+void Material::SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState) {
+	this->textureState = texSamplerState;
+}
+
 float Material::GetTiling() {
 	return this->uvTiling;
 }
@@ -133,6 +137,10 @@ void Material::SetTextureFilenameKey(PBRTextureTypes textureType, std::string ne
 
 Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetClampSamplerState() {
 	return this->clampState;
+}
+
+void Material::SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState) {
+	this->clampState = clampSamplerState;
 }
 
 /// <summary>

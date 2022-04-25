@@ -416,8 +416,16 @@ std::string Mesh::GetName() {
 	return this->name;
 }
 
+void Mesh::SetName(std::string name) {
+	this->name = name;
+}
+
 std::string Mesh::GetFileNameKey() {
 	return this->filenameKey;
+}
+
+void Mesh::SetFileNameKey(std::string newKey) {
+	this->filenameKey = newKey;
 }
 
 void Mesh::SetDepthPrePass(bool prePass) {
