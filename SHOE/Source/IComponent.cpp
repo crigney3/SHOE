@@ -27,6 +27,9 @@ void IComponent::ReceiveEvent(EntityEventType event, std::shared_ptr<void> messa
 	case EntityEventType::OnEnable:
 		OnEnable();
 		break;
+	case EntityEventType::OnDisable:
+		OnDisable();
+		break;
 	case EntityEventType::OnTransform:
 		OnTransform();
 		break;

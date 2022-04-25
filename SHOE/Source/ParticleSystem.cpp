@@ -234,7 +234,7 @@ void ParticleSystem::Update() {
 
 	particleSimComputeShader->SetFloat("speed", this->speed);
 	particleSimComputeShader->SetFloat3("endPos", this->destination);
-	particleSimComputeShader->SetFloat("Time::deltaTime", Time::deltaTime);
+	particleSimComputeShader->SetFloat("deltaTime", Time::deltaTime);
 	particleSimComputeShader->SetFloat("lifeTime", this->particleLifetime);
 	particleSimComputeShader->SetInt("maxParticles", this->maxParticles);
 
