@@ -752,7 +752,7 @@ bool Renderer::GetDrawColliderTransformsStatus() { return drawColliderTransforms
 
 void Renderer::SetDrawColliderTransformsStatus(bool _newState) { drawColliderTransforms = _newState; }
 
-void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
+void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 	// Background color (Cornflower Blue in this case) for clearing
 	const float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -1067,7 +1067,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, float totalTime) {
 
 	for (std::shared_ptr<ParticleSystem> emitter : emitters) {
 		if (!emitter->IsEnabled()) continue;
-		emitter->Draw(mainCamera, totalTime, particleBlendAdditive);
+		emitter->Draw(mainCamera, particleBlendAdditive);
 	}
 
 	if (meshIt < activeMeshes.size())

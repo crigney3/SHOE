@@ -15,8 +15,6 @@ public:
 	static void Update();
 
 	static void AddColliderToManager(std::shared_ptr<Collider> _c);
-	//TODO: this is going to get so bad with memory leaks so we need a clean removal process somehow
-
 private:
 	static void CheckTriggerCollisions();
 	static void CheckColliderCollisions();

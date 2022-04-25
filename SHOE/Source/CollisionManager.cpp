@@ -17,9 +17,8 @@ CollisionManager::CollisionManager()
 
 CollisionManager::~CollisionManager()
 {
-	for (auto c : markedAsColliders_) {
-		c.reset();
-	}
+	markedAsTriggerboxes_.clear();
+	markedAsColliders_.clear();
 }
 
 std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsTriggerboxes() { return markedAsTriggerboxes_; }
@@ -28,10 +27,6 @@ std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsColliders() 
 
 void CollisionManager::Update()
 {
-	for (auto& c : ComponentManager::GetAllEnabled<Collider>())
-	{
-		c->Update();
-	}
 	//CheckTriggerCollisions();
 	//CheckColliderCollisions();
 

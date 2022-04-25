@@ -84,6 +84,38 @@ void IComponent::OnTriggerEnter(std::shared_ptr<GameEntity> other)
 }
 
 /**
+ * \brief Called while in a collision with another GameEntity with a collider attached
+ * \param other GameEntity that was collided with
+ */
+void IComponent::InCollision(std::shared_ptr<GameEntity> other)
+{
+}
+
+/**
+ * \brief Called while in another GameEntity's trigger box
+ * \param other Entity collided with
+ */
+void IComponent::InTrigger(std::shared_ptr<GameEntity> other)
+{
+}
+
+/**
+ * \brief Called on exiting a collision with another GameEntity with a collider attached
+ * \param other GameEntity that was collided with
+ */
+void IComponent::OnCollisionExit(std::shared_ptr<GameEntity> other)
+{
+}
+
+/**
+ * \brief Called on exiting another GameEntity's trigger box
+ * \param other Entity collided with
+ */
+void IComponent::OnTriggerExit(std::shared_ptr<GameEntity> other)
+{
+}
+
+/**
  * \brief Called when this entity's transform is changed
  */
 void IComponent::OnTransform()

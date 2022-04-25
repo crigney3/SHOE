@@ -10,7 +10,7 @@ class Collider : public IComponent, public std::enable_shared_from_this<Collider
 public:
 	Collider();
 	void Start() override;
-	void Update();
+	void Update() override;
 	void OnDestroy() override;
 
 	std::shared_ptr<GameEntity> GetOwner();

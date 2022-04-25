@@ -27,7 +27,7 @@ public:
 	void Update() override;
 	void OnDestroy() override;
 
-	void Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive);
+	void Draw(std::shared_ptr<Camera> cam, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive);
 
 	void SetParticleTextureSRV(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV);
 
@@ -76,7 +76,7 @@ private:
 	static Microsoft::WRL::ComPtr<ID3D11DeviceContext> defaultContext;
 
 	void Initialize(int maxParticles);
-	void EmitParticle(float currentTime, int emitCount);
+	void EmitParticle(int emitCount);
 
 	unsigned int* indices;
 

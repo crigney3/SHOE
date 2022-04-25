@@ -189,6 +189,7 @@
     <ClInclude Include="Headers\SimpleShader.h" />
     <ClInclude Include="Headers\Sky.h" />
     <ClInclude Include="Headers\Terrain.h" />
+    <ClInclude Include="Headers\Time.h" />
     <ClInclude Include="Headers\Transform.h" />
     <ClInclude Include="Headers\Collider.h" />
     <ClInclude Include="Headers\Vertex.h" />
@@ -387,6 +388,7 @@
     <ClCompile Include="Source\Renderer.cpp" />
     <ClCompile Include="Source\SimpleShader.cpp" />
     <ClCompile Include="Source\Sky.cpp" />
+    <ClCompile Include="Source\Time.cpp" />
     <ClCompile Include="Source\Transform.cpp" />
     <ClCompile Include="Source\Collider.cpp" />
   </ItemGroup>

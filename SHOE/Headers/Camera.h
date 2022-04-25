@@ -40,7 +40,7 @@ public:
 
 	void UpdateProjectionMatrix(float aspectRatio, bool type);
 	void UpdateViewMatrix();
-	void Update(float dt, HWND windowHandle);
+	void Update(HWND windowHandle);
 
 	float GetFOV();
 	void SetFOV(float fov);
