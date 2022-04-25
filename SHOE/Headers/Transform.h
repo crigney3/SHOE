@@ -19,7 +19,6 @@ private:
 
 	bool isDirty; // Can/will only be dirty if: has a parent & parent has moved
 	void MarkThisDirty();
-	void MarkChildTransformsDirty();
 
 	std::shared_ptr<Transform> parent;
 	std::vector<std::shared_ptr<Transform>> children = std::vector<std::shared_ptr<Transform>>();

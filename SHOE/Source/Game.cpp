@@ -999,10 +999,7 @@ void Game::Update(float deltaTime, float totalTime)
 	// Quit if the escape key is pressed
 	if (input.TestKeyAction(KeyActions::QuitGame)) Quit();
 
-	for(std::shared_ptr<GameEntity> entity : *globalAssets.GetActiveGameEntities())
-	{
-		entity->Update(deltaTime, totalTime);
-	}
+	globalAssets.BroadcastGlobalEntityEvent(EntityEventType::Update);
 
 	if (movingEnabled) {
 		//globalAssets.GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition((float)sin(totalTime), +2.0f, +0.0f);

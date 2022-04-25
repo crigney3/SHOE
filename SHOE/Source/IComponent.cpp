@@ -14,45 +14,48 @@ void IComponent::Start()
  * \param deltaTime Time since last frame
  * \param totalTime Time since program start
  */
-void IComponent::Update(float deltaTime, float totalTime)
+void IComponent::Update()
 {
 }
 
-void IComponent::RecieveEvent(EntityEventType event, std::shared_ptr<void> message)
+void IComponent::ReceiveEvent(EntityEventType event, std::shared_ptr<void> message)
 {
 	switch (event) {
-	case EntityEventType::OnParentEnabledChanged:
-		hierarchyIsEnabled = std::dynamic_pointer_cast<bool>(message).get();
+	case EntityEventType::Update:
+		Update();
+		break;
+	case EntityEventType::OnEnable:
+		OnEnable();
 		break;
 	case EntityEventType::OnTransform:
 		OnTransform();
 		break;
 	case EntityEventType::OnMove:
-		OnMove(*std::dynamic_pointer_cast<DirectX::XMFLOAT3>(message));
+		OnMove(*std::static_pointer_cast<DirectX::XMFLOAT3>(message));
 		break;
 	case EntityEventType::OnRotate:
-		OnRotate(*std::dynamic_pointer_cast<DirectX::XMFLOAT3>(message));
+		OnRotate(*std::static_pointer_cast<DirectX::XMFLOAT3>(message));
 		break;
 	case EntityEventType::OnScale:
-		OnScale(*std::dynamic_pointer_cast<DirectX::XMFLOAT3>(message));
+		OnScale(*std::static_pointer_cast<DirectX::XMFLOAT3>(message));
 		break;
 	case EntityEventType::OnParentTransform:
-		OnParentTransform(std::dynamic_pointer_cast<GameEntity>(message));
+		OnParentTransform(std::static_pointer_cast<GameEntity>(message));
 		break;
 	case EntityEventType::OnParentMove:
-		OnParentMove(std::dynamic_pointer_cast<GameEntity>(message));
+		OnParentMove(std::static_pointer_cast<GameEntity>(message));
 		break;
 	case EntityEventType::OnParentRotate:
-		OnParentRotate(std::dynamic_pointer_cast<GameEntity>(message));
+		OnParentRotate(std::static_pointer_cast<GameEntity>(message));
 		break;
 	case EntityEventType::OnParentScale:
-		OnParentScale(std::dynamic_pointer_cast<GameEntity>(message));
+		OnParentScale(std::static_pointer_cast<GameEntity>(message));
 		break;
 	case EntityEventType::OnCollisionEnter:
-		OnCollisionEnter(std::dynamic_pointer_cast<GameEntity>(message));
+		OnCollisionEnter(std::static_pointer_cast<GameEntity>(message));
 		break;
 	case EntityEventType::OnTriggerEnter:
-		OnTriggerEnter(std::dynamic_pointer_cast<GameEntity>(message));
+		OnTriggerEnter(std::static_pointer_cast<GameEntity>(message));
 		break;
 	}
 }
@@ -144,10 +147,16 @@ void IComponent::OnParentScale(std::shared_ptr<GameEntity> parent)
 }
 
 /**
- * \brief Called when this entity's enabled state is changed
- * \param newState bool The new state of the component
+ * \brief Called when this entity is changed from disabled to enabled 
  */
-void IComponent::OnEnabledChanged(bool newState)
+void IComponent::OnEnable()
+{
+}
+
+/**
+ * \brief Called when this entity is changed from enabled to disabled
+ */
+void IComponent::OnDisable()
 {
 }
 
@@ -156,10 +165,9 @@ void IComponent::OnEnabledChanged(bool newState)
  * \param gameEntity The GameEntity to be attached to
  * \param hierarchyIsEnabled If that GameEntity is enabled
  */
-void IComponent::Bind(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled)
+void IComponent::Bind(std::shared_ptr<GameEntity> gameEntity)
 {
 	this->gameEntity = gameEntity;
-	this->hierarchyIsEnabled = hierarchyIsEnabled;
 	Start();
 }
 
@@ -176,7 +184,7 @@ void IComponent::Free()
  */
 bool IComponent::IsEnabled()
 {
-	return enabled && hierarchyIsEnabled;
+	return enabled && gameEntity->GetEnableDisable();
 }
 
 /// <summary>
@@ -195,7 +203,8 @@ void IComponent::SetEnabled(bool enabled)
 {
 	if (this->enabled != enabled) {
 		this->enabled = enabled;
-		OnEnabledChanged(enabled);
+		if (IsEnabled()) OnEnable(); 
+		else if(gameEntity->GetEnableDisable()) OnDisable();
 	}
 }
 
@@ -214,13 +223,4 @@ std::shared_ptr<GameEntity> IComponent::GetGameEntity()
 std::shared_ptr<Transform> IComponent::GetTransform()
 {
 	return gameEntity->GetTransform();
-}
-
-/// <summary>
-/// Called when the GameEntity this is attached to changes enabled state
-/// </summary>
-/// <param name="active">Is the GameEntity globally enabled</param>
-void IComponent::UpdateHierarchyIsEnabled(bool active)
-{
-	hierarchyIsEnabled = active;
 }

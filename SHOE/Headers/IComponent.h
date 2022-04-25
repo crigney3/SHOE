@@ -7,11 +7,12 @@ class Transform;
 
 enum EntityEventType {
 	Update,
+	OnEnable,
+	OnDisable,
 	OnTransform,
 	OnMove,
 	OnRotate,
 	OnScale,
-	OnEnabledChanged,
 	OnParentTransform,
 	OnParentMove,
 	OnParentRotate,
@@ -22,17 +23,16 @@ enum EntityEventType {
 	AudioPlay,
 	AudioStop,
 	EventCount,
-	REQUIRES_MESSAGE = 0b111111111111100,
-	IGNORES_ENABLED_STATE = 0b000010000100000
+	REQUIRES_MESSAGE = 0b1111111111110000
 };
 
 class IComponent
 {
 public:
-	void RecieveEvent(EntityEventType event, std::shared_ptr<void> message = nullptr);
+	void ReceiveEvent(EntityEventType event, std::shared_ptr<void> message = nullptr);
 
 	virtual void Start();
-	virtual void Update(float deltaTime, float totalTime);
+	virtual void Update();
 	virtual void OnDestroy();
 	virtual void OnCollisionEnter(std::shared_ptr<GameEntity> other);
 	virtual void OnTriggerEnter(std::shared_ptr<GameEntity> other);
@@ -44,9 +44,10 @@ public:
 	virtual void OnParentMove(std::shared_ptr<GameEntity> parent);
 	virtual void OnParentRotate(std::shared_ptr<GameEntity> parent);
 	virtual void OnParentScale(std::shared_ptr<GameEntity> parent);
-	virtual void OnEnabledChanged(bool newState);
+	virtual void OnEnable();
+	virtual void OnDisable();
 
-	void Bind(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
+	void Bind(std::shared_ptr<GameEntity> gameEntity);
 	void Free();
 
 	bool IsEnabled();
@@ -54,10 +55,8 @@ public:
 	void SetEnabled(bool enabled);
 	std::shared_ptr<GameEntity> GetGameEntity();
 	std::shared_ptr<Transform> GetTransform();
-	void UpdateHierarchyIsEnabled(bool active);
 private:
 	std::shared_ptr<GameEntity> gameEntity;
 
 	bool enabled = true;
-	bool hierarchyIsEnabled = true;
 };

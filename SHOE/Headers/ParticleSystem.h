@@ -24,7 +24,7 @@ public:
 	);
 
 	void Start() override;
-	void Update(float deltaTime, float totalTime) override;
+	void Update() override;
 	void OnDestroy() override;
 
 	void Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive);

@@ -7,8 +7,7 @@
 /// <param name="gameEntity">The GameEntity the component is to be attached to</param>
 /// <param name="hierarchyIsEnabled">Whether the GameEntity to be attached to is enabled</param>
 /// <returns>A reference to the newly bound component</returns>
-template<> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiate(std::shared_ptr<GameEntity> gameEntity,
-	bool hierarchyIsEnabled)
+template<> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiate(std::shared_ptr<GameEntity> gameEntity)
 {
 	//Allocates a new pool if there is no available components
 	if (unallocated.size() == 0) {
@@ -20,7 +19,7 @@ template<> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiat
 	std::shared_ptr<MeshRenderer> component = unallocated.front();
 	allocated.emplace_back(component);
 	unallocated.pop();
-	component->Bind(gameEntity, hierarchyIsEnabled);
+	component->Bind(gameEntity);
 	//Sorts the meshes
 	std::sort(allocated.begin(), allocated.end(), [](std::shared_ptr<MeshRenderer> a, std::shared_ptr<MeshRenderer> b) {
 		if (a->GetMaterial()->GetTransparent() != b->GetMaterial()->GetTransparent())

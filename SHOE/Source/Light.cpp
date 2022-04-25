@@ -77,7 +77,22 @@ void Light::OnRotate(DirectX::XMFLOAT3 delta)
 	lightArrayDirty = true;
 }
 
-void Light::OnEnabledChanged(bool newState)
+void Light::OnParentMove(std::shared_ptr<GameEntity> parent)
+{
+	lightArrayDirty = true;
+}
+
+void Light::OnParentRotate(std::shared_ptr<GameEntity> parent)
+{
+	lightArrayDirty = true;
+}
+
+void Light::OnEnable()
+{
+	lightArrayDirty = true;
+}
+
+void Light::OnDisable()
 {
 	lightArrayDirty = true;
 }

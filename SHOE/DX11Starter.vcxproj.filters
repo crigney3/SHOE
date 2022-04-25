@@ -123,9 +123,6 @@
     <ClInclude Include="Headers\ComponentManager.h">
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\ComponentPacket.h">
-      <Filter>Header Files\SHOE-Headers\Components</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\ComponentPool.h">
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>

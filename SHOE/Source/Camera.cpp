@@ -5,7 +5,7 @@ using namespace DirectX;
 
 Camera::Camera(float x, float y, float z, float aspectRatio, bool projMatrixType, std::string name, CameraType cameraTag)
 {
-	this->transform = ComponentManager::Instantiate<Transform>(nullptr, true);
+	this->transform = ComponentManager::Instantiate<Transform>(nullptr);
 	transform->SetPosition(x, y, z);
 
 	this->fov = XM_PIDIV4;
@@ -23,7 +23,7 @@ Camera::Camera(float x, float y, float z, float aspectRatio, bool projMatrixType
 
 Camera::Camera(DirectX::XMFLOAT3 pos, float aspectRatio, bool projMatrixType, std::string name, CameraType cameraTag)
 {
-	this->transform = ComponentManager::Instantiate<Transform>(nullptr, true);
+	this->transform = ComponentManager::Instantiate<Transform>(nullptr);
 	transform->SetPosition(pos);
 
 	this->fov = XM_PIDIV4;

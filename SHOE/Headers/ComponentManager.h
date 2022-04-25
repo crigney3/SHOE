@@ -5,7 +5,7 @@ class ComponentManager
 {
 public:
 	template <typename T>
-	static std::shared_ptr<T> Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
+	static std::shared_ptr<T> Instantiate(std::shared_ptr<GameEntity> gameEntity);
 	template <typename T>
 	static void Free(std::shared_ptr<IComponent> component);
 	template <typename T>
@@ -24,9 +24,9 @@ public:
  * \return A new component from the pool
  */
 template<typename T>
-std::shared_ptr<T> ComponentManager::Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled)
+std::shared_ptr<T> ComponentManager::Instantiate(std::shared_ptr<GameEntity> gameEntity)
 {
-	return ComponentPool<T>::Instantiate(gameEntity, hierarchyIsEnabled);
+	return ComponentPool<T>::Instantiate(gameEntity);
 }
 
 /**

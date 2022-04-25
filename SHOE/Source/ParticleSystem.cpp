@@ -208,7 +208,7 @@ void ParticleSystem::Start()
 	SetParticleComputeShader(defaultParticleDeadListInitComputeShader, ParticleComputeShaderType::DeadListInit);
 }
 
-void ParticleSystem::Update(float deltaTime, float totalTime) {
+void ParticleSystem::Update() {
 	ID3D11UnorderedAccessView* none[8] = {};
 	context->CSSetUnorderedAccessViews(0, 8, none, 0);
 
