@@ -8,7 +8,7 @@ std::vector<LightData> Light::lightData = std::vector<LightData>();
 /// <summary>
 /// Gets the data from this light in LightData format
 /// </summary>
-/// <returns>A LightData populted with this frame's data</returns>
+/// <returns>A LightData populated with this frame's data</returns>
 LightData Light::GetData()
 {
 	DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&direction);

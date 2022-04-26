@@ -11,8 +11,8 @@ void GameEntity::UpdateHierarchyIsEnabled(bool active, bool head)
 			hierarchyIsEnabled = active;
 			if (enabled && !hierarchyIsEnabled) PropagateEvent(EntityEventType::OnDisable);
 		}
-		PropagateEvent(EntityEventType::OnEnable);
-		for (std::shared_ptr<GameEntity> children : transform->GetChildrenAsGameEntities())
+		PropagateEvent(EntityEventType::OnEnable); //Safe to call as it won't propagate to disabled components
+		for (std::shared_ptr<GameEntity> children : transform->GetChildrenEntities())
 		{
 			if (children != nullptr)
 				children->UpdateHierarchyIsEnabled(GetEnableDisable());
@@ -41,6 +41,11 @@ void GameEntity::Initialize()
 	this->transform = ComponentManager::Instantiate<Transform>(shared_from_this());
 }
 
+/// <summary>
+/// Sends an event message to all relevant components and updates necessary local data
+/// </summary>
+/// <param name="event">Message type to send</param>
+/// <param name="message">Body of the message, should one be needed</param>
 void GameEntity::PropagateEvent(EntityEventType event, std::shared_ptr<void> message)
 {
 	//If the event type requires there to be a message and there isn't one, fail
@@ -57,7 +62,7 @@ void GameEntity::PropagateEvent(EntityEventType event, std::shared_ptr<void> mes
 		}
 	}
 
-	//Handles any event-specific functions within the entity
+	//Handles any event-specific functionality within the entity
 	switch (event) {
 	case EntityEventType::Update:
 		if (transformChangedThisFrame) {
@@ -84,20 +89,29 @@ void GameEntity::PropagateEvent(EntityEventType event, std::shared_ptr<void> mes
 		PropagateEventToChildren(EntityEventType::OnParentTransform, message);
 		break;
 	case EntityEventType::OnParentMove:
+		transform->MarkMatricesDirty();
 		PropagateEventToChildren(EntityEventType::OnParentMove, message);
 		break;
 	case EntityEventType::OnParentRotate:
+		transform->MarkMatricesDirty();
+		transform->MarkVectorsDirty();
 		PropagateEventToChildren(EntityEventType::OnParentRotate, message);
 		break;
 	case EntityEventType::OnParentScale:
+		transform->MarkMatricesDirty();
 		PropagateEventToChildren(EntityEventType::OnParentScale, message);
 		break;
 	}
 }
 
+/// <summary>
+/// Sends an event message to all children of this entity
+/// </summary>
+/// <param name="event">Message type to send</param>
+/// <param name="message">Body of the message, should one be needed</param>
 void GameEntity::PropagateEventToChildren(EntityEventType event, std::shared_ptr<void> message)
 {
-	for (std::shared_ptr<GameEntity> child : transform->GetChildrenAsGameEntities())
+	for (std::shared_ptr<GameEntity> child : transform->GetChildrenEntities())
 	{
 		if (child != nullptr)
 			child->PropagateEvent(event, message);
@@ -124,7 +138,7 @@ std::vector<std::shared_ptr<IComponent>> GameEntity::GetAllComponents()
  */
 void GameEntity::Release()
 {
-	for(std::shared_ptr<GameEntity> child : transform->GetChildrenAsGameEntities())
+	for(std::shared_ptr<GameEntity> child : transform->GetChildrenEntities())
 	{
 		if (child != nullptr) {
 			child->GetTransform()->SetParent(nullptr);

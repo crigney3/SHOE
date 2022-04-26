@@ -230,7 +230,7 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 					std::shared_ptr<Collider> collider = std::dynamic_pointer_cast<Collider>(co);
 
 					coValue.AddMember(COLLIDER_TYPE, collider->GetTriggerStatus(), allocator);
-					coValue.AddMember(COLLIDER_ENABLED, collider->GetEnabledStatus(), allocator);
+					coValue.AddMember(COLLIDER_ENABLED, collider->IsEnabled(), allocator);
 					coValue.AddMember(COLLIDER_IS_VISIBLE, collider->GetVisibilityStatus(), allocator);
 					coValue.AddMember(COLLIDER_IS_TRANSFORM_VISIBLE, collider->GetTransformVisibilityStatus(), allocator);
 				}
@@ -1981,6 +1981,11 @@ std::shared_ptr<Sky> AssetManager::GetSkyAtID(int id) {
 	return this->skies[id];
 }
 
+/// <summary>
+/// Broadcasts a message to all entities
+/// </summary>
+/// <param name="event">Message type to send</param>
+/// <param name="message">Body of the message, should one be needed</param>
 void AssetManager::BroadcastGlobalEntityEvent(EntityEventType event, std::shared_ptr<void> message)
 {
 	for (std::shared_ptr<GameEntity> entity : globalEntities) {

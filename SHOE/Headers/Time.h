@@ -6,4 +6,3 @@ public:
 	static float totalTime;
 	static __int64 currentTime;
 };
-

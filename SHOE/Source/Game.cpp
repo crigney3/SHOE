@@ -821,7 +821,7 @@ void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 		ImGuiTreeNodeFlags_FramePadding)) {
 		int childCount = entity->GetTransform()->GetChildCount();
 		if (childCount > 0) {
-			std::vector<std::shared_ptr<GameEntity>> children = entity->GetTransform()->GetChildrenAsGameEntities();
+			std::vector<std::shared_ptr<GameEntity>> children = entity->GetTransform()->GetChildrenEntities();
 			for (int i = 0; i < childCount; i++) {
 				RenderChildObjectsInUI(children[i]);
 			}
@@ -1055,7 +1055,7 @@ void Game::Update()
 	}*/
 
 	mainCamera->Update(this->hWnd);
-	//flashShadowCamera->Update(Time::deltaTime, this->hWnd);
+	//flashShadowCamera->Update(this->hWnd);
 }
 
 void Game::DrawLoadingScreen(AMLoadState loadType) {

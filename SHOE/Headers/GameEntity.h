@@ -215,7 +215,7 @@ std::shared_ptr<T> GameEntity::GetComponentInChildren()
 	if (component != nullptr)
 		return component;
 
-	for(auto& child : transform->GetChildrenAsGameEntities())
+	for(auto& child : transform->GetChildrenEntities())
 	{
 		component = child->GetComponentInChildren<T>();
 		if (component != nullptr)
@@ -235,7 +235,7 @@ std::vector<std::shared_ptr<T>> GameEntity::GetComponentsInChildren()
 {
 	std::vector<std::shared_ptr<T>> components = GetComponents<T>();
 
-	for (auto& child : transform->GetChildrenAsGameEntities())
+	for (auto& child : transform->GetChildrenEntities())
 	{
 		components.emplace_back(child->GetComponentsInChildren<T>());
 	}
