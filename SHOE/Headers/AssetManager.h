@@ -146,6 +146,10 @@
 #define TERRAIN_MATERIAL_BLEND_MAP_ENABLED "tBE" // bool
 #define TERRAIN_MATERIAL_MATERIAL_ARRAY "tMA" // array of Materials
 
+// Terrain Data:
+#define TERRAIN_HEIGHTMAP_FILENAME_KEY "hFK" // string
+#define TERRAIN_INDEX_OF_TERRAIN_MATERIAL "hIM" // int
+
 // Particle System Data:
 #define PARTICLE_SYSTEM_MAX_PARTICLES "pMP" // int
 #define PARTICLE_SYSTEM_FILENAME_KEY "pFK" // string
@@ -287,7 +291,7 @@ private:
 	std::shared_ptr<Mesh> LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale);
 
 	void CreateComplexGeometry();
-	void ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey);
+	void ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey, std::string name);
 	std::shared_ptr<Mesh> ProcessComplexMesh(aiMesh* mesh, const aiScene* scene);
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::string textureNameToLoad, bool isMultiParticle);
 
@@ -298,6 +302,7 @@ private:
 	void InitializeGameEntities();
 	void InitializeColliders();
 	void InitializeTerrainMaterials();
+	void InitializeTerrainEntities();
 	void InitializeCameras();
 	void InitializeLights();
 	void InitializeSkies();
@@ -416,6 +421,21 @@ public:
 											    std::string roughnessNameToLoad,
 												bool addToGlobalList = true);
 	std::shared_ptr<Terrain> CreateTerrainEntity(std::string name = "Terrain");
+	std::shared_ptr<Terrain> CreateTerrainEntity(const char* heightmap, 
+												 std::shared_ptr<TerrainMaterial> material, 
+												 std::string name = "Terrain", 
+												 unsigned int mapWidth = 512, 
+												 unsigned int mapHeight = 512, 
+												 float heightScale = 25.0f);
+	std::shared_ptr<Terrain> CreateTerrainEntity(std::shared_ptr<Mesh> terrainMesh, 
+												 std::shared_ptr<TerrainMaterial> material, 
+												 std::string name = "Terrain");
+	std::shared_ptr<TerrainMaterial> CreateTerrainMaterial(std::string name, std::vector<std::shared_ptr<Material>> materials, std::string blendMapPath = "");
+	std::shared_ptr<TerrainMaterial> CreateTerrainMaterial(std::string name,
+														   std::vector<std::string> texturePaths,
+														   std::vector<std::string> matNames,
+														   bool isPBRMat = true,
+														   std::string blendMapPath = "");
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
 													std::string textureNameToLoad,
 													bool isMultiParticle);

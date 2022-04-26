@@ -319,6 +319,9 @@
     <ClCompile Include="Source\Collider.cpp">
       <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Terrain.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

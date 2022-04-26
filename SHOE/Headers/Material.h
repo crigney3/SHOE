@@ -99,9 +99,6 @@ public:
 	void SetRefractivePixelShader(std::shared_ptr<SimplePixelShader> refractPix);
 	std::shared_ptr<SimplePixelShader> GetRefractivePixelShader();
 
-	void SetEnableDisable(bool value);
-	bool GetEnableDisable();
-
 	std::string GetTextureFilenameKey(PBRTextureTypes textureType);
 	void SetTextureFilenameKey(PBRTextureTypes textureType, std::string newFileKey);
 };
@@ -127,14 +124,17 @@ public:
 	void RemoveMaterialByName(std::string name);
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
 
-	void SetEnableDisable(bool value);
-	bool GetEnableDisable();
-
 	void SetUsingBlendMap(bool usingBlendMap);
 	bool GetUsingBlendMap();
 
 	std::string GetName();
 	void SetName(std::string name);
+
+	std::shared_ptr<SimplePixelShader> GetPixelShader();
+	void SetPixelShader(std::shared_ptr<SimplePixelShader> pixShader);
+
+	std::shared_ptr<SimpleVertexShader> GetVertexShader();
+	void SetVertexShader(std::shared_ptr<SimpleVertexShader> vertShader);
 
 	size_t GetMaterialCount();
 
@@ -144,6 +144,9 @@ private:
 
 	std::string name;
 	std::string blendMapFilenameKey;
+
+	std::shared_ptr<SimplePixelShader> pixShader;
+	std::shared_ptr<SimpleVertexShader> vertShader;
 
 	bool enabled;
 	bool blendMapEnabled;

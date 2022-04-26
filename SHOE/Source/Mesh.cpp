@@ -3,26 +3,44 @@
 using namespace DirectX;
 
 Mesh::~Mesh() {
-
+	delete[] vertexArray;
+	delete[] indices;
 }
 
 Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
+	this->vertexArray = new Vertex[vertices];
+	this->indices = new unsigned int[indexCount];
+	this->indexCount = indexCount;
 	this->materialIndex = -1;
 	this->enabled = true;
 	this->name = name;
 	this->needsDepthPrePass = false;
-	CalculateTangents(vertexArray, vertices, indices, indexCount);
+
+	std::copy(vertexArray, vertexArray + vertices, this->vertexArray);
+	std::copy(indices, indices + indexCount, this->indices);
+
+	CalculateTangents(this->vertexArray, vertices, this->indices, this->indexCount);
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
+
+	CalculateBounds(vertexArray, vertices);
 }
 
 Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, int associatedMaterialIndex, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
+	this->vertexArray = new Vertex[vertices];
+	this->indices = new unsigned int[indexCount];
+	this->indexCount = indexCount;
 	this->materialIndex = associatedMaterialIndex;
 	this->enabled = true;
 	this->name = name;
 	this->needsDepthPrePass = false;
 
+	std::copy(vertexArray, vertexArray + vertices, this->vertexArray);
+	std::copy(indices, indices + indexCount, this->indices);
+
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
+
+	CalculateBounds(vertexArray, vertices);
 }
 
 Mesh::Mesh(std::string filename, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
@@ -259,13 +277,21 @@ Mesh::Mesh(std::string filename, Microsoft::WRL::ComPtr<ID3D11Device> device, st
 	//    and detect duplicate vertices, but at that point it would be better to use a more
 	//    sophisticated model loading library like TinyOBJLoader or AssImp (yes, that's its name)
 
+	this->vertexArray = new Vertex[vertCounter];
+	this->indices = new unsigned int[indexCounter];
+	this->indexCount = indexCounter;
+	std::copy(verts.begin(), verts.end(), vertexArray);
+	std::copy(indices.begin(), indices.end(), this->indices);
+
 	CalculateTangents(&verts[0], vertCounter, &indices[0], indexCounter);
 
 	MakeBuffers(&verts[0], vertCounter, &indices[0], indexCounter, device);
+
+	CalculateBounds(&verts[0], vertCounter);
 }
 
 void Mesh::MakeBuffers(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, Microsoft::WRL::ComPtr<ID3D11Device> device) {
-	this->indices = indexCount;
+	this->indexCount = indexCount;
 
 	D3D11_BUFFER_DESC vbd;
 	vbd.Usage = D3D11_USAGE_IMMUTABLE;
@@ -384,6 +410,19 @@ void Mesh::CalculateTangents(Vertex* verts, int numVerts, unsigned int* indices,
 	}
 }
 
+void Mesh::CalculateBounds(Vertex* verts, int numVerts)
+{
+	DirectX::XMFLOAT3* positions = new DirectX::XMFLOAT3[numVerts];
+	for (int i = 0; i < numVerts; i++) positions[i] = verts[i].Position;
+	size_t sizePos = sizeof(positions[0]);
+	sizePos = sizeof(positions[numVerts - 1]);
+	sizePos = sizeof(verts[0]);
+	sizePos = sizeof(DirectX::XMFLOAT3);
+	sizePos = sizeof(bounds);
+	DirectX::BoundingOrientedBox::CreateFromPoints(bounds, numVerts, positions, sizeof(DirectX::XMFLOAT3));
+	delete[] positions;
+}
+
 Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetVertexBuffer() {
 	return vBuffer;
 }
@@ -392,8 +431,18 @@ Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetIndexBuffer() {
 	return inBuffer;
 }
 
+Vertex* Mesh::GetVertexArray()
+{
+	return vertexArray;
+}
+
+unsigned int* Mesh::GetIndexArray()
+{
+	return indices;
+}
+
 int Mesh::GetIndexCount() {
-	return this->indices;
+	return this->indexCount;
 }
 
 void Mesh::SetMaterialIndex(int matIndex) {
@@ -402,14 +451,6 @@ void Mesh::SetMaterialIndex(int matIndex) {
 
 int Mesh::GetMaterialIndex() {
 	return this->materialIndex;
-}
-
-void Mesh::SetEnableDisable(bool value) {
-	this->enabled = value;
-}
-
-bool Mesh::GetEnableDisable() {
-	return this->enabled;
 }
 
 std::string Mesh::GetName() {
@@ -426,6 +467,11 @@ std::string Mesh::GetFileNameKey() {
 
 void Mesh::SetFileNameKey(std::string newKey) {
 	this->filenameKey = newKey;
+}
+
+DirectX::BoundingOrientedBox Mesh::GetBounds()
+{
+	return bounds;
 }
 
 void Mesh::SetDepthPrePass(bool prePass) {

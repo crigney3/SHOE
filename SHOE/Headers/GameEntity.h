@@ -17,7 +17,7 @@ private:
 	std::string name;
 	bool enabled;
 	bool hierarchyIsEnabled;
-	int attachedLightCount = 0;
+	bool transformChangedThisFrame;
 
 	std::vector<std::shared_ptr<IComponent>> rawComponentList;
 	std::vector<std::shared_ptr<ComponentPacket>> componentList;
@@ -34,6 +34,12 @@ public:
 	void Update(float deltaTime, float totalTime);
 	void OnCollisionEnter(std::shared_ptr<GameEntity> other);
 	void OnTriggerEnter(std::shared_ptr<GameEntity> other);
+	void OnTransform();
+	void OnParentTransform();
+	void OnMove(DirectX::XMFLOAT3 delta);
+	void OnRotate(DirectX::XMFLOAT3 delta);
+	void OnScale(DirectX::XMFLOAT3 delta);
+	void OnEnabledChanged(bool newState);
 	
 	std::shared_ptr<Transform> GetTransform();
 
@@ -43,7 +49,6 @@ public:
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();
 	bool GetHierarchyIsEnabled();
-	bool HasLightAttached();
 
 	//Component stuff
 	template <typename T>
@@ -70,8 +75,6 @@ public:
 	std::vector<std::shared_ptr<T>> GetComponentsInChildren();
 
 	std::vector<std::shared_ptr<IComponent>> GetAllComponents();
-
-	int GetAttachedLightCount();
 	
 	void Release();
 
@@ -119,7 +122,6 @@ std::shared_ptr<Light> GameEntity::AddComponent<Light>()
 	std::shared_ptr<Light> component = ComponentManager::Instantiate<Light>(shared_from_this(), this->GetHierarchyIsEnabled());
 	componentList.push_back(std::make_shared<ComponentPacket>(component, ComponentManager::Free<Light>));
 	rawComponentList.push_back(component);
-	attachedLightCount++;
 	return component;
 }
 
@@ -135,8 +137,6 @@ bool GameEntity::RemoveComponent()
 	{
 		if(std::dynamic_pointer_cast<T>(componentList[i]->component) != nullptr)
 		{
-
-			attachedLightCount -= (std::dynamic_pointer_cast<Light>(componentList[i]->component) != nullptr);
 			componentList[i]->component->OnDestroy();
 			componentList[i]->deallocator(componentList[i]->component);
 			componentList.erase(componentList.begin() + i);

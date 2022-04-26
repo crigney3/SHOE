@@ -67,7 +67,9 @@ void Transform::SetPosition(float x, float y, float z) {
 
 void Transform::SetPosition(XMFLOAT3 pos) {
 	if (this->pos.x != pos.x || this->pos.y != pos.y || this->pos.z != pos.z) {
+		XMFLOAT3 delta = XMFLOAT3(pos.x - this->pos.x, pos.y - this->pos.y, pos.z - this->pos.z);
 		this->pos = pos;
+		if(GetGameEntity() != nullptr) GetGameEntity()->OnMove(delta);
 		MarkThisDirty();
 	}
 }
@@ -78,7 +80,9 @@ void Transform::SetRotation(float pitch, float yaw, float roll) {
 
 void Transform::SetRotation(XMFLOAT3 rot) {
 	if (this->rotQuat.x != rot.x || this->rotQuat.y != rot.y || this->rotQuat.z != rot.z) {
+		XMFLOAT3 delta = XMFLOAT3(rot.x - this->rotQuat.x, rot.y - this->rotQuat.y, rot.z - this->rotQuat.z);
 		this->rotQuat = XMFLOAT4(rot.x, rot.y, rot.z, +0.0f);
+		if (GetGameEntity() != nullptr) GetGameEntity()->OnRotate(delta);
 		MarkThisDirty();
 	}
 }
@@ -89,7 +93,9 @@ void Transform::SetScale(float x, float y, float z) {
 
 void Transform::SetScale(XMFLOAT3 scale) {
 	if (this->scale.x != scale.x || this->scale.y != scale.y || this->scale.z != scale.z) {
+		XMFLOAT3 delta = XMFLOAT3(scale.x - this->scale.x, scale.y - this->scale.y, scale.z - this->scale.z);
 		this->scale = scale;
+		if (GetGameEntity() != nullptr) GetGameEntity()->OnScale(delta);
 		MarkThisDirty();
 	}
 }
@@ -147,35 +153,15 @@ bool Transform::GetDirtyStatus() { return isDirty; }
 
 #pragma region Transformation Methods
 void Transform::MoveAbsolute(float x, float y, float z) {
-	if (x == 0 && y == 0 && z == 0) return;
-	float newX = x + this->pos.x;
-	float newY = y + this->pos.y;
-	float newZ = z + this->pos.z;
-
-	this->pos = XMFLOAT3(newX, newY, newZ);
-
-	MarkThisDirty();
+	SetPosition(XMFLOAT3(x + this->pos.x, y + this->pos.y, z + this->pos.z));
 }
 
 void Transform::Rotate(float pitch, float yaw, float roll) {
-	if (pitch == 0 && yaw == 0 && roll == 0) return;
-	float newPitch = pitch + this->rotQuat.x;
-	float newYaw = yaw + this->rotQuat.y;
-	float newRoll = roll + this->rotQuat.z;
-
-	this->rotQuat = XMFLOAT4(newPitch, newYaw, newRoll, +0.0f);
-	MarkThisDirty();
+	SetRotation(XMFLOAT3(pitch + this->rotQuat.x, yaw + this->rotQuat.y, roll + this->rotQuat.z));
 }
 
 void Transform::Scale(float x, float y, float z) {
-	if (x == 1 && y == 1 && z == 1) return;
-	float newX = x * this->scale.x;
-	float newY = y * this->scale.y;
-	float newZ = z * this->scale.z;
-
-	this->scale = XMFLOAT3(newX, newY, newZ);
-
-	MarkThisDirty();
+	SetScale(XMFLOAT3(x * this->scale.x, y * this->scale.y, z * this->scale.z));
 }
 
 void Transform::MoveRelative(float x, float y, float z)
@@ -190,9 +176,10 @@ void Transform::MoveRelative(float x, float y, float z)
 		desiredMovement,
 		rotationQuat);
 
-	XMStoreFloat3(&pos, XMLoadFloat3(&pos) + relativeMovement);
+	XMFLOAT3 finalPos;
+	XMStoreFloat3(&finalPos, XMLoadFloat3(&pos) + relativeMovement);
 
-	MarkThisDirty();
+	SetPosition(finalPos);
 }
 #pragma endregion
 
@@ -297,7 +284,6 @@ unsigned int Transform::GetChildCount() {
 void Transform::MarkThisDirty()
 {
 	this->isDirty = true;
-	if (GetGameEntity() != nullptr && GetGameEntity()->HasLightAttached()) Light::MarkDirty();
 	MarkChildTransformsDirty();
 }
 

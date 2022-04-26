@@ -87,6 +87,18 @@ private:
     std::shared_ptr<Sky> currentSky;
     DirectX::XMFLOAT3 ambientColor;
 
+    //General shaders
+    std::shared_ptr<SimpleVertexShader> basicVS;
+    std::shared_ptr<SimpleVertexShader> perFrameVS;
+    std::shared_ptr<SimpleVertexShader> fullscreenVS;
+    std::shared_ptr<SimplePixelShader> solidColorPS;
+    std::shared_ptr<SimplePixelShader> perFramePS;
+    std::shared_ptr<SimplePixelShader> textureSamplePS;
+
+    //General meshes
+    std::shared_ptr<Mesh> cubeMesh;
+    std::shared_ptr<Mesh> sphereMesh;
+
     //components for shadows
     int shadowSize;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> miscEffectSRVs[MiscEffectSRVTypes::MISC_EFFECT_SRV_COUNT];
@@ -109,6 +121,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>    renderTargetSRVs[RTVTypes::RTV_TYPE_COUNT];
 
     // Ambient Occlusion data
+    std::shared_ptr<SimplePixelShader> ssaoPS;
+    std::shared_ptr<SimplePixelShader> ssaoBlurPS;
+    std::shared_ptr<SimplePixelShader> ssaoCombinePS;
     DirectX::XMFLOAT4 ssaoOffsets[64];
     const float ssaoRadius = 1.5f;
     const int ssaoSamples = 64;
@@ -174,6 +189,7 @@ public:
     void RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTypes type);
     void RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type);
     void RenderColliders(std::shared_ptr<Camera> cam);
+    void RenderMeshBounds(std::shared_ptr<Camera> cam);
 
     static bool GetDrawColliderStatus();
     static void SetDrawColliderStatus(bool _newState);

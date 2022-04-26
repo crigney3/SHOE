@@ -49,8 +49,9 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	InitializeCameras();
 	InitializeMaterials();
 	InitializeMeshes();
-	InitializeTerrainMaterials();
 	InitializeGameEntities();
+	InitializeTerrainMaterials();
+	InitializeTerrainEntities();
 	InitializeLights();
 	InitializeColliders();
 	InitializeEmitters();
@@ -300,7 +301,7 @@ void AssetManager::LoadScene(std::string filepath) {
 
 			std::shared_ptr<Material> newMaterial = CreatePBRMaterial(name, albedo, normal, metal, rough);
 
-			newMaterial->SetEnableDisable(materialBlock[i].FindMember(MAT_ENABLED)->value.GetBool());
+			//newMaterial->SetEnableDisable(materialBlock[i].FindMember(MAT_ENABLED)->value.GetBool());
 
 			newMaterial->SetTransparent(materialBlock[i].FindMember(MAT_IS_TRANSPARENT)->value.GetBool());
 
@@ -337,7 +338,7 @@ void AssetManager::LoadScene(std::string filepath) {
 			std::string mFilename = DeSerializeFileName(meshBlock[i].FindMember(MESH_FILENAME_KEY)->value.GetString());
 			std::shared_ptr<Mesh> newMesh = CreateMesh(meshBlock[i].FindMember(MESH_NAME)->value.GetString(), mFilename);
 
-			newMesh->SetEnableDisable(meshBlock[i].FindMember(MESH_ENABLED)->value.GetBool());
+			//newMesh->SetEnableDisable(meshBlock[i].FindMember(MESH_ENABLED)->value.GetBool());
 
 			newMesh->SetDepthPrePass(meshBlock[i].FindMember(MESH_NEEDS_DEPTH_PREPASS)->value.GetBool());
 
@@ -346,8 +347,6 @@ void AssetManager::LoadScene(std::string filepath) {
 			// This is currently generated automatically. Would need to change
 			// if storing meshes built through code arrays becomes supported.
 			// newMesh->SetIndexCount(meshBlock[i].FindMember(MESH_INDEX_COUNT)->value.GetInt());
-
-			// 
 		}
 
 		const rapidjson::Value& terrainMaterialBlock = sceneDoc[TERRAIN_MATERIALS];
@@ -403,7 +402,7 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			// Simple types first
 			meshValue.AddMember(MESH_INDEX_COUNT, me->GetIndexCount(), allocator);
 			meshValue.AddMember(MESH_MATERIAL_INDEX, me->GetMaterialIndex(), allocator);
-			meshValue.AddMember(MESH_ENABLED, me->GetEnableDisable(), allocator);
+			//meshValue.AddMember(MESH_ENABLED, me->GetEnableDisable(), allocator);
 			meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, me->GetDepthPrePass(), allocator);
 
 			// Strings
@@ -429,7 +428,7 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 
 			// Simple types first
 			matValue.AddMember(MAT_UV_TILING, mat->GetTiling(), allocator);
-			matValue.AddMember(MAT_ENABLED, mat->GetEnableDisable(), allocator);
+			//matValue.AddMember(MAT_ENABLED, mat->GetEnableDisable(), allocator);
 			matValue.AddMember(MAT_IS_TRANSPARENT, mat->GetTransparent(), allocator);
 			matValue.AddMember(MAT_IS_REFRACTIVE, mat->GetRefractive(), allocator);
 			matValue.AddMember(MAT_INDEX_OF_REFRACTION, mat->GetIndexOfRefraction(), allocator);
@@ -512,7 +511,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			geValue.AddMember(ENTITY_NAME, geName, allocator);
 			geValue.AddMember(ENTITY_ENABLED, ge->GetEnableDisable(), allocator);
 			geValue.AddMember(ENTITY_HIERARCHY_ENABLED, ge->GetHierarchyIsEnabled(), allocator);
-			geValue.AddMember(ENTITY_ATTACHED_LIGHTS, ge->GetAttachedLightCount(), allocator);
 
 			rapidjson::Value geComponents(rapidjson::kArrayType);
 			for (auto co : ge->GetAllComponents()) {
@@ -576,9 +574,18 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 				if (std::dynamic_pointer_cast<Terrain>(co) != nullptr) {
 					componentType.SetString("Terrain");
 					coValue.AddMember(COMPONENT_TYPE, componentType, allocator);
+					std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(co);
 
-					// Terrain is static rn, can't be saved or loaded for the moment
-					// TODO: Stop storing terrain like that, allowing for multiple terrains
+					rapidjson::Value hmKey;
+					hmKey.SetString(terrain->GetMesh()->GetFileNameKey().c_str(), allocator);
+
+					coValue.AddMember(TERRAIN_HEIGHTMAP_FILENAME_KEY, hmKey, allocator);
+
+					int index;
+					for (index = 0; index < globalTerrainMaterials.size(); index++) {
+						if (globalTerrainMaterials[index] == terrain->GetMaterial()) break;
+					}
+					coValue.AddMember(TERRAIN_INDEX_OF_TERRAIN_MATERIAL, index, allocator);
 				}
 
 				// Is it a Particle System?
@@ -916,7 +923,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			tmName.SetString(tm->GetName().c_str(), allocator);
 			tmBlendPath.SetString(tm->GetBlendMapFilenameKey().c_str(), allocator);
 
-			terrainMatObj.AddMember(TERRAIN_MATERIAL_ENABLED, tm->GetEnableDisable(), allocator);
 			terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_ENABLED, tm->GetUsingBlendMap(), allocator);
 			terrainMatObj.AddMember(TERRAIN_MATERIAL_NAME, tmName, allocator);
 			terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_PATH, tmBlendPath, allocator);
@@ -925,11 +931,13 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			// So we just need an array of pointers to them
 			rapidjson::Value terrainInternalMats(rapidjson::kArrayType);
 			for (int i = 0; i < tm->GetMaterialCount(); i++) {
-				// GUIDs aren't implemented yet, so store names for now
-				rapidjson::Value matName;
-				matName.SetString(tm->GetMaterialAtID(i)->GetName().c_str(), allocator);
+				// GUIDs aren't implemented yet, so store array indices for now
+				int index;
+				for (index = 0; index < globalMaterials.size(); index++) {
+					if (globalMaterials[index] == tm->GetMaterialAtID(i)) break;
+				}
 
-				terrainInternalMats.PushBack(matName, allocator);
+				terrainInternalMats.PushBack(index, allocator);
 			}
 			terrainMatObj.AddMember(TERRAIN_MATERIAL_MATERIAL_ARRAY, terrainInternalMats, allocator);
 
@@ -1413,7 +1421,7 @@ std::shared_ptr<Light> AssetManager::CreateSpotLight(std::string name, DirectX::
 /// Creates a GameEntity and gives it a Terrain component
 /// </summary>
 /// <param name="name">Name of the GameEntity</param>
-/// <returns>Pointer to the new GameEntity</returns>
+/// <returns>Pointer to the new Terrain</returns>
 std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::string name) {
 	try {
 		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
@@ -1427,6 +1435,148 @@ std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::string name) {
 
 		return NULL;
 	}
+}
+
+/// <summary>
+/// Creates a GameEntity and gives it a Terrain component.
+/// Loads the mesh from a heightmap, then applies a material.
+/// </summary>
+/// <param name="heightmap"></param>
+/// <param name="material"></param>
+/// <param name="name"></param>
+/// <param name="mapWidth"></param>
+/// <param name="mapHeight"></param>
+/// <param name="heightScale"></param>
+/// <returns></returns>
+std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(const char* heightmap,
+														   std::shared_ptr<TerrainMaterial> material,
+														   std::string name,
+														   unsigned int mapWidth,
+														   unsigned int mapHeight,
+														   float heightScale) 
+{
+	try {
+		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+		std::shared_ptr<Terrain> newTerrain = newEnt->AddComponent<Terrain>();
+		std::shared_ptr<Mesh> tMesh = LoadTerrain(heightmap, mapWidth, mapHeight, heightScale);
+
+		newTerrain->SetMesh(tMesh);
+		newTerrain->SetMaterial(material);
+
+		SetLoadedAndWait("Terrain Entities", name);
+
+		return newTerrain;
+	}
+	catch (...) {
+		SetLoadedAndWait("Terrain Entities", name, std::current_exception());
+
+		return NULL;
+	}
+}
+
+/// <summary>
+/// Creates a GameEntity and gives it a Terrain component.
+/// Sets the mesh and material.
+/// </summary>
+/// <param name="terrainMesh"></param>
+/// <param name="material"></param>
+/// <param name="name"></param>
+/// <returns></returns>
+std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::shared_ptr<Mesh> terrainMesh, 
+														   std::shared_ptr<TerrainMaterial> material, 
+														   std::string name) 
+{
+	try {
+		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+		std::shared_ptr<Terrain> newTerrain = newEnt->AddComponent<Terrain>();
+
+		newTerrain->SetMesh(terrainMesh);
+		newTerrain->SetMaterial(material);
+
+		SetLoadedAndWait("Terrain Entities", name);
+
+		return newTerrain;
+	}
+	catch (...) {
+		SetLoadedAndWait("Terrain Entities", name, std::current_exception());
+
+		return NULL;
+	}
+}
+
+std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string name, std::vector<std::shared_ptr<Material>> materials, std::string blendMapPath) {
+	std::shared_ptr<TerrainMaterial> newTMat = std::make_shared<TerrainMaterial>(name);
+
+	for (auto m : materials) {
+		newTMat->AddMaterial(m);
+	}
+
+	if (blendMapPath != "") {
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
+		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
+
+		std::wstring wPath;
+		ISimpleShader::ConvertToWide(namePath, wPath);
+
+		CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
+
+		newTMat->SetBlendMap(blendMap);
+
+		newTMat->SetBlendMapFilenameKey(SerializeFileName("Assets\\Textures\\", blendMapPath));
+	}
+
+	newTMat->SetPixelShader(GetPixelShaderByName("TerrainPS"));
+	newTMat->SetVertexShader(GetVertexShaderByName("TerrainVS"));
+
+	globalTerrainMaterials.push_back(newTMat);
+
+	SetLoadedAndWait("Terrain Materials", "Forest Terrain Material");
+
+	return newTMat;
+}
+
+std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string name,
+																	 std::vector<std::string> texturePaths,
+																	 std::vector<std::string> matNames,
+																	 bool isPBRMat,
+																	 std::string blendMapPath)
+{
+	std::shared_ptr<TerrainMaterial> newTMat = std::make_shared<TerrainMaterial>(name);
+
+	for (int i = 0; i < matNames.size(); i++) {
+		std::shared_ptr<Material> newMat;
+
+		if (isPBRMat) {
+			int textureIndex = i * 4;
+			newMat = CreatePBRMaterial(matNames[i], texturePaths[textureIndex], texturePaths[textureIndex + 1], texturePaths[textureIndex + 2], texturePaths[textureIndex + 3]);
+		}
+		else {
+			// Currently unimplemented
+		}
+
+		newTMat->AddMaterial(newMat);
+	}
+
+	if (blendMapPath != "") {
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
+		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
+
+		std::wstring wPath;
+		ISimpleShader::ConvertToWide(namePath, wPath);
+
+		CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
+
+		newTMat->SetBlendMap(blendMap);
+	}
+
+	newTMat->SetPixelShader(GetPixelShaderByName("TerrainPS"));
+	newTMat->SetVertexShader(GetVertexShaderByName("TerrainVS"));
+
+	globalTerrainMaterials.push_back(newTMat);
+
+	SetLoadedAndWait("Terrain Materials", "Forest Terrain Material");
+
+	return newTMat;
 }
 
 std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension) {
@@ -1662,9 +1812,6 @@ void AssetManager::InitializeGameEntities() {
 	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveRoughMat"), "Refractive Cube");
 	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("refractiveBronzeMat"), "Refractive Torus");
 
-	std::shared_ptr<Terrain> terrainEntity = CreateTerrainEntity("Main Terrain");
-	terrainEntity->GetTransform()->SetPosition(-256.0f, -10.0f, -256.0f);
-
 	GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.0f, +0.0f, +0.0f);
 	GetGameEntityByName("Floor Cube")->GetTransform()->SetPosition(+2.0f, +0.0f, +0.0f);
 	GetGameEntityByName("Scratched Cube")->GetTransform()->SetPosition(+0.5f, +2.0f, +0.0f);
@@ -1696,8 +1843,6 @@ void AssetManager::InitializeGameEntities() {
 	GetGameEntityByName("Floor Helix")->GetTransform()->SetParent(GetGameEntityByName("Rough Torus")->GetTransform());
 	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
 	GetGameEntityByName("Wood Sphere")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
-
-
 
 	CreateComplexGeometry();
 }
@@ -1831,7 +1976,7 @@ void AssetManager::InitializeMeshes() {
 	globalMeshes = std::vector<std::shared_ptr<Mesh>>();
 
 	// Test loading failure
-	CreateMesh("ExceptionTest", "InvalidPath");
+	//CreateMesh("ExceptionTest", "InvalidPath");
 
 	CreateMesh("Cube", "cube.obj");
 	CreateMesh("Cylinder", "cylinder.obj");
@@ -1893,53 +2038,81 @@ void AssetManager::InitializeLights() {
 	}
 }
 
+void AssetManager::InitializeTerrainEntities() {
+	Terrain::SetDefaults(GetMeshByName("Cube"), GetTerrainMaterialByName("Forest Terrain Material"));
+
+	std::shared_ptr<Terrain> mainTerrain = CreateTerrainEntity("valley.raw16", GetTerrainMaterialByName("Forest Terrain Material"), "Basic Terrain");
+	mainTerrain->GetTransform()->SetPosition(-256.0f, -14.0f, -256.0f);
+}
+
 void AssetManager::InitializeTerrainMaterials() {
 	try {
 		globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMaterial>>();
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> defaultBlendMap;
-		std::shared_ptr<TerrainMaterial> forestTerrainMaterial;
 
-		//Load terrain and add a blend map
-
-		std::string namePath;
-
-		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_HEIGHTMAP_PATH, "valley.raw16");
-
-		std::shared_ptr<Mesh> mainTerrain = LoadTerrain(namePath.c_str(), 512, 512, 25.0f);
-		globalMeshes.push_back(mainTerrain);
-
-		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, "blendMap.png");
-
-		std::wstring wPath;
-		ISimpleShader::ConvertToWide(namePath, wPath);
-
-		CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, defaultBlendMap.GetAddressOf());
-
-		std::string assetPathStr = "Assets\\Textures\\";
-
-		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
-
-		SetLoadedAndWait("Terrain", "Height and Blend Maps");
+		std::vector<std::shared_ptr<Material>> tMats = std::vector<std::shared_ptr<Material>>();
 
 		std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", "forest_floor_albedo.png", "forest_floor_Normal-ogl.png", "wood_metal.png", "forest_floor_Roughness.png");
-		std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", "bog_albedo.png.png", "bog_normal-ogl.png", "wood_metal.png", "bog_roughness.png");
+		std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", "bog_albedo.png", "bog_normal-ogl.png", "wood_metal.png", "bog_roughness.png");
 		std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", "rocky_dirt1-albedo.png", "rocky_dirt1-normal-ogl.png", "wood_metal.png", "rocky_dirt1_Roughness.png");
+
+		tMats.push_back(forestMat);
+		tMats.push_back(bogMat);
+		tMats.push_back(rockyMat);
 
 		//Set appropriate tiling
 		forestMat->SetTiling(10.0f);
 		bogMat->SetTiling(10.0f);
 
-		forestTerrainMaterial = std::make_shared<TerrainMaterial>("Forest Terrain Material", defaultBlendMap);
+		std::shared_ptr<TerrainMaterial> forestTerrainMaterial = CreateTerrainMaterial("Forest Terrain Material", tMats, "blendMap.png");
 
-		forestTerrainMaterial->AddMaterial(forestMat);
-		forestTerrainMaterial->AddMaterial(bogMat);
-		forestTerrainMaterial->AddMaterial(rockyMat);
+		tMats.clear();
 
-		forestTerrainMaterial->SetBlendMapFilenameKey(baseFilename);
+		std::vector<std::string> metalPaths;
+		std::vector<std::string> metalNames;
 
-		globalTerrainMaterials.push_back(forestTerrainMaterial);
+		// Must be kept in PBR order!
+		// This sections is only for testing and should be commented on push.
+		// Since these materials already exist, it's quicker and more efficient
+		// to just grab them.
+		std::shared_ptr<TerrainMaterial> industrialTerrainMaterial;
 
-		SetLoadedAndWait("Terrain", "Forest Terrain Material");
+		/*metalPaths.push_back("floor_albedo.png");
+		metalPaths.push_back("floor_normals.png");
+		metalPaths.push_back("floor_metal.png");
+		metalPaths.push_back("floor_roughness.png");
+
+		metalPaths.push_back("cobblestone_albedo.png");
+		metalPaths.push_back("cobblestone_normals.png");
+		metalPaths.push_back("cobblestone_metal.png");
+		metalPaths.push_back("cobblestone_roughness.png");
+
+		metalPaths.push_back("rough_albedo.png");
+		metalPaths.push_back("rough_normals.png");
+		metalPaths.push_back("rough_metal.png");
+		metalPaths.push_back("rough_roughness.png");
+
+		metalNames.push_back("Floor");
+		metalNames.push_back("Stone");
+		metalNames.push_back("Rough");
+
+		industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", metalPaths, metalNames, true, "blendMap.png");*/
+
+		// This is the correct way to create a tMat when the materials are already loaded:
+		tMats.push_back(GetMaterialByName("floorMat"));
+		tMats.push_back(GetMaterialByName("cobbleMat"));
+		tMats.push_back(GetMaterialByName("roughMat"));
+
+		industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", tMats, "blendMap.png");
+
+		// This is the correct way to load a tMat that doesn't use blend mapping
+		// Note that even with one material, it must be pushed to the vector
+		std::shared_ptr<TerrainMaterial> floorTerrainMaterial;
+		tMats.clear();
+
+		tMats.push_back(GetMaterialByName("terrainFloorMat"));
+
+		floorTerrainMaterial = CreateTerrainMaterial("Floor Terrain Material", tMats);
 	}
 	catch (...) {
 		SetLoadedAndWait("Terrain Materials", "Unknown Terrain Material", std::current_exception());
@@ -2301,6 +2474,8 @@ void AssetManager::SetCameraTag(std::shared_ptr<Camera> cam, CameraType tag) {
 std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale) {
 	std::shared_ptr<Mesh> finalTerrain;
 
+	std::string fullPath = GetFullPathToAssetFile(AssetPathIndex::ASSET_HEIGHTMAP_PATH, filename);
+
 	unsigned int numVertices = mapWidth * mapHeight;
 	unsigned int numIndices = (mapWidth - 1) * (mapHeight - 1) * 6;
 
@@ -2313,7 +2488,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 
 	//Read the file
 	std::ifstream file;
-	file.open(filename, std::ios_base::binary);
+	file.open(fullPath.c_str(), std::ios_base::binary);
 
 	if (file) {
 		file.read((char*)&heights[0], (std::streamsize)numVertices * 2);
@@ -2429,7 +2604,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 			XMStoreFloat3(&vertices[index].normal, normalTotal);
 
 			//Store data in vertex
-			XMFLOAT3 normal = XMFLOAT3(+0.0f, +1.0f, +0.0f);
+			XMFLOAT3 normal = XMFLOAT3(+0.0f, +1.0f, -0.0f);
 			XMFLOAT3 tangents = XMFLOAT3(+0.0f, +0.0f, +0.0f);
 			XMFLOAT2 UV = XMFLOAT2(x / (float)mapWidth, z / (float)mapWidth);
 			vertices[index] = { position, normal, tangents, UV };
@@ -2615,7 +2790,7 @@ void AssetManager::CreateComplexGeometry() {
 		aiProcess_CalcTangentSpace);
 
 	if (flashLightModel != NULL) {
-		ProcessComplexModel(flashLightModel->mRootNode, flashLightModel, serializedKey);
+		ProcessComplexModel(flashLightModel->mRootNode, flashLightModel, serializedKey, "Human");
 	}
 
 	namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, "hat.obj");
@@ -2629,15 +2804,15 @@ void AssetManager::CreateComplexGeometry() {
 		aiProcess_CalcTangentSpace);
 
 	if (hatModel != NULL) {
-		ProcessComplexModel(hatModel->mRootNode, hatModel, serializedKey);
+		ProcessComplexModel(hatModel->mRootNode, hatModel, serializedKey, "Hat");
 	}
 	
 }
 
-void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey) {
+void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey, std::string name) {
 	for (unsigned int i = 0; i < node->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		std::string newName = "ComplexMesh" + std::to_string(i);
+		std::string newName = name + "CM" + std::to_string(i);
 		mesh->mName = newName;
 
 		std::shared_ptr<Mesh> newMesh = ProcessComplexMesh(mesh, scene);
@@ -2652,7 +2827,7 @@ void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene, std::
 	}
 
 	for (unsigned int i = 0; i < node->mNumChildren; i++) {
-		ProcessComplexModel(node->mChildren[i], scene, serializedFilenameKey);
+		ProcessComplexModel(node->mChildren[i], scene, serializedFilenameKey, name + "Child" + std::to_string(i));
 	}
 }
 

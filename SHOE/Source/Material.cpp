@@ -206,14 +206,6 @@ std::shared_ptr<SimplePixelShader> Material::GetRefractivePixelShader() {
 	return this->refractivePixShader;
 }
 
-void Material::SetEnableDisable(bool value) {
-	this->enabled = value;
-}
-
-bool Material::GetEnableDisable() {
-	return this->enabled;
-}
-
 #pragma endregion
 
 #pragma region TerrainMaterial
@@ -237,15 +229,7 @@ TerrainMaterial::TerrainMaterial(std::string name, Microsoft::WRL::ComPtr<ID3D11
 }
 
 TerrainMaterial::~TerrainMaterial() {
-
-}
-
-void TerrainMaterial::SetEnableDisable(bool value) {
-	this->enabled = value;
-}
-
-bool TerrainMaterial::GetEnableDisable() {
-	return this->enabled;
+	this->allMaterials.clear();
 }
 
 void TerrainMaterial::SetUsingBlendMap(bool usingBlendMap) {
@@ -316,6 +300,22 @@ std::shared_ptr<Material> TerrainMaterial::GetMaterialByName(std::string name) {
 
 size_t TerrainMaterial::GetMaterialCount() {
 	return this->allMaterials.size();
+}
+
+std::shared_ptr<SimplePixelShader> TerrainMaterial::GetPixelShader() {
+	return this->pixShader;
+}
+
+void TerrainMaterial::SetPixelShader(std::shared_ptr<SimplePixelShader> pixShader) {
+	this->pixShader = pixShader;
+}
+
+std::shared_ptr<SimpleVertexShader> TerrainMaterial::GetVertexShader() {
+	return this->vertShader;
+}
+
+void TerrainMaterial::SetVertexShader(std::shared_ptr<SimpleVertexShader> vertShader) {
+	this->vertShader = vertShader;
 }
 
 #pragma endregion
