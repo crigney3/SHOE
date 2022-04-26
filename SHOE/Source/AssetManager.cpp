@@ -295,13 +295,11 @@ void AssetManager::LoadScene(std::string filepath) {
 		for (rapidjson::SizeType i = 0; i < materialBlock.Size(); i++) {
 			std::string name = DeSerializeFileName(materialBlock[i].FindMember(MAT_NAME)->value.GetString());
 			std::string albedo = DeSerializeFileName(materialBlock[i].FindMember(MAT_TEXTURE_OR_ALBEDO_MAP)->value.GetString());
-			std::string normal = DeSerializeFileName(materialBlock[i].FindMember(MAT_NAME)->value.GetString());
-			std::string metal = DeSerializeFileName(materialBlock[i].FindMember(MAT_NAME)->value.GetString());
-			std::string rough = DeSerializeFileName(materialBlock[i].FindMember(MAT_NAME)->value.GetString());
+			std::string normal = DeSerializeFileName(materialBlock[i].FindMember(MAT_NORMAL_MAP)->value.GetString());
+			std::string metal = DeSerializeFileName(materialBlock[i].FindMember(MAT_METAL_MAP)->value.GetString());
+			std::string rough = DeSerializeFileName(materialBlock[i].FindMember(MAT_ROUGHNESS_MAP)->value.GetString());
 
 			std::shared_ptr<Material> newMaterial = CreatePBRMaterial(name, albedo, normal, metal, rough);
-
-			//newMaterial->SetEnableDisable(materialBlock[i].FindMember(MAT_ENABLED)->value.GetBool());
 
 			newMaterial->SetTransparent(materialBlock[i].FindMember(MAT_IS_TRANSPARENT)->value.GetBool());
 
@@ -352,7 +350,25 @@ void AssetManager::LoadScene(std::string filepath) {
 		const rapidjson::Value& terrainMaterialBlock = sceneDoc[TERRAIN_MATERIALS];
 		assert(terrainMaterialBlock.IsArray());
 		for (rapidjson::SizeType i = 0; i < terrainMaterialBlock.Size(); i++) {
+			std::string tMatName;
+			std::string tMatBlendMapPath;
+			const rapidjson::Value& tMatInternalBlock = terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_MATERIAL_ARRAY)->value;
+			std::vector<std::shared_ptr<Material>> internalMaterials;
 
+			tMatName = (terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_NAME)->value.GetString());
+			tMatBlendMapPath = (DeSerializeFileName(terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_BLEND_MAP_PATH)->value.GetString()));
+
+			for (rapidjson::SizeType j = 0; j < tMatInternalBlock.Size(); j++) {
+				// Material texture strings are being incorrectly serialized/loaded
+				internalMaterials.push_back(GetMaterialAtID(tMatInternalBlock[j].GetInt()));
+			}
+
+			if (terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_BLEND_MAP_ENABLED)->value.GetBool()) {
+				std::shared_ptr<TerrainMaterial> newTMat = CreateTerrainMaterial(tMatName, internalMaterials, tMatBlendMapPath);
+			}
+			else {
+				std::shared_ptr<TerrainMaterial> newTMat = CreateTerrainMaterial(tMatName, internalMaterials);
+			}
 		}
 
 		fclose(file);

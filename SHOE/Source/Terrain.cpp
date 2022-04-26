@@ -39,7 +39,7 @@ void Terrain::OnTransform()
 	CalculateBounds();
 }
 
-void Terrain::OnParentTransform()
+void Terrain::OnParentTransform(std::shared_ptr<GameEntity> parent)
 {
 	CalculateBounds();
 }

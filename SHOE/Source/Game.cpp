@@ -1154,6 +1154,7 @@ void Game::Draw()
 		}
 
 		renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
+	}
 
 	renderer->Draw(mainCamera);
 }
