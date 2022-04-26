@@ -8,7 +8,7 @@ std::vector<LightData> Light::lightData = std::vector<LightData>();
 /// <summary>
 /// Gets the data from this light in LightData format
 /// </summary>
-/// <returns>A LightData populted with this frame's data</returns>
+/// <returns>A LightData populated with this frame's data</returns>
 LightData Light::GetData()
 {
 	DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&direction);
@@ -77,7 +77,22 @@ void Light::OnRotate(DirectX::XMFLOAT3 delta)
 	lightArrayDirty = true;
 }
 
-void Light::OnEnabledChanged(bool newState)
+void Light::OnParentMove(std::shared_ptr<GameEntity> parent)
+{
+	lightArrayDirty = true;
+}
+
+void Light::OnParentRotate(std::shared_ptr<GameEntity> parent)
+{
+	lightArrayDirty = true;
+}
+
+void Light::OnEnable()
+{
+	lightArrayDirty = true;
+}
+
+void Light::OnDisable()
 {
 	lightArrayDirty = true;
 }

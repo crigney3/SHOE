@@ -7,25 +7,22 @@
 void GameEntity::UpdateHierarchyIsEnabled(bool active, bool head)
 {
 	if (head || hierarchyIsEnabled != active) {
-		if(!head) hierarchyIsEnabled = active;
-		OnEnabledChanged(active);
-		for (std::shared_ptr<ComponentPacket> packet : componentList)
-		{
-			if (packet->component->IsEnabled() != GetEnableDisable()) {
-				packet->component->OnEnabledChanged(packet->component->IsEnabled());
-			}
-			packet->component->UpdateHierarchyIsEnabled(GetEnableDisable());
+		if (!head) { 
+			hierarchyIsEnabled = active;
+			if (enabled && !hierarchyIsEnabled) PropagateEvent(EntityEventType::OnDisable);
 		}
-		for (std::shared_ptr<GameEntity> children : transform->GetChildrenAsGameEntities())
+		PropagateEvent(EntityEventType::OnEnable); //Safe to call as it won't propagate to disabled components
+		for (std::shared_ptr<GameEntity> children : transform->GetChildrenEntities())
 		{
-			if (children.get() != NULL)
+			if (children != nullptr)
 				children->UpdateHierarchyIsEnabled(GetEnableDisable());
 		}
 	}
 }
 
 GameEntity::GameEntity(DirectX::XMMATRIX worldIn, std::string name) {
-	this->componentList = std::vector<std::shared_ptr<ComponentPacket>>();
+	this->componentList = std::vector<std::shared_ptr<IComponent>>();
+	this->componentDeallocList = std::vector<std::function<void(std::shared_ptr<IComponent>)>>();
 	this->name = name;
 	this->enabled = true;
 	this->hierarchyIsEnabled = true;
@@ -41,124 +38,83 @@ GameEntity::~GameEntity() {
  */
 void GameEntity::Initialize()
 {
-	this->transform = ComponentManager::Instantiate<Transform>(shared_from_this(), this->GetHierarchyIsEnabled());
+	this->transform = ComponentManager::Instantiate<Transform>(shared_from_this());
 }
 
-/**
- * \brief Updates all attached components
- */
-void GameEntity::Update(float deltaTime, float totalTime)
+/// <summary>
+/// Sends an event message to all relevant components and updates necessary local data
+/// </summary>
+/// <param name="event">Message type to send</param>
+/// <param name="message">Body of the message, should one be needed</param>
+void GameEntity::PropagateEvent(EntityEventType event, std::shared_ptr<void> message)
 {
-	if (GetEnableDisable()) {
-		for (std::shared_ptr<ComponentPacket> packet : componentList) {
-			if (packet->component->IsEnabled())
-				packet->component->Update(deltaTime, totalTime);
+	//If the event type requires there to be a message and there isn't one, fail
+	if ((EntityEventType::REQUIRES_MESSAGE & 1 << event) && message == nullptr) {
+		//Probably should throw but I'll silently fail for now
+		return;
+	}
+
+	//Propagates the event to all attached components
+	if (GetEnableDisable() || event == EntityEventType::OnDisable){
+		for (std::shared_ptr<IComponent> component : componentList) {
+			if (component->IsEnabled() || (event == EntityEventType::OnDisable && component->IsLocallyEnabled()))
+				component->ReceiveEvent(event, message);
 		}
+	}
+
+	//Handles any event-specific functionality within the entity
+	switch (event) {
+	case EntityEventType::Update:
 		if (transformChangedThisFrame) {
 			transformChangedThisFrame = false;
-			OnTransform();
+			PropagateEvent(EntityEventType::OnTransform);
 		}
-	}
-}
-
-/**
- * \brief Called on entering a collision with another GameEntity with a collider attached
- * \param other Entity collided with
- */
-void GameEntity::OnCollisionEnter(std::shared_ptr<GameEntity> other)
-{
-	if (GetEnableDisable()) {
-		for (std::shared_ptr<ComponentPacket> packet : componentList) {
-			if (packet->component->IsEnabled())
-				packet->component->OnCollisionEnter(other);
-		}
-	}
-}
-
-/**
- * \brief Called on entering another GameEntity's trigger box
- * \param other Entity collided with
- */
-void GameEntity::OnTriggerEnter(std::shared_ptr<GameEntity> other)
-{
-	if (GetEnableDisable()) {
-		for (std::shared_ptr<ComponentPacket> packet : componentList) {
-			if (packet->component->IsEnabled())
-				packet->component->OnTriggerEnter(other);
-		}
-	}
-}
-
-void GameEntity::OnTransform()
-{
-	if (GetEnableDisable()) {
-		for (std::shared_ptr<ComponentPacket> packet : componentList) {
-			if (packet->component->IsEnabled())
-				packet->component->OnTransform();
-		}
-		for (std::shared_ptr<GameEntity> child : transform->GetChildrenAsGameEntities())
-		{
-			if (child.get() != NULL)
-				child->OnParentTransform();
-		}
-	}
-}
-
-void GameEntity::OnParentTransform()
-{
-	if (GetEnableDisable()) {
-		for (std::shared_ptr<ComponentPacket> packet : componentList) {
-			if (packet->component->IsEnabled())
-				packet->component->OnParentTransform();
-		}
-		for (std::shared_ptr<GameEntity> child : transform->GetChildrenAsGameEntities())
-		{
-			if (child.get() != NULL)
-				child->OnParentTransform();
-		}
-	}
-}
-
-void GameEntity::OnMove(DirectX::XMFLOAT3 delta)
-{
-	if (GetEnableDisable()) {
-		for (std::shared_ptr<ComponentPacket> packet : componentList) {
-			if (packet->component->IsEnabled())
-				packet->component->OnMove(delta);
-		}
+		break;
+	case EntityEventType::OnTransform:
+		PropagateEventToChildren(EntityEventType::OnParentTransform, shared_from_this());
+		break;
+	case EntityEventType::OnMove:
+		PropagateEventToChildren(EntityEventType::OnParentMove, shared_from_this());
 		transformChangedThisFrame = true;
-	}
-}
-
-void GameEntity::OnRotate(DirectX::XMFLOAT3 delta)
-{
-	if (GetEnableDisable()) {
-		for (std::shared_ptr<ComponentPacket> packet : componentList) {
-			if (packet->component->IsEnabled())
-				packet->component->OnRotate(delta);
-		}
+		break;
+	case EntityEventType::OnRotate:
+		PropagateEventToChildren(EntityEventType::OnParentRotate, shared_from_this());
 		transformChangedThisFrame = true;
-	}
-}
-
-void GameEntity::OnScale(DirectX::XMFLOAT3 delta)
-{
-	if (GetEnableDisable()) {
-		for (std::shared_ptr<ComponentPacket> packet : componentList) {
-			if (packet->component->IsEnabled())
-				packet->component->OnScale(delta);
-		}
+		break;
+	case EntityEventType::OnScale:
+		PropagateEventToChildren(EntityEventType::OnParentScale, shared_from_this());
 		transformChangedThisFrame = true;
+		break;
+	case EntityEventType::OnParentTransform:
+		PropagateEventToChildren(EntityEventType::OnParentTransform, message);
+		break;
+	case EntityEventType::OnParentMove:
+		transform->MarkMatricesDirty();
+		PropagateEventToChildren(EntityEventType::OnParentMove, message);
+		break;
+	case EntityEventType::OnParentRotate:
+		transform->MarkMatricesDirty();
+		transform->MarkVectorsDirty();
+		PropagateEventToChildren(EntityEventType::OnParentRotate, message);
+		break;
+	case EntityEventType::OnParentScale:
+		transform->MarkMatricesDirty();
+		PropagateEventToChildren(EntityEventType::OnParentScale, message);
+		break;
 	}
 }
 
-void GameEntity::OnEnabledChanged(bool newState)
+/// <summary>
+/// Sends an event message to all children of this entity
+/// </summary>
+/// <param name="event">Message type to send</param>
+/// <param name="message">Body of the message, should one be needed</param>
+void GameEntity::PropagateEventToChildren(EntityEventType event, std::shared_ptr<void> message)
 {
-	if (enabled) {
-		for (std::shared_ptr<ComponentPacket> packet : componentList) {
-			if (packet->component->IsLocallyEnabled())
-				packet->component->OnEnabledChanged(newState);
-		}
+	for (std::shared_ptr<GameEntity> child : transform->GetChildrenEntities())
+	{
+		if (child != nullptr)
+			child->PropagateEvent(event, message);
 	}
 }
 
@@ -174,7 +130,7 @@ std::shared_ptr<Transform> GameEntity::GetTransform() {
  */
 std::vector<std::shared_ptr<IComponent>> GameEntity::GetAllComponents()
 {
-	return rawComponentList;
+	return componentList;
 }
 
 /**
@@ -182,15 +138,15 @@ std::vector<std::shared_ptr<IComponent>> GameEntity::GetAllComponents()
  */
 void GameEntity::Release()
 {
-	for(std::shared_ptr<GameEntity> child : transform->GetChildrenAsGameEntities())
+	for(std::shared_ptr<GameEntity> child : transform->GetChildrenEntities())
 	{
-		if (child != NULL) {
+		if (child != nullptr) {
 			child->GetTransform()->SetParent(nullptr);
 		}	
 	}
-	for (std::shared_ptr<ComponentPacket> packet : componentList) {
-		packet->component->OnDestroy();
-		packet->deallocator(packet->component);
+	for (int i = 0; i < componentList.size(); i++) {
+		componentList[i]->OnDestroy();
+		componentDeallocList[i](componentList[i]);
 	}
 	transform->OnDestroy();
 	ComponentManager::Free<Transform>(transform);
@@ -207,10 +163,11 @@ void GameEntity::SetName(std::string Name) {
 /// <summary>
 /// Sets whether this GameEntity is enabled
 /// </summary>
-/// <param name="value"></param>
+/// <param name="value">New enabled state of the entity</param>
 void GameEntity::SetEnableDisable(bool value) {
 	if (enabled != value) {
 		this->enabled = value;
+		if (!value && hierarchyIsEnabled) PropagateEvent(EntityEventType::OnDisable);
 		UpdateHierarchyIsEnabled(GetEnableDisable(), true);
 	}
 }
@@ -220,7 +177,7 @@ void GameEntity::SetEnableDisable(bool value) {
 /// </summary>
 /// <returns>True if all are enabled</returns>
 bool GameEntity::GetEnableDisable() {
-	return this->enabled && this->hierarchyIsEnabled;
+	return enabled && hierarchyIsEnabled;
 }
 
 /// <summary>
@@ -241,12 +198,12 @@ bool GameEntity::RemoveComponent(std::shared_ptr<IComponent> component)
 {
 	for (int i = 0; i < componentList.size(); i++)
 	{
-		if (componentList[i]->component == component)
+		if (componentList[i] == component)
 		{
-			componentList[i]->component->OnDestroy();
-			componentList[i]->deallocator(componentList[i]->component);
+			componentList[i]->OnDestroy();
+			componentDeallocList[i](componentList[i]);
 			componentList.erase(componentList.begin() + i);
-			rawComponentList.erase(rawComponentList.begin() + i);
+			componentDeallocList.erase(componentDeallocList.begin() + i);
 			return true;
 		}
 	}

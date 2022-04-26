@@ -36,7 +36,10 @@ public:
 	void OnDestroy() override;
 	void OnMove(DirectX::XMFLOAT3 delta) override;
 	void OnRotate(DirectX::XMFLOAT3 delta) override;
-	void OnEnabledChanged(bool newState) override;
+	void OnParentMove(std::shared_ptr<GameEntity> parent) override;
+	void OnParentRotate(std::shared_ptr<GameEntity> parent) override;
+	void OnEnable() override;
+	void OnDisable() override;
 
 	float GetType();
 	void SetType(float type);
@@ -49,4 +52,3 @@ public:
 	float GetRange();
 	void SetRange(float range);
 };
-

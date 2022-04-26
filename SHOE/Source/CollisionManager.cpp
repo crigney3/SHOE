@@ -17,9 +17,8 @@ CollisionManager::CollisionManager()
 
 CollisionManager::~CollisionManager()
 {
-	for (auto c : markedAsColliders_) {
-		c.reset();
-	}
+	markedAsTriggerboxes_.clear();
+	markedAsColliders_.clear();
 }
 
 std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsTriggerboxes() { return markedAsTriggerboxes_; }
@@ -28,10 +27,6 @@ std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsColliders() 
 
 void CollisionManager::Update()
 {
-	for (auto& c : ComponentManager::GetAllEnabled<Collider>())
-	{
-		c->Update();
-	}
 	//CheckTriggerCollisions();
 	//CheckColliderCollisions();
 
@@ -43,21 +38,16 @@ void CollisionManager::Update()
 		for (int j = 0; j < c.size(); j++)
 		{
 			std::shared_ptr<Collider> b = c[j];
-	
-			std::string aName = a->GetOwner()->GetName();
-			std::string bName = b->GetOwner()->GetName();
 
 			// Skip if about to check against self
-			if (aName == bName)
+			if (a == b)
 				continue;
 	
 			// TODO: Somehow need to check for collisions while avoiding dupes 
 			if ((!a->GetTriggerStatus() && b->GetTriggerStatus())
 				&& a->GetOrientedBoundingBox().Intersects(b->GetOrientedBoundingBox()))
 			{
-#if defined(DEBUG) || defined(_DEBUG)
-				printf("\n%s Colliding with %s", aName.c_str(), bName.c_str());
-#endif
+
 			}
 		}
 	}
@@ -88,12 +78,6 @@ void CollisionManager::CheckTriggerCollisions()
 			{
 #if defined(DEBUG) || defined(_DEBUG)
 				printf("Colliding\n");
-#endif
-			}
-			if (cOBB.Intersects(tOBB))
-			{
-#if defined(DEBUG) || defined(_DEBUG)
-				printf("Colliding2\n");
 #endif
 			}
 		}

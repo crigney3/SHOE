@@ -528,7 +528,6 @@ public:
 	size_t GetSoundArraySize();
 	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
 	std::vector<std::shared_ptr<Sky>>* GetSkyArray();
-	Light* GetFlashlight();
 
 	FMOD::Sound* GetSoundAtID(int id);
 	std::shared_ptr<Camera> GetCameraAtID(int id);
@@ -542,6 +541,8 @@ public:
 
 	int GetPixelShaderIDByPointer(std::shared_ptr<SimplePixelShader> pixelPointer);
 	int GetVertexShaderIDByPointer(std::shared_ptr<SimpleVertexShader> vertexPointer);
+
+	void BroadcastGlobalEntityEvent(EntityEventType event, std::shared_ptr<void> message = nullptr);
 
 	std::shared_ptr<Sky> currentSky;
 };

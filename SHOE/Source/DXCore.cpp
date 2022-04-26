@@ -2,6 +2,7 @@
 
 #include <WindowsX.h>
 #include <sstream>
+#include "../Headers/Time.h"
 
 // Define the static instance variable so our OS-level 
 // message handling function below can talk to our object
@@ -400,8 +401,8 @@ HRESULT DXCore::Run()
 			Input::GetInstance().Update();
 
 			// The game loop
-			Update(deltaTime, totalTime);
-			Draw(deltaTime, totalTime);
+			Update();
+			Draw();
 
 			// Frame is over, notify the input manager
 			Input::GetInstance().EndOfFrame();
@@ -480,6 +481,10 @@ void DXCore::UpdateTimer()
 
 	// Calculate the total time from start to now
 	totalTime = (float)((currentTime - startTime) * perfCounterSeconds);
+
+	Time::currentTime = currentTime;
+	Time::deltaTime = deltaTime;
+	Time::totalTime = totalTime;
 
 	// Save current time for next frame
 	previousTime = currentTime;

@@ -28,8 +28,8 @@ public:
 	// will be called automatically
 	void Init();
 	void OnResize();
-	void Update(float deltaTime, float totalTime);
-	void Draw(float deltaTime, float totalTime);
+	void Update();
+	void Draw();
 
 	// Loading screen info
 	void DrawLoadingScreen(AMLoadState loadType);
@@ -48,7 +48,7 @@ private:
 
 	// Rendering helper methods
 	void RenderSky();
-	void RenderUI(float deltaTime);
+	void RenderUI();
 	std::unique_ptr<Renderer> renderer;
 
 	//Camera pointer

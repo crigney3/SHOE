@@ -1,5 +1,6 @@
 #include "../Headers/ParticleSystem.h"
 #include "../Headers/GameEntity.h"
+#include "../Headers/Time.h"
 
 std::shared_ptr<SimplePixelShader> ParticleSystem::defaultParticlePixelShader = nullptr;
 std::shared_ptr<SimpleVertexShader> ParticleSystem::defaultParticleVertexShader = nullptr;
@@ -216,18 +217,18 @@ void ParticleSystem::Start()
 	SetParticleComputeShader(defaultParticleDeadListInitComputeShader, ParticleComputeShaderType::DeadListInit);
 }
 
-void ParticleSystem::Update(float deltaTime, float totalTime) {
+void ParticleSystem::Update() {
 	ID3D11UnorderedAccessView* none[8] = {};
 	context->CSSetUnorderedAccessViews(0, 8, none, 0);
 
 	// New Emission
-	timeSinceEmit += deltaTime;
+	timeSinceEmit += Time::deltaTime;
 	while (timeSinceEmit > secondsPerEmission) {
 		int emitCount = (int)(timeSinceEmit / secondsPerEmission);
 		emitCount = min(emitCount, 65535);
 		timeSinceEmit = fmod(timeSinceEmit, secondsPerEmission);
 
-		EmitParticle(totalTime, emitCount);
+		EmitParticle(emitCount);
 	}
 
 	// Array size is equal to num of uavs
@@ -241,7 +242,7 @@ void ParticleSystem::Update(float deltaTime, float totalTime) {
 
 	particleSimComputeShader->SetFloat("speed", this->speed);
 	particleSimComputeShader->SetFloat3("endPos", this->destination);
-	particleSimComputeShader->SetFloat("deltaTime", deltaTime);
+	particleSimComputeShader->SetFloat("deltaTime", Time::deltaTime);
 	particleSimComputeShader->SetFloat("lifeTime", this->particleLifetime);
 	particleSimComputeShader->SetInt("maxParticles", this->maxParticles);
 
@@ -257,7 +258,7 @@ void ParticleSystem::OnDestroy()
 
 }
 
-void ParticleSystem::Draw(std::shared_ptr<Camera> cam, float currentTime, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive)
+void ParticleSystem::Draw(std::shared_ptr<Camera> cam, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive)
 {
 	ID3D11UnorderedAccessView* none[8] = {};
 	context->CSSetUnorderedAccessViews(0, 8, none, 0);
@@ -293,7 +294,7 @@ void ParticleSystem::Draw(std::shared_ptr<Camera> cam, float currentTime, Micros
 
 	particleVertexShader->SetMatrix4x4("view", cam->GetViewMatrix());
 	particleVertexShader->SetMatrix4x4("projection", cam->GetProjectionMatrix());
-	particleVertexShader->SetFloat("currentTime", currentTime);
+	particleVertexShader->SetFloat("currentTime", Time::currentTime);
 	particleVertexShader->SetFloat("scale", this->scale);
 	particleVertexShader->CopyAllBufferData();
 	particlePixelShader->SetFloat4("colorTint", this->colorTint);
@@ -462,7 +463,7 @@ void ParticleSystem::Initialize(int maxParticles)
 	delete[] indices;
 }
 
-void ParticleSystem::EmitParticle(float currentTime, int emitCount) {
+void ParticleSystem::EmitParticle(int emitCount) {
 	particleEmitComputeShader->SetShader();
 
 	particleEmitComputeShader->SetUnorderedAccessView("particles", this->drawListUAV);
@@ -471,7 +472,7 @@ void ParticleSystem::EmitParticle(float currentTime, int emitCount) {
 
 	particleEmitComputeShader->SetFloat3("startPos", this->GetTransform()->GetGlobalPosition());
 	//particleEmitComputeShader->SetFloat3("cameraPos", cam->GetTransform()->GetPosition());
-	particleEmitComputeShader->SetFloat("emitTime", currentTime);
+	particleEmitComputeShader->SetFloat("emitTime", Time::currentTime);
 	particleEmitComputeShader->SetInt("maxParticles", this->maxParticles);
 	particleEmitComputeShader->SetInt("emitCount", emitCount);
 

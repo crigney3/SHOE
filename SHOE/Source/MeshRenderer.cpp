@@ -39,7 +39,7 @@ void MeshRenderer::OnTransform()
 	CalculateBounds();
 }
 
-void MeshRenderer::OnParentTransform()
+void MeshRenderer::OnParentTransform(std::shared_ptr<GameEntity> parent)
 {
 	CalculateBounds();
 }

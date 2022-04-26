@@ -1,4 +1,5 @@
 #include "../Headers/Game.h"
+#include "../Headers/Time.h"
 
 // Needed for a helper function to read compiled shader files from the hard drive
 #pragma comment(lib, "d3dcompiler.lib")
@@ -163,13 +164,13 @@ void Game::SaveSceneAs() {
 	globalAssets.SaveScene("structureTest.json");
 }
 
-void Game::RenderUI(float deltaTime) {
+void Game::RenderUI() {
 	// Reset the gui state to prevent tainted input
 	input.SetGuiKeyboardCapture(false);
 	input.SetGuiMouseCapture(false);
 
 	ImGuiIO& io = ImGui::GetIO();
-	io.DeltaTime = deltaTime;
+	io.DeltaTime = Time::deltaTime;
 	io.DisplaySize.x = (float)this->width;
 	io.DisplaySize.y = (float)this->height;
 	io.KeyCtrl = input.KeyDown(VK_CONTROL);
@@ -820,7 +821,7 @@ void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 		ImGuiTreeNodeFlags_FramePadding)) {
 		int childCount = entity->GetTransform()->GetChildCount();
 		if (childCount > 0) {
-			std::vector<std::shared_ptr<GameEntity>> children = entity->GetTransform()->GetChildrenAsGameEntities();
+			std::vector<std::shared_ptr<GameEntity>> children = entity->GetTransform()->GetChildrenEntities();
 			for (int i = 0; i < childCount; i++) {
 				RenderChildObjectsInUI(children[i]);
 			}
@@ -988,35 +989,32 @@ void Game::OnResize()
 // --------------------------------------------------------
 // Update your game here - user input, move objects, AI, etc.
 // --------------------------------------------------------
-void Game::Update(float deltaTime, float totalTime)
+void Game::Update()
 {
 	audioHandler.GetSoundSystem()->update();
 
-	RenderUI(deltaTime);
+	RenderUI();
 
-	// To untie something from framerate, multiply by deltatime
+	// To untie something from framerate, multiply by Time::deltaTime
 
 	// Quit if the escape key is pressed
 	if (input.TestKeyAction(KeyActions::QuitGame)) Quit();
 
-	for(std::shared_ptr<GameEntity> entity : *globalAssets.GetActiveGameEntities())
-	{
-		entity->Update(deltaTime, totalTime);
-	}
+	globalAssets.BroadcastGlobalEntityEvent(EntityEventType::Update);
 
 	if (movingEnabled) {
-		//globalAssets.GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition((float)sin(totalTime), +2.0f, +0.0f);
-		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+1.5f, (float)sin(totalTime) + 2.5f, +0.0f);
-		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate( 0.0f, 0.0f, -(float)sin(deltaTime));
-		//globalAssets.GetGameEntityByName("Floor Cube")->GetTransform()->SetPosition( (float)sin(deltaTime) + 2.5f, +1.0f, +0.0f);
-		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate( 0.0f, (float)sin(deltaTime), 0.0f);
-		globalAssets.GetGameEntityByName("Scratched Cube")->GetTransform()->Rotate(-(float)sin(deltaTime), 0.0f, 0.0f);
+		//globalAssets.GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition((float)sin(Time::totalTime), +2.0f, +0.0f);
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+1.5f, (float)sin(Time::totalTime) + 2.5f, +0.0f);
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate( 0.0f, 0.0f, -(float)sin(Time::deltaTime));
+		//globalAssets.GetGameEntityByName("Floor Cube")->GetTransform()->SetPosition( (float)sin(Time::deltaTime) + 2.5f, +1.0f, +0.0f);
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate( 0.0f, (float)sin(Time::deltaTime), 0.0f);
+		globalAssets.GetGameEntityByName("Scratched Cube")->GetTransform()->Rotate(-(float)sin(Time::deltaTime), 0.0f, 0.0f);
 
-		globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(totalTime), +0.0f);
+		globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(Time::totalTime), +0.0f);
 
-		globalAssets.GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(-(float)sin(totalTime), -2.0f, +0.0f);
+		globalAssets.GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(-(float)sin(Time::totalTime), -2.0f, +0.0f);
 
-		globalAssets.GetGameEntityByName("Rough Torus")->GetTransform()->Rotate(+0.0f, +0.0f, +1.0f * deltaTime);
+		globalAssets.GetGameEntityByName("Rough Torus")->GetTransform()->Rotate(+0.0f, +0.0f, +1.0f * Time::deltaTime);
 	}
 
 	Flashlight();
@@ -1042,7 +1040,7 @@ void Game::Update(float deltaTime, float totalTime)
 
 	// Flickering is currently broken
 	/*if (flickeringEnabled) {
-		srand((unsigned int)(deltaTime * totalTime));
+		srand((unsigned int)(Time::deltaTime * Time::totalTime));
 		float prevIntensity = globalAssets.globalLights.at(4).intensity;
 		int flickerRand = rand() % 6 + 1;
 		if (flickerRand == 5 && !hasFlickered) {
@@ -1056,8 +1054,8 @@ void Game::Update(float deltaTime, float totalTime)
 		}
 	}*/
 
-	mainCamera->Update(deltaTime, this->hWnd);
-	//flashShadowCamera->Update(deltaTime, this->hWnd);
+	mainCamera->Update(this->hWnd);
+	//flashShadowCamera->Update(this->hWnd);
 }
 
 void Game::DrawLoadingScreen(AMLoadState loadType) {
@@ -1147,7 +1145,7 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 // --------------------------------------------------------
 // Clear the screen, redraw everything, present to the user
 // --------------------------------------------------------
-void Game::Draw(float deltaTime, float totalTime)
+void Game::Draw()
 {
 	if (globalAssets.GetAMLoadState() != INITIALIZING || globalAssets.GetAMLoadState() != SCENE_LOAD) {
 		//Render shadows before anything else
@@ -1157,6 +1155,5 @@ void Game::Draw(float deltaTime, float totalTime)
 
 		renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
 
-		renderer->Draw(mainCamera, totalTime);
-	}
+	renderer->Draw(mainCamera);
 }

@@ -14,8 +14,53 @@ void IComponent::Start()
  * \param deltaTime Time since last frame
  * \param totalTime Time since program start
  */
-void IComponent::Update(float deltaTime, float totalTime)
+void IComponent::Update()
 {
+}
+
+void IComponent::ReceiveEvent(EntityEventType event, std::shared_ptr<void> message)
+{
+	switch (event) {
+	case EntityEventType::Update:
+		Update();
+		break;
+	case EntityEventType::OnEnable:
+		OnEnable();
+		break;
+	case EntityEventType::OnDisable:
+		OnDisable();
+		break;
+	case EntityEventType::OnTransform:
+		OnTransform();
+		break;
+	case EntityEventType::OnMove:
+		OnMove(*std::static_pointer_cast<DirectX::XMFLOAT3>(message));
+		break;
+	case EntityEventType::OnRotate:
+		OnRotate(*std::static_pointer_cast<DirectX::XMFLOAT3>(message));
+		break;
+	case EntityEventType::OnScale:
+		OnScale(*std::static_pointer_cast<DirectX::XMFLOAT3>(message));
+		break;
+	case EntityEventType::OnParentTransform:
+		OnParentTransform(std::static_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnParentMove:
+		OnParentMove(std::static_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnParentRotate:
+		OnParentRotate(std::static_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnParentScale:
+		OnParentScale(std::static_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnCollisionEnter:
+		OnCollisionEnter(std::static_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnTriggerEnter:
+		OnTriggerEnter(std::static_pointer_cast<GameEntity>(message));
+		break;
+	}
 }
 
 /**
@@ -42,16 +87,41 @@ void IComponent::OnTriggerEnter(std::shared_ptr<GameEntity> other)
 }
 
 /**
- * \brief Called when this entity's transform is changed
+ * \brief Called while in a collision with another GameEntity with a collider attached
+ * \param other GameEntity that was collided with
  */
-void IComponent::OnTransform()
+void IComponent::InCollision(std::shared_ptr<GameEntity> other)
 {
 }
 
 /**
- * \brief Called when this parent's transform is changed
+ * \brief Called while in another GameEntity's trigger box
+ * \param other Entity collided with
  */
-void IComponent::OnParentTransform()
+void IComponent::InTrigger(std::shared_ptr<GameEntity> other)
+{
+}
+
+/**
+ * \brief Called on exiting a collision with another GameEntity with a collider attached
+ * \param other GameEntity that was collided with
+ */
+void IComponent::OnCollisionExit(std::shared_ptr<GameEntity> other)
+{
+}
+
+/**
+ * \brief Called on exiting another GameEntity's trigger box
+ * \param other Entity collided with
+ */
+void IComponent::OnTriggerExit(std::shared_ptr<GameEntity> other)
+{
+}
+
+/**
+ * \brief Called when this entity's transform is changed
+ */
+void IComponent::OnTransform()
 {
 }
 
@@ -80,10 +150,48 @@ void IComponent::OnScale(DirectX::XMFLOAT3 delta)
 }
 
 /**
- * \brief Called when this entity's enabled state is changed
- * \param newState bool The new state of the component
+ * \brief Called when a parent's transform is changed
+ * \param parent std::shared_ptr<GameEntity> The parent whose transform was changed
  */
-void IComponent::OnEnabledChanged(bool newState)
+void IComponent::OnParentTransform(std::shared_ptr<GameEntity> parent)
+{
+}
+
+/**
+ * \brief Called when a parent is moved
+ * \param parent std::shared_ptr<GameEntity> The parent who moved
+ */
+void IComponent::OnParentMove(std::shared_ptr<GameEntity> parent)
+{
+}
+
+/**
+ * \brief Called when a parent is rotated
+ * \param parent std::shared_ptr<GameEntity> The parent who rotated
+ */
+void IComponent::OnParentRotate(std::shared_ptr<GameEntity> parent)
+{
+}
+
+/**
+ * \brief Called when a parent is scaled
+ * \param parent std::shared_ptr<GameEntity> The parent who scaled
+ */
+void IComponent::OnParentScale(std::shared_ptr<GameEntity> parent)
+{
+}
+
+/**
+ * \brief Called when this entity is changed from disabled to enabled 
+ */
+void IComponent::OnEnable()
+{
+}
+
+/**
+ * \brief Called when this entity is changed from enabled to disabled
+ */
+void IComponent::OnDisable()
 {
 }
 
@@ -92,10 +200,9 @@ void IComponent::OnEnabledChanged(bool newState)
  * \param gameEntity The GameEntity to be attached to
  * \param hierarchyIsEnabled If that GameEntity is enabled
  */
-void IComponent::Bind(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled)
+void IComponent::Bind(std::shared_ptr<GameEntity> gameEntity)
 {
 	this->gameEntity = gameEntity;
-	this->hierarchyIsEnabled = hierarchyIsEnabled;
 	Start();
 }
 
@@ -112,7 +219,7 @@ void IComponent::Free()
  */
 bool IComponent::IsEnabled()
 {
-	return enabled && hierarchyIsEnabled;
+	return enabled && gameEntity->GetEnableDisable();
 }
 
 /// <summary>
@@ -131,7 +238,8 @@ void IComponent::SetEnabled(bool enabled)
 {
 	if (this->enabled != enabled) {
 		this->enabled = enabled;
-		OnEnabledChanged(enabled);
+		if (IsEnabled()) OnEnable(); 
+		else if(gameEntity->GetEnableDisable()) OnDisable();
 	}
 }
 
@@ -150,13 +258,4 @@ std::shared_ptr<GameEntity> IComponent::GetGameEntity()
 std::shared_ptr<Transform> IComponent::GetTransform()
 {
 	return gameEntity->GetTransform();
-}
-
-/// <summary>
-/// Called when the GameEntity this is attached to changes enabled state
-/// </summary>
-/// <param name="active">Is the GameEntity globally enabled</param>
-void IComponent::UpdateHierarchyIsEnabled(bool active)
-{
-	hierarchyIsEnabled = active;
 }

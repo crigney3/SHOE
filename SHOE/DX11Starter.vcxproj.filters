@@ -123,9 +123,6 @@
     <ClInclude Include="Headers\ComponentManager.h">
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\ComponentPacket.h">
-      <Filter>Header Files\SHOE-Headers\Components</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\ComponentPool.h">
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
@@ -149,6 +146,9 @@
     </ClInclude>
     <ClInclude Include="Headers\Light.h">
       <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Time.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -321,6 +321,9 @@
     </ClCompile>
     <ClCompile Include="Source\Terrain.cpp">
       <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Time.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -181,7 +181,7 @@ public:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMiscEffectSRV(MiscEffectSRVTypes type);
 
     void DrawPointLights();
-    void Draw(std::shared_ptr<Camera> camera, float totalTime);
+    void Draw(std::shared_ptr<Camera> camera);
 
     void SetActiveSky(std::shared_ptr<Sky> sky);
 
