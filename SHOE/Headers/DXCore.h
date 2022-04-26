@@ -70,8 +70,8 @@ public:
 
 	// Pure virtual methods for setup and game functionality
 	virtual void Init() = 0;
-	virtual void Update(float deltaTime, float totalTime) = 0;
-	virtual void Draw(float deltaTime, float totalTime) = 0;
+	virtual void Update() = 0;
+	virtual void Draw() = 0;
 
 	std::string GetFullPathTo(std::string relativeFilePath);
 	std::wstring GetFullPathTo_Wide(std::wstring relativeFilePath);

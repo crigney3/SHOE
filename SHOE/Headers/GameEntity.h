@@ -8,7 +8,6 @@
 #include "Material.h"
 #include "Camera.h"
 #include "ComponentManager.h"
-#include "ComponentPacket.h"
 
 class GameEntity : public std::enable_shared_from_this<GameEntity>
 {
@@ -19,8 +18,11 @@ private:
 	bool hierarchyIsEnabled;
 	bool transformChangedThisFrame;
 
-	std::vector<std::shared_ptr<IComponent>> rawComponentList;
-	std::vector<std::shared_ptr<ComponentPacket>> componentList;
+	std::vector<std::shared_ptr<IComponent>> componentList;
+	std::vector<std::function<void(std::shared_ptr<IComponent>)>> componentDeallocList;
+
+	void PropagateEvent(EntityEventType event, std::shared_ptr<void> message = nullptr);
+	void PropagateEventToChildren(EntityEventType event, std::shared_ptr<void> message = nullptr);
 
 	void UpdateHierarchyIsEnabled(bool active, bool head = false);
 
@@ -31,15 +33,6 @@ public:
 	~GameEntity();
 
 	void Initialize();
-	void Update(float deltaTime, float totalTime);
-	void OnCollisionEnter(std::shared_ptr<GameEntity> other);
-	void OnTriggerEnter(std::shared_ptr<GameEntity> other);
-	void OnTransform();
-	void OnParentTransform();
-	void OnMove(DirectX::XMFLOAT3 delta);
-	void OnRotate(DirectX::XMFLOAT3 delta);
-	void OnScale(DirectX::XMFLOAT3 delta);
-	void OnEnabledChanged(bool newState);
 	
 	std::shared_ptr<Transform> GetTransform();
 
@@ -89,9 +82,9 @@ public:
 template<typename T>
 std::shared_ptr<T> GameEntity::AddComponent()
 {
-	std::shared_ptr<T> component = ComponentManager::Instantiate<T>(shared_from_this(), this->GetHierarchyIsEnabled());
-	componentList.push_back(std::make_shared<ComponentPacket>(component, ComponentManager::Free<T>));
-	rawComponentList.push_back(component);
+	std::shared_ptr<T> component = ComponentManager::Instantiate<T>(shared_from_this());
+	componentList.push_back(component);
+	componentDeallocList.push_back(ComponentManager::Free<T>);
 	return component;
 }
 
@@ -119,9 +112,9 @@ std::shared_ptr<Light> GameEntity::AddComponent<Light>()
 #endif
 		return nullptr;
 	}
-	std::shared_ptr<Light> component = ComponentManager::Instantiate<Light>(shared_from_this(), this->GetHierarchyIsEnabled());
-	componentList.push_back(std::make_shared<ComponentPacket>(component, ComponentManager::Free<Light>));
-	rawComponentList.push_back(component);
+	std::shared_ptr<Light> component = ComponentManager::Instantiate<Light>(shared_from_this());
+	componentList.push_back(component);
+	componentDeallocList.push_back(ComponentManager::Free<Light>);
 	return component;
 }
 
@@ -135,12 +128,12 @@ bool GameEntity::RemoveComponent()
 {
 	for(int i = 0; i < componentList.size(); i++)
 	{
-		if(std::dynamic_pointer_cast<T>(componentList[i]->component) != nullptr)
+		if(std::dynamic_pointer_cast<T>(componentList[i]) != nullptr)
 		{
-			componentList[i]->component->OnDestroy();
-			componentList[i]->deallocator(componentList[i]->component);
+			componentList[i]->OnDestroy();
+			componentDeallocList[i](componentList[i]);
 			componentList.erase(componentList.begin() + i);
-			rawComponentList.erase(rawComponentList.begin() + i);
+			componentDeallocList.erase(componentDeallocList.begin() + i);
 			return true;
 		}
 	}
@@ -165,9 +158,10 @@ bool GameEntity::RemoveComponent<Transform>()
 template<typename T>
 std::shared_ptr<T> GameEntity::GetComponent()
 {
-	for (std::shared_ptr<ComponentPacket> packet : componentList) {
-		if (std::dynamic_pointer_cast<T>(packet->component) != nullptr)
-			return std::dynamic_pointer_cast<T>(packet->component);
+	for (std::shared_ptr<IComponent> component : componentList) {
+		std::shared_ptr<T> c = std::dynamic_pointer_cast<T>(component);
+		if (c != nullptr)
+			return c;
 	}
 	return nullptr;
 }
@@ -191,8 +185,8 @@ template<typename T>
 std::vector<std::shared_ptr<T>> GameEntity::GetComponents()
 {
 	std::vector<std::shared_ptr<T>> components = std::vector<std::shared_ptr<T>>();
-	for (std::shared_ptr<ComponentPacket> packet : componentList) {
-		std::shared_ptr<T> component = std::dynamic_pointer_cast<T>(packet->component);
+	for (std::shared_ptr<IComponent> c : componentList) {
+		std::shared_ptr<T> component = std::dynamic_pointer_cast<T>(c);
 		if (component != nullptr)
 			components.push_back(component);
 	}
@@ -221,14 +215,14 @@ std::shared_ptr<T> GameEntity::GetComponentInChildren()
 	if (component != nullptr)
 		return component;
 
-	for(auto& child : transform->GetChildrenAsGameEntities())
+	for(auto& child : transform->GetChildrenEntities())
 	{
 		component = child->GetComponentInChildren<T>();
 		if (component != nullptr)
 			return component;
 	}
 
-	return std::shared_ptr<T>();
+	return nullptr;
 }
 
 /**
@@ -241,7 +235,7 @@ std::vector<std::shared_ptr<T>> GameEntity::GetComponentsInChildren()
 {
 	std::vector<std::shared_ptr<T>> components = GetComponents<T>();
 
-	for (auto& child : transform->GetChildrenAsGameEntities())
+	for (auto& child : transform->GetChildrenEntities())
 	{
 		components.emplace_back(child->GetComponentsInChildren<T>());
 	}

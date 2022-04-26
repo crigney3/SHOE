@@ -14,7 +14,7 @@ public:
 	void Start() override;
 	void OnDestroy() override;
 	void OnTransform() override;
-	void OnParentTransform() override;
+	void OnParentTransform(std::shared_ptr<GameEntity> parent) override;
 
 	bool DrawBounds;
 

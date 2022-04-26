@@ -11,7 +11,7 @@ template <typename T>
 class ComponentPool
 {
 public:
-	static std::shared_ptr<T> Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
+	static std::shared_ptr<T> Instantiate(std::shared_ptr<GameEntity> gameEntity);
 	static void Free(std::shared_ptr<IComponent> component);
 	static int GetActiveCount();
 	static std::vector<std::shared_ptr<T>> GetAll();
@@ -22,15 +22,13 @@ private:
 	static std::queue<std::shared_ptr<T>> unallocated;
 };
 
-template <> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled);
+template <> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiate(std::shared_ptr<GameEntity> gameEntity);
 
 template<typename T>
-std::vector<std::shared_ptr<T>> ComponentPool<T>::allocated =
-std::vector<std::shared_ptr<T>>();
+std::vector<std::shared_ptr<T>> ComponentPool<T>::allocated = std::vector<std::shared_ptr<T>>();
 
 template<typename T>
-std::queue<std::shared_ptr<T>> ComponentPool<T>::unallocated =
-std::queue<std::shared_ptr<T>>();
+std::queue<std::shared_ptr<T>> ComponentPool<T>::unallocated = std::queue<std::shared_ptr<T>>();
 
 /**
  * \brief Binds an unallocated component from the pool to a GameEntity
@@ -39,7 +37,7 @@ std::queue<std::shared_ptr<T>>();
  * \return A reference to the newly bound component
  */
 template<typename T>
-std::shared_ptr<T> ComponentPool<T>::Instantiate(std::shared_ptr<GameEntity> gameEntity, bool hierarchyIsEnabled)
+std::shared_ptr<T> ComponentPool<T>::Instantiate(std::shared_ptr<GameEntity> gameEntity)
 {
 	//Allocates a new pool if there is no available components
 	if (unallocated.size() == 0) {
@@ -51,7 +49,7 @@ std::shared_ptr<T> ComponentPool<T>::Instantiate(std::shared_ptr<GameEntity> gam
 	std::shared_ptr<T> component = unallocated.front();
 	allocated.emplace_back(component);
 	unallocated.pop();
-	component->Bind(gameEntity, hierarchyIsEnabled);
+	component->Bind(gameEntity);
 	return component;
 }
 
@@ -93,11 +91,11 @@ template<typename T>
 std::vector<std::shared_ptr<T>> ComponentPool<T>::GetAllEnabled()
 {
 	std::vector<std::shared_ptr<T>> enabled = std::vector<std::shared_ptr<T>>();
-	for(int i = 0; i < allocated.size(); i++)
+	for(std::shared_ptr<T> component : allocated)
 	{
-		if(allocated[i]->IsEnabled())
+		if(component->IsEnabled())
 		{
-			enabled.emplace_back(allocated[i]);
+			enabled.emplace_back(component);
 		}
 	}
 	return enabled;

@@ -1,11 +1,12 @@
 #include "../Headers/Camera.h"
 #include "..\Headers\ComponentManager.h"
+#include "../Headers/Time.h"
 
 using namespace DirectX;
 
 Camera::Camera(float x, float y, float z, float aspectRatio, bool projMatrixType, std::string name, CameraType cameraTag)
 {
-	this->transform = ComponentManager::Instantiate<Transform>(nullptr, true);
+	this->transform = ComponentManager::Instantiate<Transform>(nullptr);
 	transform->SetPosition(x, y, z);
 
 	this->fov = XM_PIDIV4;
@@ -23,7 +24,7 @@ Camera::Camera(float x, float y, float z, float aspectRatio, bool projMatrixType
 
 Camera::Camera(DirectX::XMFLOAT3 pos, float aspectRatio, bool projMatrixType, std::string name, CameraType cameraTag)
 {
-	this->transform = ComponentManager::Instantiate<Transform>(nullptr, true);
+	this->transform = ComponentManager::Instantiate<Transform>(nullptr);
 	transform->SetPosition(pos);
 
 	this->fov = XM_PIDIV4;
@@ -45,9 +46,9 @@ Camera::~Camera()
 	ComponentManager::Free<Transform>(transform);
 }
 
-void Camera::Update(float dt, HWND windowHandle)
+void Camera::Update(HWND windowHandle)
 {
-	float speed = dt * moveSpeed;
+	float speed = Time::deltaTime * moveSpeed;
 
 	Input& input = Input::GetInstance();
 
@@ -69,8 +70,8 @@ void Camera::Update(float dt, HWND windowHandle)
 
 	if (input.MouseLeftDown())
 	{
-		float xDiff = this->lookSpeed * dt * input.GetMouseXDelta();
-		float yDiff = this->lookSpeed * dt * input.GetMouseYDelta();
+		float xDiff = this->lookSpeed * Time::deltaTime * input.GetMouseXDelta();
+		float yDiff = this->lookSpeed * Time::deltaTime * input.GetMouseYDelta();
 
 		//TODO: Fix gimbal lock
 		transform->Rotate(yDiff, xDiff, 0);
