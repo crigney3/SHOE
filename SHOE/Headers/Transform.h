@@ -10,7 +10,7 @@ class Transform : public IComponent,  public std::enable_shared_from_this<Transf
 private:
 	std::shared_ptr<Transform> parent;
 	std::vector<std::shared_ptr<Transform>> children = std::vector<std::shared_ptr<Transform>>();
-	std::vector<std::shared_ptr<GameEntity>> childEntites = std::vector<std::shared_ptr<GameEntity>>();
+	std::vector<std::shared_ptr<GameEntity>> childEntities = std::vector<std::shared_ptr<GameEntity>>();
 
 	bool globalsDirty;
 	DirectX::XMFLOAT3 worldPos;
