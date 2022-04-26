@@ -459,7 +459,7 @@ void DXCore::SetVSAssetPaths() {
 	assetPathStrings[13] = "..\\Assets\\Shaders\\";
 }
 
-std::string DXCore::GetAssetPathString(int index) {
+std::string DXCore::GetAssetPathString(AssetPathIndex index) {
 	return assetPathStrings[index];
 }
 

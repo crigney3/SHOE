@@ -153,7 +153,7 @@ void Game::LoadScene() {
 }
 
 void Game::SaveScene() {
-	globalAssets.SaveScene("structurTest.json");
+	globalAssets.SaveScene("structureTest.json");
 }
 
 void Game::SaveSceneAs() {
@@ -1147,12 +1147,14 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 // --------------------------------------------------------
 void Game::Draw()
 {
-	//Render shadows before anything else
-	if (flashMenuToggle) {
-		renderer->RenderShadows(flashShadowCamera, MiscEffectSRVTypes::FLASHLIGHT_SHADOW);
-	}
+	if (globalAssets.GetAMLoadState() != INITIALIZING || globalAssets.GetAMLoadState() != SCENE_LOAD) {
+		//Render shadows before anything else
+		if (flashMenuToggle) {
+			renderer->RenderShadows(flashShadowCamera, MiscEffectSRVTypes::FLASHLIGHT_SHADOW);
+		}
 
-	renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
+		renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
+	}
 
 	renderer->Draw(mainCamera);
 }

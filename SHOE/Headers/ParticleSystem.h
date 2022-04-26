@@ -58,6 +58,9 @@ public:
 	void SetDestination(DirectX::XMFLOAT3 destination);
 	DirectX::XMFLOAT3 GetDestination();
 
+	void SetFilenameKey(std::string filenameKey);
+	std::string GetFilenameKey();
+
 	void SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> shader, ParticleComputeShaderType type);
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetDrawListSRV();
@@ -87,6 +90,8 @@ private:
 	float timeSinceEmit;
 
 	float particleLifetime;
+
+	std::string filenameKey;
 
 	std::shared_ptr<SimplePixelShader> particlePixelShader;
 	std::shared_ptr<SimpleVertexShader> particleVertexShader;

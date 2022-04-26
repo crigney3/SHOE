@@ -44,11 +44,6 @@ Renderer::Renderer(
 	this->ssaoBlurPS = globalAssets.GetPixelShaderByName("SSAOBlurPS");
 	this->ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
 
-	this->VSTerrain = globalAssets.GetVertexShaderByName("TerrainVS");
-	this->PSTerrain = globalAssets.GetPixelShaderByName("TerrainPS");
-	this->terrainMesh = globalAssets.GetMeshByName("TerrainMesh");
-	this->terrainMat = globalAssets.GetTerrainMaterialByName("Forest TMaterial");
-
 	this->drawColliders = true;
 	this->drawColliderTransforms = true;
 
@@ -922,7 +917,9 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		for (int i = 0; i < terrains.size(); i++) {
 			if (!terrains[i]->IsEnabled()) continue;
 
-			std::shared_ptr<TerrainMaterial> terrainMat = globalAssets.GetTerrainMaterialByName("Forest Terrain Material");
+			std::shared_ptr<TerrainMaterial> terrainMat = terrains[i]->GetMaterial();
+			std::shared_ptr<SimplePixelShader> PSTerrain = terrains[i]->GetMaterial()->GetPixelShader();
+			std::shared_ptr<SimpleVertexShader> VSTerrain = terrains[i]->GetMaterial()->GetVertexShader();
 
 			PSTerrain->SetShader();
 			PSTerrain->SetData("lights", Light::GetLightArray(), sizeof(Light) * 64);
@@ -972,11 +969,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 			UINT stride = sizeof(Vertex);
 			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, terrainMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(terrainMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			context->IASetVertexBuffers(0, 1, terrains[i]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(terrains[i]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 			context->DrawIndexed(
-				terrainMesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+				terrains[i]->GetMesh()->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
 				0,     // Offset to the first index we want to use
 				0);    // Offset to add to each index when looking up vertices
 		}

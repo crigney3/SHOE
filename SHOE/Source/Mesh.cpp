@@ -19,7 +19,7 @@ Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCo
 	std::copy(vertexArray, vertexArray + vertices, this->vertexArray);
 	std::copy(indices, indices + indexCount, this->indices);
 
-	CalculateTangents(vertexArray, vertices, indices, indexCount);
+	CalculateTangents(this->vertexArray, vertices, this->indices, this->indexCount);
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
 
@@ -414,6 +414,11 @@ void Mesh::CalculateBounds(Vertex* verts, int numVerts)
 {
 	DirectX::XMFLOAT3* positions = new DirectX::XMFLOAT3[numVerts];
 	for (int i = 0; i < numVerts; i++) positions[i] = verts[i].Position;
+	size_t sizePos = sizeof(positions[0]);
+	sizePos = sizeof(positions[numVerts - 1]);
+	sizePos = sizeof(verts[0]);
+	sizePos = sizeof(DirectX::XMFLOAT3);
+	sizePos = sizeof(bounds);
 	DirectX::BoundingOrientedBox::CreateFromPoints(bounds, numVerts, positions, sizeof(DirectX::XMFLOAT3));
 	delete[] positions;
 }
@@ -452,8 +457,16 @@ std::string Mesh::GetName() {
 	return this->name;
 }
 
+void Mesh::SetName(std::string name) {
+	this->name = name;
+}
+
 std::string Mesh::GetFileNameKey() {
 	return this->filenameKey;
+}
+
+void Mesh::SetFileNameKey(std::string newKey) {
+	this->filenameKey = newKey;
 }
 
 DirectX::BoundingOrientedBox Mesh::GetBounds()

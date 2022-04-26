@@ -7,6 +7,13 @@
 #include <memory>
 #include <vector>
 
+enum PBRTextureTypes {
+	ALBEDO,
+	NORMAL,
+	METAL,
+	ROUGH
+};
+
 class Material
 {
 private:
@@ -32,6 +39,11 @@ private:
 	float indexOfRefraction;
 	float refractionScale;
 
+	std::string albedoFileKey;
+	std::string normalsFileKey;
+	std::string metalFileKey;
+	std::string roughnessFileKey;
+
 public:
 	Material(DirectX::XMFLOAT4 tint,
 			 std::shared_ptr<SimplePixelShader> pix,
@@ -56,8 +68,13 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRoughMap();
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture();
+
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
+	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState);
+
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetClampSamplerState();
+	void SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState);
+
 	float GetTiling();
 	void SetTiling(float uv);
 
@@ -81,6 +98,9 @@ public:
 
 	void SetRefractivePixelShader(std::shared_ptr<SimplePixelShader> refractPix);
 	std::shared_ptr<SimplePixelShader> GetRefractivePixelShader();
+
+	std::string GetTextureFilenameKey(PBRTextureTypes textureType);
+	void SetTextureFilenameKey(PBRTextureTypes textureType, std::string newFileKey);
 };
 
 class TerrainMaterial {
@@ -110,6 +130,12 @@ public:
 	std::string GetName();
 	void SetName(std::string name);
 
+	std::shared_ptr<SimplePixelShader> GetPixelShader();
+	void SetPixelShader(std::shared_ptr<SimplePixelShader> pixShader);
+
+	std::shared_ptr<SimpleVertexShader> GetVertexShader();
+	void SetVertexShader(std::shared_ptr<SimpleVertexShader> vertShader);
+
 	size_t GetMaterialCount();
 
 private:
@@ -118,6 +144,9 @@ private:
 
 	std::string name;
 	std::string blendMapFilenameKey;
+
+	std::shared_ptr<SimplePixelShader> pixShader;
+	std::shared_ptr<SimpleVertexShader> vertShader;
 
 	bool enabled;
 	bool blendMapEnabled;

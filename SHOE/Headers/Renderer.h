@@ -155,12 +155,6 @@ private:
 	// Conditional Drawing
     static bool drawColliders, drawColliderTransforms;
 
-    //Temporary terrain variables
-    std::shared_ptr<SimpleVertexShader> VSTerrain;
-    std::shared_ptr<SimplePixelShader> PSTerrain;
-    std::shared_ptr<Mesh> terrainMesh;
-    std::shared_ptr<TerrainMaterial> terrainMat;
-
     void InitRenderTargetViews();
 
 public:

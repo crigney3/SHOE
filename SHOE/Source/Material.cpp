@@ -84,6 +84,10 @@ Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetSamplerState() {
 	return this->textureState;
 }
 
+void Material::SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState) {
+	this->textureState = texSamplerState;
+}
+
 float Material::GetTiling() {
 	return this->uvTiling;
 }
@@ -92,8 +96,51 @@ void Material::SetTiling(float uv) {
 	this->uvTiling = uv;
 }
 
+std::string Material::GetTextureFilenameKey(PBRTextureTypes textureType) {
+	switch (textureType) {
+		case PBRTextureTypes::ALBEDO:
+			return this->albedoFileKey;
+			break;
+		case PBRTextureTypes::NORMAL:
+			return this->normalsFileKey;
+			break;
+		case PBRTextureTypes::METAL:
+			return this->metalFileKey;
+			break;
+		case PBRTextureTypes::ROUGH:
+			return this->roughnessFileKey;
+			break;
+		default:
+			return "";
+			break;
+	}
+}
+
+void Material::SetTextureFilenameKey(PBRTextureTypes textureType, std::string newFileKey) {
+	switch (textureType) {
+		case PBRTextureTypes::ALBEDO:
+			this->albedoFileKey = newFileKey;
+			break;
+		case PBRTextureTypes::NORMAL:
+			this->normalsFileKey = newFileKey;
+			break;
+		case PBRTextureTypes::METAL:
+			this->metalFileKey = newFileKey;
+			break;
+		case PBRTextureTypes::ROUGH:
+			this->roughnessFileKey = newFileKey;
+			break;
+		default:
+			break;
+	}
+}
+
 Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetClampSamplerState() {
 	return this->clampState;
+}
+
+void Material::SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState) {
+	this->clampState = clampSamplerState;
 }
 
 /// <summary>
@@ -182,7 +229,7 @@ TerrainMaterial::TerrainMaterial(std::string name, Microsoft::WRL::ComPtr<ID3D11
 }
 
 TerrainMaterial::~TerrainMaterial() {
-
+	this->allMaterials.clear();
 }
 
 void TerrainMaterial::SetUsingBlendMap(bool usingBlendMap) {
@@ -253,6 +300,22 @@ std::shared_ptr<Material> TerrainMaterial::GetMaterialByName(std::string name) {
 
 size_t TerrainMaterial::GetMaterialCount() {
 	return this->allMaterials.size();
+}
+
+std::shared_ptr<SimplePixelShader> TerrainMaterial::GetPixelShader() {
+	return this->pixShader;
+}
+
+void TerrainMaterial::SetPixelShader(std::shared_ptr<SimplePixelShader> pixShader) {
+	this->pixShader = pixShader;
+}
+
+std::shared_ptr<SimpleVertexShader> TerrainMaterial::GetVertexShader() {
+	return this->vertShader;
+}
+
+void TerrainMaterial::SetVertexShader(std::shared_ptr<SimpleVertexShader> vertShader) {
+	this->vertShader = vertShader;
 }
 
 #pragma endregion
