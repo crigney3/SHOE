@@ -778,34 +778,64 @@ void Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam)
 {
 	bool hasSelected = false;
 	if (selectedEntity != -1) {
-		std::shared_ptr<MeshRenderer> mesh = globalAssets.GetGameEntityByID(selectedEntity)->GetComponent<MeshRenderer>();
-		if (mesh != nullptr && mesh->IsEnabled()) {
-			context->RSSetState(0); // Unclear if this should be a custom rasterizer state
-			context->OMSetDepthStencilState(0, 0);
+		context->RSSetState(0);
+		context->OMSetDepthStencilState(0, 0);
 
-			context->OMSetRenderTargets(1, outlineRTV.GetAddressOf(), 0);
+		VSShadow->SetShader();
+		VSShadow->SetMatrix4x4("view", cam->GetViewMatrix());
+		VSShadow->SetMatrix4x4("projection", cam->GetProjectionMatrix());
+		VSShadow->SetMatrix4x4("world", globalAssets.GetGameEntityByID(selectedEntity)->GetTransform()->GetWorldMatrix());
+		VSShadow->CopyAllBufferData();
 
-			VSShadow->SetShader();
-			VSShadow->SetMatrix4x4("view", cam->GetViewMatrix());
-			VSShadow->SetMatrix4x4("projection", cam->GetProjectionMatrix());
-			VSShadow->SetMatrix4x4("world", mesh->GetTransform()->GetWorldMatrix());
-			VSShadow->CopyAllBufferData();
+		solidColorPS->SetShader();
+		solidColorPS->SetFloat3("Color", XMFLOAT3(1.0f, 1.0f, 1.0f));
+		solidColorPS->CopyAllBufferData();
 
-			solidColorPS->SetShader();
-			solidColorPS->SetFloat3("Color", XMFLOAT3(1.0f, 1.0f, 1.0f));
-			solidColorPS->CopyAllBufferData();
+		context->OMSetRenderTargets(1, outlineRTV.GetAddressOf(), 0);
 
-			UINT stride = sizeof(Vertex);
-			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+		UINT stride = sizeof(Vertex);
+		UINT offset = 0;
 
-			context->DrawIndexed(
-				mesh->GetMesh()->GetIndexCount(),
-				0,
-				0);
+		std::vector<std::shared_ptr<MeshRenderer>> meshes = globalAssets.GetGameEntityByID(selectedEntity)->GetComponents<MeshRenderer>();
+		for (std::shared_ptr<MeshRenderer> mesh : meshes) {
+			if (mesh->IsEnabled()) {
+				context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+				context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
-			hasSelected = true;
+				context->DrawIndexed(
+					mesh->GetMesh()->GetIndexCount(),
+					0,
+					0);
+
+				hasSelected = true;
+			}
+		}
+
+		context->IASetVertexBuffers(0, 1, sphereMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(sphereMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+		std::vector<std::shared_ptr<ParticleSystem>> particles = globalAssets.GetGameEntityByID(selectedEntity)->GetComponents<ParticleSystem>();
+		for (std::shared_ptr<ParticleSystem> particleSystem : particles) {
+			if (particleSystem->IsEnabled()) {
+				context->DrawIndexed(
+					sphereMesh->GetIndexCount(),
+					0,
+					0);
+
+				hasSelected = true;
+			}
+		}
+
+		std::vector<std::shared_ptr<Light>> lights = globalAssets.GetGameEntityByID(selectedEntity)->GetComponents<Light>();
+		for (std::shared_ptr<Light> light : lights) {
+			if (light->IsEnabled()) {
+				context->DrawIndexed(
+					sphereMesh->GetIndexCount(),
+					0,
+					0);
+
+				hasSelected = true;
+			}
 		}
 	}
 
