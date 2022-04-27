@@ -2186,6 +2186,7 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("ParticlesPS", "PSParticles.cso");
 	CreatePixelShader("TextureSamplePS", "PSTextureSample.cso");
 	CreatePixelShader("RefractivePS", "PSRefractive.cso");
+	CreatePixelShader("OutlinePS", "PSSilhouette.cso");
 
 	// Make compute shaders
 	CreateComputeShader("ParticleMoveCS", "CSParticleFlow.cso");
