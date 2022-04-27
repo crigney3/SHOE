@@ -72,6 +72,8 @@ Game::~Game()
 	delete& AudioHandler::GetInstance();
 
 	delete loadingSpriteBatch;
+	delete loadingMutex;
+	delete notification;
 }
 
 // --------------------------------------------------------
@@ -149,11 +151,49 @@ void Game::Init()
 }
 
 void Game::LoadScene() {
-	globalAssets.LoadScene("structureTest.json");
+	globalAssets.SetAMLoadState(AMLoadState::SCENE_LOAD);
+
+#if defined(DEBUG) || defined(_DEBUG)
+	printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
+#endif
+
+	// Start the loading thread and the loading screen thread
+	std::thread loadingThread = std::thread([this] { globalAssets.LoadScene("structureTest.json"); });
+	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(globalAssets.GetAMLoadState()); });
+
+	// Once they've stopped passing control back and forth, join them
+	// to the main thread
+	screenThread.join();
+	loadingThread.join();
+
+#if defined(DEBUG) || defined(_DEBUG)
+	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
+#endif
+
+	mainCamera = globalAssets.GetMainCamera();
+	mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
+	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
+	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
+
+	Entities = globalAssets.GetActiveGameEntities();
+
+	skies = globalAssets.GetSkyArray();
+
+	renderer.reset();
+
+	//With everything initialized, start the renderer
+	renderer = std::make_unique<Renderer>(height,
+										  width,
+										  device,
+										  context,
+										  swapChain,
+										  backBufferRTV,
+										  depthStencilView);
 }
 
 void Game::SaveScene() {
 	globalAssets.SaveScene("structureTest.json");
+
 }
 
 void Game::SaveSceneAs() {
@@ -454,6 +494,8 @@ void Game::RenderUI() {
 				ImGui::Checkbox("Enabled ", &terrainEnabled);
 				if (terrainEnabled != terrain->IsLocallyEnabled())
 					terrain->SetEnabled(terrainEnabled);
+
+				ImGui::Checkbox("Render Bounds ", &terrain->DrawBounds);
 			}
 
 			if (std::dynamic_pointer_cast<Collider>(componentList[c]) != nullptr)
@@ -839,7 +881,7 @@ void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 				int payload_n = *(const int*)payload->Data;
 
 				// Logic to parent objects and reorder list
-				std::shared_ptr<GameEntity> sourceEntity = globalAssets.GetGameEntityByID(payload_n);
+				std::shared_ptr<GameEntity> sourceEntity = globalAssets.GetGameEntityAtID(payload_n);
 
 				sourceEntity->GetTransform()->SetParent(entity->GetTransform());
 
@@ -1075,14 +1117,14 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 					std::rethrow_exception(globalAssets.GetLoadingException());
 				}
 				catch (const std::exception& e) {
-					loadedObjectString = "Last Object: " + globalAssets.GetLastLoadedObject() + " Failed to Load! Error is printed to DBG console.";
+					loadedObjectString = globalAssets.GetLastLoadedObject() + " Failed to Load! Error is printed to DBG console.";
 #if defined(DEBUG) || defined(_DEBUG)
 					printf(e.what());
 #endif
 				}
 			}
 			else {
-				loadedObjectString = "Last Object Loaded: " + globalAssets.GetLastLoadedObject();
+				loadedObjectString = "Loading Object: " + globalAssets.GetLastLoadedObject();
 			}
 
 			context->ClearRenderTargetView(backBufferRTV.Get(), color);

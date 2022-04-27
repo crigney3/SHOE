@@ -12,7 +12,6 @@
 
 // Categories:
 #define ENTITIES "en" // category - only used to fetch actual data
-#define COMPONENTS "cm" // category - only used to fetch actual data
 #define MESHES "m" // category - only used to fetch actual data
 #define MATERIALS "a" // category - only used to fetch actual data
 #define VERTEX_SHADERS "vS" // category - only used to fetch actual data
@@ -24,6 +23,7 @@
 #define SKIES "s" // category - only used to fetch actual data
 #define SOUNDS "sO" // category - only used to fetch actual data
 #define TERRAIN_MATERIALS "tM" // category - only used to fetch actual data
+#define TERRAIN_ENTITIES "tE" // category - only used to fetch actual data
 
 // Entities:
 #define ENTITY_NAME "n" // string
@@ -31,8 +31,15 @@
 #define ENTITY_HIERARCHY_ENABLED "hE" // bool
 #define ENTITY_ATTACHED_LIGHTS "aL" // deprecated
 #define COMPONENT_TYPE "ct" // int
-#define MESH_COMPONENT_INDEX "mCI" // int
-#define MATERIAL_COMPONENT_INDEX "aCI" // int
+#define COMPONENTS "cm" // category - only used to fetch actual data
+
+// Component Types:
+#define CO_TRANSFORM_TYPE 0
+#define CO_COLLIDER_TYPE 1
+#define CO_TERRAIN_TYPE 2
+#define CO_PARTICLE_TYPE 3
+#define CO_LIGHT_TYPE 4
+#define CO_MESHRENDERER_TYPE 5
 
 // Light Components:
 #define LIGHT_TYPE "lT" // int
@@ -45,6 +52,8 @@
 // Mesh Renderer Components:
 #define MESH_OBJECT "mO" // category - only used to fetch actual data
 #define MATERIAL_OBJECT "mA" // category - only used to fetch actual data
+#define MESH_COMPONENT_INDEX "mCI" // int
+#define MATERIAL_COMPONENT_INDEX "aCI" // int
 
 // Mesh Data:
 
@@ -65,7 +74,7 @@
 #define MAT_REFRACTION_SCALE "aRS" // float
 #define MAT_COLOR_TINT "aCT" // float array 4
 #define MAT_PIXEL_SHADER "aPS" // int
-#define MAT_REFRACTION_PIXEL_SHADER "aPS" // int
+#define MAT_REFRACTION_PIXEL_SHADER "aRP" // int
 #define MAT_VERTEX_SHADER "aVS" // int
 #define MAT_TEXTURE_OR_ALBEDO_MAP "aAM" // string 
 #define MAT_NORMAL_MAP "aNM" // string
@@ -330,6 +339,7 @@ private:
 	LoadingNotifications loaded;
 	// Helper functions for threads
 	void SetLoadedAndWait(std::string category, std::string object, std::exception_ptr error = NULL);
+	void SetLoadingAndWait(std::string category, std::string object);
 	AMLoadState assetManagerLoadState;
 	bool singleLoadComplete;
 
@@ -427,6 +437,13 @@ public:
 												 unsigned int mapWidth = 512, 
 												 unsigned int mapHeight = 512, 
 												 float heightScale = 25.0f);
+	std::shared_ptr<Terrain> CreateTerrainOnEntity(std::shared_ptr<GameEntity> entityToEdit,
+												   const char* heightmap, 
+												   std::shared_ptr<TerrainMaterial> material, 
+												   std::string name = "Terrain", 
+												   unsigned int mapWidth = 512, 
+												   unsigned int mapHeight = 512, 
+												   float heightScale = 25.0f);
 	std::shared_ptr<Terrain> CreateTerrainEntity(std::shared_ptr<Mesh> terrainMesh, 
 												 std::shared_ptr<TerrainMaterial> material, 
 												 std::string name = "Terrain");
@@ -536,8 +553,9 @@ public:
 	std::shared_ptr<SimpleVertexShader> GetVertexShaderAtID(int id);
 	std::shared_ptr<SimplePixelShader> GetPixelShaderAtID(int id);
 	std::shared_ptr<SimpleComputeShader> GetComputeShaderAtID(int id);
-	std::shared_ptr<GameEntity> GetGameEntityByID(int id);
+	std::shared_ptr<GameEntity> GetGameEntityAtID(int id);
 	std::shared_ptr<Sky> GetSkyAtID(int id);
+	std::shared_ptr<TerrainMaterial> GetTerrainMaterialAtID(int id);
 
 	int GetPixelShaderIDByPointer(std::shared_ptr<SimplePixelShader> pixelPointer);
 	int GetVertexShaderIDByPointer(std::shared_ptr<SimpleVertexShader> vertexPointer);
