@@ -39,6 +39,7 @@ Renderer::Renderer(
 	this->solidColorPS = globalAssets.GetPixelShaderByName("SolidColorPS");
 	this->perFramePS = globalAssets.GetPixelShaderByName("NormalsPS");
 	this->textureSamplePS = globalAssets.GetPixelShaderByName("TextureSamplePS");
+	this->outlinePS = globalAssets.GetPixelShaderByName("OutlinePS");
 
 	this->ssaoPS = globalAssets.GetPixelShaderByName("SSAOPS");
 	this->ssaoBlurPS = globalAssets.GetPixelShaderByName("SSAOBlurPS");
@@ -55,7 +56,7 @@ Renderer::Renderer(
 	colliderRSdesc.DepthBias = 100;
 	colliderRSdesc.DepthBiasClamp = 0.0f;
 	colliderRSdesc.SlopeScaledDepthBias = 10.0f;
-	device->CreateRasterizerState(&colliderRSdesc, &colliderRasterizer);
+	device->CreateRasterizerState(&colliderRSdesc, &outlineRasterizer);
 
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
@@ -137,6 +138,15 @@ void Renderer::InitRenderTargetViews() {
 	device->CreateRenderTargetView(compositeTexture.Get(), &compositeRTVDesc, renderTargetRTVs[RTVTypes::COMPOSITE].GetAddressOf());
 
 	device->CreateShaderResourceView(compositeTexture.Get(), 0, renderTargetSRVs[RTVTypes::COMPOSITE].GetAddressOf());
+
+	finalCompositeTexture.Reset();
+	renderTargetRTVs[RTVTypes::FINAL_COMPOSITE].Reset();
+	renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].Reset();
+
+	device->CreateTexture2D(&compositeTexDesc, 0, finalCompositeTexture.GetAddressOf());
+	device->CreateRenderTargetView(finalCompositeTexture.Get(), &compositeRTVDesc, renderTargetRTVs[RTVTypes::FINAL_COMPOSITE].GetAddressOf());
+
+	device->CreateShaderResourceView(finalCompositeTexture.Get(), 0, renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].GetAddressOf());
 
 	silhouetteTexture.Reset();
 	renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].Reset();
@@ -259,6 +269,30 @@ void Renderer::InitRenderTargetViews() {
 	prePassDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // No depth writing - unsure whether to keep this here
 	prePassDepthDesc.DepthFunc = D3D11_COMPARISON_LESS; // Get only the closest pixels
 	device->CreateDepthStencilState(&prePassDepthDesc, prePassDepthState.GetAddressOf());
+
+	//Set up outlining buffers
+	outlineTexture.Reset();
+	outlineRTV.Reset();
+	outlineSRV.Reset();
+
+	D3D11_TEXTURE2D_DESC basicTexDesc = {};
+	basicTexDesc.Width = windowWidth;
+	basicTexDesc.Height = windowHeight;
+	basicTexDesc.ArraySize = 1;
+	basicTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	basicTexDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	basicTexDesc.MipLevels = 1;
+	basicTexDesc.MiscFlags = 0;
+	basicTexDesc.SampleDesc.Count = 1;
+	device->CreateTexture2D(&basicTexDesc, 0, &outlineTexture);
+
+	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	rtvDesc.Texture2D.MipSlice = 0;
+	rtvDesc.Format = basicTexDesc.Format;
+	device->CreateRenderTargetView(outlineTexture.Get(), &rtvDesc, outlineRTV.GetAddressOf());
+
+	device->CreateShaderResourceView(outlineTexture.Get(), 0, outlineSRV.GetAddressOf());
 
 	InitShadows();
 }
@@ -462,7 +496,7 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 	VSShadow->SetMatrix4x4("view", sourceCam->GetViewMatrix());
 	VSShadow->SetMatrix4x4("projection", sourceCam->GetProjectionMatrix());
 
-	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAllEnabled<MeshRenderer>();
+	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAll<MeshRenderer>();
 
 	switch(type) {
 		case MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS:
@@ -607,7 +641,7 @@ void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 	basicVS->SetMatrix4x4("projection", mainCamera->GetProjectionMatrix());
 
 	//Draw in wireframe mode
-	context->RSSetState(colliderRasterizer.Get());
+	context->RSSetState(outlineRasterizer.Get());
 
 	// Grab the list of colliders
 	const std::vector<std::shared_ptr<Collider>> colliders = ComponentManager::GetAllEnabled<Collider>();
@@ -697,7 +731,7 @@ void Renderer::RenderMeshBounds(std::shared_ptr<Camera> cam)
 	basicVS->SetMatrix4x4("projection", mainCamera->GetProjectionMatrix());
 
 	//Draw in wireframe mode
-	context->RSSetState(colliderRasterizer.Get());
+	context->RSSetState(outlineRasterizer.Get());
 
 	// Grab the list of meshes
 	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAllEnabled<MeshRenderer>();
@@ -740,6 +774,91 @@ void Renderer::RenderMeshBounds(std::shared_ptr<Camera> cam)
 	context->RSSetState(0);
 }
 
+void Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam)
+{
+	bool hasSelected = false;
+	if (selectedEntity != -1) {
+		context->RSSetState(0);
+		context->OMSetDepthStencilState(0, 0);
+
+		VSShadow->SetShader();
+		VSShadow->SetMatrix4x4("view", cam->GetViewMatrix());
+		VSShadow->SetMatrix4x4("projection", cam->GetProjectionMatrix());
+		VSShadow->SetMatrix4x4("world", globalAssets.GetGameEntityByID(selectedEntity)->GetTransform()->GetWorldMatrix());
+		VSShadow->CopyAllBufferData();
+
+		solidColorPS->SetShader();
+		solidColorPS->SetFloat3("Color", XMFLOAT3(1.0f, 1.0f, 1.0f));
+		solidColorPS->CopyAllBufferData();
+
+		context->OMSetRenderTargets(1, outlineRTV.GetAddressOf(), 0);
+
+		UINT stride = sizeof(Vertex);
+		UINT offset = 0;
+
+		std::vector<std::shared_ptr<MeshRenderer>> meshes = globalAssets.GetGameEntityByID(selectedEntity)->GetComponents<MeshRenderer>();
+		for (std::shared_ptr<MeshRenderer> mesh : meshes) {
+			if (mesh->IsEnabled()) {
+				context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+				context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+				context->DrawIndexed(
+					mesh->GetMesh()->GetIndexCount(),
+					0,
+					0);
+
+				hasSelected = true;
+			}
+		}
+
+		context->IASetVertexBuffers(0, 1, sphereMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(sphereMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+		std::vector<std::shared_ptr<ParticleSystem>> particles = globalAssets.GetGameEntityByID(selectedEntity)->GetComponents<ParticleSystem>();
+		for (std::shared_ptr<ParticleSystem> particleSystem : particles) {
+			if (particleSystem->IsEnabled()) {
+				context->DrawIndexed(
+					sphereMesh->GetIndexCount(),
+					0,
+					0);
+
+				hasSelected = true;
+			}
+		}
+
+		std::vector<std::shared_ptr<Light>> lights = globalAssets.GetGameEntityByID(selectedEntity)->GetComponents<Light>();
+		for (std::shared_ptr<Light> light : lights) {
+			if (light->IsEnabled()) {
+				context->DrawIndexed(
+					sphereMesh->GetIndexCount(),
+					0,
+					0);
+
+				hasSelected = true;
+			}
+		}
+	}
+
+	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), 0);
+
+	fullscreenVS->SetShader();
+
+	outlinePS->SetShader();
+	outlinePS->SetShaderResourceView("backBuffer", renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].Get());
+	outlinePS->SetShaderResourceView("FilledMeshTexture", outlineSRV.Get());
+	outlinePS->SetSamplerState("samplerOptions", globalAssets.GetMaterialAtID(0)->GetClampSamplerState().Get());
+	outlinePS->SetFloat3("borderColor", XMFLOAT3(1, 0, 1));
+	outlinePS->SetFloat("pixelWidth", 1.0f / windowWidth);
+	outlinePS->SetFloat("pixelHeight", 1.0f / windowHeight);
+	outlinePS->SetInt("borderWidth", 1);
+	outlinePS->SetInt("hasSelected", hasSelected);
+	outlinePS->CopyAllBufferData();
+
+	context->Draw(3, 0);
+
+	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+}
+
 bool Renderer::GetDrawColliderStatus() { return drawColliders; }
 void Renderer::SetDrawColliderStatus(bool _newState) { drawColliders = _newState; }
 
@@ -766,6 +885,8 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	}
 	const float depths[4] = { 1,0,0,0 };
 	context->ClearRenderTargetView(renderTargetRTVs[RTVTypes::DEPTHS].Get(), depths);
+
+	context->ClearRenderTargetView(outlineRTV.Get(), color);
 
 	// This fills in all renderTargets used before post-processing
 	// Includes Colors, Ambient, Normals, and Depths
@@ -1036,7 +1157,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	}
 	else
 	{
-		currentRTV = backBufferRTV;
+		currentRTV = renderTargetRTVs[RTVTypes::FINAL_COMPOSITE];
 	}
 
 	renderTargets[0] = currentRTV.Get();
@@ -1079,7 +1200,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 		// For the refraction merge, we need to store the composite
 		// to a buffer that can be read by the GPU
-		renderTargets[0] = backBufferRTV.Get();
+		renderTargets[0] = renderTargetRTVs[RTVTypes::FINAL_COMPOSITE].Get();
 		context->OMSetRenderTargets(1, renderTargets, 0);
 		
 		textureSamplePS->SetShader();
@@ -1091,7 +1212,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		RenderDepths(mainCamera, MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS);
 
 		// Then loop through and draw refractive objects
-		renderTargets[0] = backBufferRTV.Get();
+		renderTargets[0] = renderTargetRTVs[RTVTypes::FINAL_COMPOSITE].Get();
 		context->OMSetRenderTargets(1, renderTargets, depthBufferDSV.Get());
 
 		// Currently, all refractive shaders are the same, so this is fine
@@ -1157,6 +1278,8 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 			context->DrawIndexed(activeMeshes[meshIt]->GetMesh()->GetIndexCount(), 0, 0);
 		}
 	}
+
+	RenderSelectedHighlight(cam);
 
 	context->OMSetBlendState(0, 0, 0xFFFFFFFF);
 	context->OMSetDepthStencilState(0, 0);

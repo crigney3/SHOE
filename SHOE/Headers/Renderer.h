@@ -11,7 +11,8 @@
 // 5 - SSAO with blur fix
 // 6 - Refraction Silhouette Render
 // 7 - Render of pre-transparency composite
-// 8 - Count: always the last one, tracks size
+// 8 - Render of post-transparency composite
+// 9 - Count: always the last one, tracks size
 enum RTVTypes 
 {
     COLORS_NO_AMBIENT,
@@ -22,6 +23,7 @@ enum RTVTypes
     SSAO_BLUR,
     REFRACTION_SILHOUETTE,
     COMPOSITE,
+    FINAL_COMPOSITE,
 
     RTV_TYPE_COUNT
 };
@@ -94,6 +96,7 @@ private:
     std::shared_ptr<SimplePixelShader> solidColorPS;
     std::shared_ptr<SimplePixelShader> perFramePS;
     std::shared_ptr<SimplePixelShader> textureSamplePS;
+    std::shared_ptr<SimplePixelShader> outlinePS;
 
     //General meshes
     std::shared_ptr<Mesh> cubeMesh;
@@ -108,7 +111,7 @@ private:
     std::shared_ptr<SimpleVertexShader> VSShadow;
 
     //components for colliders
-    Microsoft::WRL::ComPtr<ID3D11RasterizerState> colliderRasterizer;
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> outlineRasterizer;
 
     // Offset and random values for SSAO blur and texture
     Microsoft::WRL::ComPtr<ID3D11Texture2D> ssaoRandomTex;
@@ -135,6 +138,7 @@ private:
     // Composite and Silhouette also need textures
     Microsoft::WRL::ComPtr<ID3D11Texture2D> compositeTexture;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> silhouetteTexture;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> finalCompositeTexture;
 
     unsigned int windowHeight;
     unsigned int windowWidth;
@@ -151,6 +155,10 @@ private:
     //Camera pointers for shadows
     std::shared_ptr<Camera> flashShadowCamera;
     std::shared_ptr<Camera> mainShadowCamera;
+
+    //Selected Entity Outline targets
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> outlineTexture;
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> outlineRTV;
 
 	// Conditional Drawing
     static bool drawColliders, drawColliderTransforms;
@@ -190,9 +198,13 @@ public:
     void RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type);
     void RenderColliders(std::shared_ptr<Camera> cam);
     void RenderMeshBounds(std::shared_ptr<Camera> cam);
+    void RenderSelectedHighlight(std::shared_ptr<Camera> cam);
 
     static bool GetDrawColliderStatus();
     static void SetDrawColliderStatus(bool _newState);
 	static bool GetDrawColliderTransformsStatus();
     static void SetDrawColliderTransformsStatus(bool _newState);
+
+    int selectedEntity = -1;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> outlineSRV;
 };

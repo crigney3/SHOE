@@ -66,7 +66,7 @@ Game::~Game()
 	ImGui_ImplDX11_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
-	
+
 	delete& Input::GetInstance();
 	delete& AssetManager::GetInstance();
 	delete& AudioHandler::GetInstance();
@@ -95,7 +95,7 @@ void Game::Init()
 #endif
 
 	// Start the loading thread and the loading screen thread
-	std::thread loadingThread = std::thread( [this] { globalAssets.Initialize(device, context, notification, loadingMutex, hWnd); });
+	std::thread loadingThread = std::thread([this] { globalAssets.Initialize(device, context, notification, loadingMutex, hWnd); });
 	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(globalAssets.GetAMLoadState()); });
 
 	// Once they've stopped passing control back and forth, join them
@@ -125,11 +125,12 @@ void Game::Init()
 	rtvWindowEnabled = false;
 
 	flashMenuToggle = false;
+	entityUIIndex = -1;
 	camUIIndex = 0;
 	skyUIIndex = 0;
 
 	skies = globalAssets.GetSkyArray();
-	
+
 	// Tell the input assembler stage of the pipeline what kind of
 	// geometric primitives (points, lines or triangles) we want to draw.  
 	// Essentially: "What kind of shape should the GPU draw with our data?"
@@ -317,7 +318,7 @@ void Game::RenderUI() {
 			if (entityUIIndex < 0) entityUIIndex = globalAssets.GetGameEntityArraySize() - 1;
 		};
 		ImGui::SameLine();
-		
+
 		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
 			entityUIIndex++;
 			if (entityUIIndex > globalAssets.GetGameEntityArraySize() - 1) entityUIIndex = 0;
@@ -353,19 +354,19 @@ void Game::RenderUI() {
 		currentEntity->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
 		currentEntity->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
 
-		for(int c = 0; c < componentList.size(); c++)
+		for (int c = 0; c < componentList.size(); c++)
 		{
 			ImGui::Separator();
 			ImGui::PushID(101 + c);
 
-			if(std::dynamic_pointer_cast<MeshRenderer>(componentList[c]) != nullptr)
+			if (std::dynamic_pointer_cast<MeshRenderer>(componentList[c]) != nullptr)
 			{
 				std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(componentList[c]);
 				ImGui::Text("MeshRenderer");
 
 				bool meshEnabled = meshRenderer->IsLocallyEnabled();
 				ImGui::Checkbox("Enabled ", &meshEnabled);
-				if(meshEnabled != meshRenderer->IsLocallyEnabled())
+				if (meshEnabled != meshRenderer->IsLocallyEnabled())
 					meshRenderer->SetEnabled(meshEnabled);
 
 				ImGui::Checkbox("Render Bounds ", &meshRenderer->DrawBounds);
@@ -577,7 +578,7 @@ void Game::RenderUI() {
 		// Dropdown and Collapsible Header to add components
 		if (ImGui::CollapsingHeader("Add Component")) {
 			static ComponentTypes selectedComponent = ComponentTypes::MESH_RENDERER;
-			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Transform", "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light"};
+			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Transform", "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light" };
 
 			if (ImGui::BeginListBox("Component Listbox")) {
 				for (int i = 0; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
@@ -633,13 +634,13 @@ void Game::RenderUI() {
 				audioHandler.BasicPlaySound(globalAssets.GetSoundAtID(i));
 			}
 		}
-		
+
 		ImGui::End();
 	}
 
 	if (objHierarchyEnabled) {
 		// Display the UI for setting parents
-		if (ImGui::TreeNodeEx("GameObjects", 
+		if (ImGui::TreeNodeEx("GameObjects",
 			ImGuiTreeNodeFlags_DefaultOpen |
 			ImGuiTreeNodeFlags_FramePadding)) {
 			for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
@@ -686,6 +687,11 @@ void Game::RenderUI() {
 			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
 			ImGui::Text("Render Depth Prepass (used for optimization)");
 			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+		}
+		
+		if (ImGui::CollapsingHeader("Selected Entity Filled View")) {
+			ImGui::Text("Selected Entity");
+			ImGui::Image(renderer->outlineSRV.Get(), ImVec2(500, 300));
 		}
 
 		ImGui::End();
@@ -747,42 +753,21 @@ void Game::RenderUI() {
 
 		ImGui::End();
 	}
-	
+
 	if (collidersWindowEnabled)
 	{
 		ImGui::Begin("Collider Inspector");
-		
-		// Currently commented as it's not needed for the bulk operations,
-		// and has been moved to the components UI
-		/*static int colliderUIIndex = 0;
-		std::shared_ptr<Collider> currentCollider = ComponentManager::GetAll<Collider>()[colliderUIIndex];
-		std::string indexStr = std::to_string(colliderUIIndex) + " - " + currentCollider->GetOwner()->GetName();
-		std::string node = "Editing collider " + indexStr;
-		ImGui::Text(node.c_str());
-		
-		if (ImGui::ArrowButton("Previous Collider", ImGuiDir_Left)) {
-			colliderUIIndex--;
-			if (colliderUIIndex < 0) colliderUIIndex = ComponentManager::GetAll<Collider>().size() - 1;
-		};
-		ImGui::SameLine();
-		
-		if (ImGui::ArrowButton("Next Collider", ImGuiDir_Right)) {
-			colliderUIIndex++;
-			if (colliderUIIndex > ComponentManager::GetAll<Collider>().size() - 1) colliderUIIndex = 0;
-		};*/
 
 		ImGui::Text("Collider bulk operations:");
 
 		bool UIDrawColliders = Renderer::GetDrawColliderStatus();
 		ImGui::Checkbox("Draw Colliders?", &UIDrawColliders);
-		UIDrawColliders ? Renderer::SetDrawColliderStatus(true) : Renderer::SetDrawColliderStatus(false);
-		
+		Renderer::SetDrawColliderStatus(UIDrawColliders);
+
 		bool UIDrawColliderTransforms = Renderer::GetDrawColliderTransformsStatus() & UIDrawColliders;
 		ImGui::Checkbox("Draw Colliders' Transforms?", &UIDrawColliderTransforms);
-		UIDrawColliderTransforms ? Renderer::SetDrawColliderTransformsStatus(true) : Renderer::SetDrawColliderTransformsStatus(false);
+		Renderer::SetDrawColliderTransformsStatus(UIDrawColliderTransforms);
 
-		// Don't edit collider transforms from the UI - they use the main entity transform
-		
 		ImGui::End();
 	}
 
@@ -860,7 +845,7 @@ void Game::RenderUI() {
 
 void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 	std::string nodeName = entity->GetName();
-	if (ImGui::TreeNodeEx(nodeName.c_str(), 
+	if (ImGui::TreeNodeEx(nodeName.c_str(),
 		ImGuiTreeNodeFlags_DefaultOpen |
 		ImGuiTreeNodeFlags_FramePadding)) {
 		int childCount = entity->GetTransform()->GetChildCount();
@@ -877,7 +862,7 @@ void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 		}
 
 		if (ImGui::BeginDragDropTarget()) {
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PARENTING_CELL")) 
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PARENTING_CELL"))
 			{
 				IM_ASSERT(payload->DataSize == sizeof(int));
 				int payload_n = *(const int*)payload->Data;
@@ -947,7 +932,7 @@ std::shared_ptr<GameEntity> Game::GetClickedEntity()
 	float distToHit = mainCamera->GetFarDist();
 	float rayLength = mainCamera->GetFarDist();
 
-	for (std::shared_ptr<MeshRenderer> meshRenderer : ComponentManager::GetAllEnabled<MeshRenderer>()) 
+	for (std::shared_ptr<MeshRenderer> meshRenderer : ComponentManager::GetAllEnabled<MeshRenderer>())
 	{
 		if (meshRenderer->GetBounds().Intersects(origin, direction, rayLength)) {
 			std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
@@ -955,7 +940,7 @@ std::shared_ptr<GameEntity> Game::GetClickedEntity()
 			Vertex* vertices = mesh->GetVertexArray();
 			unsigned int* indices = mesh->GetIndexArray();
 			float distToTri;
-			
+
 			for (int i = 0; i < mesh->GetIndexCount(); i += 3) {
 				XMVECTOR vertex0 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i]].Position), worldMatrix);
 				XMVECTOR vertex1 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 1]].Position), worldMatrix);
@@ -1002,13 +987,9 @@ void Game::Flashlight() {
 		flashShadowCamera->GetTransform()->SetPosition(flashlight->GetTransform()->GetGlobalPosition());
 		flashShadowCamera->GetTransform()->SetRotation(mainCamera->GetTransform()->GetLocalPitchYawRoll());
 		flashShadowCamera->UpdateViewMatrix();
-		FlickeringCheck();
-	}
-}
-
-void Game::FlickeringCheck() {
-	if (input.TestKeyAction(KeyActions::ToggleFlashlightFlicker)) {
-		flickeringEnabled = !flickeringEnabled;
+		if (input.TestKeyAction(KeyActions::ToggleFlashlightFlicker)) {
+			flickeringEnabled = !flickeringEnabled;
+		}
 	}
 }
 
@@ -1047,11 +1028,9 @@ void Game::Update()
 	globalAssets.BroadcastGlobalEntityEvent(EntityEventType::Update);
 
 	if (movingEnabled) {
-		//globalAssets.GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition((float)sin(Time::totalTime), +2.0f, +0.0f);
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+1.5f, (float)sin(Time::totalTime) + 2.5f, +0.0f);
-		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate( 0.0f, 0.0f, -(float)sin(Time::deltaTime));
-		//globalAssets.GetGameEntityByName("Floor Cube")->GetTransform()->SetPosition( (float)sin(Time::deltaTime) + 2.5f, +1.0f, +0.0f);
-		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate( 0.0f, (float)sin(Time::deltaTime), 0.0f);
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate(0.0f, 0.0f, -(float)sin(Time::deltaTime));
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate(0.0f, (float)sin(Time::deltaTime), 0.0f);
 		globalAssets.GetGameEntityByName("Scratched Cube")->GetTransform()->Rotate(-(float)sin(Time::deltaTime), 0.0f, 0.0f);
 
 		globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(Time::totalTime), +0.0f);
@@ -1081,6 +1060,8 @@ void Game::Update()
 		}
 		clickedEntityBuffer = nullptr;
 	}
+
+	renderer->selectedEntity = entityUIIndex;
 
 	// Flickering is currently broken
 	/*if (flickeringEnabled) {
@@ -1159,7 +1140,7 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 				titleString += "'";
 				DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
 			}
-			
+
 			// Certified conversion moment
 			DirectX::XMStoreFloat2(&categoryOrigin, categoryFont->MeasureString(loadedCategoryString.c_str()) / 2.0f);
 			DirectX::XMStoreFloat2(&objectOrigin, objectFont->MeasureString(loadedObjectString.c_str()) / 2.0f);
@@ -1178,7 +1159,7 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 #if defined(DEBUG) || defined(_DEBUG)
 			printf("Took too long to load. \n");
 #endif
-		}	
+		}
 
 		globalAssets.SetSingleLoadComplete(false);
 		lock.unlock();
