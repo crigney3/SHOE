@@ -11,10 +11,7 @@ public:
 		std::shared_ptr<Mesh> mesh,
 		std::shared_ptr<Material> mat
 	);
-	void Start() override;
 	void OnDestroy() override;
-	void OnTransform() override;
-	void OnParentTransform(std::shared_ptr<GameEntity> parent) override;
 
 	bool DrawBounds;
 
@@ -34,4 +31,7 @@ private:
 
 	DirectX::BoundingOrientedBox bounds;
 	void CalculateBounds();
+	void Start() override;
+	void OnTransform() override;
+	void OnParentTransform(std::shared_ptr<GameEntity> parent) override;
 };

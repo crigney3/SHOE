@@ -60,6 +60,18 @@ void IComponent::ReceiveEvent(EntityEventType event, std::shared_ptr<void> messa
 	case EntityEventType::OnTriggerEnter:
 		OnTriggerEnter(std::static_pointer_cast<GameEntity>(message));
 		break;
+	case EntityEventType::InCollision:
+		InCollision(std::static_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::InTrigger:
+		InTrigger(std::static_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnCollisionExit:
+		OnCollisionExit(std::static_pointer_cast<GameEntity>(message));
+		break;
+	case EntityEventType::OnTriggerExit:
+		OnTriggerExit(std::static_pointer_cast<GameEntity>(message));
+		break;
 	}
 }
 

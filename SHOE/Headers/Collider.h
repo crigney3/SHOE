@@ -8,36 +8,41 @@
 class Collider : public IComponent, public std::enable_shared_from_this<Collider>
 {
 public:
-	void Start() override;
-	void Update() override;
 	void OnDestroy() override;
 
 	DirectX::BoundingOrientedBox GetOrientedBoundingBox();
 
 	// Extents Get/Set
-	DirectX::XMFLOAT3 GetExtents();
-	void SetExtents(DirectX::XMFLOAT3 _newExtents);
-	void SetXExtent(float _x);
-	void SetYExtent(float _y);
-	void SetZExtent(float _z);
-	void SetWidth(float _width);
-	void SetHeight(float _height);
-	void SetDepth(float _depth);
-	// Bool Get/Sets
-	bool GetTriggerStatus();
-	bool GetVisibilityStatus();
-	bool GetTransformVisibilityStatus();
-	void SetTriggerStatus(bool _isTrigger);
-	void SetVisibilityStatus(bool _isVisible);
-	void SetTransformVisibilityStatus(bool _isTransformVisible);
+	DirectX::XMFLOAT3 GetPositionOffset();
+	void SetPositionOffset(DirectX::XMFLOAT3 posOffset);
+	DirectX::XMFLOAT3 GetRotationOffset();
+	void SetRotationOffset(DirectX::XMFLOAT3 rotOffset);
+	DirectX::XMFLOAT3 GetScale();
+	void SetScale(DirectX::XMFLOAT3 scale);
+	DirectX::XMFLOAT4X4 GetWorldMatrix();
 
-	void OnCollisionEnter(std::shared_ptr<GameEntity> other) override;
-	void OnTriggerEnter(std::shared_ptr<GameEntity> other) override;
+	// Bool Get/Sets
+	bool IsTrigger();
+	bool IsVisible();
+	void SetIsTrigger(bool _isTrigger);
+	void SetVisible(bool _isVisible);
 
 private:
+	void RegenerateBoundingBox();
+
+	void Start() override;
+	void OnCollisionEnter(std::shared_ptr<GameEntity> other) override;
+	void OnTriggerEnter(std::shared_ptr<GameEntity> other) override;
+	void InCollision(std::shared_ptr<GameEntity> other) override;
+	void InTrigger(std::shared_ptr<GameEntity> other) override;
+	void OnCollisionExit(std::shared_ptr<GameEntity> other) override;
+	void OnTriggerExit(std::shared_ptr<GameEntity> other) override;
+	void OnTransform() override;
+	void OnParentTransform(std::shared_ptr<GameEntity> parent) override;
+
+	std::shared_ptr<Transform> offset;
 	DirectX::BoundingOrientedBox obb_;
 
 	bool isTrigger_;
 	bool isVisible_;
-	bool isTransformVisible_;
 };

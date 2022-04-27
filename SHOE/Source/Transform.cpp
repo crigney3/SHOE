@@ -24,9 +24,57 @@ void Transform::Start() {
 	this->childEntities.clear();
 }
 
+void Transform::Update()
+{
+	if (transformChangedThisFrame) {
+		transformChangedThisFrame = false;
+		GetGameEntity()->PropagateEvent(EntityEventType::OnTransform);
+		GetGameEntity()->PropagateEventToChildren(EntityEventType::OnParentTransform, GetGameEntity());
+	}
+}
+
 void Transform::OnDestroy()
 {
 	parent = nullptr;
+}
+
+void Transform::OnMove(DirectX::XMFLOAT3 delta)
+{
+	GetGameEntity()->PropagateEventToChildren(EntityEventType::OnParentMove, GetGameEntity());
+}
+
+void Transform::OnRotate(DirectX::XMFLOAT3 delta)
+{
+	GetGameEntity()->PropagateEventToChildren(EntityEventType::OnParentRotate, GetGameEntity());
+}
+
+void Transform::OnScale(DirectX::XMFLOAT3 delta)
+{
+	GetGameEntity()->PropagateEventToChildren(EntityEventType::OnParentScale, GetGameEntity());
+}
+
+void Transform::OnParentTransform(std::shared_ptr<GameEntity> parent)
+{
+	GetGameEntity()->PropagateEventToChildren(EntityEventType::OnParentTransform, parent);
+}
+
+void Transform::OnParentMove(std::shared_ptr<GameEntity> parent)
+{
+	MarkMatricesDirty();
+	GetGameEntity()->PropagateEventToChildren(EntityEventType::OnParentMove, parent);
+}
+
+void Transform::OnParentRotate(std::shared_ptr<GameEntity> parent)
+{
+	MarkMatricesDirty();
+	MarkVectorsDirty();
+	GetGameEntity()->PropagateEventToChildren(EntityEventType::OnParentRotate, parent);
+}
+
+void Transform::OnParentScale(std::shared_ptr<GameEntity> parent)
+{
+	MarkMatricesDirty();
+	GetGameEntity()->PropagateEventToChildren(EntityEventType::OnParentScale, parent);
 }
 
 #pragma region Setters
@@ -38,8 +86,9 @@ void Transform::SetPosition(XMFLOAT3 pos) {
 	if (position.x != pos.x || position.y != pos.y || position.z != pos.z) {
 		std::shared_ptr<XMFLOAT3> delta = std::make_shared<XMFLOAT3>(pos.x - position.x, pos.y - position.y, pos.z - position.z);
 		position = pos;
-		if (GetGameEntity() != nullptr) GetGameEntity()->PropagateEvent(EntityEventType::OnMove, delta);
 		MarkMatricesDirty();
+		transformChangedThisFrame = true;
+		if (GetGameEntity() != nullptr) GetGameEntity()->PropagateEvent(EntityEventType::OnMove, delta);
 	}
 }
 
@@ -51,9 +100,10 @@ void Transform::SetRotation(XMFLOAT3 rot) {
 	if (pitchYawRoll.x != rot.x || pitchYawRoll.y != rot.y || pitchYawRoll.z != rot.z) {
 		std::shared_ptr<XMFLOAT3> delta = std::make_shared<XMFLOAT3>(rot.x - pitchYawRoll.x, rot.y - pitchYawRoll.y, rot.z - pitchYawRoll.z);
 		pitchYawRoll = XMFLOAT3(rot.x, rot.y, rot.z);
-		if (GetGameEntity() != nullptr) GetGameEntity()->PropagateEvent(EntityEventType::OnRotate, delta);
 		MarkMatricesDirty();
 		MarkVectorsDirty();
+		transformChangedThisFrame = true;
+		if (GetGameEntity() != nullptr) GetGameEntity()->PropagateEvent(EntityEventType::OnRotate, delta);
 	}
 }
 
@@ -65,8 +115,9 @@ void Transform::SetScale(XMFLOAT3 scale) {
 	if (this->scale.x != scale.x || this->scale.y != scale.y || this->scale.z != scale.z) {
 		std::shared_ptr<XMFLOAT3> delta = std::make_shared<XMFLOAT3>(scale.x - this->scale.x, scale.y - this->scale.y, scale.z - this->scale.z);
 		this->scale = scale;
-		if (GetGameEntity() != nullptr) GetGameEntity()->PropagateEvent(EntityEventType::OnScale, delta);
 		MarkMatricesDirty();
+		transformChangedThisFrame = true;
+		if (GetGameEntity() != nullptr) GetGameEntity()->PropagateEvent(EntityEventType::OnScale, delta);
 	}
 }
 # pragma endregion
@@ -147,7 +198,6 @@ void Transform::MarkVectorsDirty()
 void Transform::MarkGlobalsDirty()
 {
 	globalsDirty = true;
-	if (parent != nullptr) parent->MarkGlobalsDirty();
 }
 
 #pragma endregion
@@ -255,6 +305,8 @@ void Transform::UpdateGlobals()
 	XMStoreFloat3(&worldPos, globalPos);
 	XMStoreFloat4(&worldRotQuat, globalRotQuat);
 	XMStoreFloat3(&worldScale, globalScale);
+
+	globalsDirty = false;
 }
 
 void Transform::AddChild(std::shared_ptr<Transform> child) {
@@ -311,6 +363,17 @@ void Transform::SetParent(std::shared_ptr<Transform> newParent) {
 			newParent->AddChild(shared_from_this());
 		}
 	}
+}
+
+/// <summary>
+/// A special set parent for transforms that are part of other components
+/// instead of directly attached to a GameEntity
+/// </summary>
+/// <param name="parent">Transform of the Entity this is on</param>
+void Transform::SetParentNoReciprocate(std::shared_ptr<Transform> parent)
+{
+	this->parent = parent;
+	globalsDirty = true;
 }
 
 std::shared_ptr<Transform> Transform::GetParent() {

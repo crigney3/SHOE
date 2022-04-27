@@ -23,8 +23,6 @@ public:
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context
 	);
 
-	void Start() override;
-	void Update() override;
 	void OnDestroy() override;
 
 	void Draw(std::shared_ptr<Camera> cam, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive);
@@ -77,6 +75,9 @@ private:
 	static Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> defaultParticleTextureSRV;
 	static Microsoft::WRL::ComPtr<ID3D11Device> defaultDevice;
 	static Microsoft::WRL::ComPtr<ID3D11DeviceContext> defaultContext;
+
+	void Start() override;
+	void Update() override;
 
 	void Initialize(int maxParticles);
 	void EmitParticle(int emitCount);

@@ -803,10 +803,9 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 					coValue.AddMember(COMPONENT_TYPE, CO_COLLIDER_TYPE, allocator);
 					std::shared_ptr<Collider> collider = std::dynamic_pointer_cast<Collider>(co);
 
-					coValue.AddMember(COLLIDER_TYPE, collider->GetTriggerStatus(), allocator);
+					coValue.AddMember(COLLIDER_TYPE, collider->IsTrigger(), allocator);
 					coValue.AddMember(COLLIDER_ENABLED, collider->IsEnabled(), allocator);
-					coValue.AddMember(COLLIDER_IS_VISIBLE, collider->GetVisibilityStatus(), allocator);
-					coValue.AddMember(COLLIDER_IS_TRANSFORM_VISIBLE, collider->GetTransformVisibilityStatus(), allocator);
+					coValue.AddMember(COLLIDER_IS_VISIBLE, collider->IsVisible(), allocator);
 				}
 
 				// Is it Terrain?
@@ -2613,22 +2612,15 @@ void AssetManager::InitializeIMGUI(HWND hwnd) {
 void AssetManager::InitializeColliders() {
 	std::shared_ptr<GameEntity> e = GetGameEntityByName("Bronze Cube");
 	std::shared_ptr<GameEntity> e2 = GetGameEntityByName("Scratched Sphere");
-	std::shared_ptr<GameEntity> e3 = GetGameEntityByName("Rough Torus");
-	std::shared_ptr<GameEntity> e4 = GetGameEntityByName("Floor Helix");
 	std::shared_ptr<GameEntity> e5 = GetGameEntityByName("Shiny Rough Sphere");
-
 	std::shared_ptr<GameEntity> e6 = GetGameEntityByName("Floor Cube");
 	std::shared_ptr<GameEntity> e7 = GetGameEntityByName("Scratched Cube");
-	//TODO: the wood sphere will become a child of the spinning stuff if you disable and enable it via IMGUI....
 
 	std::shared_ptr<Collider> c1 = AddColliderToGameEntity(e);
 	std::shared_ptr<Collider> c2 = AddColliderToGameEntity(e2);
-	std::shared_ptr<Collider> c3 = AddColliderToGameEntity(e3);
-	std::shared_ptr<Collider> c4 = AddColliderToGameEntity(e4);
 	std::shared_ptr<Collider> c5 = AddColliderToGameEntity(e5);
 	std::shared_ptr<Collider> c6 = AddColliderToGameEntity(e6);
 	std::shared_ptr<Collider> c7 = AddTriggerBoxToGameEntity(e7);
-	c6->SetExtents(XMFLOAT3(1.002f, 1.002f, 1.002f)); //TODO: check and see if setting this alters where children end up (coordinate space scaling)
 }
 #pragma endregion
 
@@ -2655,7 +2647,7 @@ std::shared_ptr<Collider> AssetManager::AddTriggerBoxToGameEntity(OUT std::share
 
 		std::shared_ptr<Collider> c = entity->AddComponent<Collider>();
 
-		c->SetTriggerStatus(true);
+		c->SetIsTrigger(true);
 
 		return c;
 	}

@@ -111,7 +111,7 @@ private:
     std::shared_ptr<SimpleVertexShader> VSShadow;
 
     //components for colliders
-    Microsoft::WRL::ComPtr<ID3D11RasterizerState> outlineRasterizer;
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> wireframeRasterizer;
 
     // Offset and random values for SSAO blur and texture
     Microsoft::WRL::ComPtr<ID3D11Texture2D> ssaoRandomTex;
@@ -161,7 +161,10 @@ private:
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> outlineRTV;
 
 	// Conditional Drawing
-    static bool drawColliders, drawColliderTransforms;
+    static bool drawColliders;
+
+    UINT stride = sizeof(Vertex);
+    UINT offset = 0;
 
     void InitRenderTargetViews();
 
@@ -202,8 +205,6 @@ public:
 
     static bool GetDrawColliderStatus();
     static void SetDrawColliderStatus(bool _newState);
-	static bool GetDrawColliderTransformsStatus();
-    static void SetDrawColliderTransformsStatus(bool _newState);
 
     int selectedEntity;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> outlineSRV;

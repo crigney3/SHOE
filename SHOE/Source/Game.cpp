@@ -70,6 +70,7 @@ Game::~Game()
 	delete& Input::GetInstance();
 	delete& AssetManager::GetInstance();
 	delete& AudioHandler::GetInstance();
+	delete& CollisionManager::GetInstance();
 
 	delete loadingSpriteBatch;
 	delete loadingMutex;
@@ -566,28 +567,20 @@ void Game::RenderUI() {
 			if (std::dynamic_pointer_cast<Collider>(componentList[c]) != nullptr)
 			{
 				std::shared_ptr<Collider> currentCollider = std::dynamic_pointer_cast<Collider>(componentList[c]);
-				currentCollider->GetTriggerStatus() ? ImGui::Text("TriggerBox") : ImGui::Text("Collider");
+				ImGui::Text(currentCollider->IsTrigger() ? "Trigger" : "Collider");
 
 				bool colliderEnabled = currentCollider->IsLocallyEnabled();
 				ImGui::Checkbox("Enabled ", &colliderEnabled);
 				if (colliderEnabled != currentCollider->IsLocallyEnabled())
 					currentCollider->SetEnabled(colliderEnabled);
 
-				bool UIDrawCollider = currentCollider->GetVisibilityStatus();
-				ImGui::Checkbox("Draw Collider?", &UIDrawCollider);
-				UIDrawCollider ? currentCollider->SetVisibilityStatus(true) : currentCollider->SetVisibilityStatus(false);
+				bool UIDrawCollider = currentCollider->IsVisible();
+				ImGui::Checkbox("Render Collider", &UIDrawCollider);
+				currentCollider->SetVisible(UIDrawCollider);
 
-				bool UIDrawColliderTransform = currentCollider->GetTransformVisibilityStatus();
-				ImGui::Checkbox("Draw Transform?", &UIDrawColliderTransform);
-				UIDrawColliderTransform ? currentCollider->SetTransformVisibilityStatus(true) : currentCollider->SetTransformVisibilityStatus(false);
-
-				bool UITriggerSwitch = currentCollider->GetTriggerStatus();
-				ImGui::Checkbox("Is this a TriggerBox?", &UITriggerSwitch);
-				UITriggerSwitch ? currentCollider->SetTriggerStatus(true) : currentCollider->SetTriggerStatus(false);
-
-				ImGui::NewLine();
-
-				// Don't edit collider transforms from the UI - they use the main entity transform
+				bool UITriggerSwitch = currentCollider->IsTrigger();
+				ImGui::Checkbox("Is Trigger", &UITriggerSwitch);
+				currentCollider->SetIsTrigger(UITriggerSwitch);
 			}
 
 			if (std::dynamic_pointer_cast<Light>(componentList[c]) != nullptr)
@@ -824,10 +817,6 @@ void Game::RenderUI() {
 		bool UIDrawColliders = Renderer::GetDrawColliderStatus();
 		ImGui::Checkbox("Draw Colliders?", &UIDrawColliders);
 		Renderer::SetDrawColliderStatus(UIDrawColliders);
-
-		bool UIDrawColliderTransforms = Renderer::GetDrawColliderTransformsStatus() & UIDrawColliders;
-		ImGui::Checkbox("Draw Colliders' Transforms?", &UIDrawColliderTransforms);
-		Renderer::SetDrawColliderTransformsStatus(UIDrawColliderTransforms);
 
 		ImGui::End();
 	}
@@ -1104,7 +1093,7 @@ void Game::Update()
 	Flashlight();
 	RenderSky();
 
-	CollisionManager::Update();
+	CollisionManager::GetInstance().Update();
 
 	//Click to select an object
 	if (input.MouseRightPress()) {
