@@ -181,6 +181,8 @@ void Game::LoadScene() {
 
 	renderer.reset();
 
+	context->Flush();
+
 	//With everything initialized, start the renderer
 	renderer = std::make_unique<Renderer>(height,
 										  width,

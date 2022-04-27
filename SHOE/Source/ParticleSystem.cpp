@@ -69,25 +69,8 @@ float ParticleSystem::GetParticleLifetime() {
 
 void ParticleSystem::SetMaxParticles(int maxParticles) {
 	if (this->maxParticles != maxParticles) {
-		// SRV handle release and wipe
-		sortListSRV.Reset();
-		drawListSRV.Reset();
-
-		// Unbind all UAVs
-		// Don't reset the Computer Shader pointers,
-		// We still need those
-		ID3D11UnorderedAccessView* none[8] = {};
-		context->CSSetUnorderedAccessViews(0, 8, none, 0);
-
-		// UAV handle release and wipe
-		this->deadListUAV.Reset();
-		this->sortListUAV.Reset();
-		this->argsListUAV.Reset();
-		this->drawListUAV.Reset();
-
-		// Buffer reset and wipe
-		inBuffer.Reset();
-		argsBuffer.Reset();
+		// Reset most data
+		OnDestroy();
 
 		this->maxParticles = maxParticles;
 		Initialize(this->maxParticles);
@@ -185,7 +168,6 @@ void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixe
 
 void ParticleSystem::Start()
 {
-	this->maxParticles = 20;
 	this->particlesPerSecond = 1.0f;
 	this->particleLifetime = 3.0f;
 	this->secondsPerEmission = 1.0f / particlesPerSecond;
@@ -207,14 +189,17 @@ void ParticleSystem::Start()
 	this->additiveBlend = true;
 	this->isMultiParticle = true;
 
-	// Set up a function to calculate if this emitter will overflow its buffer
+	// TODO: Set up a function to calculate if this emitter will overflow its buffer
 	// Then recalculate maxParticles if it will
-	Initialize(this->maxParticles);
+	
+	// With the current component system, don't initialize until SetMaxParticles is called
+	//this->maxParticles = 20;
+	/*Initialize(this->maxParticles);
 
 	SetParticleComputeShader(defaultParticleCopyComputeShader, ParticleComputeShaderType::Copy);
 	SetParticleComputeShader(defaultParticleSimComputeShader, ParticleComputeShaderType::Simulate);
 	SetParticleComputeShader(defaultParticleEmitComputeShader, ParticleComputeShaderType::Emit);
-	SetParticleComputeShader(defaultParticleDeadListInitComputeShader, ParticleComputeShaderType::DeadListInit);
+	SetParticleComputeShader(defaultParticleDeadListInitComputeShader, ParticleComputeShaderType::DeadListInit);*/
 }
 
 void ParticleSystem::Update() {
@@ -255,7 +240,25 @@ void ParticleSystem::Update() {
 
 void ParticleSystem::OnDestroy()
 {
+	// SRV handle release and wipe
+	sortListSRV.Reset();
+	drawListSRV.Reset();
 
+	// Unbind all UAVs
+	// Don't reset the Computer Shader pointers,
+	// We still need those
+	ID3D11UnorderedAccessView* none[8] = {};
+	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+
+	// UAV handle release and wipe
+	this->deadListUAV.Reset();
+	this->sortListUAV.Reset();
+	this->argsListUAV.Reset();
+	this->drawListUAV.Reset();
+
+	// Buffer reset and wipe
+	inBuffer.Reset();
+	argsBuffer.Reset();
 }
 
 void ParticleSystem::Draw(std::shared_ptr<Camera> cam, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive)
@@ -317,13 +320,15 @@ void ParticleSystem::Initialize(int maxParticles)
 
 	ID3D11Buffer* deadListBuffer;
 
+	this->maxParticles = maxParticles + 5;
+
 	D3D11_BUFFER_DESC deadDesc = {};
 	deadDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 	deadDesc.CPUAccessFlags = 0;
 	deadDesc.Usage = D3D11_USAGE_DEFAULT;
 	deadDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	deadDesc.StructureByteStride = sizeof(unsigned int);
-	deadDesc.ByteWidth = (sizeof(unsigned int) * maxParticles) + sizeof(unsigned int);
+	deadDesc.ByteWidth = (sizeof(unsigned int) * this->maxParticles) + sizeof(unsigned int);
 	device->CreateBuffer(&deadDesc, 0, &deadListBuffer);
 
 	D3D11_UNORDERED_ACCESS_VIEW_DESC deadUavDesc = {};
@@ -331,7 +336,7 @@ void ParticleSystem::Initialize(int maxParticles)
 	deadUavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
 	deadUavDesc.Buffer.FirstElement = 0;
 	deadUavDesc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_APPEND;
-	deadUavDesc.Buffer.NumElements = maxParticles;
+	deadUavDesc.Buffer.NumElements = this->maxParticles;
 	device->CreateUnorderedAccessView(deadListBuffer, &deadUavDesc, this->deadListUAV.GetAddressOf());
 
 	deadListBuffer->Release();
@@ -344,7 +349,7 @@ void ParticleSystem::Initialize(int maxParticles)
 
 	D3D11_BUFFER_DESC sortDesc = {};
 	sortDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-	sortDesc.ByteWidth = sizeof(DirectX::XMFLOAT2) * maxParticles;
+	sortDesc.ByteWidth = sizeof(DirectX::XMFLOAT2) * this->maxParticles;
 	sortDesc.CPUAccessFlags = 0;
 	sortDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	sortDesc.StructureByteStride = sizeof(DirectX::XMFLOAT2);
@@ -356,7 +361,7 @@ void ParticleSystem::Initialize(int maxParticles)
 	sortUAVDesc.Format = DXGI_FORMAT_UNKNOWN; // Needed for RW structured buffers
 	sortUAVDesc.Buffer.FirstElement = 0;
 	sortUAVDesc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_COUNTER; // IncrementCounter() in HLSL
-	sortUAVDesc.Buffer.NumElements = maxParticles;
+	sortUAVDesc.Buffer.NumElements = this->maxParticles;
 	sortUAVDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
 	device->CreateUnorderedAccessView(sortListBuffer, &sortUAVDesc, &this->sortListUAV);
 
@@ -364,7 +369,7 @@ void ParticleSystem::Initialize(int maxParticles)
 	D3D11_SHADER_RESOURCE_VIEW_DESC sortSRVDesc = {};
 	sortSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
 	sortSRVDesc.Buffer.FirstElement = 0;
-	sortSRVDesc.Buffer.NumElements = maxParticles;
+	sortSRVDesc.Buffer.NumElements = this->maxParticles;
 	sortSRVDesc.Format = DXGI_FORMAT_UNKNOWN;
 	device->CreateShaderResourceView(sortListBuffer, &sortSRVDesc, sortListSRV.GetAddressOf());
 
@@ -376,7 +381,7 @@ void ParticleSystem::Initialize(int maxParticles)
 
 	D3D11_BUFFER_DESC drawDesc = {};
 	drawDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
-	drawDesc.ByteWidth = sizeof(Particle) * maxParticles;
+	drawDesc.ByteWidth = sizeof(Particle) * this->maxParticles;
 	drawDesc.CPUAccessFlags = 0;
 	drawDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	drawDesc.StructureByteStride = sizeof(Particle);
@@ -388,7 +393,7 @@ void ParticleSystem::Initialize(int maxParticles)
 	drawUAVDesc.Format = DXGI_FORMAT_UNKNOWN; // Needed for RW structured buffers
 	drawUAVDesc.Buffer.FirstElement = 0;
 	drawUAVDesc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_COUNTER; // IncrementCounter() in HLSL
-	drawUAVDesc.Buffer.NumElements = maxParticles;
+	drawUAVDesc.Buffer.NumElements = this->maxParticles;
 	drawUAVDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
 	device->CreateUnorderedAccessView(drawListBuffer, &drawUAVDesc, &this->drawListUAV);
 
@@ -396,7 +401,7 @@ void ParticleSystem::Initialize(int maxParticles)
 	D3D11_SHADER_RESOURCE_VIEW_DESC drawSRVDesc = {};
 	drawSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
 	drawSRVDesc.Buffer.FirstElement = 0;
-	drawSRVDesc.Buffer.NumElements = maxParticles;
+	drawSRVDesc.Buffer.NumElements = this->maxParticles;
 	drawSRVDesc.Format = DXGI_FORMAT_UNKNOWN;
 	device->CreateShaderResourceView(drawListBuffer, &drawSRVDesc, drawListSRV.GetAddressOf());
 
@@ -423,8 +428,8 @@ void ParticleSystem::Initialize(int maxParticles)
 
 	// Index data, currently always the same
 
-	unsigned long* indices = new unsigned long[maxParticles * 6];
-	for (unsigned long i = 0; i < maxParticles; i++)
+	unsigned long* indices = new unsigned long[this->maxParticles * 6];
+	for (unsigned long i = 0; i < this->maxParticles; i++)
 	{
 		unsigned long indexCounter = i * 6;
 		indices[indexCounter + 0] = 0 + i * 4;
@@ -437,26 +442,12 @@ void ParticleSystem::Initialize(int maxParticles)
 	D3D11_SUBRESOURCE_DATA indexData = {};
 	indexData.pSysMem = indices;
 
-	// Old Indices
-	/*
-	* indices = new unsigned int[maxParticles * 6];
-		int indexCount = 0;
-		for (int i = 0; i < maxParticles * 4; i += 4) {
-			indices[indexCount++] = i;
-			indices[indexCount++] = i + 1;
-			indices[indexCount++] = i + 2;
-			indices[indexCount++] = i;
-			indices[indexCount++] = i + 2;
-			indices[indexCount++] = i + 3;
-		}
-	*/
-
 	// Regular (static) index buffer
 	D3D11_BUFFER_DESC ibDesc = {};
 	ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	ibDesc.CPUAccessFlags = 0;
 	ibDesc.Usage = D3D11_USAGE_DEFAULT;
-	ibDesc.ByteWidth = sizeof(unsigned long) * maxParticles * 6;
+	ibDesc.ByteWidth = sizeof(unsigned long) * this->maxParticles * 6;
 	ibDesc.MiscFlags = 0;
 	ibDesc.StructureByteStride = 0;
 	device->CreateBuffer(&ibDesc, &indexData, inBuffer.GetAddressOf());

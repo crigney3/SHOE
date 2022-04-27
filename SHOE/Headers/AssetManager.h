@@ -164,6 +164,7 @@
 #define PARTICLE_SYSTEM_FILENAME_KEY "pFK" // string
 #define PARTICLE_SYSTEM_IS_MULTI_PARTICLE "pIP" // bool
 #define PARTICLE_SYSTEM_ADDITIVE_BLEND "pAB" // bool
+#define PARTICLE_SYSTEM_ENABLED "pEN" // bool
 #define PARTICLE_SYSTEM_COLOR_TINT "pCT" // float array 4
 #define PARTICLE_SYSTEM_SCALE "pS" // float
 #define PARTICLE_SYSTEM_SPEED "pE" //float
@@ -213,22 +214,6 @@ struct LoadingNotifications {
 struct FMODUserData {
 	std::shared_ptr<std::string> name;
 	std::shared_ptr<std::string> filenameKey;
-};
-
-// State machine used to track what type of load
-// AssetManager is doing on calling any Create() function
-enum AMLoadState {
-	// Used when SHOE isn't loading
-	NOT_LOADING,
-	// Used when SHOE first loads
-	INITIALIZING,
-	// Used when something calls a Create() function
-	SINGLE_CREATION,
-	// In the future, used for complex asset imports
-	COMPLEX_CREATION,
-	// In the future, used for loading a scene with
-	// a loading screen running parallel
-	SCENE_LOAD
 };
 
 enum ComponentTypes {
@@ -437,13 +422,6 @@ public:
 												 unsigned int mapWidth = 512, 
 												 unsigned int mapHeight = 512, 
 												 float heightScale = 25.0f);
-	std::shared_ptr<Terrain> CreateTerrainOnEntity(std::shared_ptr<GameEntity> entityToEdit,
-												   const char* heightmap, 
-												   std::shared_ptr<TerrainMaterial> material, 
-												   std::string name = "Terrain", 
-												   unsigned int mapWidth = 512, 
-												   unsigned int mapHeight = 512, 
-												   float heightScale = 25.0f);
 	std::shared_ptr<Terrain> CreateTerrainEntity(std::shared_ptr<Mesh> terrainMesh, 
 												 std::shared_ptr<TerrainMaterial> material, 
 												 std::string name = "Terrain");
@@ -465,6 +443,40 @@ public:
 												   bool additiveBlendState = true);
 	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode, std::string name = "");
 	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false);
+
+	// Create-On-Entity methods, for components and loading
+	std::shared_ptr<Terrain> CreateTerrainOnEntity(std::shared_ptr<GameEntity> entityToEdit,
+												   const char* heightmap, 
+												   std::shared_ptr<TerrainMaterial> material, 
+												   unsigned int mapWidth = 512, 
+												   unsigned int mapHeight = 512, 
+												   float heightScale = 25.0f);
+	std::shared_ptr<Terrain> CreateTerrainOnEntity(std::shared_ptr<GameEntity> entityToEdit,
+												   std::shared_ptr<Mesh> terrainMesh,
+												   std::shared_ptr<TerrainMaterial> material);
+	std::shared_ptr<ParticleSystem> CreateParticleEmitterOnEntity(std::shared_ptr<GameEntity> entityToEdit,
+																  std::string textureNameToLoad,
+																  int maxParticles,
+																  float particleLifeTime,
+																  float particlesPerSecond,
+																  bool isMultiParticle = false,
+																  bool additiveBlendState = true);
+	std::shared_ptr<ParticleSystem> CreateParticleEmitterOnEntity(std::shared_ptr<GameEntity> entityToEdit, 
+																  std::string textureNameToLoad,
+																  bool isMultiParticle);
+	std::shared_ptr<Light> CreateDirectionalLightOnEntity(std::shared_ptr<GameEntity> entityToEdit,
+														  DirectX::XMFLOAT3 direction,
+														  DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
+														  float intensity = 1.0f);
+	std::shared_ptr<Light> CreatePointLightOnEntity(std::shared_ptr<GameEntity> entityToEdit,
+													float range,
+													DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
+													float intensity = 1.0f);
+	std::shared_ptr<Light> CreateSpotLightOnEntity(std::shared_ptr<GameEntity> entityToEdit, 
+												   DirectX::XMFLOAT3 direction,
+												   float range,
+												   DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
+												   float intensity = 1.0f);
 
 	// Creation Helper Methods
 	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType);
