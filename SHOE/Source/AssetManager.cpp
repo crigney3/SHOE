@@ -469,9 +469,31 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 					std::shared_ptr<Collider> collider = newEnt->AddComponent<Collider>();
 
 					collider->SetEnabled(componentBlock[i].FindMember(COLLIDER_ENABLED)->value.GetBool());
-					collider->SetVisibilityStatus(componentBlock[i].FindMember(COLLIDER_IS_VISIBLE)->value.GetBool());
-					collider->SetTransformVisibilityStatus(componentBlock[i].FindMember(COLLIDER_IS_TRANSFORM_VISIBLE)->value.GetBool());
-					collider->SetTriggerStatus(componentBlock[i].FindMember(COLLIDER_TYPE)->value.GetBool());
+					collider->SetVisible(componentBlock[i].FindMember(COLLIDER_IS_VISIBLE)->value.GetBool());
+					collider->SetIsTrigger(componentBlock[i].FindMember(COLLIDER_TYPE)->value.GetBool());
+					DirectX::XMFLOAT3 pos;
+					DirectX::XMFLOAT3 rot;
+					DirectX::XMFLOAT3 scale;
+
+					const rapidjson::Value& posBlock = componentBlock[i].FindMember(COLLIDER_POSITION_OFFSET)->value;
+					const rapidjson::Value& rotBlock = componentBlock[i].FindMember(COLLIDER_SCALE_OFFSET)->value;
+					const rapidjson::Value& scaleBlock = componentBlock[i].FindMember(COLLIDER_ROTATION_OFFSET)->value;
+
+					pos.x = posBlock[0].GetDouble();
+					pos.y = posBlock[1].GetDouble();
+					pos.z = posBlock[2].GetDouble();
+
+					rot.x = rotBlock[0].GetDouble();
+					rot.y = rotBlock[1].GetDouble();
+					rot.z = rotBlock[2].GetDouble();
+
+					scale.x = scaleBlock[0].GetDouble();
+					scale.y = scaleBlock[1].GetDouble();
+					scale.z = scaleBlock[2].GetDouble();
+
+					collider->SetPositionOffset(pos);
+					collider->SetRotationOffset(rot);
+					collider->SetScale(pos);
 				}
 				else if (componentType == CO_TERRAIN_TYPE) {
 					std::string heightmapKey = DeSerializeFileName(componentBlock[i].FindMember(TERRAIN_HEIGHTMAP_FILENAME_KEY)->value.GetString());
