@@ -806,6 +806,27 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 					coValue.AddMember(COLLIDER_TYPE, collider->IsTrigger(), allocator);
 					coValue.AddMember(COLLIDER_ENABLED, collider->IsEnabled(), allocator);
 					coValue.AddMember(COLLIDER_IS_VISIBLE, collider->IsVisible(), allocator);
+
+					// Treat FLOATX as float array[x]
+					rapidjson::Value pos(rapidjson::kArrayType);
+					rapidjson::Value rot(rapidjson::kArrayType);
+					rapidjson::Value scale(rapidjson::kArrayType);
+
+					pos.PushBack(collider->GetPositionOffset().x, allocator);
+					pos.PushBack(collider->GetPositionOffset().y, allocator);
+					pos.PushBack(collider->GetPositionOffset().z, allocator);
+
+					scale.PushBack(collider->GetScale().x, allocator);
+					scale.PushBack(collider->GetScale().y, allocator);
+					scale.PushBack(collider->GetScale().z, allocator);
+
+					rot.PushBack(collider->GetRotationOffset().x, allocator);
+					rot.PushBack(collider->GetRotationOffset().y, allocator);
+					rot.PushBack(collider->GetRotationOffset().z, allocator);
+
+					coValue.AddMember(COLLIDER_POSITION_OFFSET, pos, allocator);
+					coValue.AddMember(COLLIDER_SCALE_OFFSET, scale, allocator);
+					coValue.AddMember(COLLIDER_ROTATION_OFFSET, rot, allocator);
 				}
 
 				// Is it Terrain?

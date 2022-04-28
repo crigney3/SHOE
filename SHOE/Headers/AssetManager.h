@@ -102,7 +102,7 @@
 // Transform Data:
 #define TRANSFORM_LOCAL_POSITION "tLP" // float array 3
 #define TRANSFORM_LOCAL_SCALE "tLS" // float array 3
-#define TRANSFORM_LOCAL_ROTATION "tLR" // float array 4
+#define TRANSFORM_LOCAL_ROTATION "tLR" // float array 3
 
 // Generic Shader Data:
 #define SHADER_NAME "sN" // string
@@ -137,11 +137,12 @@
 #define SKY_FILENAME_EXTENSION "sFE" //string
 
 // Collider Data:
-// Fairly sparse for now
 #define COLLIDER_TYPE "cT" // bool
 #define COLLIDER_ENABLED "cE" // bool
 #define COLLIDER_IS_VISIBLE "cIV" // bool
-#define COLLIDER_IS_TRANSFORM_VISIBLE "cIT" // bool
+#define COLLIDER_POSITION_OFFSET "cPO" // float array 3
+#define COLLIDER_SCALE_OFFSET "cOS" // float array 3
+#define COLLIDER_ROTATION_OFFSET "cRO" // float array 3
 
 // Sound Data:
 #define SOUND_FILENAME_KEY "oFK" // string
