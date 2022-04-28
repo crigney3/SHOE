@@ -168,6 +168,8 @@ void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixe
 
 void ParticleSystem::Start()
 {
+	this->maxParticles = 20;
+
 	this->particlesPerSecond = 1.0f;
 	this->particleLifetime = 3.0f;
 	this->secondsPerEmission = 1.0f / particlesPerSecond;
@@ -191,15 +193,13 @@ void ParticleSystem::Start()
 
 	// TODO: Set up a function to calculate if this emitter will overflow its buffer
 	// Then recalculate maxParticles if it will
-	
-	// With the current component system, don't initialize until SetMaxParticles is called
-	//this->maxParticles = 20;
-	/*Initialize(this->maxParticles);
+
+	Initialize(this->maxParticles);
 
 	SetParticleComputeShader(defaultParticleCopyComputeShader, ParticleComputeShaderType::Copy);
 	SetParticleComputeShader(defaultParticleSimComputeShader, ParticleComputeShaderType::Simulate);
 	SetParticleComputeShader(defaultParticleEmitComputeShader, ParticleComputeShaderType::Emit);
-	SetParticleComputeShader(defaultParticleDeadListInitComputeShader, ParticleComputeShaderType::DeadListInit);*/
+	SetParticleComputeShader(defaultParticleDeadListInitComputeShader, ParticleComputeShaderType::DeadListInit);
 }
 
 void ParticleSystem::Update() {
@@ -320,7 +320,7 @@ void ParticleSystem::Initialize(int maxParticles)
 
 	ID3D11Buffer* deadListBuffer;
 
-	this->maxParticles = maxParticles + 5;
+	this->maxParticles = maxParticles;
 
 	D3D11_BUFFER_DESC deadDesc = {};
 	deadDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;

@@ -335,6 +335,7 @@ private:
 
 public:
 	static bool materialSortDirty;
+	bool shouldSendUpdateMessage;
 
 	~AssetManager();
 
@@ -356,8 +357,8 @@ public:
 
 	std::string GetLoadingSceneName();
 	// Pass file pointer?
-	void LoadScene(std::string filepath);
-	void LoadScene(FILE* file);
+	void LoadScene(std::string filepath, std::condition_variable* threadNotifier, std::mutex* threadLock);
+	void LoadScene(FILE* file, std::condition_variable* threadNotifier, std::mutex* threadLock);
 	void SaveScene(std::string filepath, std::string sceneName = "");
 	void SaveScene(FILE* file, std::string sceneName = "");
 

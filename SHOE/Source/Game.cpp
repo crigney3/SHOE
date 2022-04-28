@@ -152,6 +152,12 @@ void Game::Init()
 }
 
 void Game::LoadScene() {
+	delete loadingMutex;
+	delete notification;
+
+	loadingMutex = new std::mutex();
+	notification = new std::condition_variable();
+
 	globalAssets.SetAMLoadState(AMLoadState::SCENE_LOAD);
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -159,7 +165,7 @@ void Game::LoadScene() {
 #endif
 
 	// Start the loading thread and the loading screen thread
-	std::thread loadingThread = std::thread([this] { globalAssets.LoadScene("structureTest.json"); });
+	std::thread loadingThread = std::thread([this] { globalAssets.LoadScene("structureTest.json", notification, loadingMutex); });
 	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(globalAssets.GetAMLoadState()); });
 
 	// Once they've stopped passing control back and forth, join them
@@ -394,8 +400,6 @@ void Game::RenderUI() {
 						ImGui::EndListBox();
 					}
 
-					/*ImGui::LabelText("Switch to Selected Material: ", 0);
-					ImGui::SameLine();*/
 					if (ImGui::Button("Swap")) {
 						meshRenderer->SetMaterial(globalAssets.GetMaterialAtID(materialIndex));
 					}
@@ -499,6 +503,62 @@ void Game::RenderUI() {
 					terrain->SetEnabled(terrainEnabled);
 
 				ImGui::Checkbox("Render Bounds ", &terrain->DrawBounds);
+
+				// Material changes
+				if (ImGui::CollapsingHeader("Terrain Material Swapping")) {
+					static int materialIndex = 0;
+
+					std::string nameBuffer;
+					static char nameBuf[64] = "";
+					nameBuffer = terrain->GetMaterial()->GetName();
+					strcpy_s(nameBuf, nameBuffer.c_str());
+
+					ImGui::Text(nameBuf);
+					if (ImGui::BeginListBox("TMaterialList")) {
+						for (int i = 0; i < globalAssets.GetTerrainMaterialArraySize(); i++) {
+							const bool is_selected = (materialIndex == i);
+							if (ImGui::Selectable(globalAssets.GetTerrainMaterialAtID(i)->GetName().c_str(), is_selected)) {
+								materialIndex = i;
+							}
+
+							if (is_selected) ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndListBox();
+					}
+
+					if (ImGui::Button("Swap")) {
+						terrain->SetMaterial(globalAssets.GetTerrainMaterialAtID(materialIndex));
+					}
+				}
+
+				// Mesh Swapping
+				if (ImGui::CollapsingHeader("Mesh Swapping")) {
+					static int meshIndex = 0;
+
+					std::string nameBuffer;
+					static char nameBuf[64] = "";
+					nameBuffer = terrain->GetMesh()->GetName();
+					strcpy_s(nameBuf, nameBuffer.c_str());
+
+					ImGui::Text(nameBuf);
+					if (ImGui::BeginListBox("MeshList")) {
+						for (int i = 0; i < globalAssets.GetMeshArraySize(); i++) {
+							const bool is_selected = (meshIndex == i);
+							if (ImGui::Selectable(globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
+								meshIndex = i;
+							}
+
+							if (is_selected) ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndListBox();
+					}
+
+					if (ImGui::Button("Swap")) {
+						terrain->SetMesh(globalAssets.GetMeshAtID(meshIndex));
+					}
+				}
 			}
 
 			if (std::dynamic_pointer_cast<Collider>(componentList[c]) != nullptr)
@@ -727,9 +787,8 @@ void Game::RenderUI() {
 		strcpy_s(nameBuf, nameBuffer.c_str());
 		ImGui::InputText("Rename Camera (disabled) ", nameBuf, sizeof(nameBuffer));
 
-		// Wait, isn't this a really bad idea?
-		// 30 Minutes later, I have determined that this was, in fact a terrible idea.
-		//currentCam->SetName(nameBuf);
+		// It's not a bad idea any more!
+		currentCam->SetName(nameBuf);
 
 		float fov = currentCam->GetFOV();
 		ImGui::SliderFloat("FOV", &fov, 0, XM_PI - 0.01f);
@@ -812,9 +871,9 @@ void Game::RenderUI() {
 		}
 
 		if (ImGui::BeginMenu("Add")) {
-			ImGui::Text("This menu will allow easily adding more objects and lights.");
+			ImGui::Text("Add a new GameEntity, which can have components attached.");
 
-			if (ImGui::Button("Add GameObject")) {
+			if (ImGui::Button("Add GameEntity")) {
 				globalAssets.CreateGameEntity("GameEntity" + std::to_string(globalAssets.GetGameEntityArraySize()));
 
 				entityUIIndex = globalAssets.GetGameEntityArraySize() - 1;
@@ -1025,7 +1084,7 @@ void Game::Update()
 	// Quit if the escape key is pressed
 	if (input.TestKeyAction(KeyActions::QuitGame)) Quit();
 
-	globalAssets.BroadcastGlobalEntityEvent(EntityEventType::Update);
+	if(globalAssets.shouldSendUpdateMessage) globalAssets.BroadcastGlobalEntityEvent(EntityEventType::Update);
 
 	if (movingEnabled) {
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+1.5f, (float)sin(Time::totalTime) + 2.5f, +0.0f);
@@ -1080,7 +1139,7 @@ void Game::Update()
 	}*/
 
 	mainCamera->Update(this->hWnd);
-	//flashShadowCamera->Update(this->hWnd);
+	globalAssets.shouldSendUpdateMessage = true;
 }
 
 void Game::DrawLoadingScreen(AMLoadState loadType) {
@@ -1172,14 +1231,14 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 // --------------------------------------------------------
 void Game::Draw()
 {
-	if (globalAssets.GetAMLoadState() != INITIALIZING || globalAssets.GetAMLoadState() != SCENE_LOAD) {
+	if (globalAssets.GetAMLoadState() != INITIALIZING && globalAssets.GetAMLoadState() != SCENE_LOAD) {
 		//Render shadows before anything else
 		if (flashMenuToggle) {
 			renderer->RenderShadows(flashShadowCamera, MiscEffectSRVTypes::FLASHLIGHT_SHADOW);
 		}
 
 		renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
-	}
 
-	renderer->Draw(mainCamera);
+		renderer->Draw(mainCamera);
+	}
 }

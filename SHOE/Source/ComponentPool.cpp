@@ -17,9 +17,9 @@ template<> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiat
 	}
 
 	std::shared_ptr<MeshRenderer> component = unallocated.front();
+	component->Bind(gameEntity);
 	allocated.emplace_back(component);
 	unallocated.pop();
-	component->Bind(gameEntity);
 	//Sorts the meshes
 	std::sort(allocated.begin(), allocated.end(), [](std::shared_ptr<MeshRenderer> a, std::shared_ptr<MeshRenderer> b) {
 		if (a->GetMaterial()->GetTransparent() != b->GetMaterial()->GetTransparent())

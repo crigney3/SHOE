@@ -18,6 +18,7 @@ AssetManager::~AssetManager() {
 	}
 
 	globalSounds.clear();
+	globalMeshes.clear();
 
 	// And components
 	for (auto ge : globalEntities) {
@@ -180,8 +181,11 @@ std::string AssetManager::GetCurrentSceneName() {
 	return currentSceneName;
 }
 
-void AssetManager::LoadScene(std::string filepath) {
+void AssetManager::LoadScene(std::string filepath, std::condition_variable* threadNotifier, std::mutex* threadLock) {
 	HRESULT hr = CoInitialize(NULL);
+
+	this->threadNotifier = threadNotifier;
+	this->threadLock = threadLock;
 
 	try {
 		rapidjson::Document sceneDoc;
@@ -426,6 +430,7 @@ void AssetManager::LoadScene(std::string filepath) {
 
 			std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
 			newEnt->SetEnableDisable(entityBlock[i].FindMember(ENTITY_ENABLED)->value.GetBool());
+			//newEnt->UpdateHierarchyIsEnabled(entityBlock[i].FindMember(ENTITY_HIERARCHY_ENABLED)->value.GetBool());
 			newEnt->UpdateHierarchyIsEnabled(entityBlock[i].FindMember(ENTITY_HIERARCHY_ENABLED)->value.GetBool());
 
 			const rapidjson::Value& componentBlock = entityBlock[i].FindMember(COMPONENTS)->value;
@@ -503,7 +508,9 @@ void AssetManager::LoadScene(std::string filepath) {
 
 					newParticles->SetColorTint(color);
 					newParticles->SetDestination(destination);
-					newParticles->SetEnabled(enabled);
+
+					// Particles are a bit of a mess, and need to be initially disabled for at least the first frame.
+					newParticles->SetEnabled(false);
 				}
 				else if (componentType == CO_LIGHT_TYPE) {
 					std::shared_ptr<Light> light;
@@ -567,7 +574,7 @@ void AssetManager::LoadScene(std::string filepath) {
 
 			// Skies are such large objects that Flush is needed to prevent
 			// the Device from timing out
-			context->Flush();
+			//context->Flush();
 		}
 
 		const rapidjson::Value& soundBlock = sceneDoc[SOUNDS];
@@ -593,7 +600,7 @@ void AssetManager::LoadScene(std::string filepath) {
 	}	
 }
 
-void AssetManager::LoadScene(FILE* file) {
+void AssetManager::LoadScene(FILE* file, std::condition_variable* threadNotifier, std::mutex* threadLock) {
 	rapidjson::Document sceneDoc;
 
 	char readBuffer[FILE_BUFFER_SIZE];
@@ -629,7 +636,14 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 		//
 
 		rapidjson::Value meshBlock(rapidjson::kArrayType);
+		bool shouldBreak = false;
 		for (auto me : this->globalMeshes) {
+			for (auto te : ComponentManager::GetAll<Terrain>()) {
+				if (te->GetMesh() == me) shouldBreak = true;
+			}
+
+			if (shouldBreak) break;
+
 			// Mesh
 			rapidjson::Value meshValue(rapidjson::kObjectType);
 
@@ -1541,6 +1555,9 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 		newEnt->Initialize();
 
 		globalEntities.push_back(newEnt);
+
+		shouldSendUpdateMessage = false;
+		newEnt->Freeze();
 
 		return newEnt;
 	}
@@ -2454,11 +2471,14 @@ void AssetManager::InitializeCameras() {
 
 	float aspectRatio = (float)(dxInstance->width / dxInstance->height);
 	CreateCamera("mainCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -20.0f), aspectRatio, 1)->SetTag(CameraType::MAIN);
-	CreateCamera("mainShadowCamera", DirectX::XMFLOAT3(0.0f, 10.0f, -20.0f), 1.0f, 0)->SetTag(CameraType::MISC_SHADOW);
+	std::shared_ptr<Camera> scTemp = CreateCamera("mainShadowCamera", DirectX::XMFLOAT3(0.0f, 20.0f, -200.0f), 1.0f, 0);
 	std::shared_ptr<Camera> fscTemp = CreateCamera("flashShadowCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -5.5f), 1.0f, 1);
+
+	scTemp->SetTag(CameraType::MISC_SHADOW);
+	scTemp->GetTransform()->SetRotation(-10.0f, 0.0f, 0.0f);
+
 	fscTemp->SetTag(CameraType::MISC_SHADOW);
 	fscTemp->GetTransform()->SetRotation(0, 0, 0);
-	fscTemp->UpdateViewMatrix();
 }
 
 // --------------------------------------------------------
@@ -2962,6 +2982,8 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 	finalTerrain = std::make_shared<Mesh>(vertices.data(), numVertices, indices.data(), numIndices, device, "TerrainMesh");
 
 	finalTerrain->SetFileNameKey(SerializeFileName("Assets\\HeightMaps\\", fullPath));
+	globalMeshes.push_back(finalTerrain);
+	Terrain::SetDefaults(finalTerrain, globalTerrainMaterials[0]);
 
 	return finalTerrain;
 }

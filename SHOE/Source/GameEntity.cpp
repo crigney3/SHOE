@@ -6,6 +6,9 @@
  */
 void GameEntity::UpdateHierarchyIsEnabled(bool active, bool head)
 {
+	//If this GameEntity is Frozen, don't Update
+	if (frozen) return;
+
 	if (head || hierarchyIsEnabled != active) {
 		if (!head) { 
 			hierarchyIsEnabled = active;
@@ -48,6 +51,11 @@ void GameEntity::Initialize()
 /// <param name="message">Body of the message, should one be needed</param>
 void GameEntity::PropagateEvent(EntityEventType event, std::shared_ptr<void> message)
 {
+	if (event == EntityEventType::Update) this->Unfreeze();
+
+	//If this GameEntity is Frozen, don't Propagate
+	if (frozen) return;
+
 	//If the event type requires there to be a message and there isn't one, fail
 	if ((EntityEventType::REQUIRES_MESSAGE & 1 << event) && message == nullptr) {
 		//Probably should throw but I'll silently fail for now
@@ -208,4 +216,13 @@ bool GameEntity::RemoveComponent(std::shared_ptr<IComponent> component)
 		}
 	}
 	return false;
+}
+
+
+void GameEntity::Freeze() {
+	this->frozen = true;
+}
+
+void GameEntity::Unfreeze() {
+	this->frozen = false;
 }

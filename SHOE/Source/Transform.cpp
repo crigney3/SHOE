@@ -21,6 +21,7 @@ void Transform::Start() {
 	XMStoreFloat4x4(&worldMatrix, XMMatrixIdentity());
 	XMStoreFloat4x4(&worldInverseTransposeMatrix, XMMatrixIdentity());
 	this->children.clear();
+	this->childEntities.clear();
 }
 
 void Transform::OnDestroy()

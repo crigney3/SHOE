@@ -784,7 +784,7 @@ void Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam)
 		VSShadow->SetShader();
 		VSShadow->SetMatrix4x4("view", cam->GetViewMatrix());
 		VSShadow->SetMatrix4x4("projection", cam->GetProjectionMatrix());
-		VSShadow->SetMatrix4x4("world", globalAssets.GetGameEntityByID(selectedEntity)->GetTransform()->GetWorldMatrix());
+		VSShadow->SetMatrix4x4("world", globalAssets.GetGameEntityAtID(selectedEntity)->GetTransform()->GetWorldMatrix());
 		VSShadow->CopyAllBufferData();
 
 		solidColorPS->SetShader();
@@ -796,7 +796,7 @@ void Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam)
 		UINT stride = sizeof(Vertex);
 		UINT offset = 0;
 
-		std::vector<std::shared_ptr<MeshRenderer>> meshes = globalAssets.GetGameEntityByID(selectedEntity)->GetComponents<MeshRenderer>();
+		std::vector<std::shared_ptr<MeshRenderer>> meshes = globalAssets.GetGameEntityAtID(selectedEntity)->GetComponents<MeshRenderer>();
 		for (std::shared_ptr<MeshRenderer> mesh : meshes) {
 			if (mesh->IsEnabled()) {
 				context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
@@ -814,7 +814,7 @@ void Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam)
 		context->IASetVertexBuffers(0, 1, sphereMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
 		context->IASetIndexBuffer(sphereMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
-		std::vector<std::shared_ptr<ParticleSystem>> particles = globalAssets.GetGameEntityByID(selectedEntity)->GetComponents<ParticleSystem>();
+		std::vector<std::shared_ptr<ParticleSystem>> particles = globalAssets.GetGameEntityAtID(selectedEntity)->GetComponents<ParticleSystem>();
 		for (std::shared_ptr<ParticleSystem> particleSystem : particles) {
 			if (particleSystem->IsEnabled()) {
 				context->DrawIndexed(
@@ -826,7 +826,7 @@ void Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam)
 			}
 		}
 
-		std::vector<std::shared_ptr<Light>> lights = globalAssets.GetGameEntityByID(selectedEntity)->GetComponents<Light>();
+		std::vector<std::shared_ptr<Light>> lights = globalAssets.GetGameEntityAtID(selectedEntity)->GetComponents<Light>();
 		for (std::shared_ptr<Light> light : lights) {
 			if (light->IsEnabled()) {
 				context->DrawIndexed(
@@ -906,6 +906,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	// This section could be improved, see Chris's Demos and
 	// Structs in header. Currently only supports the single default 
 	// PBR+IBL shader
+	LightData* lightData = Light::GetLightArray();
 	unsigned int lightCount = Light::GetLightArrayCount();
 
 	perFrameVS->SetMatrix4x4("view", cam->GetViewMatrix());
@@ -916,7 +917,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	perFrameVS->SetMatrix4x4("envLightView", mainShadowCamera->GetViewMatrix());
 	perFrameVS->SetMatrix4x4("envLightProjection", mainShadowCamera->GetProjectionMatrix());
 
-	perFramePS->SetData("lights", Light::GetLightArray(), sizeof(LightData) * MAX_LIGHTS);
+	perFramePS->SetData("lights", lightData, sizeof(LightData) * MAX_LIGHTS);
 	perFramePS->SetData("lightCount", &lightCount, sizeof(lightCount));
 	perFramePS->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 	if (this->currentSky->GetEnableDisable()) {
@@ -1043,7 +1044,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 			std::shared_ptr<SimpleVertexShader> VSTerrain = terrains[i]->GetMaterial()->GetVertexShader();
 
 			PSTerrain->SetShader();
-			PSTerrain->SetData("lights", Light::GetLightArray(), sizeof(Light) * 64);
+			PSTerrain->SetData("lights", lightData, sizeof(Light) * 64);
 			PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
 			PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 			PSTerrain->SetFloat("uvMultNear", 50.0f);
@@ -1224,7 +1225,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		refractivePS->SetMatrix4x4("projMatrix", mainCamera->GetProjectionMatrix());
 		refractivePS->SetFloat3("cameraPos", mainCamera->GetTransform()->GetLocalPosition());
 
-		refractivePS->SetData("lights", Light::GetLightArray(), sizeof(Light) * 64);
+		refractivePS->SetData("lights", lightData, sizeof(Light) * 64);
 		refractivePS->SetData("lightCount", &lightCount, sizeof(unsigned int));
 
 		refractivePS->SetShaderResourceView("environmentMap", currentSky->GetSkyTexture().Get());
