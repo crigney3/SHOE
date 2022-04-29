@@ -17,7 +17,6 @@ private:
 	bool enabled;
 	bool hierarchyIsEnabled;
 	bool transformChangedThisFrame;
-	bool frozen;
 
 	std::vector<std::shared_ptr<IComponent>> componentList;
 	std::vector<std::function<void(std::shared_ptr<IComponent>)>> componentDeallocList;
