@@ -29,17 +29,8 @@
 #define ENTITY_NAME "n" // string
 #define ENTITY_ENABLED "e" // bool
 #define ENTITY_HIERARCHY_ENABLED "hE" // bool
-#define ENTITY_ATTACHED_LIGHTS "aL" // deprecated
 #define COMPONENT_TYPE "ct" // int
 #define COMPONENTS "cm" // category - only used to fetch actual data
-
-// Component Types:
-#define CO_TRANSFORM_TYPE 0
-#define CO_COLLIDER_TYPE 1
-#define CO_TERRAIN_TYPE 2
-#define CO_PARTICLE_TYPE 3
-#define CO_LIGHT_TYPE 4
-#define CO_MESHRENDERER_TYPE 5
 
 // Light Components:
 #define LIGHT_TYPE "lT" // int
@@ -221,11 +212,11 @@ enum ComponentTypes {
 	// While Transform is tracked here, it is often skipped or handled uniquely
 	// when assessing all components, as it cannot be removed or doubled
 	TRANSFORM,
-	MESH_RENDERER,
-	PARTICLE_SYSTEM,
 	COLLIDER,
 	TERRAIN,
+	PARTICLE_SYSTEM,
 	LIGHT,
+	MESH_RENDERER,
 	// Must always be the final enum
 	COMPONENT_TYPE_COUNT
 };
@@ -268,12 +259,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState;
 
-	DirectX::XMFLOAT4 redTint = DirectX::XMFLOAT4(0.2f, 0.0f, 0.0f, 1.0f);
-	DirectX::XMFLOAT4 greenTint = DirectX::XMFLOAT4(0.0f, 0.2f, 0.0f, 1.0f);
-	DirectX::XMFLOAT4 blueTint = DirectX::XMFLOAT4(0.0f, 0.0f, 0.2f, 1.0f);
 	DirectX::XMFLOAT4 whiteTint = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	DirectX::XMFLOAT4 grayTint = DirectX::XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	DirectX::XMFLOAT4 brownTint = DirectX::XMFLOAT4(1.0f, 0.4f, 0.0f, 1.0f);
 
 	// Helper for creating a cubemap from 6 individual textures
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> CreateCubemap(
@@ -329,8 +315,6 @@ private:
 	AMLoadState assetManagerLoadState;
 	bool singleLoadComplete;
 
-	ComponentTypes allCurrentComponentTypes;
-
 	std::string currentSceneName;
 	std::string loadingSceneName;
 
@@ -363,8 +347,6 @@ public:
 	void SaveScene(FILE* file, std::string sceneName = "");
 
 	std::string GetCurrentSceneName();
-
-	ComponentTypes GetAllCurrentComponentTypes();
 
 	/// <summary>
 	/// Gets the full path to an asset that is inside the Assets/ dir.
@@ -513,9 +495,6 @@ public:
 
 	// Methods to disable and enable assets for rendering
 	// Currently not implemented except for lights
-	
-	void EnableDisableSky(std::string name, bool value);
-	void EnableDisableSky(int id, bool value);
 	void EnableDisableCamera(std::string name, bool value);
 	void EnableDisableCamera(int id, bool value);
 
@@ -556,8 +535,6 @@ public:
 	size_t GetGameEntityArraySize();
 	size_t GetTerrainMaterialArraySize();
 	size_t GetSoundArraySize();
-	std::vector<std::shared_ptr<GameEntity>>* GetActiveGameEntities();
-	std::vector<std::shared_ptr<Sky>>* GetSkyArray();
 
 	FMOD::Sound* GetSoundAtID(int id);
 	std::shared_ptr<Camera> GetCameraAtID(int id);

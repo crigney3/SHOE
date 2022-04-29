@@ -184,8 +184,6 @@ std::string AssetManager::GetCurrentSceneName() {
 void AssetManager::LoadScene(std::string filepath, std::condition_variable* threadNotifier, std::mutex* threadLock) {
 	HRESULT hr = CoInitialize(NULL);
 
-	
-
 	this->threadNotifier = threadNotifier;
 	this->threadLock = threadLock;
 
@@ -256,7 +254,6 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 			loadDesc.MipLODBias = (sampleStateBlock[i].FindMember(SAMPLER_MIP_LOD_BIAS)->value.GetDouble());
 			loadDesc.ComparisonFunc = (D3D11_COMPARISON_FUNC)(sampleStateBlock[i].FindMember(SAMPLER_COMPARISON_FUNCTION)->value.GetInt());
 
-			float borderColor[4];
 			const rapidjson::Value& borderColorBlock = sampleStateBlock[i].FindMember(SAMPLER_BORDER_COLOR)->value;
 			for (int j = 0; j < 4; j++) {
 				loadDesc.BorderColor[j] = borderColorBlock[j].GetDouble();
@@ -390,8 +387,6 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 			std::string mFilename = DeSerializeFileName(meshBlock[i].FindMember(MESH_FILENAME_KEY)->value.GetString());
 			std::shared_ptr<Mesh> newMesh = CreateMesh(meshBlock[i].FindMember(MESH_NAME)->value.GetString(), mFilename);
 
-			//newMesh->SetEnableDisable(meshBlock[i].FindMember(MESH_ENABLED)->value.GetBool());
-
 			newMesh->SetDepthPrePass(meshBlock[i].FindMember(MESH_NEEDS_DEPTH_PREPASS)->value.GetBool());
 
 			newMesh->SetMaterialIndex(meshBlock[i].FindMember(MESH_MATERIAL_INDEX)->value.GetInt());
@@ -404,13 +399,11 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 		const rapidjson::Value& terrainMaterialBlock = sceneDoc[TERRAIN_MATERIALS];
 		assert(terrainMaterialBlock.IsArray());
 		for (rapidjson::SizeType i = 0; i < terrainMaterialBlock.Size(); i++) {
-			std::string tMatName;
-			std::string tMatBlendMapPath;
 			const rapidjson::Value& tMatInternalBlock = terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_MATERIAL_ARRAY)->value;
 			std::vector<std::shared_ptr<Material>> internalMaterials;
 
-			tMatName = (terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_NAME)->value.GetString());
-			tMatBlendMapPath = (DeSerializeFileName(terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_BLEND_MAP_PATH)->value.GetString()));
+			std::string tMatName = terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_NAME)->value.GetString();
+			std::string tMatBlendMapPath = DeSerializeFileName(terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_BLEND_MAP_PATH)->value.GetString());
 
 			for (rapidjson::SizeType j = 0; j < tMatInternalBlock.Size(); j++) {
 				// Material texture strings are being incorrectly serialized/loaded
@@ -432,14 +425,13 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 
 			std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
 			newEnt->SetEnableDisable(entityBlock[i].FindMember(ENTITY_ENABLED)->value.GetBool());
-			//newEnt->UpdateHierarchyIsEnabled(entityBlock[i].FindMember(ENTITY_HIERARCHY_ENABLED)->value.GetBool());
 			newEnt->UpdateHierarchyIsEnabled(entityBlock[i].FindMember(ENTITY_HIERARCHY_ENABLED)->value.GetBool());
 
 			const rapidjson::Value& componentBlock = entityBlock[i].FindMember(COMPONENTS)->value;
 			assert(componentBlock.IsArray());
 			for (rapidjson::SizeType i = 0; i < componentBlock.Size(); i++) {
 				int componentType = componentBlock[i].FindMember(COMPONENT_TYPE)->value.GetInt();
-				if (componentType == CO_TRANSFORM_TYPE) {
+				if (componentType == ComponentTypes::TRANSFORM) {
 					std::shared_ptr<Transform> trans = newEnt->GetTransform();
 					DirectX::XMFLOAT3 pos;
 					DirectX::XMFLOAT3 rot;
@@ -465,19 +457,20 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 					trans->SetRotation(rot);
 					trans->SetScale(scale);
 				}
-				else if (componentType == CO_COLLIDER_TYPE) {
+				else if (componentType == ComponentTypes::COLLIDER) {
 					std::shared_ptr<Collider> collider = newEnt->AddComponent<Collider>();
 
 					collider->SetEnabled(componentBlock[i].FindMember(COLLIDER_ENABLED)->value.GetBool());
 					collider->SetVisible(componentBlock[i].FindMember(COLLIDER_IS_VISIBLE)->value.GetBool());
 					collider->SetIsTrigger(componentBlock[i].FindMember(COLLIDER_TYPE)->value.GetBool());
+
 					DirectX::XMFLOAT3 pos;
 					DirectX::XMFLOAT3 rot;
 					DirectX::XMFLOAT3 scale;
 
 					const rapidjson::Value& posBlock = componentBlock[i].FindMember(COLLIDER_POSITION_OFFSET)->value;
-					const rapidjson::Value& rotBlock = componentBlock[i].FindMember(COLLIDER_SCALE_OFFSET)->value;
-					const rapidjson::Value& scaleBlock = componentBlock[i].FindMember(COLLIDER_ROTATION_OFFSET)->value;
+					const rapidjson::Value& rotBlock = componentBlock[i].FindMember(COLLIDER_ROTATION_OFFSET)->value;
+					const rapidjson::Value& scaleBlock = componentBlock[i].FindMember(COLLIDER_SCALE_OFFSET)->value;
 
 					pos.x = posBlock[0].GetDouble();
 					pos.y = posBlock[1].GetDouble();
@@ -495,13 +488,13 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 					collider->SetRotationOffset(rot);
 					collider->SetScale(pos);
 				}
-				else if (componentType == CO_TERRAIN_TYPE) {
+				else if (componentType == ComponentTypes::TERRAIN) {
 					std::string heightmapKey = DeSerializeFileName(componentBlock[i].FindMember(TERRAIN_HEIGHTMAP_FILENAME_KEY)->value.GetString());
 					std::shared_ptr<TerrainMaterial> tMat = GetTerrainMaterialAtID(componentBlock[i].FindMember(TERRAIN_INDEX_OF_TERRAIN_MATERIAL)->value.GetInt());
 
 					CreateTerrainOnEntity(newEnt, heightmapKey.c_str(), tMat);
 				}
-				else if (componentType == CO_PARTICLE_TYPE) {
+				else if (componentType == ComponentTypes::PARTICLE_SYSTEM) {
 					std::string filename = DeSerializeFileName(componentBlock[i].FindMember(PARTICLE_SYSTEM_FILENAME_KEY)->value.GetString());
 					int maxParticles = componentBlock[i].FindMember(PARTICLE_SYSTEM_MAX_PARTICLES)->value.GetInt();
 					bool blendState = componentBlock[i].FindMember(PARTICLE_SYSTEM_ADDITIVE_BLEND)->value.GetBool();
@@ -536,7 +529,7 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 					// Particles are a bit of a mess, and need to be initially disabled for at least the first frame.
 					newParticles->SetEnabled(false);
 				}
-				else if (componentType == CO_LIGHT_TYPE) {
+				else if (componentType == ComponentTypes::LIGHT) {
 					std::shared_ptr<Light> light;
 
 					DirectX::XMFLOAT3 direction;
@@ -570,7 +563,7 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 						// Unrecognized light type, do nothing
 					}
 				}
-				else if (componentType == CO_MESHRENDERER_TYPE) {
+				else if (componentType == ComponentTypes::MESH_RENDERER) {
 					std::shared_ptr<MeshRenderer> mRenderer = newEnt->AddComponent<MeshRenderer>();
 					mRenderer->SetMaterial(GetMaterialAtID(componentBlock[i].FindMember(MATERIAL_COMPONENT_INDEX)->value.GetInt()));
 					mRenderer->SetMesh(GetMeshAtID(componentBlock[i].FindMember(MESH_COMPONENT_INDEX)->value.GetInt()));
@@ -586,10 +579,10 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 		for (rapidjson::SizeType i = 0; i < skyBlock.Size(); i++) {
 			std::string name = skyBlock[i].FindMember(SKY_NAME)->value.GetString();
 			std::string filename = DeSerializeFileName(skyBlock[i].FindMember(SKY_FILENAME_KEY)->value.GetString());
-			std::string filenameExtension = skyBlock[i].FindMember(SKY_FILENAME_EXTENSION)->value.GetString();
 			bool keyType = skyBlock[i].FindMember(SKY_FILENAME_KEY_TYPE)->value.GetBool();
 
 			if (keyType) {
+				std::string filenameExtension = skyBlock[i].FindMember(SKY_FILENAME_EXTENSION)->value.GetString();
 				CreateSky(filename, keyType, name, filenameExtension);
 			}
 			else {
@@ -700,7 +693,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 
 			// Simple types first
 			matValue.AddMember(MAT_UV_TILING, mat->GetTiling(), allocator);
-			//matValue.AddMember(MAT_ENABLED, mat->GetEnableDisable(), allocator);
 			matValue.AddMember(MAT_IS_TRANSPARENT, mat->GetTransparent(), allocator);
 			matValue.AddMember(MAT_IS_REFRACTIVE, mat->GetRefractive(), allocator);
 			matValue.AddMember(MAT_INDEX_OF_REFRACTION, mat->GetIndexOfRefraction(), allocator);
@@ -789,9 +781,8 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			rapidjson::Value coValue(rapidjson::kObjectType);
 			for (auto co : ge->GetAllComponents()) {
 				// Is it a Light?
-				if (std::dynamic_pointer_cast<Light>(co) != nullptr) {
-					std::shared_ptr<Light> light = std::dynamic_pointer_cast<Light>(co);
-					coValue.AddMember(COMPONENT_TYPE, CO_LIGHT_TYPE, allocator);
+				if (std::shared_ptr<Light> light = std::dynamic_pointer_cast<Light>(co)) {
+					coValue.AddMember(COMPONENT_TYPE, ComponentTypes::LIGHT, allocator);
 
 					// Basic types
 					coValue.AddMember(LIGHT_TYPE, light->GetType(), allocator);
@@ -821,9 +812,9 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 				}
 
 				// Is it a Collider?
-				if (std::dynamic_pointer_cast<Collider>(co) != nullptr) {
-					coValue.AddMember(COMPONENT_TYPE, CO_COLLIDER_TYPE, allocator);
-					std::shared_ptr<Collider> collider = std::dynamic_pointer_cast<Collider>(co);
+				else if (std::shared_ptr<Collider> collider = std::dynamic_pointer_cast<Collider>(co)) {
+					coValue.AddMember(COMPONENT_TYPE, ComponentTypes::COLLIDER, allocator);
+					
 
 					coValue.AddMember(COLLIDER_TYPE, collider->IsTrigger(), allocator);
 					coValue.AddMember(COLLIDER_ENABLED, collider->IsEnabled(), allocator);
@@ -852,9 +843,8 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 				}
 
 				// Is it Terrain?
-				if (std::dynamic_pointer_cast<Terrain>(co) != nullptr) {
-					coValue.AddMember(COMPONENT_TYPE, CO_TERRAIN_TYPE, allocator);
-					std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(co);
+				else if (std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(co)) {
+					coValue.AddMember(COMPONENT_TYPE, ComponentTypes::TERRAIN, allocator);
 
 					rapidjson::Value hmKey;
 					hmKey.SetString(terrain->GetMesh()->GetFileNameKey().c_str(), allocator);
@@ -869,9 +859,8 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 				}
 
 				// Is it a Particle System?
-				if (std::dynamic_pointer_cast<ParticleSystem>(co) != nullptr) {
-					coValue.AddMember(COMPONENT_TYPE, CO_PARTICLE_TYPE, allocator);
-					std::shared_ptr<ParticleSystem> ps = std::dynamic_pointer_cast<ParticleSystem>(co);
+				else if (std::shared_ptr<ParticleSystem> ps = std::dynamic_pointer_cast<ParticleSystem>(co)) {
+					coValue.AddMember(COMPONENT_TYPE, ComponentTypes::PARTICLE_SYSTEM, allocator);
 
 					coValue.AddMember(PARTICLE_SYSTEM_MAX_PARTICLES, ps->GetMaxParticles(), allocator);
 					coValue.AddMember(PARTICLE_SYSTEM_IS_MULTI_PARTICLE, ps->IsMultiParticle(), allocator);
@@ -903,10 +892,8 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 				}
 
 				// Is it a MeshRenderer?
-				if (std::dynamic_pointer_cast<MeshRenderer>(co) != nullptr) {
-					coValue.AddMember(COMPONENT_TYPE, CO_MESHRENDERER_TYPE, allocator);
-
-					std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(co);
+				else if (std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(co)) {
+					coValue.AddMember(COMPONENT_TYPE, ComponentTypes::MESH_RENDERER, allocator);
 
 					// Mesh Renderers are really just storage for a Mesh
 					// and a Material, so get the indices for those in the 
@@ -936,7 +923,7 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			}
 
 			// Transforms are treated and stored differently
-			coValue.AddMember(COMPONENT_TYPE, CO_TRANSFORM_TYPE, allocator);
+			coValue.AddMember(COMPONENT_TYPE, ComponentTypes::TRANSFORM, allocator);
 			std::shared_ptr<Transform> transform = ge->GetTransform();
 
 			// Treat FLOATX as float array[x]
@@ -1306,9 +1293,7 @@ std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFL
 	try {
 		SetLoadingAndWait("Cameras", id);
 
-		std::shared_ptr<Camera> newCam;
-
-		newCam = std::make_shared<Camera>(pos, aspectRatio, type, id);
+		std::shared_ptr<Camera> newCam = std::make_shared<Camera>(pos, aspectRatio, type, id);
 
 		this->globalCameras.push_back(newCam);
 
@@ -1326,11 +1311,9 @@ std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string
 	try {
 		SetLoadingAndWait("Vertex Shaders", id);
 
-		std::shared_ptr<SimpleVertexShader> newVS;
-
 		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), namePath, id);
+		std::shared_ptr<SimpleVertexShader> newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), namePath, id);
 
 		// Serialize the filename if it's in the right folder
 		std::string assetPathStr = "Assets\\Shaders\\";
@@ -1354,11 +1337,9 @@ std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string i
 	try {
 		SetLoadingAndWait("Pixel Shaders", id);
 
-		std::shared_ptr<SimplePixelShader> newPS;
-
 		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), namePath, id);
+		std::shared_ptr<SimplePixelShader> newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), namePath, id);
 
 		// Serialize the filename if it's in the right folder
 		std::string assetPathStr = "Assets\\Shaders\\";
@@ -1382,17 +1363,14 @@ std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::stri
 	try {
 		SetLoadingAndWait("Compute Shaders", id);
 
-		std::shared_ptr<SimpleComputeShader> newCS;
-
 		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), namePath.c_str(), id);
+		std::shared_ptr<SimpleComputeShader> newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), namePath.c_str(), id);
 
 		// Serialize the filename if it's in the right folder
-		std::string baseFilename;
 		std::string assetPathStr = "Assets\\Shaders\\";
 		
-		baseFilename = SerializeFileName(assetPathStr, namePath);
+		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
 		newCS->SetFileNameKey(baseFilename);
 
@@ -1425,10 +1403,8 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 	try {
 		SetLoadingAndWait("Meshes", id);
 
-		std::shared_ptr<Mesh> newMesh;
-
 		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, nameToLoad);
-		newMesh = std::make_shared<Mesh>(namePath.c_str(), device, id);
+		std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(namePath.c_str(), device, id);
 
 		globalMeshes.push_back(newMesh);
 
@@ -1467,8 +1443,7 @@ std::string AssetManager::SerializeFileName(std::string assetFolderPath, std::st
 }
 
 std::string AssetManager::DeSerializeFileName(std::string assetPath) {
-	char t[2] = "t";
-	if (assetPath[0] == t[0]) {
+	if (assetPath[0] == 't') {
 		// Return the assetPath and remove the t
 		return assetPath.substr(1);
 	}
@@ -1478,7 +1453,6 @@ std::string AssetManager::DeSerializeFileName(std::string assetPath) {
 }
 
 HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType) {
-	HRESULT hr;
 	AssetPathIndex assetPath;
 
 	switch (textureType) {
@@ -1499,7 +1473,7 @@ HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL:
 	std::string namePath = GetFullPathToAssetFile(assetPath, nameToLoad);
 	std::wstring widePath;
 
-	hr = ISimpleShader::ConvertToWide(namePath, widePath);
+	HRESULT hr = ISimpleShader::ConvertToWide(namePath, widePath);
 
 	CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, texture->GetAddressOf());
 
@@ -1547,7 +1521,6 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
-		std::shared_ptr<Material> newMat;
 
 		std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
 		std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
@@ -1557,7 +1530,7 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 		LoadPBRTexture(metalnessNameToLoad, &metalness, PBRTextureTypes::METAL);
 		LoadPBRTexture(roughnessNameToLoad, &roughness, PBRTextureTypes::ROUGH);
 
-		newMat = std::make_shared<Material>(whiteTint,
+		std::shared_ptr<Material> newMat = std::make_shared<Material>(whiteTint,
 			PSNormal,
 			VSNormal,
 			albedo,
@@ -1881,7 +1854,6 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 		importantSkyVertexShaders.push_back(GetVertexShaderByName("SkyVS"));
 		importantSkyVertexShaders.push_back(GetVertexShaderByName("FullscreenVS"));
 
-		std::string filenameKey;
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newSkyTexture;
 
 		std::string assetPath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
@@ -1910,7 +1882,7 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 			CreateDDSTextureFromFile(device.Get(), context.Get(), skyDDSWide.c_str(), nullptr, &newSkyTexture);
 		}
 
-		filenameKey = SerializeFileName("Assets\\Textures\\Skies\\", assetPath);
+		std::string filenameKey = SerializeFileName("Assets\\Textures\\Skies\\", assetPath);
 
 		std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, newSkyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
 
@@ -1973,13 +1945,19 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 															 float particlesPerSecond,
 															 bool isMultiParticle,
 															 bool additiveBlendState) {
-	std::shared_ptr<ParticleSystem> newEmitter = CreateParticleEmitter(name, textureNameToLoad, isMultiParticle);
-	newEmitter->SetMaxParticles(maxParticles);
-	newEmitter->SetParticleLifetime(particleLifeTime);
-	newEmitter->SetParticlesPerSecond(particlesPerSecond);
-	newEmitter->SetBlendState(additiveBlendState);
+	try {
+		SetLoadingAndWait("Particle Emitter", name);
 
-	return newEmitter;
+		std::shared_ptr<GameEntity> emitterEntity = CreateGameEntity(name);
+		std::shared_ptr<ParticleSystem> newEmitter = CreateParticleEmitterOnEntity(emitterEntity, textureNameToLoad, maxParticles, particleLifeTime, particlesPerSecond, isMultiParticle, additiveBlendState);
+
+		return newEmitter;
+	}
+	catch (...) {
+		SetLoadedAndWait("Particle Emitter", name, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::string filePath, bool preInitializing) {
@@ -1988,8 +1966,6 @@ std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::st
 		// the loading screen.
 		if (!preInitializing) SetLoadingAndWait("Font", name);
 
-		std::string assetPath;
-
 		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_FONT_PATH, filePath);
 		std::wstring wPathBuf;
 
@@ -1997,12 +1973,10 @@ std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::st
 
 		ISimpleShader::ConvertToWide(namePath, wPathBuf);
 
-		std::shared_ptr<DirectX::SpriteFont> sFont = std::make_shared<DirectX::SpriteFont>(device.Get(), wPathBuf.c_str());
-
 		std::shared_ptr<SHOEFont> newFont = std::make_shared<SHOEFont>();
 		newFont->fileNameKey = baseFilename;
 		newFont->name = name;
-		newFont->spritefont = sFont;
+		newFont->spritefont = std::make_shared<DirectX::SpriteFont>(device.Get(), wPathBuf.c_str());
 
 		globalFonts.push_back(newFont);
 
@@ -2434,7 +2408,6 @@ void AssetManager::InitializeTerrainEntities() {
 void AssetManager::InitializeTerrainMaterials() {
 	try {
 		globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMaterial>>();
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> defaultBlendMap;
 
 		std::vector<std::shared_ptr<Material>> tMats = std::vector<std::shared_ptr<Material>>();
 
@@ -2494,6 +2467,7 @@ void AssetManager::InitializeTerrainMaterials() {
 		// This is the correct way to load a tMat that doesn't use blend mapping
 		// Note that even with one material, it must be pushed to the vector
 		std::shared_ptr<TerrainMaterial> floorTerrainMaterial;
+
 		tMats.clear();
 
 		tMats.push_back(GetMaterialByName("terrainFloorMat"));
@@ -2756,14 +2730,6 @@ size_t AssetManager::GetSoundArraySize() {
 	return this->globalSounds.size();
 }
 
-std::vector<std::shared_ptr<GameEntity>>* AssetManager::GetActiveGameEntities() {
-	return &this->globalEntities;
-}
-
-std::vector<std::shared_ptr<Sky>>* AssetManager::GetSkyArray() {
-	return &this->skies;
-}
-
 FMOD::Sound* AssetManager::GetSoundAtID(int id) {
 	return this->globalSounds[id];
 }
@@ -2814,10 +2780,6 @@ std::shared_ptr<GameEntity> AssetManager::GetGameEntityAtID(int id) {
 
 std::shared_ptr<TerrainMaterial> AssetManager::GetTerrainMaterialAtID(int id) {
 	return this->globalTerrainMaterials[id];
-}
-
-ComponentTypes AssetManager::GetAllCurrentComponentTypes() {
-	return this->allCurrentComponentTypes;
 }
 
 std::shared_ptr<Camera> AssetManager::GetMainCamera() {
@@ -2871,7 +2833,6 @@ void AssetManager::SetCameraTag(std::shared_ptr<Camera> cam, CameraType tag) {
 
 #pragma region buildAssetData
 std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale) {
-	std::shared_ptr<Mesh> finalTerrain;
 
 	std::string fullPath = GetFullPathToAssetFile(AssetPathIndex::ASSET_HEIGHTMAP_PATH, filename);
 
@@ -3008,12 +2969,10 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 			XMFLOAT2 UV = XMFLOAT2(x / (float)mapWidth, z / (float)mapWidth);
 			vertices[index] = { position, normal, tangents, UV };
 		}
-
-
 	}
 
 	//Mesh handles tangents
-	finalTerrain = std::make_shared<Mesh>(vertices.data(), numVertices, indices.data(), numIndices, device, "TerrainMesh");
+	std::shared_ptr<Mesh> finalTerrain = std::make_shared<Mesh>(vertices.data(), numVertices, indices.data(), numIndices, device, "TerrainMesh");
 
 	finalTerrain->SetFileNameKey(SerializeFileName("Assets\\HeightMaps\\", fullPath));
 	globalMeshes.push_back(finalTerrain);
@@ -3215,8 +3174,7 @@ void AssetManager::CreateComplexGeometry() {
 void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey, std::string name) {
 	for (unsigned int i = 0; i < node->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		std::string newName = name + "CM" + std::to_string(i);
-		mesh->mName = newName;
+		mesh->mName = name + "CM" + std::to_string(i);
 
 		std::shared_ptr<Mesh> newMesh = ProcessComplexMesh(mesh, scene);
 		std::shared_ptr<GameEntity> newEntity = CreateGameEntity(newMesh, GetMaterialByName("cobbleMat"), mesh->mName.C_Str());;
@@ -3397,14 +3355,6 @@ void AssetManager::RemoveTerrainMaterial(std::string name) {
 void AssetManager::RemoveTerrainMaterial(int id) {
 	globalEntities.erase(globalEntities.begin() + id);
 }
-
-void AssetManager::RemoveLight(std::string name) {
-	globalEntities.erase(globalEntities.begin() + GetGameEntityIDByName(name));
-}
-
-void AssetManager::RemoveLight(int id) {
-	globalEntities.erase(globalEntities.begin() + id);
-}
 */
 #pragma endregion
 
@@ -3414,14 +3364,6 @@ void AssetManager::RemoveLight(int id) {
 // Enables or disables assets into or
 // out of the rendering pipeline
 //
-
-void AssetManager::EnableDisableSky(std::string name, bool value) {
-	GetSkyByName(name)->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisableSky(int id, bool value) {
-	skies[id]->SetEnableDisable(value);
-}
 
 void AssetManager::EnableDisableCamera(std::string name, bool value) {
 	GetCameraByName(name)->SetEnableDisable(value);
@@ -3532,16 +3474,6 @@ std::shared_ptr<SHOEFont> AssetManager::GetFontByName(std::string name) {
 	}
 	return nullptr;
 }
-
-// Unlikely to be implemented, see GetLightIdByName
-//std::shared_ptr<Light> AssetManager::GetLightByName(std::string name) {
-//	for (int i = 0; i < globalLights.size(); i++) {
-//		if (globalLights[i]->GetName() == name) {
-//			return globalLights[i];
-//		}
-//	}
-//	return nullptr;
-//}
 #pragma endregion
 
 #pragma region getAssetID
@@ -3641,22 +3573,6 @@ int AssetManager::GetVertexShaderIDByPointer(std::shared_ptr<SimpleVertexShader>
 //	return -1;
 //}
 
-// Unsure if current design pattern allows this
-// Lights must stay at a specific size to be passed to GPU
-// Could theoretically create map
-// Could also create a wrapper struct with:
-//		Name
-//		Light
-// and do pointer math to return Lights as an array that skips name
-//int AssetManager::GetLightIDByName(std::string name) {
-//	for (int i = 0; i < globalLights.size(); i++) {
-//		if (globalLights[i]-> == name) {
-//			return i;
-//		}
-//	}
-//	return -1;
-//}
-
 std::string AssetManager::GetFullPathToAssetFile(AssetPathIndex index, std::string filename) {
 	std::string asset = dxInstance->GetAssetPathString(index) + filename;
 	char pathBuf[1024];
@@ -3669,11 +3585,5 @@ std::string AssetManager::GetFullPathToExternalAssetFile(std::string filename) {
 	GetFullPathNameA(filename.c_str(), sizeof(pathBuf), pathBuf, NULL);
 	return pathBuf;
 }
-
-#pragma endregion
-
-#pragma region inlines
-
-
 
 #pragma endregion
