@@ -12,7 +12,6 @@
 
 // Categories:
 #define ENTITIES "en" // category - only used to fetch actual data
-#define COMPONENTS "cm" // category - only used to fetch actual data
 #define MESHES "m" // category - only used to fetch actual data
 #define MATERIALS "a" // category - only used to fetch actual data
 #define VERTEX_SHADERS "vS" // category - only used to fetch actual data
@@ -24,6 +23,7 @@
 #define SKIES "s" // category - only used to fetch actual data
 #define SOUNDS "sO" // category - only used to fetch actual data
 #define TERRAIN_MATERIALS "tM" // category - only used to fetch actual data
+#define TERRAIN_ENTITIES "tE" // category - only used to fetch actual data
 
 // Entities:
 #define ENTITY_NAME "n" // string
@@ -31,8 +31,15 @@
 #define ENTITY_HIERARCHY_ENABLED "hE" // bool
 #define ENTITY_ATTACHED_LIGHTS "aL" // deprecated
 #define COMPONENT_TYPE "ct" // int
-#define MESH_COMPONENT_INDEX "mCI" // int
-#define MATERIAL_COMPONENT_INDEX "aCI" // int
+#define COMPONENTS "cm" // category - only used to fetch actual data
+
+// Component Types:
+#define CO_TRANSFORM_TYPE 0
+#define CO_COLLIDER_TYPE 1
+#define CO_TERRAIN_TYPE 2
+#define CO_PARTICLE_TYPE 3
+#define CO_LIGHT_TYPE 4
+#define CO_MESHRENDERER_TYPE 5
 
 // Light Components:
 #define LIGHT_TYPE "lT" // int
@@ -45,6 +52,8 @@
 // Mesh Renderer Components:
 #define MESH_OBJECT "mO" // category - only used to fetch actual data
 #define MATERIAL_OBJECT "mA" // category - only used to fetch actual data
+#define MESH_COMPONENT_INDEX "mCI" // int
+#define MATERIAL_COMPONENT_INDEX "aCI" // int
 
 // Mesh Data:
 
@@ -65,7 +74,7 @@
 #define MAT_REFRACTION_SCALE "aRS" // float
 #define MAT_COLOR_TINT "aCT" // float array 4
 #define MAT_PIXEL_SHADER "aPS" // int
-#define MAT_REFRACTION_PIXEL_SHADER "aPS" // int
+#define MAT_REFRACTION_PIXEL_SHADER "aRP" // int
 #define MAT_VERTEX_SHADER "aVS" // int
 #define MAT_TEXTURE_OR_ALBEDO_MAP "aAM" // string 
 #define MAT_NORMAL_MAP "aNM" // string
@@ -155,6 +164,7 @@
 #define PARTICLE_SYSTEM_FILENAME_KEY "pFK" // string
 #define PARTICLE_SYSTEM_IS_MULTI_PARTICLE "pIP" // bool
 #define PARTICLE_SYSTEM_ADDITIVE_BLEND "pAB" // bool
+#define PARTICLE_SYSTEM_ENABLED "pEN" // bool
 #define PARTICLE_SYSTEM_COLOR_TINT "pCT" // float array 4
 #define PARTICLE_SYSTEM_SCALE "pS" // float
 #define PARTICLE_SYSTEM_SPEED "pE" //float
@@ -204,22 +214,6 @@ struct LoadingNotifications {
 struct FMODUserData {
 	std::shared_ptr<std::string> name;
 	std::shared_ptr<std::string> filenameKey;
-};
-
-// State machine used to track what type of load
-// AssetManager is doing on calling any Create() function
-enum AMLoadState {
-	// Used when SHOE isn't loading
-	NOT_LOADING,
-	// Used when SHOE first loads
-	INITIALIZING,
-	// Used when something calls a Create() function
-	SINGLE_CREATION,
-	// In the future, used for complex asset imports
-	COMPLEX_CREATION,
-	// In the future, used for loading a scene with
-	// a loading screen running parallel
-	SCENE_LOAD
 };
 
 enum ComponentTypes {
@@ -330,6 +324,7 @@ private:
 	LoadingNotifications loaded;
 	// Helper functions for threads
 	void SetLoadedAndWait(std::string category, std::string object, std::exception_ptr error = NULL);
+	void SetLoadingAndWait(std::string category, std::string object);
 	AMLoadState assetManagerLoadState;
 	bool singleLoadComplete;
 
@@ -361,8 +356,8 @@ public:
 
 	std::string GetLoadingSceneName();
 	// Pass file pointer?
-	void LoadScene(std::string filepath);
-	void LoadScene(FILE* file);
+	void LoadScene(std::string filepath, std::condition_variable* threadNotifier, std::mutex* threadLock);
+	void LoadScene(FILE* file, std::condition_variable* threadNotifier, std::mutex* threadLock);
 	void SaveScene(std::string filepath, std::string sceneName = "");
 	void SaveScene(FILE* file, std::string sceneName = "");
 
@@ -448,6 +443,40 @@ public:
 												   bool additiveBlendState = true);
 	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode, std::string name = "");
 	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false);
+
+	// Create-On-Entity methods, for components and loading
+	std::shared_ptr<Terrain> CreateTerrainOnEntity(std::shared_ptr<GameEntity> entityToEdit,
+												   const char* heightmap, 
+												   std::shared_ptr<TerrainMaterial> material, 
+												   unsigned int mapWidth = 512, 
+												   unsigned int mapHeight = 512, 
+												   float heightScale = 25.0f);
+	std::shared_ptr<Terrain> CreateTerrainOnEntity(std::shared_ptr<GameEntity> entityToEdit,
+												   std::shared_ptr<Mesh> terrainMesh,
+												   std::shared_ptr<TerrainMaterial> material);
+	std::shared_ptr<ParticleSystem> CreateParticleEmitterOnEntity(std::shared_ptr<GameEntity> entityToEdit,
+																  std::string textureNameToLoad,
+																  int maxParticles,
+																  float particleLifeTime,
+																  float particlesPerSecond,
+																  bool isMultiParticle = false,
+																  bool additiveBlendState = true);
+	std::shared_ptr<ParticleSystem> CreateParticleEmitterOnEntity(std::shared_ptr<GameEntity> entityToEdit, 
+																  std::string textureNameToLoad,
+																  bool isMultiParticle);
+	std::shared_ptr<Light> CreateDirectionalLightOnEntity(std::shared_ptr<GameEntity> entityToEdit,
+														  DirectX::XMFLOAT3 direction,
+														  DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
+														  float intensity = 1.0f);
+	std::shared_ptr<Light> CreatePointLightOnEntity(std::shared_ptr<GameEntity> entityToEdit,
+													float range,
+													DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
+													float intensity = 1.0f);
+	std::shared_ptr<Light> CreateSpotLightOnEntity(std::shared_ptr<GameEntity> entityToEdit, 
+												   DirectX::XMFLOAT3 direction,
+												   float range,
+												   DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
+												   float intensity = 1.0f);
 
 	// Creation Helper Methods
 	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType);
@@ -536,8 +565,9 @@ public:
 	std::shared_ptr<SimpleVertexShader> GetVertexShaderAtID(int id);
 	std::shared_ptr<SimplePixelShader> GetPixelShaderAtID(int id);
 	std::shared_ptr<SimpleComputeShader> GetComputeShaderAtID(int id);
-	std::shared_ptr<GameEntity> GetGameEntityByID(int id);
+	std::shared_ptr<GameEntity> GetGameEntityAtID(int id);
 	std::shared_ptr<Sky> GetSkyAtID(int id);
+	std::shared_ptr<TerrainMaterial> GetTerrainMaterialAtID(int id);
 
 	int GetPixelShaderIDByPointer(std::shared_ptr<SimplePixelShader> pixelPointer);
 	int GetVertexShaderIDByPointer(std::shared_ptr<SimpleVertexShader> vertexPointer);

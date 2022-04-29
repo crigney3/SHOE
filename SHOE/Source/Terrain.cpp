@@ -84,6 +84,6 @@ DirectX::BoundingOrientedBox Terrain::GetBounds()
 
 void Terrain::CalculateBounds()
 {
-	bounds = DirectX::BoundingOrientedBox(GetTransform()->GetGlobalPosition(), DirectX::XMFLOAT3(256.0f, 0.1f, 256.0f), GetTransform()->GetGlobalRotation());
-	bounds.Transform(bounds, DirectX::XMLoadFloat4x4(&GetTransform()->GetWorldMatrix()));
+	bounds = DirectX::BoundingOrientedBox(GetTransform()->GetGlobalPosition(), DirectX::XMFLOAT3(256.0f, 2.0f, 256.0f), GetTransform()->GetGlobalRotation());
+	//bounds.Transform(bounds, DirectX::XMLoadFloat4x4(&GetTransform()->GetWorldMatrix()));
 }

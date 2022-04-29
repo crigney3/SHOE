@@ -165,7 +165,7 @@ void Material::SetRefractive(bool refractive) {
 
 	// If this material is refractive, we can assume it should
 	// also be transparent.
-	this->transparent = true;
+	if(refractive) this->transparent = true;
 }
 
 bool Material::GetRefractive() {

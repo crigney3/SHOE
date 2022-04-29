@@ -72,6 +72,8 @@ Game::~Game()
 	delete& AudioHandler::GetInstance();
 
 	delete loadingSpriteBatch;
+	delete loadingMutex;
+	delete notification;
 }
 
 // --------------------------------------------------------
@@ -150,11 +152,59 @@ void Game::Init()
 }
 
 void Game::LoadScene() {
-	globalAssets.LoadScene("structureTest.json");
+	delete loadingMutex;
+	delete notification;
+
+	loadingMutex = new std::mutex();
+	notification = new std::condition_variable();
+
+	globalAssets.SetAMLoadState(AMLoadState::SCENE_LOAD);
+
+#if defined(DEBUG) || defined(_DEBUG)
+	printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
+#endif
+
+	entityUIIndex = -1;
+
+	// Start the loading thread and the loading screen thread
+	std::thread loadingThread = std::thread([this] { globalAssets.LoadScene("structureTest.json", notification, loadingMutex); });
+	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(globalAssets.GetAMLoadState()); });
+
+	// Once they've stopped passing control back and forth, join them
+	// to the main thread
+	screenThread.join();
+	loadingThread.join();
+
+#if defined(DEBUG) || defined(_DEBUG)
+	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
+#endif
+
+	mainCamera = globalAssets.GetMainCamera();
+	mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
+	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
+	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
+
+	Entities = globalAssets.GetActiveGameEntities();
+
+	skies = globalAssets.GetSkyArray();
+
+	renderer.reset();
+
+	context->Flush();
+
+	//With everything initialized, start the renderer
+	renderer = std::make_unique<Renderer>(height,
+										  width,
+										  device,
+										  context,
+										  swapChain,
+										  backBufferRTV,
+										  depthStencilView);
 }
 
 void Game::SaveScene() {
 	globalAssets.SaveScene("structureTest.json");
+
 }
 
 void Game::SaveSceneAs() {
@@ -352,8 +402,6 @@ void Game::RenderUI() {
 						ImGui::EndListBox();
 					}
 
-					/*ImGui::LabelText("Switch to Selected Material: ", 0);
-					ImGui::SameLine();*/
 					if (ImGui::Button("Swap")) {
 						meshRenderer->SetMaterial(globalAssets.GetMaterialAtID(materialIndex));
 					}
@@ -455,6 +503,64 @@ void Game::RenderUI() {
 				ImGui::Checkbox("Enabled ", &terrainEnabled);
 				if (terrainEnabled != terrain->IsLocallyEnabled())
 					terrain->SetEnabled(terrainEnabled);
+
+				ImGui::Checkbox("Render Bounds ", &terrain->DrawBounds);
+
+				// Material changes
+				if (ImGui::CollapsingHeader("Terrain Material Swapping")) {
+					static int materialIndex = 0;
+
+					std::string nameBuffer;
+					static char nameBuf[64] = "";
+					nameBuffer = terrain->GetMaterial()->GetName();
+					strcpy_s(nameBuf, nameBuffer.c_str());
+
+					ImGui::Text(nameBuf);
+					if (ImGui::BeginListBox("TMaterialList")) {
+						for (int i = 0; i < globalAssets.GetTerrainMaterialArraySize(); i++) {
+							const bool is_selected = (materialIndex == i);
+							if (ImGui::Selectable(globalAssets.GetTerrainMaterialAtID(i)->GetName().c_str(), is_selected)) {
+								materialIndex = i;
+							}
+
+							if (is_selected) ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndListBox();
+					}
+
+					if (ImGui::Button("Swap")) {
+						terrain->SetMaterial(globalAssets.GetTerrainMaterialAtID(materialIndex));
+					}
+				}
+
+				// Mesh Swapping
+				if (ImGui::CollapsingHeader("Mesh Swapping")) {
+					static int meshIndex = 0;
+
+					std::string nameBuffer;
+					static char nameBuf[64] = "";
+					nameBuffer = terrain->GetMesh()->GetName();
+					strcpy_s(nameBuf, nameBuffer.c_str());
+
+					ImGui::Text(nameBuf);
+					if (ImGui::BeginListBox("MeshList")) {
+						for (int i = 0; i < globalAssets.GetMeshArraySize(); i++) {
+							const bool is_selected = (meshIndex == i);
+							if (ImGui::Selectable(globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
+								meshIndex = i;
+							}
+
+							if (is_selected) ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndListBox();
+					}
+
+					if (ImGui::Button("Swap")) {
+						terrain->SetMesh(globalAssets.GetMeshAtID(meshIndex));
+					}
+				}
 			}
 
 			if (std::dynamic_pointer_cast<Collider>(componentList[c]) != nullptr)
@@ -683,9 +789,8 @@ void Game::RenderUI() {
 		strcpy_s(nameBuf, nameBuffer.c_str());
 		ImGui::InputText("Rename Camera (disabled) ", nameBuf, sizeof(nameBuffer));
 
-		// Wait, isn't this a really bad idea?
-		// 30 Minutes later, I have determined that this was, in fact a terrible idea.
-		//currentCam->SetName(nameBuf);
+		// It's not a bad idea any more!
+		currentCam->SetName(nameBuf);
 
 		float fov = currentCam->GetFOV();
 		ImGui::SliderFloat("FOV", &fov, 0, XM_PI - 0.01f);
@@ -768,9 +873,9 @@ void Game::RenderUI() {
 		}
 
 		if (ImGui::BeginMenu("Add")) {
-			ImGui::Text("This menu will allow easily adding more objects and lights.");
+			ImGui::Text("Add a new GameEntity, which can have components attached.");
 
-			if (ImGui::Button("Add GameObject")) {
+			if (ImGui::Button("Add GameEntity")) {
 				globalAssets.CreateGameEntity("GameEntity" + std::to_string(globalAssets.GetGameEntityArraySize()));
 
 				entityUIIndex = globalAssets.GetGameEntityArraySize() - 1;
@@ -824,7 +929,7 @@ void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 				int payload_n = *(const int*)payload->Data;
 
 				// Logic to parent objects and reorder list
-				std::shared_ptr<GameEntity> sourceEntity = globalAssets.GetGameEntityByID(payload_n);
+				std::shared_ptr<GameEntity> sourceEntity = globalAssets.GetGameEntityAtID(payload_n);
 
 				sourceEntity->GetTransform()->SetParent(entity->GetTransform());
 
@@ -1036,7 +1141,6 @@ void Game::Update()
 	}*/
 
 	mainCamera->Update(this->hWnd);
-	//flashShadowCamera->Update(this->hWnd);
 }
 
 void Game::DrawLoadingScreen(AMLoadState loadType) {
@@ -1056,14 +1160,14 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 					std::rethrow_exception(globalAssets.GetLoadingException());
 				}
 				catch (const std::exception& e) {
-					loadedObjectString = "Last Object: " + globalAssets.GetLastLoadedObject() + " Failed to Load! Error is printed to DBG console.";
+					loadedObjectString = globalAssets.GetLastLoadedObject() + " Failed to Load! Error is printed to DBG console.";
 #if defined(DEBUG) || defined(_DEBUG)
 					printf(e.what());
 #endif
 				}
 			}
 			else {
-				loadedObjectString = "Last Object Loaded: " + globalAssets.GetLastLoadedObject();
+				loadedObjectString = "Loading Object: " + globalAssets.GetLastLoadedObject();
 			}
 
 			context->ClearRenderTargetView(backBufferRTV.Get(), color);
@@ -1128,14 +1232,14 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 // --------------------------------------------------------
 void Game::Draw()
 {
-	if (globalAssets.GetAMLoadState() != INITIALIZING || globalAssets.GetAMLoadState() != SCENE_LOAD) {
+	if (globalAssets.GetAMLoadState() != INITIALIZING && globalAssets.GetAMLoadState() != SCENE_LOAD) {
 		//Render shadows before anything else
 		if (flashMenuToggle) {
 			renderer->RenderShadows(flashShadowCamera, MiscEffectSRVTypes::FLASHLIGHT_SHADOW);
 		}
 
 		renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
-	}
 
-	renderer->Draw(mainCamera);
+		renderer->Draw(mainCamera);
+	}
 }
