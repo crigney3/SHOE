@@ -25,9 +25,6 @@ private:
 	void PropagateEventToChildren(EntityEventType event, std::shared_ptr<void> message = nullptr);
 
 	void UpdateHierarchyIsEnabled(bool active, bool head = false);
-
-	friend class Transform;
-
 public:
 	GameEntity(DirectX::XMMATRIX worldIn, std::string name);
 	~GameEntity();
@@ -71,7 +68,9 @@ public:
 	
 	void Release();
 
+	friend class Transform;
 	friend class AssetManager;
+	friend class CollisionManager;
 };
 
 /**

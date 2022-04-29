@@ -56,13 +56,8 @@ void Camera::Update(HWND windowHandle)
 	if (input.KeyDown(VK_SHIFT)) { speed *= 5; }
 	if (input.KeyDown(VK_CONTROL)) { speed *= 0.1f; }
 
-	// Movement
-	if (input.TestKeyAction(KeyActions::MoveForward)) { transform->MoveRelative(0, 0, speed); }
-	if (input.TestKeyAction(KeyActions::MoveBack)) { transform->MoveRelative(0, 0, -speed); }
-	if (input.TestKeyAction(KeyActions::StrafeLeft)) { transform->MoveRelative(-speed, 0, 0); }
-	if (input.TestKeyAction(KeyActions::StrafeRight)) { transform->MoveRelative(speed, 0, 0); }
-	if (input.TestKeyAction(KeyActions::MoveDown)) { transform->MoveAbsolute(0, -speed, 0); }
-	if (input.TestKeyAction(KeyActions::MoveUp)) { transform->MoveAbsolute(0, speed, 0); }
+	transform->MoveRelative(input.TestInputAxis(InputAxes::MovementStrafe) * speed, 0, input.TestInputAxis(InputAxes::MovementAdvance) * speed);
+	transform->MoveAbsolute(0, input.TestInputAxis(InputAxes::MovementY) * speed, 0);
 
 	POINT mousePos = {};
 	GetCursorPos(&mousePos);

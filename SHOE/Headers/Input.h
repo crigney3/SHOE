@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Windows.h>
-#include "Keybind.h"
+#include "InputAxis.h"
 
 class Input
 {
@@ -51,6 +51,10 @@ public:
 	bool TestKeyAction(KeyActions action);
 	void UnbindKeyAction(KeyActions action);
 
+	void BindInputAxis(InputAxes axis, KeyActions positiveAction, KeyActions negativeAction);
+	int TestInputAxis(InputAxes axis);
+	void UnbindInputAxis(InputAxes axis);
+
 	bool KeyDown(int key);
 	bool KeyUp(int key);
 
@@ -99,6 +103,7 @@ private:
 
 	// Keybind Mapping
 	Keybind* keybinds;
+	InputAxis* axes;
 
 	// The window's handle (id) from the OS, so
 	// we can get the cursor's position

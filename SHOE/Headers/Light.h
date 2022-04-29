@@ -21,6 +21,14 @@ private:
 	static bool lightArrayDirty;
 	static std::vector<LightData> lightData;
 
+	void Start() override;
+	void OnMove(DirectX::XMFLOAT3 delta) override;
+	void OnRotate(DirectX::XMFLOAT3 delta) override;
+	void OnParentMove(std::shared_ptr<GameEntity> parent) override;
+	void OnParentRotate(std::shared_ptr<GameEntity> parent) override;
+	void OnEnable() override;
+	void OnDisable() override;
+
 	float type;
 	DirectX::XMFLOAT3 color;
 	float intensity;
@@ -29,17 +37,10 @@ private:
 
 	LightData GetData();
 public:
+	void OnDestroy() override;
+
 	static LightData* GetLightArray();
 	static int GetLightArrayCount();
-
-	void Start() override;
-	void OnDestroy() override;
-	void OnMove(DirectX::XMFLOAT3 delta) override;
-	void OnRotate(DirectX::XMFLOAT3 delta) override;
-	void OnParentMove(std::shared_ptr<GameEntity> parent) override;
-	void OnParentRotate(std::shared_ptr<GameEntity> parent) override;
-	void OnEnable() override;
-	void OnDisable() override;
 
 	float GetType();
 	void SetType(float type);

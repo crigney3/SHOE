@@ -469,9 +469,31 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 					std::shared_ptr<Collider> collider = newEnt->AddComponent<Collider>();
 
 					collider->SetEnabled(componentBlock[i].FindMember(COLLIDER_ENABLED)->value.GetBool());
-					collider->SetVisibilityStatus(componentBlock[i].FindMember(COLLIDER_IS_VISIBLE)->value.GetBool());
-					collider->SetTransformVisibilityStatus(componentBlock[i].FindMember(COLLIDER_IS_TRANSFORM_VISIBLE)->value.GetBool());
-					collider->SetTriggerStatus(componentBlock[i].FindMember(COLLIDER_TYPE)->value.GetBool());
+					collider->SetVisible(componentBlock[i].FindMember(COLLIDER_IS_VISIBLE)->value.GetBool());
+					collider->SetIsTrigger(componentBlock[i].FindMember(COLLIDER_TYPE)->value.GetBool());
+					DirectX::XMFLOAT3 pos;
+					DirectX::XMFLOAT3 rot;
+					DirectX::XMFLOAT3 scale;
+
+					const rapidjson::Value& posBlock = componentBlock[i].FindMember(COLLIDER_POSITION_OFFSET)->value;
+					const rapidjson::Value& rotBlock = componentBlock[i].FindMember(COLLIDER_SCALE_OFFSET)->value;
+					const rapidjson::Value& scaleBlock = componentBlock[i].FindMember(COLLIDER_ROTATION_OFFSET)->value;
+
+					pos.x = posBlock[0].GetDouble();
+					pos.y = posBlock[1].GetDouble();
+					pos.z = posBlock[2].GetDouble();
+
+					rot.x = rotBlock[0].GetDouble();
+					rot.y = rotBlock[1].GetDouble();
+					rot.z = rotBlock[2].GetDouble();
+
+					scale.x = scaleBlock[0].GetDouble();
+					scale.y = scaleBlock[1].GetDouble();
+					scale.z = scaleBlock[2].GetDouble();
+
+					collider->SetPositionOffset(pos);
+					collider->SetRotationOffset(rot);
+					collider->SetScale(pos);
 				}
 				else if (componentType == CO_TERRAIN_TYPE) {
 					std::string heightmapKey = DeSerializeFileName(componentBlock[i].FindMember(TERRAIN_HEIGHTMAP_FILENAME_KEY)->value.GetString());
@@ -803,10 +825,30 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 					coValue.AddMember(COMPONENT_TYPE, CO_COLLIDER_TYPE, allocator);
 					std::shared_ptr<Collider> collider = std::dynamic_pointer_cast<Collider>(co);
 
-					coValue.AddMember(COLLIDER_TYPE, collider->GetTriggerStatus(), allocator);
+					coValue.AddMember(COLLIDER_TYPE, collider->IsTrigger(), allocator);
 					coValue.AddMember(COLLIDER_ENABLED, collider->IsEnabled(), allocator);
-					coValue.AddMember(COLLIDER_IS_VISIBLE, collider->GetVisibilityStatus(), allocator);
-					coValue.AddMember(COLLIDER_IS_TRANSFORM_VISIBLE, collider->GetTransformVisibilityStatus(), allocator);
+					coValue.AddMember(COLLIDER_IS_VISIBLE, collider->IsVisible(), allocator);
+
+					// Treat FLOATX as float array[x]
+					rapidjson::Value pos(rapidjson::kArrayType);
+					rapidjson::Value rot(rapidjson::kArrayType);
+					rapidjson::Value scale(rapidjson::kArrayType);
+
+					pos.PushBack(collider->GetPositionOffset().x, allocator);
+					pos.PushBack(collider->GetPositionOffset().y, allocator);
+					pos.PushBack(collider->GetPositionOffset().z, allocator);
+
+					scale.PushBack(collider->GetScale().x, allocator);
+					scale.PushBack(collider->GetScale().y, allocator);
+					scale.PushBack(collider->GetScale().z, allocator);
+
+					rot.PushBack(collider->GetRotationOffset().x, allocator);
+					rot.PushBack(collider->GetRotationOffset().y, allocator);
+					rot.PushBack(collider->GetRotationOffset().z, allocator);
+
+					coValue.AddMember(COLLIDER_POSITION_OFFSET, pos, allocator);
+					coValue.AddMember(COLLIDER_SCALE_OFFSET, scale, allocator);
+					coValue.AddMember(COLLIDER_ROTATION_OFFSET, rot, allocator);
 				}
 
 				// Is it Terrain?
@@ -2613,22 +2655,15 @@ void AssetManager::InitializeIMGUI(HWND hwnd) {
 void AssetManager::InitializeColliders() {
 	std::shared_ptr<GameEntity> e = GetGameEntityByName("Bronze Cube");
 	std::shared_ptr<GameEntity> e2 = GetGameEntityByName("Scratched Sphere");
-	std::shared_ptr<GameEntity> e3 = GetGameEntityByName("Rough Torus");
-	std::shared_ptr<GameEntity> e4 = GetGameEntityByName("Floor Helix");
 	std::shared_ptr<GameEntity> e5 = GetGameEntityByName("Shiny Rough Sphere");
-
 	std::shared_ptr<GameEntity> e6 = GetGameEntityByName("Floor Cube");
 	std::shared_ptr<GameEntity> e7 = GetGameEntityByName("Scratched Cube");
-	//TODO: the wood sphere will become a child of the spinning stuff if you disable and enable it via IMGUI....
 
 	std::shared_ptr<Collider> c1 = AddColliderToGameEntity(e);
 	std::shared_ptr<Collider> c2 = AddColliderToGameEntity(e2);
-	std::shared_ptr<Collider> c3 = AddColliderToGameEntity(e3);
-	std::shared_ptr<Collider> c4 = AddColliderToGameEntity(e4);
 	std::shared_ptr<Collider> c5 = AddColliderToGameEntity(e5);
 	std::shared_ptr<Collider> c6 = AddColliderToGameEntity(e6);
 	std::shared_ptr<Collider> c7 = AddTriggerBoxToGameEntity(e7);
-	c6->SetExtents(XMFLOAT3(1.002f, 1.002f, 1.002f)); //TODO: check and see if setting this alters where children end up (coordinate space scaling)
 }
 #pragma endregion
 
@@ -2655,7 +2690,7 @@ std::shared_ptr<Collider> AssetManager::AddTriggerBoxToGameEntity(OUT std::share
 
 		std::shared_ptr<Collider> c = entity->AddComponent<Collider>();
 
-		c->SetTriggerStatus(true);
+		c->SetIsTrigger(true);
 
 		return c;
 	}

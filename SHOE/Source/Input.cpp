@@ -63,6 +63,7 @@ Input::~Input()
 	delete[] kbState;
 	delete[] prevKbState;
 	delete[] keybinds;
+	delete[] axes;
 }
 
 // ---------------------------------------------------
@@ -87,20 +88,25 @@ void Input::Initialize(HWND windowHandle)
 
 	this->windowHandle = windowHandle;
 
-	keybinds = new Keybind[KeyActions::Length]{};
+	keybinds = new Keybind[(int)KeyActions::Length]{};
 
 	//Default Keybinds
-	keybinds[KeyActions::MoveForward].Bind				(0, 0, 0, 0, 1, new int[] { 'W' },		 1, new int[] { 'S' });
-	keybinds[KeyActions::MoveBack].Bind					(0, 0, 0, 0, 1, new int[] { 'S' },		 1, new int[] { 'W' });
-	keybinds[KeyActions::StrafeLeft].Bind				(0, 0, 0, 0, 1, new int[] { 'A' },		 1, new int[] { 'D' });
-	keybinds[KeyActions::StrafeRight].Bind				(0, 0, 0, 0, 1, new int[] { 'D' },		 1, new int[] { 'A' });
-	keybinds[KeyActions::MoveDown].Bind					(0, 0, 0, 0, 1, new int[] { 'X' },		 1, new int[] { ' ' });
-	keybinds[KeyActions::MoveUp].Bind					(0, 0, 0, 0, 1, new int[] { ' ' },		 1, new int[] { 'X' });
-	keybinds[KeyActions::SprintModifier].Bind			(0, 0, 0, 0, 1, new int[] { VK_SHIFT },	 1, new int[] { VK_CONTROL });
-	keybinds[KeyActions::SneakModifier].Bind			(0, 0, 0, 0, 1, new int[] { VK_CONTROL },1, new int[] { VK_SHIFT });
-	keybinds[KeyActions::ToggleFlashlight].Bind			(1, new int[] { 'F' });
-	keybinds[KeyActions::ToggleFlashlightFlicker].Bind	(1, new int[] { 'V' });
-	keybinds[KeyActions::QuitGame].Bind					(1, new int[] { VK_ESCAPE });
+	keybinds[(int)KeyActions::MoveForward].Bind				(0, 0, 0, 0, 1, new int[] { 'W' });
+	keybinds[(int)KeyActions::MoveBack].Bind				(0, 0, 0, 0, 1, new int[] { 'S' });
+	keybinds[(int)KeyActions::StrafeLeft].Bind				(0, 0, 0, 0, 1, new int[] { 'A' });
+	keybinds[(int)KeyActions::StrafeRight].Bind				(0, 0, 0, 0, 1, new int[] { 'D' });
+	keybinds[(int)KeyActions::MoveDown].Bind				(0, 0, 0, 0, 1, new int[] { 'X' });
+	keybinds[(int)KeyActions::MoveUp].Bind					(0, 0, 0, 0, 1, new int[] { ' ' });
+	keybinds[(int)KeyActions::SprintModifier].Bind			(0, 0, 0, 0, 1, new int[] { VK_SHIFT },	 1, new int[] { VK_CONTROL });
+	keybinds[(int)KeyActions::SneakModifier].Bind			(0, 0, 0, 0, 1, new int[] { VK_CONTROL },1, new int[] { VK_SHIFT });
+	keybinds[(int)KeyActions::ToggleFlashlight].Bind		(1, new int[] { 'F' });
+	keybinds[(int)KeyActions::ToggleFlashlightFlicker].Bind	(1, new int[] { 'V' });
+	keybinds[(int)KeyActions::QuitGame].Bind				(1, new int[] { VK_ESCAPE });
+
+	axes = new InputAxis[(int)InputAxes::Length]{};
+	axes[(int)InputAxes::MovementAdvance].Bind	(KeyActions::MoveForward, KeyActions::MoveBack);
+	axes[(int)InputAxes::MovementStrafe].Bind	(KeyActions::StrafeRight, KeyActions::StrafeLeft);
+	axes[(int)InputAxes::MovementY].Bind		(KeyActions::MoveUp, KeyActions::MoveDown);
 }
 
 // ----------------------------------------------------------
@@ -183,7 +189,8 @@ void Input::SetWheelDelta(float delta)
 /// </summary>
 void Input::BindKeyAction(KeyActions action, int triggerByPressCt, int* triggerByPress, int triggerByReleaseCt, int* triggerByRelease, int triggerByDownCt, int* triggerByDown, int mustHaveUpCt, int* mustHaveUp, int mustHaveDownCt, int* mustHaveDown)
 {
-	keybinds[action].Bind(
+	if (action == KeyActions::Length) return;
+	keybinds[(int)action].Bind(
 		triggerByPressCt, triggerByPress,
 		triggerByReleaseCt, triggerByRelease,
 		triggerByDownCt, triggerByDown,
@@ -199,7 +206,7 @@ bool Input::TestKeyAction(KeyActions action)
 {
 	if (action == KeyActions::Length || guiWantsKeyboard)
 		return false;
-	Keybind* keybind = &keybinds[action];
+	Keybind* keybind = &keybinds[(int)action];
 	for (int i = 0; i < keybind->mustHaveDownCt; i++)
 	{
 		if (!KeyDown(keybind->mustHaveDown[i]))
@@ -233,7 +240,37 @@ bool Input::TestKeyAction(KeyActions action)
 /// </summary>
 void Input::UnbindKeyAction(KeyActions action)
 {
-	keybinds[action].Unbind();
+	if (action == KeyActions::Length) return;
+	keybinds[(int)action].Unbind();
+}
+
+/// <summary>
+/// Binds the positive and negative inputs of an input axis
+/// </summary>
+void Input::BindInputAxis(InputAxes axis, KeyActions positiveAction, KeyActions negativeAction)
+{
+	if (axis == InputAxes::Length) return;
+	axes[(int)axis].Bind(positiveAction, negativeAction);
+}
+
+/// <summary>
+/// Tests an input axis
+/// </summary>
+/// <param name="axis">Axis to test</param>
+/// <returns>1 if only the positive action is triggered, -1 if only the negative is triggered, 0 otherwise</returns>
+int Input::TestInputAxis(InputAxes axis)
+{
+	if (axis == InputAxes::Length || guiWantsKeyboard || !axes[(int)axis].bound) return 0;
+	return TestKeyAction(axes[(int)axis].positiveAxis) - TestKeyAction(axes[(int)axis].negativeAxis);
+}
+
+/// <summary>
+/// Unbinds an input axis so it can not be triggered
+/// </summary>
+void Input::UnbindInputAxis(InputAxes axis)
+{
+	if (axis == InputAxes::Length) return;
+	axes[(int)axis].Unbind();
 }
 
 // ----------------------------------------------------------

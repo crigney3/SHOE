@@ -40,10 +40,21 @@ private:
 
 	void SetTransformsFromMatrix(DirectX::XMFLOAT4X4 worldMatrix);
 
+	bool transformChangedThisFrame = false;
+
 	// Helpers for conversion
 	DirectX::XMFLOAT3 QuaternionToEuler(DirectX::XMFLOAT4 quaternion);
-public:
+
 	void Start() override;
+	void Update() override;
+	void OnMove(DirectX::XMFLOAT3 delta) override;
+	void OnRotate(DirectX::XMFLOAT3 delta) override;
+	void OnScale(DirectX::XMFLOAT3 delta) override;
+	void OnParentTransform(std::shared_ptr<GameEntity> parent) override;
+	void OnParentMove(std::shared_ptr<GameEntity> parent) override;
+	void OnParentRotate(std::shared_ptr<GameEntity> parent) override;
+	void OnParentScale(std::shared_ptr<GameEntity> parent) override;
+public:
 	void OnDestroy() override;
 
 	void MoveAbsolute(float x, float y, float z);
@@ -85,6 +96,7 @@ public:
 	void AddChild(std::shared_ptr<Transform> child);
 	void RemoveChild(std::shared_ptr<Transform> child);
 	void SetParent(std::shared_ptr<Transform> newParent);
+	void SetParentNoReciprocate(std::shared_ptr<Transform> parent);
 	std::shared_ptr<Transform> GetParent();
 	std::shared_ptr<Transform> GetChild(unsigned int index);
 	unsigned int GetChildCount();

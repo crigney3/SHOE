@@ -5,85 +5,100 @@
 
 using namespace DirectX;
 
-// forward declaration for static
-std::vector<std::shared_ptr<Collider>> CollisionManager::markedAsTriggerboxes_;
-std::vector<std::shared_ptr<Collider>> CollisionManager::markedAsColliders_;
+// Singleton requirement
+CollisionManager* CollisionManager::instance;
 
 CollisionManager::CollisionManager()
 {
-	markedAsTriggerboxes_ = std::vector<std::shared_ptr<Collider>>();
-	markedAsColliders_ = std::vector<std::shared_ptr<Collider>>();
+	activeCollisions = std::vector<Collision>();
+	activeTriggers = std::vector<Collision>();
+	lastFrameCollisions = std::vector<Collision>();
+	lastFrameTriggers = std::vector<Collision>();
 }
 
 CollisionManager::~CollisionManager()
 {
-	markedAsTriggerboxes_.clear();
-	markedAsColliders_.clear();
+	activeCollisions.clear();
+	activeTriggers.clear();
+	lastFrameCollisions.clear();
+	lastFrameTriggers.clear();
 }
-
-std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsTriggerboxes() { return markedAsTriggerboxes_; }
-
-std::vector<std::shared_ptr<Collider>> CollisionManager::GetMarkedAsColliders() { return markedAsColliders_; }
 
 void CollisionManager::Update()
 {
-	//CheckTriggerCollisions();
-	//CheckColliderCollisions();
-
-	// ROUGH implementation of collision. Seems to work and no dupes occur (I think)
-	std::vector<std::shared_ptr<Collider>> c = ComponentManager::GetAllEnabled<Collider>();
-	for (int i = 0; i < c.size(); i++)
+	std::vector<std::shared_ptr<Collider>> c = ComponentManager::GetAll<Collider>();
+	for (int i = 0; i < c.size() - 1; i++)
 	{
+		if (!c[i]->IsEnabled()) continue;
 		std::shared_ptr<Collider> a = c[i];
-		for (int j = 0; j < c.size(); j++)
+		for (int j = i + 1; j < c.size(); j++)
 		{
+			if (!c[j]->IsEnabled() || (c[i]->IsTrigger() && c[j]->IsTrigger())) continue;
 			std::shared_ptr<Collider> b = c[j];
-
-			// Skip if about to check against self
-			if (a == b)
-				continue;
 	
-			// TODO: Somehow need to check for collisions while avoiding dupes 
-			if ((!a->GetTriggerStatus() && b->GetTriggerStatus())
-				&& a->GetOrientedBoundingBox().Intersects(b->GetOrientedBoundingBox()))
-			{
-
+			if (a->GetOrientedBoundingBox().Intersects(b->GetOrientedBoundingBox())) {
+				//Collision
+				if (!a->IsTrigger() && !b->IsTrigger())
+				{
+					RegisterColliderCollision(a, b);
+				}
+				//Triggers
+				else 
+				{
+					RegisterTriggerCollision(a, b);
+				}
 			}
 		}
 	}
-}
 
-/**
- * \brief Adds a collider shared_ptr to appropriate subset (collider or triggerbox) list
- * \param _c collider to add
- */
-void CollisionManager::AddColliderToManager(std::shared_ptr<Collider> _c)
-{
-	// add it to the appropriate subset
-	if (_c->GetTriggerStatus() == true)
-		markedAsTriggerboxes_.push_back(_c);
-	else
-		markedAsColliders_.push_back(_c);
-}
-
-void CollisionManager::CheckTriggerCollisions()
-{
-	for (auto& t : markedAsTriggerboxes_)
-	{
-		DirectX::BoundingOrientedBox tOBB = t.get()->GetOrientedBoundingBox();
-		for (auto& c : markedAsColliders_)
-		{
-			BoundingOrientedBox cOBB = c->GetOrientedBoundingBox();
-			if (tOBB.Intersects(cOBB))
-			{
-#if defined(DEBUG) || defined(_DEBUG)
-				printf("Colliding\n");
-#endif
-			}
-		}
+	//Signals the end of previously registered collisions that weren't triggered this frame
+	for (int i = 0; i < lastFrameCollisions.size(); i++) {
+		lastFrameCollisions[i].a->GetGameEntity()->PropagateEvent(EntityEventType::OnCollisionExit, lastFrameCollisions[i].b->GetGameEntity());
+		lastFrameCollisions[i].b->GetGameEntity()->PropagateEvent(EntityEventType::OnCollisionExit, lastFrameCollisions[i].a->GetGameEntity());
 	}
+	for (int i = 0; i < lastFrameTriggers.size(); i++) {
+		lastFrameTriggers[i].a->GetGameEntity()->PropagateEvent(EntityEventType::OnTriggerExit, lastFrameTriggers[i].b->GetGameEntity());
+		lastFrameTriggers[i].b->GetGameEntity()->PropagateEvent(EntityEventType::OnTriggerExit, lastFrameTriggers[i].a->GetGameEntity());
+	}
+
+	lastFrameCollisions.clear();
+	lastFrameTriggers.clear();
+	lastFrameCollisions.swap(activeCollisions);
+	lastFrameTriggers.swap(activeTriggers);
 }
 
-void CollisionManager::CheckColliderCollisions()
+void CollisionManager::RegisterColliderCollision(std::shared_ptr<Collider> a, std::shared_ptr<Collider> b)
 {
+	Collision newCollision{ a, b };
+	auto& collisionPos = std::find(lastFrameCollisions.begin(), lastFrameCollisions.end(), newCollision);
+	//If this collision has already been logged
+	if (collisionPos != lastFrameCollisions.end()) {
+		a->GetGameEntity()->PropagateEvent(EntityEventType::InCollision, b->GetGameEntity());
+		b->GetGameEntity()->PropagateEvent(EntityEventType::InCollision, a->GetGameEntity());
+		lastFrameCollisions.erase(collisionPos);
+	}
+	else {
+		//It's a new collision
+		a->GetGameEntity()->PropagateEvent(EntityEventType::OnCollisionEnter, b->GetGameEntity());
+		b->GetGameEntity()->PropagateEvent(EntityEventType::OnCollisionEnter, a->GetGameEntity());
+	}
+	activeCollisions.push_back(newCollision);
+}
+
+void CollisionManager::RegisterTriggerCollision(std::shared_ptr<Collider> a, std::shared_ptr<Collider> b)
+{
+	Collision newTrigger{ a, b };
+	auto& triggerPos = std::find(lastFrameTriggers.begin(), lastFrameTriggers.end(), newTrigger);
+	//If this collision has already been logged
+	if (triggerPos != lastFrameTriggers.end()) {
+		a->GetGameEntity()->PropagateEvent(EntityEventType::InTrigger, b->GetGameEntity());
+		b->GetGameEntity()->PropagateEvent(EntityEventType::InTrigger, a->GetGameEntity());
+		lastFrameTriggers.erase(triggerPos);
+	}
+	else {
+		//It's a new collision
+		a->GetGameEntity()->PropagateEvent(EntityEventType::OnTriggerEnter, b->GetGameEntity());
+		b->GetGameEntity()->PropagateEvent(EntityEventType::OnTriggerEnter, a->GetGameEntity());
+	}
+	activeTriggers.push_back(newTrigger);
 }

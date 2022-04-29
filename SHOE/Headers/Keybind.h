@@ -3,7 +3,7 @@
 /// <summary>
 /// Defines all possible keybindable actions
 /// </summary>
-enum KeyActions {
+enum class KeyActions {
     QuitGame,
     MoveForward,
     MoveBack,

@@ -6,7 +6,6 @@ using namespace DirectX;
 
 // forward declaration for static members
 bool Renderer::drawColliders;
-bool Renderer::drawColliderTransforms;
 
 Renderer::Renderer(
 	unsigned int windowHeight,
@@ -46,7 +45,6 @@ Renderer::Renderer(
 	this->ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
 
 	this->drawColliders = true;
-	this->drawColliderTransforms = true;
 
 	this->selectedEntity = -1;
 
@@ -58,7 +56,7 @@ Renderer::Renderer(
 	colliderRSdesc.DepthBias = 100;
 	colliderRSdesc.DepthBiasClamp = 0.0f;
 	colliderRSdesc.SlopeScaledDepthBias = 10.0f;
-	device->CreateRasterizerState(&colliderRSdesc, &outlineRasterizer);
+	device->CreateRasterizerState(&colliderRSdesc, &wireframeRasterizer);
 
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
@@ -223,7 +221,7 @@ void Renderer::InitRenderTargetViews() {
 			(float)RandomRange(0, 1),
 			0
 		);
-		XMVECTOR offset = XMVector3Normalize(XMLoadFloat4(&ssaoOffsets[i]));
+		XMVECTOR ssaoOffset = XMVector3Normalize(XMLoadFloat4(&ssaoOffsets[i]));
 
 		float scale = (float)i / 64;
 		XMVECTOR acceleratedScale = XMVectorLerp(
@@ -231,7 +229,7 @@ void Renderer::InitRenderTargetViews() {
 			XMVectorSet(1, 1, 1, 1),
 			scale * scale
 		);
-		XMStoreFloat4(&ssaoOffsets[i], offset * acceleratedScale);
+		XMStoreFloat4(&ssaoOffsets[i], ssaoOffset * acceleratedScale);
 	}
 
 	// Set up particle depth and blending
@@ -439,6 +437,9 @@ void Renderer::DrawPointLights()
 	basicVS->SetMatrix4x4("view", mainCamera->GetViewMatrix());
 	basicVS->SetMatrix4x4("projection", mainCamera->GetProjectionMatrix());
 
+	context->IASetVertexBuffers(0, 1, sphereMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+	context->IASetIndexBuffer(sphereMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
 	std::vector<std::shared_ptr<Light>> lights = ComponentManager::GetAll<Light>();
 
 	for (int i = 0; i < lights.size(); i++)
@@ -464,12 +465,6 @@ void Renderer::DrawPointLights()
 		// Copy data
 		basicVS->CopyAllBufferData();
 		solidColorPS->CopyAllBufferData();
-
-		// Draw
-		UINT stride = sizeof(Vertex);
-		UINT offset = 0;
-		context->IASetVertexBuffers(0, 1, sphereMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-		context->IASetIndexBuffer(sphereMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 		context->DrawIndexed(
 			sphereMesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
@@ -519,8 +514,6 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 				solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
 				solidColorPS->CopyAllBufferData();
 
-				UINT stride = sizeof(Vertex);
-				UINT offset = 0;
 				context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
 				context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
@@ -547,8 +540,6 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 				solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
 				solidColorPS->CopyAllBufferData();
 
-				UINT stride = sizeof(Vertex);
-				UINT offset = 0;
 				context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
 				context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
@@ -612,8 +603,6 @@ void Renderer::RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTyp
 
 		VSShadow->CopyAllBufferData();
 		
-		UINT stride = sizeof(Vertex);
-		UINT offset = 0;
 		context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
 		context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
@@ -643,32 +632,23 @@ void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 	basicVS->SetMatrix4x4("projection", mainCamera->GetProjectionMatrix());
 
 	//Draw in wireframe mode
-	context->RSSetState(outlineRasterizer.Get());
+	context->RSSetState(wireframeRasterizer.Get());
+
+	context->IASetVertexBuffers(0, 1, cubeMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+	context->IASetIndexBuffer(cubeMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 	// Grab the list of colliders
-	const std::vector<std::shared_ptr<Collider>> colliders = ComponentManager::GetAllEnabled<Collider>();
+	const std::vector<std::shared_ptr<Collider>> colliders = ComponentManager::GetAll<Collider>();
 
 	for (std::shared_ptr<Collider> collider : colliders)
 	{
-		if (collider->GetVisibilityStatus()) {
-			//----------------------//
-			// --- Draw the OBB --- //
-			//----------------------//
-			//Make the world matrix for this collider
-			BoundingOrientedBox obb = collider->GetOrientedBoundingBox();
-			XMMATRIX transMat = XMMatrixTranslation(obb.Center.x, obb.Center.y, obb.Center.z);
-			XMMATRIX scaleMat = XMMatrixScaling(obb.Extents.x * 2, obb.Extents.y * 2, obb.Extents.z * 2);
-			XMMATRIX rotMat = XMMatrixRotationQuaternion(XMLoadFloat4(&obb.Orientation));
-
-			XMFLOAT4X4 world;
-			XMStoreFloat4x4(&world, scaleMat * rotMat * transMat);
-
-			basicVS->SetMatrix4x4("world", world);
+		if (collider->IsEnabled() && collider->IsVisible()) {
+			basicVS->SetMatrix4x4("world", collider->GetWorldMatrix());
 
 			// Set up the pixel shader data
 			XMFLOAT3 finalColor = XMFLOAT3(0.5f, 1.0f, 1.0f);
 			// Drawing colliders and triggerboxes as different colors
-			if (collider->GetTriggerStatus())
+			if (collider->IsTrigger())
 			{
 				finalColor = XMFLOAT3(1.0f, 1.0f, 0.0f);
 			}
@@ -679,38 +659,6 @@ void Renderer::RenderColliders(std::shared_ptr<Camera> cam)
 			solidColorPS->CopyAllBufferData();
 
 			// Draw
-			UINT stride = sizeof(Vertex);
-			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, cubeMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(cubeMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-
-			context->DrawIndexed(
-				cubeMesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
-				0,     // Offset to the first index we want to use
-				0);    // Offset to add to each index when looking up vertices
-		}
-
-		//----------------------------------------//
-		// --- Draw the Colliders' transforms --- //
-		//----------------------------------------//
-		if (drawColliderTransforms && collider->GetTransformVisibilityStatus())
-		{
-			// Set up the world matrix for this collider
-			basicVS->SetMatrix4x4("world", collider->GetTransform()->GetWorldMatrix());
-
-			// Set up the pixel shader data
-			solidColorPS->SetFloat3("Color", XMFLOAT3(1.0f, 0.0f, 1.0f));
-
-			// Copy data
-			basicVS->CopyAllBufferData();
-			solidColorPS->CopyAllBufferData();
-
-			// Draw
-			UINT stride = sizeof(Vertex);
-			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, cubeMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(cubeMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-
 			context->DrawIndexed(
 				cubeMesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
 				0,     // Offset to the first index we want to use
@@ -733,7 +681,10 @@ void Renderer::RenderMeshBounds(std::shared_ptr<Camera> cam)
 	basicVS->SetMatrix4x4("projection", mainCamera->GetProjectionMatrix());
 
 	//Draw in wireframe mode
-	context->RSSetState(outlineRasterizer.Get());
+	context->RSSetState(wireframeRasterizer.Get());
+
+	context->IASetVertexBuffers(0, 1, cubeMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+	context->IASetIndexBuffer(cubeMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 	// Grab the list of meshes
 	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAllEnabled<MeshRenderer>();
@@ -758,12 +709,6 @@ void Renderer::RenderMeshBounds(std::shared_ptr<Camera> cam)
 			// Copy data
 			basicVS->CopyAllBufferData();
 			solidColorPS->CopyAllBufferData();
-
-			// Draw
-			UINT stride = sizeof(Vertex);
-			UINT offset = 0;
-			context->IASetVertexBuffers(0, 1, cubeMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(cubeMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 			context->DrawIndexed(
 				cubeMesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
@@ -863,10 +808,6 @@ void Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam)
 
 bool Renderer::GetDrawColliderStatus() { return drawColliders; }
 void Renderer::SetDrawColliderStatus(bool _newState) { drawColliders = _newState; }
-
-bool Renderer::GetDrawColliderTransformsStatus() { return drawColliderTransforms; }
-
-void Renderer::SetDrawColliderTransformsStatus(bool _newState) { drawColliderTransforms = _newState; }
 
 void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
@@ -1016,8 +957,6 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		if (currentMesh != activeMeshes[meshIt]->GetMesh().get()) {
 			currentMesh = activeMeshes[meshIt]->GetMesh().get();
 
-			UINT stride = sizeof(Vertex);
-			UINT offset = 0;
 			context->IASetVertexBuffers(0, 1, currentMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
 			context->IASetIndexBuffer(currentMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 		}
@@ -1091,8 +1030,6 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 			VSTerrain->CopyAllBufferData();
 
-			UINT stride = sizeof(Vertex);
-			UINT offset = 0;
 			context->IASetVertexBuffers(0, 1, terrains[i]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
 			context->IASetIndexBuffer(terrains[i]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
@@ -1273,8 +1210,6 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 			refractivePS->SetShaderResourceView("textureRoughness", activeMeshes[meshIt]->GetMaterial()->GetRoughMap());
 			refractivePS->SetShaderResourceView("textureMetal", activeMeshes[meshIt]->GetMaterial()->GetMetalMap());
 
-			UINT stride = sizeof(Vertex);
-			UINT offset = 0;
 			context->IASetVertexBuffers(0, 1, activeMeshes[meshIt]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
 			context->IASetIndexBuffer(activeMeshes[meshIt]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 

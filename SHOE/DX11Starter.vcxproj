@@ -179,6 +179,7 @@
     <ClInclude Include="Headers\GameEntity.h" />
     <ClInclude Include="Headers\IComponent.h" />
     <ClInclude Include="Headers\Input.h" />
+    <ClInclude Include="Headers\InputAxis.h" />
     <ClInclude Include="Headers\Keybind.h" />
     <ClInclude Include="Headers\Light.h" />
     <ClInclude Include="Headers\Material.h" />
@@ -384,6 +385,7 @@
     <ClCompile Include="Source\GameEntity.cpp" />
     <ClCompile Include="Source\IComponent.cpp" />
     <ClCompile Include="Source\Input.cpp" />
+    <ClCompile Include="Source\InputAxis.cpp" />
     <ClCompile Include="Source\Keybind.cpp" />
     <ClCompile Include="Source\Light.cpp" />
     <ClCompile Include="Source\Main.cpp" />

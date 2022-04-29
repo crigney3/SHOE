@@ -56,51 +56,11 @@ void GameEntity::PropagateEvent(EntityEventType event, std::shared_ptr<void> mes
 
 	//Propagates the event to all attached components
 	if (GetEnableDisable() || event == EntityEventType::OnDisable){
+		transform->ReceiveEvent(event, message);
 		for (std::shared_ptr<IComponent> component : componentList) {
 			if (component->IsEnabled() || (event == EntityEventType::OnDisable && component->IsLocallyEnabled()))
 				component->ReceiveEvent(event, message);
 		}
-	}
-
-	//Handles any event-specific functionality within the entity
-	switch (event) {
-	case EntityEventType::Update:
-		if (transformChangedThisFrame) {
-			transformChangedThisFrame = false;
-			PropagateEvent(EntityEventType::OnTransform);
-		}
-		break;
-	case EntityEventType::OnTransform:
-		PropagateEventToChildren(EntityEventType::OnParentTransform, shared_from_this());
-		break;
-	case EntityEventType::OnMove:
-		PropagateEventToChildren(EntityEventType::OnParentMove, shared_from_this());
-		transformChangedThisFrame = true;
-		break;
-	case EntityEventType::OnRotate:
-		PropagateEventToChildren(EntityEventType::OnParentRotate, shared_from_this());
-		transformChangedThisFrame = true;
-		break;
-	case EntityEventType::OnScale:
-		PropagateEventToChildren(EntityEventType::OnParentScale, shared_from_this());
-		transformChangedThisFrame = true;
-		break;
-	case EntityEventType::OnParentTransform:
-		PropagateEventToChildren(EntityEventType::OnParentTransform, message);
-		break;
-	case EntityEventType::OnParentMove:
-		transform->MarkMatricesDirty();
-		PropagateEventToChildren(EntityEventType::OnParentMove, message);
-		break;
-	case EntityEventType::OnParentRotate:
-		transform->MarkMatricesDirty();
-		transform->MarkVectorsDirty();
-		PropagateEventToChildren(EntityEventType::OnParentRotate, message);
-		break;
-	case EntityEventType::OnParentScale:
-		transform->MarkMatricesDirty();
-		PropagateEventToChildren(EntityEventType::OnParentScale, message);
-		break;
 	}
 }
 
