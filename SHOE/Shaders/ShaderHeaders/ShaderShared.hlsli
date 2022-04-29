@@ -122,6 +122,22 @@ float3 MicrofacetBRDF(float3 n, float3 l, float3 v, float roughness, float metal
 	return (D * F * G) / (4 * max(dot(n, v), dot(n, l)));
 }
 
+struct Vertex {
+	float3 position;
+	float2 uv;
+};
+
+// This must always match the Particle definition from the CPU.
+// Wait, maybe not
+struct Particle {
+	float age;
+	float3 position;
+	float emitTime;
+	float3 startPosition;
+	float alive;
+	float3 padding;
+};
+
 // Struct representing the data we expect to receive from earlier pipeline stages
 // - Should match the output of our corresponding vertex shader
 // - The name of the struct itself is unimportant
@@ -268,7 +284,7 @@ float3 calcPointLight(float3 normal, float3 surfaceColor, float3 worldPos, Light
 
 float3 calcLight(VertexToPixel input, LightStruct light, float3 cameraPos, float3 specColor, float rough, float metal) {
 	if (light.type == 0.0f) {
-		float3 normal = normalize(input.normal);
+		float3 normal = input.normal;
 		float3 toLight = normalize(-light.direction);
 
 		float d = length(toLight);
@@ -289,7 +305,7 @@ float3 calcLight(VertexToPixel input, LightStruct light, float3 cameraPos, float
 		return finalColor;
 	}
 	else if (light.type == 1.0f) {
-		float3 normal = normalize(input.normal);
+		float3 normal = input.normal;
 		float3 toLight = normalize(light.position - input.worldPos);
 
 		float d = length(toLight);
@@ -310,7 +326,7 @@ float3 calcLight(VertexToPixel input, LightStruct light, float3 cameraPos, float
 		return finalColor;
 	}
 	else if (light.type == 2.0f) {
-		float3 normal = normalize(input.normal);
+		float3 normal = input.normal;
 		float3 toLight = light.position - input.worldPos;
 
 		float d = length(toLight);
@@ -342,7 +358,7 @@ float3 calcLight(VertexToPixel input, LightStruct light, float3 cameraPos, float
 
 float3 calcLight(VertexToPixelNormal input, LightStruct light, float3 cameraPos, float3 specColor, float rough, float metal) {
 	if (light.type == 0.0f) {
-		float3 normal = normalize(input.normal);
+		float3 normal = input.normal;
 		float3 toLight = normalize(-light.direction);
 
 		float d = length(toLight);
@@ -361,7 +377,7 @@ float3 calcLight(VertexToPixelNormal input, LightStruct light, float3 cameraPos,
 		return finalColor;
 	}
 	else if (light.type == 1.0f) {
-		float3 normal = normalize(input.normal);
+		float3 normal = input.normal;
 		float3 toLight = normalize(light.position - input.worldPos);
 
 		float d = length(toLight);
@@ -380,7 +396,7 @@ float3 calcLight(VertexToPixelNormal input, LightStruct light, float3 cameraPos,
 		return finalColor;
 	}
 	else if (light.type == 2.0f) {
-		float3 normal = normalize(input.normal);
+		float3 normal = input.normal;
 		float3 toLight = light.position - input.worldPos;
 
 		float d = length(toLight);

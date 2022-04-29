@@ -5,8 +5,17 @@
 
 #include <DirectXMath.h>
 #include <Windows.h>
-#include <memory>
 #include <string>
+
+enum CameraType {
+	// Only one camera may be main at a time
+	MAIN,
+	MISC_SHADOW,
+	// Play is also unique
+	PLAY,
+	MISC,
+	CAMERA_TYPE_COUNT
+};
 
 class Camera
 {
@@ -15,12 +24,14 @@ public:
 		   float y,
 		   float z,
 		   float aspectRatio,
-		   bool type,
-		   std::string name = "camera");
+		   bool projMatrixType,
+		   std::string name = "camera",
+		   CameraType cameraTag = MISC);
 	Camera(DirectX::XMFLOAT3 pos,
 		   float aspectRatio,
-		   bool type,
-		   std::string name = "camera");
+		   bool projMatrixType,
+		   std::string name = "camera",
+		   CameraType cameraTag = MISC);
 	~Camera();
 
 	DirectX::XMFLOAT4X4 GetViewMatrix();
@@ -29,7 +40,7 @@ public:
 
 	void UpdateProjectionMatrix(float aspectRatio, bool type);
 	void UpdateViewMatrix();
-	void Update(float dt, HWND windowHandle);
+	void Update(HWND windowHandle);
 
 	float GetFOV();
 	void SetFOV(float fov);
@@ -46,11 +57,20 @@ public:
 	float GetLookSpeed();
 	void SetLookSpeed(float lookSpeed);
 
+	float GetAspectRatio();
+	void SetAspectRatio(float newAspectRatio);
+
+	bool GetProjectionMatrixType();
+	void SetProjectionMatrixType(bool newProjMatrixType);
+
 	void SetEnableDisable(bool value);
 	bool GetEnableDisable();
 
 	std::string GetName();
 	void SetName(std::string name);
+
+	CameraType GetTag();
+	void SetTag(CameraType tag);
 
 private:
 	std::shared_ptr<Transform> transform;
@@ -63,10 +83,11 @@ private:
 	float farDist;
 	float moveSpeed;
 	float lookSpeed;
-	float prevAspectRatio;
-	bool type;
+	float aspectRatio;
+	bool projMatrixType;
 
 	bool enabled;
 	std::string name;
+	CameraType tag;
 };
 

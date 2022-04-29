@@ -389,3 +389,6 @@ FodyWeavers.xsd
 # JetBrains Rider
 .idea/
 *.sln.iml
+
+# imgui state
+SHOE/imgui.ini

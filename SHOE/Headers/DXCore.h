@@ -9,6 +9,44 @@
 #include "../IMGUI/Headers/imgui_impl_dx11.h"
 #include "Input.h"
 
+#pragma region paths
+
+enum AssetPathIndex {
+	ASSET_MODEL_PATH,
+	ASSET_SCENE_PATH,
+	ASSET_HEIGHTMAP_PATH,
+	ASSET_FONT_PATH,
+	ASSET_PARTICLE_PATH,
+	ASSET_SOUND_PATH,
+	ASSET_TEXTURE_PATH_BASIC,
+	ASSET_TEXTURE_PATH_SKIES,
+	ASSET_TEXTURE_PATH_PBR,
+	ASSET_TEXTURE_PATH_PBR_ALBEDO,
+	ASSET_TEXTURE_PATH_PBR_NORMALS,
+	ASSET_TEXTURE_PATH_PBR_METALNESS,
+	ASSET_TEXTURE_PATH_PBR_ROUGHNESS,
+	ASSET_SHADER_PATH,
+	ASSET_PATH_COUNT
+};
+
+#pragma endregion
+
+// State machine used to track what type of load
+// AssetManager is doing on calling any Create() function
+enum AMLoadState {
+	// Used when SHOE isn't loading
+	NOT_LOADING,
+	// Used when SHOE first loads
+	INITIALIZING,
+	// Used when something calls a Create() function
+	SINGLE_CREATION,
+	// In the future, used for complex asset imports
+	COMPLEX_CREATION,
+	// In the future, used for loading a scene with
+	// a loading screen running parallel
+	SCENE_LOAD
+};
+
 // We can include the correct library files here
 // instead of in Visual Studio settings if we want
 #pragma comment(lib, "d3d11.lib")
@@ -45,15 +83,20 @@ public:
 
 	// Pure virtual methods for setup and game functionality
 	virtual void Init() = 0;
-	virtual void Update(float deltaTime, float totalTime) = 0;
-	virtual void Draw(float deltaTime, float totalTime) = 0;
+	virtual void Update() = 0;
+	virtual void Draw() = 0;
 
 	std::string GetFullPathTo(std::string relativeFilePath);
 	std::wstring GetFullPathTo_Wide(std::wstring relativeFilePath);
 
+	void SetVSAssetPaths();
+	void SetBuildAssetPaths();
+
 	// Size of the window's client area
 	unsigned int width;
 	unsigned int height;
+
+	std::string GetAssetPathString(AssetPathIndex index);
 
 protected:
 	HINSTANCE	hInstance;		// The handle to the application
@@ -81,6 +124,10 @@ protected:
 	std::string GetExePath();
 	std::wstring GetExePath_Wide();
 
+	float GetTotalTime();
+	float GetDeltaTime();
+
+	std::string assetPathStrings[ASSET_PATH_COUNT];
 
 private:
 	// Timing related data

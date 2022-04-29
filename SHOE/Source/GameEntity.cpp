@@ -1,87 +1,115 @@
 #include "../Headers/GameEntity.h"
 
-GameEntity::GameEntity(std::shared_ptr<Mesh> mesh, DirectX::XMMATRIX worldIn, std::shared_ptr<Material> mat, std::string name) {
-	this->mesh = mesh;
-	this->transform = Transform(worldIn);
-	this->transform.SetGameEntity(this);
-	this->mat = mat;
+/**
+ * \brief Updates children and attached components with whether the object's parent is enabled
+ * \param active Whether this entity's parent is considered enabled
+ */
+void GameEntity::UpdateHierarchyIsEnabled(bool active, bool head)
+{
+	if (head || hierarchyIsEnabled != active) {
+		if (!head) { 
+			hierarchyIsEnabled = active;
+			if (enabled && !hierarchyIsEnabled) PropagateEvent(EntityEventType::OnDisable);
+		}
+		PropagateEvent(EntityEventType::OnEnable); //Safe to call as it won't propagate to disabled components
+		for (std::shared_ptr<GameEntity> children : transform->GetChildrenEntities())
+		{
+			if (children != nullptr)
+				children->UpdateHierarchyIsEnabled(GetEnableDisable());
+		}
+	}
+}
+
+GameEntity::GameEntity(DirectX::XMMATRIX worldIn, std::string name) {
+	this->componentList = std::vector<std::shared_ptr<IComponent>>();
+	this->componentDeallocList = std::vector<std::function<void(std::shared_ptr<IComponent>)>>();
 	this->name = name;
 	this->enabled = true;
+	this->hierarchyIsEnabled = true;
+	transformChangedThisFrame = true;
 }
 
 GameEntity::~GameEntity() {
-
 }
 
-std::shared_ptr<Mesh> GameEntity::GetMesh() {
-	return this->mesh;
+/**
+ * \brief Delays attaching the transform until the self-reference can be made
+ * To be called after instantiation
+ */
+void GameEntity::Initialize()
+{
+	this->transform = ComponentManager::Instantiate<Transform>(shared_from_this());
 }
 
-Transform* GameEntity::GetTransform() {
-	return &this->transform;
+/// <summary>
+/// Sends an event message to all relevant components and updates necessary local data
+/// </summary>
+/// <param name="event">Message type to send</param>
+/// <param name="message">Body of the message, should one be needed</param>
+void GameEntity::PropagateEvent(EntityEventType event, std::shared_ptr<void> message)
+{
+	//If the event type requires there to be a message and there isn't one, fail
+	if ((EntityEventType::REQUIRES_MESSAGE & 1 << event) && message == nullptr) {
+		//Probably should throw but I'll silently fail for now
+		return;
+	}
+
+	//Propagates the event to all attached components
+	if (GetEnableDisable() || event == EntityEventType::OnDisable){
+		transform->ReceiveEvent(event, message);
+		for (std::shared_ptr<IComponent> component : componentList) {
+			if (component->IsEnabled() || (event == EntityEventType::OnDisable && component->IsLocallyEnabled()))
+				component->ReceiveEvent(event, message);
+		}
+	}
 }
 
-std::shared_ptr<Material> GameEntity::GetMaterial() {
-	return this->mat;
+/// <summary>
+/// Sends an event message to all children of this entity
+/// </summary>
+/// <param name="event">Message type to send</param>
+/// <param name="message">Body of the message, should one be needed</param>
+void GameEntity::PropagateEventToChildren(EntityEventType event, std::shared_ptr<void> message)
+{
+	for (std::shared_ptr<GameEntity> child : transform->GetChildrenEntities())
+	{
+		if (child != nullptr)
+			child->PropagateEvent(event, message);
+	}
 }
 
-void GameEntity::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<Camera> cam, std::shared_ptr<Camera> shadowCam1, std::shared_ptr<Camera> shadowCam2) {
-	mat->GetVertShader()->SetShader();
-
-	std::shared_ptr<SimpleVertexShader> vs = mat->GetVertShader();
-	vs->SetFloat4("colorTint", mat->GetTint());
-	vs->SetMatrix4x4("world", transform.GetWorldMatrix());
-	vs->SetMatrix4x4("view", cam->GetViewMatrix());
-	vs->SetMatrix4x4("projection", cam->GetProjectionMatrix());
-	vs->SetMatrix4x4("lightView", shadowCam1->GetViewMatrix());
-	vs->SetMatrix4x4("lightProjection", shadowCam1->GetProjectionMatrix());
-
-	vs->SetMatrix4x4("envLightView", shadowCam2->GetViewMatrix());
-	vs->SetMatrix4x4("envLightProjection", shadowCam2->GetProjectionMatrix());
-
-	vs->CopyAllBufferData();
-
-	UINT stride = sizeof(Vertex);
-	UINT offset = 0;
-	context->IASetVertexBuffers(0, 1, this->mesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-	context->IASetIndexBuffer(this->mesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-
-
-	// Finally do the actual drawing
-	//  - Do this ONCE PER OBJECT you intend to draw
-	//  - This will use all of the currently set DirectX "stuff" (shaders, buffers, etc)
-	//  - DrawIndexed() uses the currently set INDEX BUFFER to look up corresponding
-	//     vertices in the currently set VERTEX BUFFER
-	context->DrawIndexed(
-		this->mesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
-		0,     // Offset to the first index we want to use
-		0);    // Offset to add to each index when looking up vertices
+/// <summary>
+/// Same as GetComponent<Transform>()
+/// </summary>
+std::shared_ptr<Transform> GameEntity::GetTransform() {
+	return transform;
 }
 
-void GameEntity::DrawFromVerts(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<SimpleVertexShader> vs, std::shared_ptr<Camera> cam, std::shared_ptr<Camera> shadowCam1, std::shared_ptr<Camera> shadowCam2) {
-	vs->SetShader();
+/**
+ * \brief Returns a list of all attached components
+ */
+std::vector<std::shared_ptr<IComponent>> GameEntity::GetAllComponents()
+{
+	return componentList;
+}
 
-	vs->SetFloat4("colorTint", DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-	vs->SetMatrix4x4("world", transform.GetWorldMatrix());
-	vs->SetMatrix4x4("view", cam->GetViewMatrix());
-	vs->SetMatrix4x4("projection", cam->GetProjectionMatrix());
-	vs->SetMatrix4x4("lightView", shadowCam1->GetViewMatrix());
-	vs->SetMatrix4x4("lightProjection", shadowCam1->GetProjectionMatrix());
-
-	vs->SetMatrix4x4("envLightView", shadowCam2->GetViewMatrix());
-	vs->SetMatrix4x4("envLightProjection", shadowCam2->GetProjectionMatrix());
-
-	vs->CopyAllBufferData();
-
-	UINT stride = sizeof(Vertex);
-	UINT offset = 0;
-	context->IASetVertexBuffers(0, 1, this->mesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-	context->IASetIndexBuffer(this->mesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-
-	context->DrawIndexed(
-		this->mesh->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
-		0,     // Offset to the first index we want to use
-		0);    // Offset to add to each index when looking up vertices
+/**
+ * \brief Frees all of the stored objects in the entity so it can be safely destroyed
+ */
+void GameEntity::Release()
+{
+	for(std::shared_ptr<GameEntity> child : transform->GetChildrenEntities())
+	{
+		if (child != nullptr) {
+			child->GetTransform()->SetParent(nullptr);
+		}	
+	}
+	for (int i = 0; i < componentList.size(); i++) {
+		componentList[i]->OnDestroy();
+		componentDeallocList[i](componentList[i]);
+	}
+	transform->OnDestroy();
+	ComponentManager::Free<Transform>(transform);
 }
 
 std::string GameEntity::GetName() {
@@ -92,10 +120,52 @@ void GameEntity::SetName(std::string Name) {
 	this->name = Name;
 }
 
+/// <summary>
+/// Sets whether this GameEntity is enabled
+/// </summary>
+/// <param name="value">New enabled state of the entity</param>
 void GameEntity::SetEnableDisable(bool value) {
-	this->enabled = value;
+	if (enabled != value) {
+		this->enabled = value;
+		if (!value && hierarchyIsEnabled) PropagateEvent(EntityEventType::OnDisable);
+		UpdateHierarchyIsEnabled(GetEnableDisable(), true);
+	}
 }
 
+/// <summary>
+/// Whether this GameEntity is enabled and all generations of parent(s) are also enabled
+/// </summary>
+/// <returns>True if all are enabled</returns>
 bool GameEntity::GetEnableDisable() {
-	return this->enabled;
+	return enabled && hierarchyIsEnabled;
+}
+
+/// <summary>
+/// Are all generations of parent(s) of this Entity enabled
+/// </summary>
+/// <returns>True if all are enabled</returns>
+bool GameEntity::GetHierarchyIsEnabled()
+{
+	return hierarchyIsEnabled;
+}
+
+/// <summary>
+/// Removes a component by reference
+/// </summary>
+/// <param name="component">Component to remove</param>
+/// <returns>If the component was successfully removed</returns>
+bool GameEntity::RemoveComponent(std::shared_ptr<IComponent> component)
+{
+	for (int i = 0; i < componentList.size(); i++)
+	{
+		if (componentList[i] == component)
+		{
+			componentList[i]->OnDestroy();
+			componentDeallocList[i](componentList[i]);
+			componentList.erase(componentList.begin() + i);
+			componentDeallocList.erase(componentDeallocList.begin() + i);
+			return true;
+		}
+	}
+	return false;
 }

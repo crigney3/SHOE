@@ -20,16 +20,24 @@ struct VertexShaderInput
 
 //Instead of separately passing in light view and projection, I'm using the existing ones
 //as they'll be the same for my flashlight.
-cbuffer ExternalData : register(b0)
+cbuffer PerFrame : register(b0)
 {
-	float4 colorTint;
-	matrix world;
 	matrix view;
 	matrix projection;
 	matrix lightView;
 	matrix lightProjection;
 	matrix envLightView;
 	matrix envLightProjection;
+}
+
+cbuffer PerMaterial : register(b1)
+{
+	float4 colorTint;
+}
+
+cbuffer PerObject : register(b2)
+{
+	matrix world;
 }
 
 // --------------------------------------------------------

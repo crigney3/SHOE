@@ -3,29 +3,66 @@
 using namespace DirectX;
 
 Mesh::~Mesh() {
-
+	delete[] vertexArray;
+	delete[] indices;
 }
 
 Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
+	this->vertexArray = new Vertex[vertices];
+	this->indices = new unsigned int[indexCount];
+	this->indexCount = indexCount;
 	this->materialIndex = -1;
 	this->enabled = true;
 	this->name = name;
-	CalculateTangents(vertexArray, vertices, indices, indexCount);
+	this->needsDepthPrePass = false;
+
+	std::copy(vertexArray, vertexArray + vertices, this->vertexArray);
+	std::copy(indices, indices + indexCount, this->indices);
+
+	CalculateTangents(this->vertexArray, vertices, this->indices, this->indexCount);
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
+
+	CalculateBounds(vertexArray, vertices);
 }
 
 Mesh::Mesh(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, int associatedMaterialIndex, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
+	this->vertexArray = new Vertex[vertices];
+	this->indices = new unsigned int[indexCount];
+	this->indexCount = indexCount;
 	this->materialIndex = associatedMaterialIndex;
 	this->enabled = true;
 	this->name = name;
+	this->needsDepthPrePass = false;
+
+	std::copy(vertexArray, vertexArray + vertices, this->vertexArray);
+	std::copy(indices, indices + indexCount, this->indices);
 
 	MakeBuffers(vertexArray, vertices, indices, indexCount, device);
+
+	CalculateBounds(vertexArray, vertices);
 }
 
-Mesh::Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
+Mesh::Mesh(std::string filename, Microsoft::WRL::ComPtr<ID3D11Device> device, std::string name) {
 	this->materialIndex = -1;
 	this->name = name;
+	this->needsDepthPrePass = false;
+
+	// Serialize the filename if it's in the right folder
+	std::string baseFilename = "";
+	size_t dirPos = filename.find("Assets\\Models");
+	if (dirPos != std::string::npos) {
+		// File is in the assets folder
+		baseFilename = "t";
+		baseFilename += filename.substr(dirPos + sizeof("Assets\\Models"));
+	}
+	else {
+		baseFilename = "f";
+		baseFilename += filename;
+	}
+
+	this->filenameKey = baseFilename;
+
 	// Author: Chris Cascioli
 	// Purpose: Basic .OBJ 3D model loading, supporting positions, uvs and normals
 	// 
@@ -36,7 +73,7 @@ Mesh::Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device, st
 	// - NOTE: You'll need to #include <fstream>
 
 	// File input object
-	std::ifstream obj(filename);
+	std::ifstream obj(filename.c_str());
 
 	// Check for successful open
 	if (!obj.is_open())
@@ -240,17 +277,25 @@ Mesh::Mesh(const char* filename, Microsoft::WRL::ComPtr<ID3D11Device> device, st
 	//    and detect duplicate vertices, but at that point it would be better to use a more
 	//    sophisticated model loading library like TinyOBJLoader or AssImp (yes, that's its name)
 
+	this->vertexArray = new Vertex[vertCounter];
+	this->indices = new unsigned int[indexCounter];
+	this->indexCount = indexCounter;
+	std::copy(verts.begin(), verts.end(), vertexArray);
+	std::copy(indices.begin(), indices.end(), this->indices);
+
 	CalculateTangents(&verts[0], vertCounter, &indices[0], indexCounter);
 
 	MakeBuffers(&verts[0], vertCounter, &indices[0], indexCounter, device);
+
+	CalculateBounds(&verts[0], vertCounter);
 }
 
 void Mesh::MakeBuffers(Vertex* vertexArray, int vertices, unsigned int* indices, int indexCount, Microsoft::WRL::ComPtr<ID3D11Device> device) {
-	this->indices = indexCount;
+	this->indexCount = indexCount;
 
 	D3D11_BUFFER_DESC vbd;
 	vbd.Usage = D3D11_USAGE_IMMUTABLE;
-	vbd.ByteWidth = sizeof(Vertex) * vertices;       // 3 = number of vertices in the buffer
+	vbd.ByteWidth = sizeof(Vertex) * vertices;
 	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER; // Tells DirectX this is a vertex buffer
 	vbd.CPUAccessFlags = 0;
 	vbd.MiscFlags = 0;
@@ -365,6 +410,19 @@ void Mesh::CalculateTangents(Vertex* verts, int numVerts, unsigned int* indices,
 	}
 }
 
+void Mesh::CalculateBounds(Vertex* verts, int numVerts)
+{
+	DirectX::XMFLOAT3* positions = new DirectX::XMFLOAT3[numVerts];
+	for (int i = 0; i < numVerts; i++) positions[i] = verts[i].Position;
+	size_t sizePos = sizeof(positions[0]);
+	sizePos = sizeof(positions[numVerts - 1]);
+	sizePos = sizeof(verts[0]);
+	sizePos = sizeof(DirectX::XMFLOAT3);
+	sizePos = sizeof(bounds);
+	DirectX::BoundingOrientedBox::CreateFromPoints(bounds, numVerts, positions, sizeof(DirectX::XMFLOAT3));
+	delete[] positions;
+}
+
 Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetVertexBuffer() {
 	return vBuffer;
 }
@@ -373,18 +431,53 @@ Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetIndexBuffer() {
 	return inBuffer;
 }
 
+Vertex* Mesh::GetVertexArray()
+{
+	return vertexArray;
+}
+
+unsigned int* Mesh::GetIndexArray()
+{
+	return indices;
+}
+
 int Mesh::GetIndexCount() {
-	return this->indices;
+	return this->indexCount;
 }
 
-void Mesh::SetEnableDisable(bool value) {
-	this->enabled = value;
+void Mesh::SetMaterialIndex(int matIndex) {
+	this->materialIndex = matIndex;
 }
 
-bool Mesh::GetEnableDisable() {
-	return this->enabled;
+int Mesh::GetMaterialIndex() {
+	return this->materialIndex;
 }
 
 std::string Mesh::GetName() {
 	return this->name;
+}
+
+void Mesh::SetName(std::string name) {
+	this->name = name;
+}
+
+std::string Mesh::GetFileNameKey() {
+	return this->filenameKey;
+}
+
+void Mesh::SetFileNameKey(std::string newKey) {
+	this->filenameKey = newKey;
+}
+
+DirectX::BoundingOrientedBox Mesh::GetBounds()
+{
+	return bounds;
+}
+
+void Mesh::SetDepthPrePass(bool prePass) {
+	this->needsDepthPrePass = prePass;
+}
+
+bool Mesh::GetDepthPrePass() {
+	return this->needsDepthPrePass;
 }

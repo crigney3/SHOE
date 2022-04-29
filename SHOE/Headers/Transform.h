@@ -1,28 +1,70 @@
 #pragma once
 
-#include <memory>
 #include <DirectXMath.h>
 #include <vector>
 #include "GameEntity.fwd.h"
+#include "IComponent.h"
 
-class Transform
+class Transform : public IComponent,  public std::enable_shared_from_this<Transform>
 {
 private:
-	DirectX::XMFLOAT4X4 worldMatrix;
-	DirectX::XMFLOAT3 pos;
+	std::shared_ptr<Transform> parent;
+	std::vector<std::shared_ptr<Transform>> children = std::vector<std::shared_ptr<Transform>>();
+	std::vector<std::shared_ptr<GameEntity>> childEntities = std::vector<std::shared_ptr<GameEntity>>();
+
+	bool globalsDirty;
+	DirectX::XMFLOAT3 worldPos;
+	DirectX::XMFLOAT3 worldScale;
+	DirectX::XMFLOAT4 worldRotQuat;
+
+	// Raw transformation data
+	DirectX::XMFLOAT3 position;
+	DirectX::XMFLOAT3 pitchYawRoll;
 	DirectX::XMFLOAT3 scale;
-	DirectX::XMFLOAT4 rotQuat;
 
-	bool isDirty;
-	void MarkChildTransformsDirty();
+	// Local orientation vectors
+	bool vectorsDirty;
+	DirectX::XMFLOAT3 up;
+	DirectX::XMFLOAT3 right;
+	DirectX::XMFLOAT3 forward;
 
-	Transform* parent;
-	std::vector<Transform*> children;
-	GameEntity* entity;
+	// World matrix and inverse transpose of the world matrix
+	bool matricesDirty;
+	DirectX::XMFLOAT4X4 worldMatrix;
+	DirectX::XMFLOAT4X4 worldInverseTransposeMatrix;
+
+	// Helper to update both matrices if necessary
+	void UpdateMatrices();
+	void UpdateVectors();
+	void UpdateGlobals();
+
+	void SetTransformsFromMatrix(DirectX::XMFLOAT4X4 worldMatrix);
+
+	bool transformChangedThisFrame = false;
+
+	// Helpers for conversion
+	DirectX::XMFLOAT3 QuaternionToEuler(DirectX::XMFLOAT4 quaternion);
+
+	void Start() override;
+	void Update() override;
+	void OnMove(DirectX::XMFLOAT3 delta) override;
+	void OnRotate(DirectX::XMFLOAT3 delta) override;
+	void OnScale(DirectX::XMFLOAT3 delta) override;
+	void OnParentTransform(std::shared_ptr<GameEntity> parent) override;
+	void OnParentMove(std::shared_ptr<GameEntity> parent) override;
+	void OnParentRotate(std::shared_ptr<GameEntity> parent) override;
+	void OnParentScale(std::shared_ptr<GameEntity> parent) override;
 public:
-	Transform();
-	Transform(DirectX::XMMATRIX worldIn, DirectX::XMFLOAT3 posIn = DirectX::XMFLOAT3(+0.0f, +0.0f, +0.0f), DirectX::XMFLOAT3 scaleIn = DirectX::XMFLOAT3(+1.0f, +1.0f, +1.0f), DirectX::XMFLOAT4 rotIn = DirectX::XMFLOAT4(+0.0f, +0.0f, +0.0f, +0.0f), Transform* parent = NULL);
-	~Transform();
+	void OnDestroy() override;
+
+	void MoveAbsolute(float x, float y, float z);
+	void MoveAbsolute(DirectX::XMFLOAT3 offset);
+	void MoveRelative(float x, float y, float z); // Move along our "local" axes (respect rotation)
+	void MoveRelative(DirectX::XMFLOAT3 offset);
+	void Rotate(float pitch, float yaw, float roll);
+	void Rotate(DirectX::XMFLOAT3 pitchYawRoll);
+	void Scale(float x, float y, float z);
+	void Scale(DirectX::XMFLOAT3 scale);
 
 	void SetPosition(float x, float y, float z);
 	void SetPosition(DirectX::XMFLOAT3 pos);
@@ -31,29 +73,34 @@ public:
 	void SetScale(float x, float y, float z);
 	void SetScale(DirectX::XMFLOAT3 scale);
 
-	DirectX::XMFLOAT3 GetPosition();
-	DirectX::XMFLOAT3 GetPitchYawRoll();
-	DirectX::XMFLOAT3 GetScale();
-	DirectX::XMFLOAT4X4 GetWorldMatrix();
+	DirectX::XMFLOAT3 GetLocalPosition();
+	DirectX::XMFLOAT3 GetGlobalPosition();
+	DirectX::XMFLOAT3 GetLocalPitchYawRoll();
+	DirectX::XMFLOAT4 GetGlobalRotation();
+	DirectX::XMFLOAT3 GetLocalScale();
+	DirectX::XMFLOAT3 GetGlobalScale();
+
+	// Local direction vector getters
+	DirectX::XMFLOAT3 GetUp();
+	DirectX::XMFLOAT3 GetRight();
 	DirectX::XMFLOAT3 GetForward();
 
-	void MoveAbsolute(float x, float y, float z);
-	void MoveRelative(float x, float y, float z); // Move along our "local" axes (respect rotation)
-	void Rotate(float pitch, float yaw, float roll);
-	void Scale(float x, float y, float z);
+	// Matrix getters
+	DirectX::XMFLOAT4X4 GetWorldMatrix();
+	DirectX::XMFLOAT4X4 GetWorldInverseTransposeMatrix();
 
-	void AddChild(Transform* child);
-	void RemoveChild(Transform* child);
-	void SetParent(Transform* newParent);
-	Transform* GetParent();
-	Transform* GetChild(unsigned int index);
-	int IndexOfChild(Transform* child);
+	void MarkMatricesDirty();
+	void MarkVectorsDirty();
+	void MarkGlobalsDirty();
+
+	void AddChild(std::shared_ptr<Transform> child);
+	void RemoveChild(std::shared_ptr<Transform> child);
+	void SetParent(std::shared_ptr<Transform> newParent);
+	void SetParentNoReciprocate(std::shared_ptr<Transform> parent);
+	std::shared_ptr<Transform> GetParent();
+	std::shared_ptr<Transform> GetChild(unsigned int index);
 	unsigned int GetChildCount();
 
-	GameEntity* GetGameEntity();
-	void SetGameEntity(GameEntity* entity);
-	std::vector<GameEntity*> GetChildrenAsGameEntities();
-
-	void SetEnableDisable(bool value);
+	std::vector<std::shared_ptr<GameEntity>> GetChildrenEntities();
 };
 

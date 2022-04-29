@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
@@ -40,6 +40,12 @@
     <Filter Include="Source Files\IMGUI-Source">
       <UniqueIdentifier>{51f652ae-a3c1-4e99-87b5-30cc4274e769}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\SHOE-Source\Components">
+      <UniqueIdentifier>{b07139f7-a6b5-4571-920d-4baa8e5f9197}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\SHOE-Headers\Components">
+      <UniqueIdentifier>{1b441970-5c02-418f-a367-b081ce6b0db6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Headers\AssetManager.h">
@@ -63,9 +69,6 @@
     <ClInclude Include="Headers\Input.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Lights.h">
-      <Filter>Header Files\SHOE-Headers</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\Material.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
@@ -79,9 +82,6 @@
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
     <ClInclude Include="Headers\Sky.h">
-      <Filter>Header Files\SHOE-Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="Headers\Transform.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
     <ClInclude Include="Headers\Vertex.h">
@@ -111,10 +111,46 @@
     <ClInclude Include="IMGUI\Headers\imstb_truetype.h">
       <Filter>Header Files\IMGUI-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Emitter.h">
+    <ClInclude Include="Headers\AudioHandler.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\AudioHandler.h">
+    <ClInclude Include="Headers\Keybind.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\CollisionManager.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\ComponentManager.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\ComponentPool.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Transform.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\IComponent.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\MeshRenderer.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\ParticleSystem.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Terrain.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Collider.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Light.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Time.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\InputAxis.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
   </ItemGroup>
@@ -179,6 +215,27 @@
     <FxCompile Include="Shaders\VertexShaders\VSParticles.hlsl">
       <Filter>Shaders\VertexShaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ComputeShaders\CSParticleFlow.hlsl">
+      <Filter>Shaders\ComputeShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeShaders\CSCopyDrawCount.hlsl">
+      <Filter>Shaders\ComputeShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeShaders\CSParticleEmit.hlsl">
+      <Filter>Shaders\ComputeShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ComputeShaders\CSInitDeadList.hlsl">
+      <Filter>Shaders\ComputeShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PixelShaders\PSTextureSample.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PixelShaders\PSRefractive.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PixelShaders\PSSilhouette.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IMGUI\Source\imgui.cpp">
@@ -238,13 +295,43 @@
     <ClCompile Include="Source\Sky.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Transform.cpp">
-      <Filter>Source Files\SHOE-Source</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Emitter.cpp">
-      <Filter>Source Files\SHOE-Source</Filter>
-    </ClCompile>
     <ClCompile Include="Source\AudioHandler.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Keybind.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\IComponent.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Transform.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MeshRenderer.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ParticleSystem.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ComponentPool.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\CollisionManager.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Light.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Collider.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Terrain.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Time.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\InputAxis.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include "InputAxis.h"
 
 class Input
 {
@@ -39,6 +40,20 @@ public:
 	int GetMouseYDelta();
 	float GetMouseWheel();
 	void SetWheelDelta(float delta);
+
+	void BindKeyAction(KeyActions action,
+		int triggerByPressCt = 0, int* triggerByPress = {},
+		int triggerByReleaseCt = 0, int* triggerByRelease = {},
+		int triggerByDownCt = 0, int* triggerByDown = {},
+		int mustHaveUpCt = 0, int* mustHaveUp = {},
+		int mustHaveDownCt = 0, int* mustHaveDown = {}
+	);
+	bool TestKeyAction(KeyActions action);
+	void UnbindKeyAction(KeyActions action);
+
+	void BindInputAxis(InputAxes axis, KeyActions positiveAction, KeyActions negativeAction);
+	int TestInputAxis(InputAxes axis);
+	void UnbindInputAxis(InputAxes axis);
 
 	bool KeyDown(int key);
 	bool KeyUp(int key);
@@ -85,6 +100,10 @@ private:
 	int mouseXDelta;
 	int mouseYDelta;
 	float wheelDelta;
+
+	// Keybind Mapping
+	Keybind* keybinds;
+	InputAxis* axes;
 
 	// The window's handle (id) from the OS, so
 	// we can get the cursor's position

@@ -2,6 +2,7 @@
 
 #include <WindowsX.h>
 #include <sstream>
+#include "../Headers/Time.h"
 
 // Define the static instance variable so our OS-level 
 // message handling function below can talk to our object
@@ -393,15 +394,15 @@ HRESULT DXCore::Run()
 		{
 			// Update timer and title bar (if necessary)
 			UpdateTimer();
-			if(titleBarStats)
+			if (titleBarStats)
 				UpdateTitleBarStats();
 
 			// Update the input manager
 			Input::GetInstance().Update();
 
 			// The game loop
-			Update(deltaTime, totalTime);
-			Draw(deltaTime, totalTime);
+			Update();
+			Draw();
 
 			// Frame is over, notify the input manager
 			Input::GetInstance().EndOfFrame();
@@ -423,6 +424,44 @@ void DXCore::Quit()
 	PostMessage(this->hWnd, WM_CLOSE, NULL, NULL);
 }
 
+// This is so cursed. Visual Studio why
+void DXCore::SetBuildAssetPaths() {
+	assetPathStrings[0] = "..\\..\\..\\Assets\\Models\\";
+	assetPathStrings[1] = "..\\..\\..\\Assets\\Scenes\\";
+	assetPathStrings[2] = "..\\..\\..\\Assets\\HeightMaps\\";
+	assetPathStrings[3] = "..\\..\\..\\Assets\\Fonts\\";
+	assetPathStrings[4] = "..\\..\\..\\Assets\\Particles\\";
+	assetPathStrings[5] = "..\\..\\..\\Assets\\Sounds\\";
+	assetPathStrings[6] = "..\\..\\..\\Assets\\Textures\\";
+	assetPathStrings[7] = "..\\..\\..\\Assets\\Textures\\Skies\\";
+	assetPathStrings[8] = "..\\..\\..\\Assets\\PBR\\";
+	assetPathStrings[9] = "..\\..\\..\\Assets\\PBR\\Albedo\\";
+	assetPathStrings[10] = "..\\..\\..\\Assets\\PBR\\Normals\\";
+	assetPathStrings[11] = "..\\..\\..\\Assets\\PBR\\Metalness\\";
+	assetPathStrings[12] = "..\\..\\..\\Assets\\PBR\\Roughness\\";
+	assetPathStrings[13] = "..\\..\\..\\Assets\\Shaders\\";
+}
+
+void DXCore::SetVSAssetPaths() {
+	assetPathStrings[0] = "..\\Assets\\Models\\";
+	assetPathStrings[1] = "..\\Assets\\Scenes\\";
+	assetPathStrings[2] = "..\\Assets\\HeightMaps\\";
+	assetPathStrings[3] = "..\\Assets\\Fonts\\";
+	assetPathStrings[4] = "..\\Assets\\Particles\\";
+	assetPathStrings[5] = "..\\Assets\\Sounds\\";
+	assetPathStrings[6] = "..\\Assets\\Textures\\";
+	assetPathStrings[7] = "..\\Assets\\Textures\\Skies\\";
+	assetPathStrings[8] = "..\\Assets\\PBR\\";
+	assetPathStrings[9] = "..\\Assets\\PBR\\Albedo\\";
+	assetPathStrings[10] = "..\\Assets\\PBR\\Normals\\";
+	assetPathStrings[11] = "..\\Assets\\PBR\\Metalness\\";
+	assetPathStrings[12] = "..\\Assets\\PBR\\Roughness\\";
+	assetPathStrings[13] = "..\\Assets\\Shaders\\";
+}
+
+std::string DXCore::GetAssetPathString(AssetPathIndex index) {
+	return assetPathStrings[index];
+}
 
 // --------------------------------------------------------
 // Uses high resolution time stamps to get very accurate
@@ -442,6 +481,10 @@ void DXCore::UpdateTimer()
 
 	// Calculate the total time from start to now
 	totalTime = (float)((currentTime - startTime) * perfCounterSeconds);
+
+	Time::currentTime = currentTime;
+	Time::deltaTime = deltaTime;
+	Time::totalTime = totalTime;
 
 	// Save current time for next frame
 	previousTime = currentTime;
@@ -591,6 +634,28 @@ std::wstring DXCore::GetExePath_Wide()
 
 	// Create a wstring for it and return
 	return std::wstring(widePath);
+}
+
+
+// ---------------------------------------------------
+// Gets the internal total time. Should not be used for
+// game updates. Currently used during initialization
+// for debug purposes.
+// ---------------------------------------------------
+float DXCore::GetTotalTime() {
+	UpdateTimer();
+	return this->totalTime;
+}
+
+
+// ---------------------------------------------------
+// Gets the internal delta time. Should not be used for
+// game updates. Currently used during initialization
+// for debug purposes.
+// ---------------------------------------------------
+float DXCore::GetDeltaTime() {
+	UpdateTimer();
+	return this->deltaTime;
 }
 
 

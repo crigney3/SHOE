@@ -86,16 +86,20 @@ void ISimpleShader::CleanUp()
 // 
 // Returns true if shader is loaded properly, false otherwise
 // --------------------------------------------------------
-bool ISimpleShader::LoadShaderFile(LPCWSTR shaderFile)
+bool ISimpleShader::LoadShaderFile(std::string shaderFile)
 {
+	// Convert string to wide
+	std::wstring wToLoad = L"";
+	ConvertToWide(shaderFile, wToLoad);
+
 	// Load the shader to a blob and ensure it worked
-	HRESULT hr = D3DReadFileToBlob(shaderFile, shaderBlob.GetAddressOf());
+	HRESULT hr = D3DReadFileToBlob(wToLoad.c_str(), shaderBlob.GetAddressOf());
 	if (hr != S_OK)
 	{
 		if (ReportErrors)
 		{
 			LogError("SimpleShader::LoadShaderFile() - Error loading file '");
-			LogW(shaderFile);
+			Log(shaderFile);
 			LogError("'. Ensure this file exists and is spelled correctly.\n");
 		}
 
@@ -110,7 +114,7 @@ bool ISimpleShader::LoadShaderFile(LPCWSTR shaderFile)
 		if (ReportErrors)
 		{
 			LogError("SimpleShader::LoadShaderFile() - Error creating shader from file '");
-			LogW(shaderFile);
+			Log(shaderFile);
 			LogError("'. Ensure the type of shader (vertex, pixel, etc.) matches the SimpleShader type (SimpleVertexShader, SimplePixelShader, etc.) you're using.\n");
 		}
 
@@ -199,7 +203,7 @@ bool ISimpleShader::LoadShaderFile(LPCWSTR shaderFile)
 		// Create this constant buffer
 		D3D11_BUFFER_DESC newBuffDesc = {};
 		newBuffDesc.Usage = D3D11_USAGE_DEFAULT;
-		newBuffDesc.ByteWidth = bufferDesc.Size;
+		newBuffDesc.ByteWidth = ((bufferDesc.Size + 15) / 16) * 16; // Quick and dirty 16-byte alignment using integer division
 		newBuffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		newBuffDesc.CPUAccessFlags = 0;
 		newBuffDesc.MiscFlags = 0;
@@ -688,9 +692,17 @@ const SimpleConstantBuffer* ISimpleShader::GetBufferInfo(unsigned int index)
 	return &constantBuffers[index];
 }
 
+void ISimpleShader::SetName(std::string name) {
+	this->name = name;
+}
 
+std::string ISimpleShader::GetFileNameKey() {
+	return this->filenameKey;
+}
 
-
+void ISimpleShader::SetFileNameKey(std::string key) {
+	this->filenameKey = key;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // ------ SIMPLE VERTEX SHADER ------------------------------------------------
@@ -699,7 +711,7 @@ const SimpleConstantBuffer* ISimpleShader::GetBufferInfo(unsigned int index)
 // --------------------------------------------------------
 // Constructor just calls the base
 // --------------------------------------------------------
-SimpleVertexShader::SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, std::string name)
+SimpleVertexShader::SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::string shaderFile, std::string name)
 	: ISimpleShader(device, context, name)
 {
 	// Ensure we set to zero to successfully trigger
@@ -716,7 +728,7 @@ SimpleVertexShader::SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> devi
 // Passing in a valid input layout will stop LoadShaderFile()
 // from creating an input layout from shader reflection
 // --------------------------------------------------------
-SimpleVertexShader::SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout, bool perInstanceCompatible, std::string name)
+SimpleVertexShader::SimpleVertexShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::string shaderFile, Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout, bool perInstanceCompatible, std::string name)
 	: ISimpleShader(device, context, name)
 {
 	// Save the custom input layout
@@ -963,7 +975,7 @@ bool SimpleVertexShader::SetSamplerState(std::string name, Microsoft::WRL::ComPt
 // --------------------------------------------------------
 // Constructor just calls the base
 // --------------------------------------------------------
-SimplePixelShader::SimplePixelShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, std::string name)
+SimplePixelShader::SimplePixelShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::string shaderFile, std::string name)
 	: ISimpleShader(device, context, name)
 {
 	// Load the actual compiled shader file
@@ -1107,7 +1119,7 @@ bool SimplePixelShader::SetSamplerState(std::string name, Microsoft::WRL::ComPtr
 // --------------------------------------------------------
 // Constructor just calls the base
 // --------------------------------------------------------
-SimpleDomainShader::SimpleDomainShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile)
+SimpleDomainShader::SimpleDomainShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::string shaderFile)
 	: ISimpleShader(device, context)
 {
 	// Load the actual compiled shader file
@@ -1250,7 +1262,7 @@ bool SimpleDomainShader::SetSamplerState(std::string name, Microsoft::WRL::ComPt
 // --------------------------------------------------------
 // Constructor just calls the base
 // --------------------------------------------------------
-SimpleHullShader::SimpleHullShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile)
+SimpleHullShader::SimpleHullShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::string shaderFile)
 	: ISimpleShader(device, context)
 {
 	// Load the actual compiled shader file
@@ -1394,7 +1406,7 @@ bool SimpleHullShader::SetSamplerState(std::string name, Microsoft::WRL::ComPtr<
 // --------------------------------------------------------
 // Constructor calls the base and sets up potential stream-out options
 // --------------------------------------------------------
-SimpleGeometryShader::SimpleGeometryShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile, bool useStreamOut, bool allowStreamOutRasterization)
+SimpleGeometryShader::SimpleGeometryShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::string shaderFile, bool useStreamOut, bool allowStreamOutRasterization)
 	: ISimpleShader(device, context)
 {
 	this->streamOutVertexSize = 0;
@@ -1684,8 +1696,8 @@ unsigned int SimpleGeometryShader::CalcComponentCount(unsigned int mask)
 // --------------------------------------------------------
 // Constructor just calls the base
 // --------------------------------------------------------
-SimpleComputeShader::SimpleComputeShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, LPCWSTR shaderFile)
-	: ISimpleShader(device, context)
+SimpleComputeShader::SimpleComputeShader(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::string shaderFile, std::string name)
+	: ISimpleShader(device, context, name)
 {
 	this->threadsTotal = 0;
 	this->threadsX = 0;
@@ -1975,4 +1987,19 @@ int SimpleComputeShader::GetUnorderedAccessViewIndex(std::string name)
 
 	// Success
 	return result->second;
+}
+
+inline HRESULT ISimpleShader::ConvertToWide(const std::string& as, std::wstring& cs)
+{
+	HRESULT hr;
+	try {
+		wchar_t* buf = new wchar_t[as.size() * 2 + 2];
+		swprintf_s(buf, as.size() * 2 + 2, L"%S", as.c_str());
+		cs = buf;
+		delete[] buf;
+		return 0;
+	}
+	catch (...) {
+		return 1;
+	}
 }

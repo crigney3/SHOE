@@ -146,13 +146,13 @@ PS_Output main(VertexToPixelNormal input)
 
 	//Calculate shadows
 
-	/*float envLightDepth = input.shadowPos2.z / input.shadowPos2.w;
+	float envLightDepth = input.shadowPos2.z / input.shadowPos2.w;
 
 	float2 envShadowUV = input.shadowPos2.xy / input.shadowPos2.w * 0.5f + 0.5f;
 
 	envShadowUV.y = 1.0f - envShadowUV.y;
 
-	float envShadowAmount = envShadowMap.SampleCmpLevelZero(shadowState, envShadowUV, envLightDepth).r;*/
+	float envShadowAmount = envShadowMap.SampleCmpLevelZero(shadowState, envShadowUV, envLightDepth).r;
 
 	for (uint i = 0; i < lightCount; i++) {
 		if (lights[i].enabled) {

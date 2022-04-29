@@ -7,6 +7,7 @@ Texture2D textureMetal					: register(t3);
 Texture2D shadowMap						: register(t4);
 Texture2D envShadowMap					: register(t5);
 
+// IBL Textures
 Texture2D brdfLookUpMap					: register(t6);
 TextureCube irradianceIBLMap			: register(t7);
 TextureCube specularIBLMap				: register(t8);
@@ -16,15 +17,17 @@ SamplerState clampSampler				: register(s1);
 
 SamplerComparisonState shadowState		: register(s2);
 
-cbuffer ExternalData : register(b0)
+cbuffer PerFrame : register(b0)
 {
 	LightStruct lights[64];
-	float3 ambientColor;
-	float specularity;
 	float3 cameraPos;
-	float uvMult;
 	uint lightCount;
 	int specIBLTotalMipLevels;
+}
+
+cbuffer PerMaterial : register(b1)
+{
+	float uvMult;
 }
 
 float3 calcLightExternal(VertexToPixelNormal input, LightStruct light, float3 specColor, float rough, float metal) {
@@ -53,7 +56,7 @@ PS_Output main(VertexToPixelNormal input)
 	float3 B = cross(T, N);
 	float3x3 TBN = float3x3(T, B, N);
 
-	input.normal = mul(unpackedNormal, TBN);
+	input.normal = normalize(mul(unpackedNormal, TBN));
 
 	float3 albedoColor = textureAlbedo.Sample(sampleState, input.uv).rgb;
 

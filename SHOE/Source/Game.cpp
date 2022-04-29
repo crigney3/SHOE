@@ -1,8 +1,10 @@
 #include "../Headers/Game.h"
+#include "../Headers/Time.h"
 
 // Needed for a helper function to read compiled shader files from the hard drive
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3dcompiler.h>
+#include "..\Headers\ComponentManager.h"
 
 #pragma warning( disable : 26495)
 
@@ -31,10 +33,22 @@ Game::Game(HINSTANCE hInstance)
 	CreateConsoleWindow(500, 120, 32, 120);
 	printf("Console window created successfully.  Feel free to printf() here.\n");
 	printf("Use arrow keys to switch skyboxes. \n");
-	printf("Use F to toggle flashlight. \n");
-	printf("When the flashlight's on, use G to toggle flickering. \n");
 #endif
 
+	// Check if the directory defines are correct
+	char pathBuf[1024];
+
+	GetFullPathNameA("SHOE.exe", sizeof(pathBuf), pathBuf, NULL);
+	std::string::size_type pos = std::string(pathBuf).find_last_of("\\/");
+
+	std::string currentSubPath = std::string(pathBuf);// .substr(40, pos);
+
+	if (currentSubPath.find("SHOE\\x64\\") != std::string::npos) {
+		SetBuildAssetPaths();
+	}
+	else {
+		SetVSAssetPaths();
+	}
 }
 
 // --------------------------------------------------------
@@ -56,6 +70,11 @@ Game::~Game()
 	delete& Input::GetInstance();
 	delete& AssetManager::GetInstance();
 	delete& AudioHandler::GetInstance();
+	delete& CollisionManager::GetInstance();
+
+	delete loadingSpriteBatch;
+	delete loadingMutex;
+	delete notification;
 }
 
 // --------------------------------------------------------
@@ -64,14 +83,35 @@ Game::~Game()
 // --------------------------------------------------------
 void Game::Init()
 {
-	// Initialize everything from gameobjects to skies
-	globalAssets.Initialize(device, context);
+	loadingMutex = new std::mutex();
+	notification = new std::condition_variable();
 
-	mainCamera = globalAssets.GetCameraByName("mainCamera");
+	// Set up the multithreading for the loading screen
+	globalAssets.SetAMLoadState(AMLoadState::INITIALIZING);
+
+	loadingSpriteBatch = new SpriteBatch(context.Get());
+
+#if defined(DEBUG) || defined(_DEBUG)
+	printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
+#endif
+
+	// Start the loading thread and the loading screen thread
+	std::thread loadingThread = std::thread([this] { globalAssets.Initialize(device, context, notification, loadingMutex, hWnd); });
+	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(globalAssets.GetAMLoadState()); });
+
+	// Once they've stopped passing control back and forth, join them
+	// to the main thread
+	screenThread.join();
+	loadingThread.join();
+
+#if defined(DEBUG) || defined(_DEBUG)
+	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
+#endif
+
+	mainCamera = globalAssets.GetMainCamera();
 	mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
 	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
-
-	Entities = globalAssets.GetActiveGameEntities();
+	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
 
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(this->hWnd);
@@ -79,36 +119,19 @@ void Game::Init()
 	movingEnabled = true;
 	lightWindowEnabled = false;
 	objWindowEnabled = false;
-	terrainWindowEnabled = false;
 	skyWindowEnabled = false;
 	objHierarchyEnabled = true;
 	rtvWindowEnabled = false;
-	childIndices = std::vector<int>();
 
 	flashMenuToggle = false;
-	lightUIIndex = 0;
-	emitterUIIndex = 0;
+	entityUIIndex = -1;
 	camUIIndex = 0;
+	skyUIIndex = 0;
 
-	skies = globalAssets.GetSkyArray();
-	activeSky = 1;
-
-	//Very important this is set accurately
-	lightCount = globalAssets.GetLightArraySize();
-	
 	// Tell the input assembler stage of the pipeline what kind of
 	// geometric primitives (points, lines or triangles) we want to draw.  
 	// Essentially: "What kind of shape should the GPU draw with our data?"
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	// Add ImGui components
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-
-	ImGui::StyleColorsDark();
-
-	ImGui_ImplWin32_Init(hWnd);
-	ImGui_ImplDX11_Init(device.Get(), context.Get());
 
 	//With everything initialized, start the renderer
 	renderer = std::make_unique<Renderer>(height,
@@ -119,18 +142,81 @@ void Game::Init()
 										  backBufferRTV,
 										  depthStencilView);
 
-
-	
-	renderer->InitShadows();
+#if defined(DEBUG) || defined(_DEBUG)
+	printf("Took %3.4f seconds for  post-initialization. \n", this->GetDeltaTime());
+	printf("Total Initialization time was %3.4f seconds. \n", this->GetTotalTime());
+#endif
 }
 
-void Game::RenderUI(float deltaTime) {
+void Game::LoadScene() {
+	delete loadingMutex;
+	delete notification;
+
+	loadingMutex = new std::mutex();
+	notification = new std::condition_variable();
+
+	globalAssets.SetAMLoadState(AMLoadState::SCENE_LOAD);
+
+#if defined(DEBUG) || defined(_DEBUG)
+	printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
+#endif
+
+	objWindowEnabled = false;
+	skyWindowEnabled = false;
+	entityUIIndex = -1;
+
+	// Start the loading thread and the loading screen thread
+	std::thread loadingThread = std::thread([this] { globalAssets.LoadScene("structureTest.json", notification, loadingMutex); });
+	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(globalAssets.GetAMLoadState()); });
+
+	// Once they've stopped passing control back and forth, join them
+	// to the main thread
+	screenThread.join();
+	loadingThread.join();
+
+#if defined(DEBUG) || defined(_DEBUG)
+	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
+#endif
+
+	mainCamera = globalAssets.GetMainCamera();
+	mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
+	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
+	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
+
+	renderer.reset();
+
+	context->Flush();
+
+	//With everything initialized, start the renderer
+	renderer = std::make_unique<Renderer>(height,
+										  width,
+										  device,
+										  context,
+										  swapChain,
+										  backBufferRTV,
+										  depthStencilView);
+}
+
+void Game::SaveScene() {
+	globalAssets.SaveScene("structureTest.json");
+
+}
+
+void Game::SaveSceneAs() {
+	// Handle file browser popup before anything else
+
+
+
+	globalAssets.SaveScene("structureTest.json");
+}
+
+void Game::GenerateEditingUI() {
 	// Reset the gui state to prevent tainted input
 	input.SetGuiKeyboardCapture(false);
 	input.SetGuiMouseCapture(false);
 
 	ImGuiIO& io = ImGui::GetIO();
-	io.DeltaTime = deltaTime;
+	io.DeltaTime = Time::deltaTime;
 	io.DisplaySize.x = (float)this->width;
 	io.DisplaySize.y = (float)this->height;
 	io.KeyCtrl = input.KeyDown(VK_CONTROL);
@@ -167,12 +253,12 @@ void Game::RenderUI(float deltaTime) {
 
 		ImGui::Text(node.c_str());
 
-		infoStr = std::to_string(globalAssets.GetLightArraySize());
+		infoStr = std::to_string(Light::GetLightArrayCount());
 		node = "Light count: " + infoStr;
 
 		ImGui::Text(node.c_str());
 
-		infoStr = std::to_string(Entities->size());
+		infoStr = std::to_string(globalAssets.GetGameEntityArraySize());
 		node = "Game Entity count: " + infoStr;
 
 		ImGui::Text(node.c_str());
@@ -182,42 +268,50 @@ void Game::RenderUI(float deltaTime) {
 
 	if (skyWindowEnabled) {
 		ImGui::Begin("Sky Editor");
-		ImGui::Image(globalAssets.GetEmitterAtID(0)->particleDataSRV.Get(), ImVec2(256, 256));
-		ImGui::End();
-	}
 
-	if (lightWindowEnabled) {
-		// Display the debug UI for lights
-		std::string indexStr = std::to_string(lightUIIndex);
-		std::string node = "Editing light " + indexStr;
-		ImGui::Begin("Light Editor");
-		ImGui::Text(node.c_str());
-		if (lightUIIndex == 4) ImGui::Text("Caution: Editing the flashlight");
+		std::shared_ptr<Sky> currentSky = globalAssets.GetSkyAtID(skyUIIndex);
 
-		if (ImGui::ArrowButton("Previous Light", ImGuiDir_Left)) {
-			lightUIIndex--;
-			if (lightUIIndex < 0) {
-				lightUIIndex = globalAssets.GetLightArraySize() - 1;
+		if (ImGui::ArrowButton("Previous Sky", ImGuiDir_Left)) {
+			skyUIIndex--;
+			if (skyUIIndex < 0) {
+				skyUIIndex = globalAssets.GetSkyArraySize() - 1;
 			}
+			renderer->SetActiveSky(globalAssets.GetSkyAtID(skyUIIndex));
 		};
 		ImGui::SameLine();
 
-		if (ImGui::ArrowButton("Next Light", ImGuiDir_Right)) {
-			lightUIIndex++;
-			if (lightUIIndex > globalAssets.GetLightArraySize() - 1) {
-				lightUIIndex = 0;
+		if (ImGui::ArrowButton("Next Sky", ImGuiDir_Right)) {
+			skyUIIndex++;
+			if (skyUIIndex > globalAssets.GetSkyArraySize() - 1) {
+				skyUIIndex = 0;
 			}
+			renderer->SetActiveSky(globalAssets.GetSkyAtID(skyUIIndex));
 		};
 
-		ImGui::ColorEdit3("Color: ", &globalAssets.GetLightAtID(lightUIIndex)->color.x);
-		ImGui::DragFloat("Intensity: ", &globalAssets.GetLightAtID(lightUIIndex)->intensity, 1, 10.0f, 200.0f);
-		ImGui::DragFloat("Range: ", &globalAssets.GetLightAtID(lightUIIndex)->range, 1, 5.0f, 20.0f);
+		std::string nameBuffer;
+		static char nameBuf[64] = "";
+		nameBuffer = currentSky->GetName();
+		strcpy_s(nameBuf, nameBuffer.c_str());
+		ImGui::InputText("Rename Sky ", nameBuf, sizeof(nameBuffer));
+
+		currentSky->SetName(nameBuf);
+
+		bool skyEnabled = currentSky->GetEnableDisable();
+		ImGui::Checkbox("Enabled ", &skyEnabled);
+		currentSky->SetEnableDisable(skyEnabled);
+
+		if (skyEnabled && ImGui::CollapsingHeader("BRDF Lookup Texture")) {
+			ImGui::Image((ImTextureID*)currentSky->GetBRDFLookupTexture().Get(), ImVec2(256, 256));
+		}
+
+		//ImGui::Image(globalAssets.GetEmitterAtID(0)->particleDataSRV.Get(), ImVec2(256, 256));
 		ImGui::End();
 	}
 
 	if (objWindowEnabled) {
 		// Display the debug UI for objects
-		std::string indexStr = std::to_string(entityUIIndex) + " - " + Entities->at(entityUIIndex)->GetName();
+		std::shared_ptr<GameEntity> currentEntity = globalAssets.GetGameEntityAtID(entityUIIndex);
+		std::string indexStr = std::to_string(entityUIIndex) + " - " + currentEntity->GetName();
 		std::string node = "Editing object " + indexStr;
 		ImGui::Begin("Object Editor");
 		ImGui::Text(node.c_str());
@@ -227,100 +321,355 @@ void Game::RenderUI(float deltaTime) {
 			if (entityUIIndex < 0) entityUIIndex = globalAssets.GetGameEntityArraySize() - 1;
 		};
 		ImGui::SameLine();
-		
+
 		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
 			entityUIIndex++;
-			if (entityUIIndex > globalAssets.GetGameEntityArraySize()) entityUIIndex = 0;
+			if (entityUIIndex > globalAssets.GetGameEntityArraySize() - 1) entityUIIndex = 0;
 		};
-
-		UIPositionEdit = Entities->at(entityUIIndex)->GetTransform()->GetPosition();
-		UIRotationEdit = Entities->at(entityUIIndex)->GetTransform()->GetPitchYawRoll();
-		UIScaleEdit = Entities->at(entityUIIndex)->GetTransform()->GetScale();
-		
-		ImGui::DragFloat3("Position: ", &UIPositionEdit.x, 0.5f);
-		ImGui::DragFloat3("Rotation: ", &UIRotationEdit.x, 0.5f, 0, 360);
-		ImGui::InputFloat3("Scale: ", &UIScaleEdit.x);
-
-		Entities->at(entityUIIndex)->GetTransform()->SetPosition(UIPositionEdit.x, UIPositionEdit.y, UIPositionEdit.z);
-		Entities->at(entityUIIndex)->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
-		Entities->at(entityUIIndex)->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
 
 		std::string nameBuffer;
 		static char nameBuf[64] = "";
-		nameBuffer = Entities->at(entityUIIndex)->GetName();
+		nameBuffer = currentEntity->GetName();
 		strcpy_s(nameBuf, nameBuffer.c_str());
 		ImGui::InputText("Rename GameObject", nameBuf, sizeof(nameBuffer));
 
-		Entities->at(entityUIIndex)->SetName(nameBuf);
+		currentEntity->SetName(nameBuf);
 
-		ImGui::End();
-	}
+		bool entityEnabled = currentEntity->GetEnableDisable();
+		ImGui::Checkbox("Enabled: ", &entityEnabled);
+		currentEntity->SetEnableDisable(entityEnabled);
 
-	// Particle Menu
-	if (particleWindowEnabled) {
-		ImGui::Begin("Particle Editor");
+		//Displays all components on the object
+		std::vector<std::shared_ptr<IComponent>> componentList = currentEntity->GetAllComponents();
 
-		std::string indexStr = globalAssets.GetEmitterAtID(emitterUIIndex)->GetName();
-		std::string node = "Editing Particle Emitter " + indexStr;
-		ImGui::Text(node.c_str());
+		// Transform is a special case, as it cannot be fetched by dynamic_pointer_cast
+		ImGui::Separator();
 
-		if (ImGui::ArrowButton("Previous Emitter", ImGuiDir_Left)) {
-			emitterUIIndex--;
-			if (emitterUIIndex < 0) {
-				emitterUIIndex = globalAssets.GetEmitterArraySize() - 1;
+		UIPositionEdit = currentEntity->GetTransform()->GetLocalPosition();
+		UIRotationEdit = currentEntity->GetTransform()->GetLocalPitchYawRoll();
+		UIScaleEdit = currentEntity->GetTransform()->GetLocalScale();
+
+		ImGui::DragFloat3("Position ", &UIPositionEdit.x, 0.5f);
+		ImGui::DragFloat3("Rotation ", &UIRotationEdit.x, 0.5f, 0, 360);
+		ImGui::InputFloat3("Scale ", &UIScaleEdit.x);
+
+		currentEntity->GetTransform()->SetPosition(UIPositionEdit.x, UIPositionEdit.y, UIPositionEdit.z);
+		currentEntity->GetTransform()->SetRotation(UIRotationEdit.x, UIRotationEdit.y, UIRotationEdit.z);
+		currentEntity->GetTransform()->SetScale(UIScaleEdit.x, UIScaleEdit.y, UIScaleEdit.z);
+
+		for (int c = 0; c < componentList.size(); c++)
+		{
+			ImGui::Separator();
+			ImGui::PushID(101 + c);
+
+			if (std::dynamic_pointer_cast<MeshRenderer>(componentList[c]) != nullptr)
+			{
+				std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(componentList[c]);
+				ImGui::Text("MeshRenderer");
+
+				bool meshEnabled = meshRenderer->IsLocallyEnabled();
+				ImGui::Checkbox("Enabled ", &meshEnabled);
+				if (meshEnabled != meshRenderer->IsLocallyEnabled())
+					meshRenderer->SetEnabled(meshEnabled);
+
+				ImGui::Checkbox("Render Bounds ", &meshRenderer->DrawBounds);
+
+				// Material changes
+				if (ImGui::CollapsingHeader("Material Swapping")) {
+					static int materialIndex = 0;
+
+					std::string nameBuffer;
+					static char nameBuf[64] = "";
+					nameBuffer = meshRenderer->GetMaterial()->GetName();
+					strcpy_s(nameBuf, nameBuffer.c_str());
+
+					ImGui::Text(nameBuf);
+					if (ImGui::BeginListBox("MaterialList")) {
+						for (int i = 0; i < globalAssets.GetMaterialArraySize(); i++) {
+							const bool is_selected = (materialIndex == i);
+							if (ImGui::Selectable(globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
+								materialIndex = i;
+							}
+
+							if (is_selected) ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndListBox();
+					}
+
+					if (ImGui::Button("Swap")) {
+						meshRenderer->SetMaterial(globalAssets.GetMaterialAtID(materialIndex));
+					}
+
+					float currentTiling = meshRenderer->GetMaterial()->GetTiling();
+					ImGui::InputFloat("Change UV Tiling", &currentTiling);
+					meshRenderer->GetMaterial()->SetTiling(currentTiling);
+				}
+
+				// Mesh Swapping
+				if (ImGui::CollapsingHeader("Mesh Swapping")) {
+					static int meshIndex = 0;
+
+					std::string nameBuffer;
+					static char nameBuf[64] = "";
+					nameBuffer = meshRenderer->GetMesh()->GetName();
+					strcpy_s(nameBuf, nameBuffer.c_str());
+
+					ImGui::Text(nameBuf);
+					if (ImGui::BeginListBox("MeshList")) {
+						for (int i = 0; i < globalAssets.GetMeshArraySize(); i++) {
+							const bool is_selected = (meshIndex == i);
+							if (ImGui::Selectable(globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
+								meshIndex = i;
+							}
+
+							if (is_selected) ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndListBox();
+					}
+
+					if (ImGui::Button("Swap")) {
+						meshRenderer->SetMesh(globalAssets.GetMeshAtID(meshIndex));
+					}
+				}
 			}
-		};
-		ImGui::SameLine();
 
-		if (ImGui::ArrowButton("Next Emitter", ImGuiDir_Right)) {
-			emitterUIIndex++;
-			if (emitterUIIndex > globalAssets.GetEmitterArraySize() - 1) {
-				emitterUIIndex = 0;
+			if (std::dynamic_pointer_cast<ParticleSystem>(componentList[c]) != nullptr)
+			{
+				std::shared_ptr<ParticleSystem> particleSystem = std::dynamic_pointer_cast<ParticleSystem>(componentList[c]);
+				ImGui::Text("ParticleSystem");
+
+				bool emitterEnabled = particleSystem->IsLocallyEnabled();
+				ImGui::Checkbox("Enabled ", &emitterEnabled);
+				if (emitterEnabled != particleSystem->IsLocallyEnabled())
+					particleSystem->SetEnabled(emitterEnabled);
+
+				XMFLOAT4 currentTint = particleSystem->GetColorTint();
+				ImGui::ColorEdit3("Color ", &currentTint.x);
+				particleSystem->SetColorTint(currentTint);
+
+				bool blendState = particleSystem->GetBlendState();
+				ImGui::Checkbox("Blend State ", &blendState);
+				ImGui::SameLine();
+				if (blendState) {
+					ImGui::Text("Blend state is additive.");
+				}
+				else {
+					ImGui::Text("Blend state is not additive.");
+				}
+				particleSystem->SetBlendState(blendState);
+
+				float scale = particleSystem->GetScale();
+				ImGui::SliderFloat("Scale with age ", &scale, 0.0f, 2.0f);
+				particleSystem->SetScale(scale);
+
+				float particlesPerSecond = particleSystem->GetParticlesPerSecond();
+				ImGui::SliderFloat("Particles per Second ", &particlesPerSecond, 0.1f, 20.0f);
+				ImGui::SameLine();
+				ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
+				particleSystem->SetParticlesPerSecond(particlesPerSecond);
+
+				float particlesLifetime = particleSystem->GetParticleLifetime();
+				ImGui::SliderFloat("Particles Lifetime ", &particlesLifetime, 0.1f, 20.0f);
+				ImGui::SameLine();
+				ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
+				particleSystem->SetParticleLifetime(particlesLifetime);
+
+				float speed = particleSystem->GetSpeed();
+				ImGui::SliderFloat("Particle Speed ", &speed, 0.1f, 5.0f);
+				particleSystem->SetSpeed(speed);
+
+				XMFLOAT3 destination = particleSystem->GetDestination();
+				ImGui::InputFloat3("Particles Move Towards ", &destination.x);
+				particleSystem->SetDestination(destination);
+
+				int maxParticles = particleSystem->GetMaxParticles();
+				ImGui::InputInt("Max Particles ", &maxParticles);
+				particleSystem->SetMaxParticles(maxParticles);
 			}
-		};
 
-		std::string nameBuffer;
-		static char nameBuf[64] = "";
-		nameBuffer = globalAssets.GetEmitterAtID(emitterUIIndex)->GetName();
-		strcpy_s(nameBuf, nameBuffer.c_str());
-		ImGui::InputText("Rename Emitter: ", nameBuf, sizeof(nameBuffer));
+			if (std::dynamic_pointer_cast<Terrain>(componentList[c]) != nullptr)
+			{
+				std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(componentList[c]);
+				ImGui::Text("Terrain");
 
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetName(nameBuf);
+				bool terrainEnabled = terrain->IsLocallyEnabled();
+				ImGui::Checkbox("Enabled ", &terrainEnabled);
+				if (terrainEnabled != terrain->IsLocallyEnabled())
+					terrain->SetEnabled(terrainEnabled);
 
-		DirectX::XMFLOAT4 currentTint = globalAssets.GetEmitterAtID(emitterUIIndex)->GetColorTint();
-		ImGui::ColorEdit3("Color: ", &currentTint.x);
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetColorTint(currentTint);
+				ImGui::Checkbox("Render Bounds ", &terrain->DrawBounds);
 
-		bool blendState = globalAssets.GetEmitterAtID(emitterUIIndex)->GetBlendState();
-		ImGui::Checkbox("Blend State: ", &blendState);
-		ImGui::SameLine();
-		if (blendState) {
-			ImGui::Text("Blend state is additive.");
+				// Material changes
+				if (ImGui::CollapsingHeader("Terrain Material Swapping")) {
+					static int materialIndex = 0;
+
+					std::string nameBuffer;
+					static char nameBuf[64] = "";
+					nameBuffer = terrain->GetMaterial()->GetName();
+					strcpy_s(nameBuf, nameBuffer.c_str());
+
+					ImGui::Text(nameBuf);
+					if (ImGui::BeginListBox("TMaterialList")) {
+						for (int i = 0; i < globalAssets.GetTerrainMaterialArraySize(); i++) {
+							const bool is_selected = (materialIndex == i);
+							if (ImGui::Selectable(globalAssets.GetTerrainMaterialAtID(i)->GetName().c_str(), is_selected)) {
+								materialIndex = i;
+							}
+
+							if (is_selected) ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndListBox();
+					}
+
+					if (ImGui::Button("Swap")) {
+						terrain->SetMaterial(globalAssets.GetTerrainMaterialAtID(materialIndex));
+					}
+				}
+
+				// Mesh Swapping
+				if (ImGui::CollapsingHeader("Mesh Swapping")) {
+					static int meshIndex = 0;
+
+					std::string nameBuffer;
+					static char nameBuf[64] = "";
+					nameBuffer = terrain->GetMesh()->GetName();
+					strcpy_s(nameBuf, nameBuffer.c_str());
+
+					ImGui::Text(nameBuf);
+					if (ImGui::BeginListBox("MeshList")) {
+						for (int i = 0; i < globalAssets.GetMeshArraySize(); i++) {
+							const bool is_selected = (meshIndex == i);
+							if (ImGui::Selectable(globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
+								meshIndex = i;
+							}
+
+							if (is_selected) ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndListBox();
+					}
+
+					if (ImGui::Button("Swap")) {
+						terrain->SetMesh(globalAssets.GetMeshAtID(meshIndex));
+					}
+				}
+			}
+
+			if (std::dynamic_pointer_cast<Collider>(componentList[c]) != nullptr)
+			{
+				std::shared_ptr<Collider> currentCollider = std::dynamic_pointer_cast<Collider>(componentList[c]);
+				ImGui::Text(currentCollider->IsTrigger() ? "Trigger" : "Collider");
+
+				bool colliderEnabled = currentCollider->IsLocallyEnabled();
+				ImGui::Checkbox("Enabled ", &colliderEnabled);
+				if (colliderEnabled != currentCollider->IsLocallyEnabled())
+					currentCollider->SetEnabled(colliderEnabled);
+
+				bool UIDrawCollider = currentCollider->IsVisible();
+				ImGui::Checkbox("Render Collider", &UIDrawCollider);
+				currentCollider->SetVisible(UIDrawCollider);
+
+				bool UITriggerSwitch = currentCollider->IsTrigger();
+				ImGui::Checkbox("Is Trigger", &UITriggerSwitch);
+				currentCollider->SetIsTrigger(UITriggerSwitch);
+			}
+
+			if (std::dynamic_pointer_cast<Light>(componentList[c]) != nullptr)
+			{
+				std::shared_ptr<Light> light = std::dynamic_pointer_cast<Light>(componentList[c]);
+				ImGui::Text("Light");
+
+				bool lightEnabled = light->IsLocallyEnabled();
+				ImGui::Checkbox("Enabled ", &lightEnabled);
+				if (lightEnabled != light->IsLocallyEnabled())
+					light->SetEnabled(lightEnabled);
+
+				UILightType = light->GetType();
+				ImGui::DragFloat("Type ", &UILightType, 1.0f, 0.0f, 2.0f);
+				light->SetType(UILightType);
+
+				//Directional Light
+				if (light->GetType() == 0.0f || light->GetType() == 2.0f) {
+					UILightDirectionEdit = light->GetDirection();
+					ImGui::InputFloat3("Direction ", &UILightDirectionEdit.x);
+					light->SetDirection(UILightDirectionEdit);
+				}
+				//Point Light
+				if (light->GetType() == 1.0f || light->GetType() == 2.0f) {
+					UILightRange = light->GetRange();
+					ImGui::DragFloat("Range ", &UILightRange, 1, 5.0f, 20.0f);
+					light->SetRange(UILightRange);
+				}
+				UILightColorEdit = light->GetColor();
+				ImGui::ColorEdit3("Color ", &UILightColorEdit.x);
+				light->SetColor(UILightColorEdit);
+				UILightIntensity = light->GetIntensity();
+				ImGui::DragFloat("Intensity ", &UILightIntensity, 0.1f, 0.01f, 1.0f);
+				light->SetIntensity(UILightIntensity);
+			}
+
+			// Remove Component Button
+			ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.35f, 1.0f, 0.6f));
+			if (ImGui::Button("Remove Component")) {
+				currentEntity->RemoveComponent(componentList[c]);
+			}
+			ImGui::PopStyleColor(3);
+			ImGui::PopID();
 		}
-		else {
-			ImGui::Text("Blend state is not additive.");
+
+		ImGui::Separator();
+
+		// Dropdown and Collapsible Header to add components
+		if (ImGui::CollapsingHeader("Add Component")) {
+			static ComponentTypes selectedComponent = ComponentTypes::MESH_RENDERER;
+			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Transform", "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light" };
+
+			if (ImGui::BeginListBox("Component Listbox")) {
+				for (int i = 0; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
+					const bool is_selected = (selectedComponent == i);
+					if (ImGui::Selectable(typeArray[i].c_str(), is_selected))
+						selectedComponent = (ComponentTypes)i;
+				}
+
+				ImGui::EndListBox();
+			}
+
+			ImGui::SameLine();
+
+			ImGui::PushID(100);
+			ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.3f, 1.0f, 0.56f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.3f, 1.0f, 0.87f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.65f, 1.0f, 0.5f));
+			if (ImGui::Button("Add Selected Component")) {
+				switch (selectedComponent) {
+					case ComponentTypes::TRANSFORM:
+						// No.
+						break;
+					case ComponentTypes::MESH_RENDERER:
+						currentEntity->AddComponent<MeshRenderer>();
+						break;
+					case ComponentTypes::PARTICLE_SYSTEM:
+						currentEntity->AddComponent<ParticleSystem>();
+						break;
+					case ComponentTypes::COLLIDER:
+						currentEntity->AddComponent<Collider>();
+						break;
+					case ComponentTypes::TERRAIN:
+						currentEntity->AddComponent<Terrain>();
+						break;
+					case ComponentTypes::LIGHT:
+						currentEntity->AddComponent<Light>();
+						break;
+				}
+			}
+			ImGui::PopStyleColor(3);
+			ImGui::PopID();
 		}
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetBlendState(blendState);
-
-		float scale = globalAssets.GetEmitterAtID(emitterUIIndex)->GetScale();
-		ImGui::SliderFloat("Scale with age: ", &scale, 0.0f, 2.0f);
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetScale(scale);
-
-		float particlesPerSecond = globalAssets.GetEmitterAtID(emitterUIIndex)->GetParticlesPerSecond();
-		ImGui::SliderFloat("Particles per Second: ", &particlesPerSecond, 0.1f, 20.0f);
-		ImGui::SameLine();
-		ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetParticlesPerSecond(particlesPerSecond);
-
-		float particlesLifetime = globalAssets.GetEmitterAtID(emitterUIIndex)->GetParticleLifetime();
-		ImGui::SliderFloat("Particles Lifetime: ", &particlesLifetime, 0.1f, 20.0f);
-		ImGui::SameLine();
-		ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetParticleLifetime(particlesLifetime);
-
-		int maxParticles = globalAssets.GetEmitterAtID(emitterUIIndex)->GetMaxParticles();
-		ImGui::InputInt("Max Particles: ", &maxParticles);
-		globalAssets.GetEmitterAtID(emitterUIIndex)->SetMaxParticles(maxParticles);
 
 		ImGui::End();
 	}
@@ -334,61 +683,65 @@ void Game::RenderUI(float deltaTime) {
 				audioHandler.BasicPlaySound(globalAssets.GetSoundAtID(i));
 			}
 		}
-		
+
 		ImGui::End();
 	}
 
 	if (objHierarchyEnabled) {
 		// Display the UI for setting parents
-		if (ImGui::TreeNodeEx("GameObjects", 
+		if (ImGui::TreeNodeEx("GameObjects",
 			ImGuiTreeNodeFlags_DefaultOpen |
 			ImGuiTreeNodeFlags_FramePadding)) {
-			ImGui::TextWrapped("Ran out of time to do drag-and-drop parenting, but hey, it shows which ones are parented!");
 			for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
-				if (Entities->at(i)->GetTransform()->GetParent() == NULL) {
-					RenderChildObjectsInUI(Entities->at(i).get());
+				if (globalAssets.GetGameEntityAtID(i)->GetTransform()->GetParent() == nullptr) {
+					RenderChildObjectsInUI(globalAssets.GetGameEntityAtID(i));
 				}
 			}
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNodeEx("Lights", 
-			ImGuiTreeNodeFlags_DefaultOpen |
-			ImGuiTreeNodeFlags_FramePadding)) {
-			ImGui::Text("Lights can't be parented (yet)");
-			for (int i = 0; i < globalAssets.GetLightArraySize(); i++) {
-				if (ImGui::TreeNode((void*)(intptr_t)i, "Light %d", i)) {
-					ImGui::TreePop();
-				}
-			}
+
 			ImGui::TreePop();
 		}
 	}
 
-	if (terrainWindowEnabled) {
-		// Display the debug UI for terrain
-		ImGui::Begin("Terrain Editor");
-
-		ImGui::Text("Currently unimplemented");
-		
-		ImGui::End();
-	}
-
-	// TODO: Make MRT menu toggleable
 	if (rtvWindowEnabled) {
 		ImGui::Begin("Multiple Render Target Viewer");
 
-		ImGui::Text("Color Without Ambient");
-		ImGui::Image(renderer->GetRenderTargetSRV(0).Get(), ImVec2(500, 300));
-		ImGui::Text("Ambient Color");
-		ImGui::Image(renderer->GetRenderTargetSRV(1).Get(), ImVec2(500, 300));
-		ImGui::Text("Normals");
-		ImGui::Image(renderer->GetRenderTargetSRV(2).Get(), ImVec2(500, 300));
-		ImGui::Text("Depths");
-		ImGui::Image(renderer->GetRenderTargetSRV(3).Get(), ImVec2(500, 300));
-		ImGui::Text("SSAO");
-		ImGui::Image(renderer->GetRenderTargetSRV(4).Get(), ImVec2(500, 300));
-		ImGui::Text("SSAO Post Blur");
-		ImGui::Image(renderer->GetRenderTargetSRV(5).Get(), ImVec2(500, 300));
+		if (ImGui::CollapsingHeader("MRT Effects")) {
+			ImGui::Text("Color Without Ambient");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_NO_AMBIENT).Get(), ImVec2(500, 300));
+			ImGui::Text("Ambient Color");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_AMBIENT).Get(), ImVec2(500, 300));
+			ImGui::Text("Normals");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::NORMALS).Get(), ImVec2(500, 300));
+			ImGui::Text("Depths");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Text("SSAO");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
+			ImGui::Text("SSAO Post Blur");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
+			ImGui::Text("Composite");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
+		}
+
+		if (ImGui::CollapsingHeader("Shadow Depth Views")) {
+			ImGui::Text("Environmental Shadows");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::ENV_SHADOW).Get(), ImVec2(500, 300));
+			ImGui::Text("Flashlight Shadows");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::FLASHLIGHT_SHADOW).Get(), ImVec2(500, 300));
+		}
+
+		if (ImGui::CollapsingHeader("Depth Prepass Views")) {
+			ImGui::Text("Refraction Silhouette Depths");
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
+			ImGui::Text("Transparency Depth Prepass");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Text("Render Depth Prepass (used for optimization)");
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+		}
+		
+		if (ImGui::CollapsingHeader("Selected Entity Filled View")) {
+			ImGui::Text("Selected Entity");
+			ImGui::Image(renderer->outlineSRV.Get(), ImVec2(500, 300));
+		}
 
 		ImGui::End();
 	}
@@ -423,9 +776,8 @@ void Game::RenderUI(float deltaTime) {
 		strcpy_s(nameBuf, nameBuffer.c_str());
 		ImGui::InputText("Rename Camera (disabled) ", nameBuf, sizeof(nameBuffer));
 
-		// Wait, isn't this a really bad idea?
-		// 30 Minutes later, I have determined that this was, in fact a terrible idea.
-		//currentCam->SetName(nameBuf);
+		// It's not a bad idea any more!
+		currentCam->SetName(nameBuf);
 
 		float fov = currentCam->GetFOV();
 		ImGui::SliderFloat("FOV", &fov, 0, XM_PI - 0.01f);
@@ -450,12 +802,36 @@ void Game::RenderUI(float deltaTime) {
 		ImGui::End();
 	}
 
-	// TODO: Add skybox menu
+	if (collidersWindowEnabled)
+	{
+		ImGui::Begin("Collider Inspector");
+
+		ImGui::Text("Collider bulk operations:");
+
+		bool UIDrawColliders = Renderer::GetDrawColliderStatus();
+		ImGui::Checkbox("Draw Colliders?", &UIDrawColliders);
+		Renderer::SetDrawColliderStatus(UIDrawColliders);
+
+		ImGui::End();
+	}
+
+	// TODO: Add Material Edit menu
 
 	// Display a menu at the top
 	if (ImGui::BeginMainMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
 			ImGui::Text("This menu will eventually contain a saving and loading system, designed for swapping between feature test scenes.");
+			if (ImGui::MenuItem("Save Scene", "ctrl+s")) {
+				SaveScene();
+			}
+
+			if (ImGui::MenuItem("Save Scene As", "ctrl+s")) {
+				SaveSceneAs();
+			}
+
+			if (ImGui::MenuItem("Load Scene", "ctrl+s")) {
+				LoadScene();
+			}
 			//ImGui::MenuItem("Toggle Flashlight", "f", &flashMenuToggle);
 
 			ImGui::EndMenu();
@@ -464,12 +840,11 @@ void Game::RenderUI(float deltaTime) {
 		if (ImGui::BeginMenu("Edit")) {
 			ImGui::MenuItem("Lights", "l", &lightWindowEnabled);
 			ImGui::MenuItem("GameObjects", "g", &objWindowEnabled);
-			ImGui::MenuItem("Particles", "p", &particleWindowEnabled);
-			ImGui::MenuItem("Terrain", "t", &terrainWindowEnabled);
 			ImGui::MenuItem("Object Hierarchy", "h", &objHierarchyEnabled);
 			ImGui::MenuItem("Skies", "", &skyWindowEnabled);
 			ImGui::MenuItem("Sound", "", &soundWindowEnabled);
 			ImGui::MenuItem("Camera", "c", &camWindowEnabled);
+			ImGui::MenuItem("Colliders", "", &collidersWindowEnabled);
 
 			ImGui::EndMenu();
 		}
@@ -481,11 +856,13 @@ void Game::RenderUI(float deltaTime) {
 		}
 
 		if (ImGui::BeginMenu("Add")) {
-			//ImGui::MenuItem("Toggle Flashlight", "f", &flashMenuToggle);
-			ImGui::Text("This menu will allow easily adding more objects and lights.");
+			ImGui::Text("Add a new GameEntity, which can have components attached.");
 
-			if (ImGui::Button("Add GameObject")) {
-				globalAssets.CreateGameEntity(globalAssets.GetMeshByName("Cube"), globalAssets.GetMaterialByName("bronzeMat"), "GameEntity" + std::to_string(globalAssets.GetGameEntityArraySize()));
+			if (ImGui::Button("Add GameEntity")) {
+				globalAssets.CreateGameEntity("GameEntity" + std::to_string(globalAssets.GetGameEntityArraySize()));
+
+				entityUIIndex = globalAssets.GetGameEntityArraySize() - 1;
+				objWindowEnabled = true;
 			}
 
 			ImGui::EndMenu();
@@ -510,66 +887,152 @@ void Game::RenderUI(float deltaTime) {
 	}
 }
 
-void Game::RenderChildObjectsInUI(GameEntity* entity) {
+void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 	std::string nodeName = entity->GetName();
-	if (ImGui::TreeNodeEx(nodeName.c_str(), 
+	if (ImGui::TreeNodeEx(nodeName.c_str(),
 		ImGuiTreeNodeFlags_DefaultOpen |
 		ImGuiTreeNodeFlags_FramePadding)) {
 		int childCount = entity->GetTransform()->GetChildCount();
 		if (childCount > 0) {
-			std::vector<GameEntity*> children = entity->GetTransform()->GetChildrenAsGameEntities();
+			std::vector<std::shared_ptr<GameEntity>> children = entity->GetTransform()->GetChildrenEntities();
 			for (int i = 0; i < childCount; i++) {
 				RenderChildObjectsInUI(children[i]);
 			}
 		}
+
+		if (ImGui::IsItemClicked()) {
+			entityUIIndex = globalAssets.GetGameEntityIDByName(entity->GetName());
+			objWindowEnabled = true;
+		}
+
+		if (ImGui::BeginDragDropTarget()) {
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PARENTING_CELL"))
+			{
+				IM_ASSERT(payload->DataSize == sizeof(int));
+				int payload_n = *(const int*)payload->Data;
+
+				// Logic to parent objects and reorder list
+				std::shared_ptr<GameEntity> sourceEntity = globalAssets.GetGameEntityAtID(payload_n);
+
+				sourceEntity->GetTransform()->SetParent(entity->GetTransform());
+
+				// Re-render children list
+				for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
+					if (globalAssets.GetGameEntityAtID(i)->GetTransform()->GetParent() == NULL) {
+						RenderChildObjectsInUI(globalAssets.GetGameEntityAtID(i));
+					}
+				}
+			}
+
+			ImGui::EndDragDropTarget();
+		}
+
+		if (ImGui::BeginDragDropSource()) {
+			ImGui::SetDragDropPayload("PARENTING_CELL", &entityUIIndex, sizeof(int));
+
+			ImGui::EndDragDropSource();
+		}
+
 		ImGui::TreePop();
 	}
 }
 
-void Game::RenderSky() {
+std::shared_ptr<GameEntity> Game::GetClickedEntity()
+{
+	//Load necessary vectors and matrices
+	XMMATRIX projectionMatrix = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
+	XMMATRIX viewMatrix = XMLoadFloat4x4(&mainCamera->GetViewMatrix());
+
+	//Convert screen position to ray
+	//Based on https://stackoverflow.com/questions/39376687/mouse-picking-with-ray-casting-in-directx
+	XMVECTOR origin = XMVector3Unproject(
+		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 0)),
+		0,
+		0,
+		width,
+		height,
+		0,
+		1,
+		projectionMatrix,
+		viewMatrix,
+		XMMatrixIdentity());
+
+	XMVECTOR destination = XMVector3Unproject(
+		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 1)),
+		0,
+		0,
+		width,
+		height,
+		0,
+		1,
+		projectionMatrix,
+		viewMatrix,
+		XMMatrixIdentity());
+
+	XMVECTOR direction = XMVector3Normalize(destination - origin);
+
+	//Raycast against MeshRenderer bounds
+	std::shared_ptr<GameEntity> closestHitEntity = nullptr;
+	float distToHit = mainCamera->GetFarDist();
+	float rayLength = mainCamera->GetFarDist();
+
+	for (std::shared_ptr<MeshRenderer> meshRenderer : ComponentManager::GetAllEnabled<MeshRenderer>())
+	{
+		if (meshRenderer->GetBounds().Intersects(origin, direction, rayLength)) {
+			std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
+			XMMATRIX worldMatrix = XMLoadFloat4x4(&meshRenderer->GetTransform()->GetWorldMatrix());
+			Vertex* vertices = mesh->GetVertexArray();
+			unsigned int* indices = mesh->GetIndexArray();
+			float distToTri;
+
+			for (int i = 0; i < mesh->GetIndexCount(); i += 3) {
+				XMVECTOR vertex0 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i]].Position), worldMatrix);
+				XMVECTOR vertex1 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 1]].Position), worldMatrix);
+				XMVECTOR vertex2 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 2]].Position), worldMatrix);
+				if (DirectX::TriangleTests::Intersects(origin, direction, vertex0, vertex1, vertex2, distToTri) && distToTri < distToHit)
+				{
+					distToHit = distToTri;
+					closestHitEntity = meshRenderer->GetGameEntity();
+				}
+			}
+		}
+	}
+
+	return closestHitEntity;
+}
+
+void Game::SelectSky() {
 	if (input.KeyPress(VK_RIGHT)) {
-		activeSky++;
-		if (activeSky > skies->size() - 1) {
-			activeSky = 0;
+		skyUIIndex++;
+		if (skyUIIndex > globalAssets.GetSkyArraySize() - 1) {
+			skyUIIndex = 0;
 		}
 	}
 	else if (input.KeyPress(VK_LEFT)) {
-		activeSky--;
-		if (activeSky < 0) {
-			activeSky = skies->size() - 1;
+		skyUIIndex--;
+		if (skyUIIndex < 0) {
+			skyUIIndex = globalAssets.GetSkyArraySize() - 1;
 		}
 	}
-
-	renderer->SetActiveSky(skies->at(activeSky));
+	renderer->SetActiveSky(globalAssets.GetSkyAtID(skyUIIndex));
 }
 
 void Game::Flashlight() {
-	Light* flashlight = globalAssets.GetFlashlight();
-	if (input.KeyPress(0x46)) {
+	if (input.TestKeyAction(KeyActions::ToggleFlashlight)) {
 		flashMenuToggle = !flashMenuToggle;
+		flashlight->SetEnabled(flashMenuToggle);
 	}
 
 	if (flashMenuToggle) {
-		flashlight->enabled = true;
-	}
-	else {
-		flashlight->enabled = false;
-	}
-
-	if (flashMenuToggle) {
-		XMFLOAT3 camPos = mainCamera->GetTransform()->GetPosition();
-		flashlight->position = XMFLOAT3(camPos.x + 0.5f, camPos.y, camPos.z + 0.5f);
-		flashlight->direction = mainCamera->GetTransform()->GetForward();
-		flashShadowCamera->GetTransform()->SetPosition(flashlight->position.x, flashlight->position.y, flashlight->position.z);
-		flashShadowCamera->GetTransform()->SetRotation(mainCamera->GetTransform()->GetPitchYawRoll().x, mainCamera->GetTransform()->GetPitchYawRoll().y, mainCamera->GetTransform()->GetPitchYawRoll().z);
+		XMFLOAT3 camPos = mainCamera->GetTransform()->GetGlobalPosition();
+		flashlight->GetTransform()->SetPosition(XMFLOAT3(camPos.x + 0.5f, camPos.y, camPos.z + 0.5f));
+		flashlight->SetDirection(mainCamera->GetTransform()->GetForward());
+		flashShadowCamera->GetTransform()->SetPosition(flashlight->GetTransform()->GetGlobalPosition());
+		flashShadowCamera->GetTransform()->SetRotation(mainCamera->GetTransform()->GetLocalPitchYawRoll());
 		flashShadowCamera->UpdateViewMatrix();
-		FlickeringCheck();
-	}
-}
-
-void Game::FlickeringCheck() {
-	if (input.KeyPress(0x47)) {
-		flickeringEnabled = !flickeringEnabled;
+		if (input.TestKeyAction(KeyActions::ToggleFlashlightFlicker)) {
+			flickeringEnabled = !flickeringEnabled;
+		}
 	}
 }
 
@@ -594,37 +1057,58 @@ void Game::OnResize()
 // --------------------------------------------------------
 // Update your game here - user input, move objects, AI, etc.
 // --------------------------------------------------------
-void Game::Update(float deltaTime, float totalTime)
+void Game::Update()
 {
 	audioHandler.GetSoundSystem()->update();
 
-	RenderUI(deltaTime);
+	GenerateEditingUI();
 
-	// To untie something from framerate, multiply by deltatime
+	// To untie something from framerate, multiply by Time::deltaTime
 
 	// Quit if the escape key is pressed
-	if (input.KeyDown(VK_ESCAPE)) Quit();
+	if (input.TestKeyAction(KeyActions::QuitGame)) Quit();
+
+	globalAssets.BroadcastGlobalEntityEvent(EntityEventType::Update);
 
 	if (movingEnabled) {
-		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+2.0f, -(float)sin(totalTime), +0.0f);
-		globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(totalTime), +0.0f);
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+1.5f, (float)sin(Time::totalTime) + 2.5f, +0.0f);
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate(0.0f, 0.0f, -(float)sin(Time::deltaTime));
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate(0.0f, (float)sin(Time::deltaTime), 0.0f);
+		globalAssets.GetGameEntityByName("Scratched Cube")->GetTransform()->Rotate(-(float)sin(Time::deltaTime), 0.0f, 0.0f);
 
-		globalAssets.GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition((float)sin(totalTime), +2.0f, +0.0f);
-		globalAssets.GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(-(float)sin(totalTime), -2.0f, +0.0f);
+		globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(Time::totalTime), +0.0f);
 
-		globalAssets.GetGameEntityByName("Rough Torus")->GetTransform()->Rotate(+0.0f, +0.0f, +1.0f * deltaTime);
+		globalAssets.GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(-(float)sin(Time::totalTime), -2.0f, +0.0f);
+
+		globalAssets.GetGameEntityByName("Rough Torus")->GetTransform()->Rotate(+0.0f, +0.0f, +1.0f * Time::deltaTime);
 	}
 
 	Flashlight();
-	RenderSky();
+	SelectSky();
 
-	for (int i = 0; i < globalAssets.GetEmitterArraySize(); i++) {
-		globalAssets.GetEmitterAtID(i)->Update(deltaTime, totalTime);
+	CollisionManager::GetInstance().Update();
+
+	//Click to select an object
+	if (input.MouseRightPress()) {
+		clickedEntityBuffer = GetClickedEntity();
 	}
+	if (input.MouseRightRelease()) {
+		if (clickedEntityBuffer != nullptr && clickedEntityBuffer == GetClickedEntity()) {
+			objWindowEnabled = true;
+			entityUIIndex = globalAssets.GetGameEntityIDByName(clickedEntityBuffer->GetName());
+		}
+		else {
+			objWindowEnabled = false;
+			entityUIIndex = -1;
+		}
+		clickedEntityBuffer = nullptr;
+	}
+
+	renderer->selectedEntity = entityUIIndex;
 
 	// Flickering is currently broken
 	/*if (flickeringEnabled) {
-		srand((unsigned int)(deltaTime * totalTime));
+		srand((unsigned int)(Time::deltaTime * Time::totalTime));
 		float prevIntensity = globalAssets.globalLights.at(4).intensity;
 		int flickerRand = rand() % 6 + 1;
 		if (flickerRand == 5 && !hasFlickered) {
@@ -638,21 +1122,106 @@ void Game::Update(float deltaTime, float totalTime)
 		}
 	}*/
 
-	mainCamera->Update(deltaTime, this->hWnd);
-	//flashShadowCamera->Update(deltaTime, this->hWnd);
+	mainCamera->Update(this->hWnd);
+}
+
+void Game::DrawLoadingScreen(AMLoadState loadType) {
+	while (globalAssets.GetAMLoadState() != AMLoadState::NOT_LOADING) {
+		std::unique_lock<std::mutex> lock(*loadingMutex);
+		using time = std::chrono::duration<int, std::milli>;
+		if (notification->wait_for(lock, time(3000), [&] {return globalAssets.GetSingleLoadComplete(); })) {
+			// Super generic draw code for now
+			// Background color (Cornflower Blue in this case) for clearing
+			const float color[4] = { 0.0f, 0.0f, 0.1f, 0.0f };
+
+			std::string loadedCategoryString = "Loading " + globalAssets.GetLastLoadedCategory();
+			std::string loadedObjectString;
+
+			if (globalAssets.GetLoadingException()) {
+				try {
+					std::rethrow_exception(globalAssets.GetLoadingException());
+				}
+				catch (const std::exception& e) {
+					loadedObjectString = globalAssets.GetLastLoadedObject() + " Failed to Load! Error is printed to DBG console.";
+#if defined(DEBUG) || defined(_DEBUG)
+					printf(e.what());
+#endif
+				}
+			}
+			else {
+				loadedObjectString = "Loading Object: " + globalAssets.GetLastLoadedObject();
+			}
+
+			context->ClearRenderTargetView(backBufferRTV.Get(), color);
+			context->ClearDepthStencilView(
+				depthStencilView.Get(),
+				D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+				1.0f,
+				0);
+
+			// Get fonts
+			static std::shared_ptr<SpriteFont> titleFont = globalAssets.GetFontByName("Roboto-Bold-72pt")->spritefont;
+			static std::shared_ptr<SpriteFont> categoryFont = globalAssets.GetFontByName("SmoochSans-Bold")->spritefont;
+			static std::shared_ptr<SpriteFont> objectFont = globalAssets.GetFontByName("SmoochSans-Italic")->spritefont;
+
+			loadingSpriteBatch->Begin();
+
+			DirectX::XMFLOAT2 titleOrigin;
+			DirectX::XMFLOAT2 categoryOrigin;
+			DirectX::XMFLOAT2 objectOrigin;
+
+			std::string titleString = "";
+
+			if (loadType == AMLoadState::INITIALIZING) {
+				titleString = "SHOE";
+				DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
+			}
+			else if (loadType == AMLoadState::SCENE_LOAD) {
+				titleString = "Loading '";
+				titleString += globalAssets.GetLoadingSceneName();
+				titleString += "'";
+				DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
+			}
+
+			// Certified conversion moment
+			DirectX::XMStoreFloat2(&categoryOrigin, categoryFont->MeasureString(loadedCategoryString.c_str()) / 2.0f);
+			DirectX::XMStoreFloat2(&objectOrigin, objectFont->MeasureString(loadedObjectString.c_str()) / 2.0f);
+
+			titleFont->DrawString(loadingSpriteBatch, titleString.c_str(), DirectX::XMFLOAT2(width / 2, height / 5), DirectX::Colors::Gold, 0.0f, titleOrigin);
+			categoryFont->DrawString(loadingSpriteBatch, loadedCategoryString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.5), DirectX::Colors::White, 0.0f, categoryOrigin);
+			objectFont->DrawString(loadingSpriteBatch, loadedObjectString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.2), DirectX::Colors::LightGray, 0.0f, objectOrigin);
+
+			loadingSpriteBatch->End();
+
+			swapChain->Present(0, 0);
+
+			context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthStencilView.Get());
+		}
+		else {
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("Took too long to load. \n");
+#endif
+		}
+
+		globalAssets.SetSingleLoadComplete(false);
+		lock.unlock();
+		notification->notify_all();
+	}
 }
 
 // --------------------------------------------------------
 // Clear the screen, redraw everything, present to the user
 // --------------------------------------------------------
-void Game::Draw(float deltaTime, float totalTime)
+void Game::Draw()
 {
-	//Render shadows before anything else
-	if (flashMenuToggle) {
-		renderer->RenderShadows(flashShadowCamera, 0);
+	if (globalAssets.GetAMLoadState() != INITIALIZING && globalAssets.GetAMLoadState() != SCENE_LOAD) {
+		//Render shadows before anything else
+		if (flashMenuToggle) {
+			renderer->RenderShadows(flashShadowCamera, MiscEffectSRVTypes::FLASHLIGHT_SHADOW);
+		}
+
+		renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
+
+		renderer->Draw(mainCamera);
 	}
-
-	renderer->RenderShadows(mainShadowCamera, 1);
-
-	renderer->Draw(mainCamera, totalTime);
 }
