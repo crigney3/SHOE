@@ -2730,14 +2730,6 @@ size_t AssetManager::GetSoundArraySize() {
 	return this->globalSounds.size();
 }
 
-std::vector<std::shared_ptr<GameEntity>>* AssetManager::GetActiveGameEntities() {
-	return &this->globalEntities;
-}
-
-std::vector<std::shared_ptr<Sky>>* AssetManager::GetSkyArray() {
-	return &this->skies;
-}
-
 FMOD::Sound* AssetManager::GetSoundAtID(int id) {
 	return this->globalSounds[id];
 }
@@ -3372,14 +3364,6 @@ void AssetManager::RemoveTerrainMaterial(int id) {
 // Enables or disables assets into or
 // out of the rendering pipeline
 //
-
-void AssetManager::EnableDisableSky(std::string name, bool value) {
-	GetSkyByName(name)->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisableSky(int id, bool value) {
-	skies[id]->SetEnableDisable(value);
-}
 
 void AssetManager::EnableDisableCamera(std::string name, bool value) {
 	GetCameraByName(name)->SetEnableDisable(value);

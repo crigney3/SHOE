@@ -113,8 +113,6 @@ void Game::Init()
 	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
 
-	Entities = globalAssets.GetActiveGameEntities();
-
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(this->hWnd);
 	statsEnabled = true;
@@ -129,8 +127,6 @@ void Game::Init()
 	entityUIIndex = -1;
 	camUIIndex = 0;
 	skyUIIndex = 0;
-
-	skies = globalAssets.GetSkyArray();
 
 	// Tell the input assembler stage of the pipeline what kind of
 	// geometric primitives (points, lines or triangles) we want to draw.  
@@ -187,10 +183,6 @@ void Game::LoadScene() {
 	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
 
-	Entities = globalAssets.GetActiveGameEntities();
-
-	skies = globalAssets.GetSkyArray();
-
 	renderer.reset();
 
 	context->Flush();
@@ -218,7 +210,7 @@ void Game::SaveSceneAs() {
 	globalAssets.SaveScene("structureTest.json");
 }
 
-void Game::RenderUI() {
+void Game::GenerateEditingUI() {
 	// Reset the gui state to prevent tainted input
 	input.SetGuiKeyboardCapture(false);
 	input.SetGuiMouseCapture(false);
@@ -266,7 +258,7 @@ void Game::RenderUI() {
 
 		ImGui::Text(node.c_str());
 
-		infoStr = std::to_string(Entities->size());
+		infoStr = std::to_string(globalAssets.GetGameEntityArraySize());
 		node = "Game Entity count: " + infoStr;
 
 		ImGui::Text(node.c_str());
@@ -318,7 +310,7 @@ void Game::RenderUI() {
 
 	if (objWindowEnabled) {
 		// Display the debug UI for objects
-		std::shared_ptr<GameEntity> currentEntity = Entities->at(entityUIIndex);
+		std::shared_ptr<GameEntity> currentEntity = globalAssets.GetGameEntityAtID(entityUIIndex);
 		std::string indexStr = std::to_string(entityUIIndex) + " - " + currentEntity->GetName();
 		std::string node = "Editing object " + indexStr;
 		ImGui::Begin("Object Editor");
@@ -701,8 +693,8 @@ void Game::RenderUI() {
 			ImGuiTreeNodeFlags_DefaultOpen |
 			ImGuiTreeNodeFlags_FramePadding)) {
 			for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
-				if (Entities->at(i)->GetTransform()->GetParent() == nullptr) {
-					RenderChildObjectsInUI(Entities->at(i));
+				if (globalAssets.GetGameEntityAtID(i)->GetTransform()->GetParent() == nullptr) {
+					RenderChildObjectsInUI(globalAssets.GetGameEntityAtID(i));
 				}
 			}
 
@@ -926,8 +918,8 @@ void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 
 				// Re-render children list
 				for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
-					if (Entities->at(i)->GetTransform()->GetParent() == NULL) {
-						RenderChildObjectsInUI(Entities->at(i));
+					if (globalAssets.GetGameEntityAtID(i)->GetTransform()->GetParent() == NULL) {
+						RenderChildObjectsInUI(globalAssets.GetGameEntityAtID(i));
 					}
 				}
 			}
@@ -1009,21 +1001,20 @@ std::shared_ptr<GameEntity> Game::GetClickedEntity()
 	return closestHitEntity;
 }
 
-void Game::RenderSky() {
+void Game::SelectSky() {
 	if (input.KeyPress(VK_RIGHT)) {
 		skyUIIndex++;
-		if (skyUIIndex > skies->size() - 1) {
+		if (skyUIIndex > globalAssets.GetSkyArraySize() - 1) {
 			skyUIIndex = 0;
 		}
 	}
 	else if (input.KeyPress(VK_LEFT)) {
 		skyUIIndex--;
 		if (skyUIIndex < 0) {
-			skyUIIndex = skies->size() - 1;
+			skyUIIndex = globalAssets.GetSkyArraySize() - 1;
 		}
 	}
-
-	renderer->SetActiveSky(skies->at(skyUIIndex));
+	renderer->SetActiveSky(globalAssets.GetSkyAtID(skyUIIndex));
 }
 
 void Game::Flashlight() {
@@ -1070,7 +1061,7 @@ void Game::Update()
 {
 	audioHandler.GetSoundSystem()->update();
 
-	RenderUI();
+	GenerateEditingUI();
 
 	// To untie something from framerate, multiply by Time::deltaTime
 
@@ -1093,7 +1084,7 @@ void Game::Update()
 	}
 
 	Flashlight();
-	RenderSky();
+	SelectSky();
 
 	CollisionManager::GetInstance().Update();
 
