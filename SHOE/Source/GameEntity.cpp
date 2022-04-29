@@ -6,9 +6,6 @@
  */
 void GameEntity::UpdateHierarchyIsEnabled(bool active, bool head)
 {
-	//If this GameEntity is Frozen, don't Update
-	if (frozen) return;
-
 	if (head || hierarchyIsEnabled != active) {
 		if (!head) { 
 			hierarchyIsEnabled = active;
