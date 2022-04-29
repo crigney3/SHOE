@@ -165,6 +165,8 @@ void Game::LoadScene() {
 	printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
 #endif
 
+	objWindowEnabled = false;
+	skyWindowEnabled = false;
 	entityUIIndex = -1;
 
 	// Start the loading thread and the loading screen thread
