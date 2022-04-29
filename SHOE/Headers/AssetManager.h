@@ -335,7 +335,6 @@ private:
 
 public:
 	static bool materialSortDirty;
-	bool shouldSendUpdateMessage;
 
 	~AssetManager();
 

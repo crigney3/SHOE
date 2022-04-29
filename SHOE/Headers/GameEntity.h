@@ -44,9 +44,6 @@ public:
 	bool GetEnableDisable();
 	bool GetHierarchyIsEnabled();
 
-	void Freeze();
-	void Unfreeze();
-
 	//Component stuff
 	template <typename T>
 	std::shared_ptr<T> AddComponent();

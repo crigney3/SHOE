@@ -48,6 +48,8 @@ Renderer::Renderer(
 	this->drawColliders = true;
 	this->drawColliderTransforms = true;
 
+	this->selectedEntity = -1;
+
 	//create and store the RS State for drawing colliders
 	D3D11_RASTERIZER_DESC colliderRSdesc = {};
 	colliderRSdesc.FillMode = D3D11_FILL_WIREFRAME;

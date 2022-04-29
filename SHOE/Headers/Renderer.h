@@ -205,6 +205,6 @@ public:
 	static bool GetDrawColliderTransformsStatus();
     static void SetDrawColliderTransformsStatus(bool _newState);
 
-    int selectedEntity = -1;
+    int selectedEntity;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> outlineSRV;
 };

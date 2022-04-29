@@ -184,6 +184,8 @@ std::string AssetManager::GetCurrentSceneName() {
 void AssetManager::LoadScene(std::string filepath, std::condition_variable* threadNotifier, std::mutex* threadLock) {
 	HRESULT hr = CoInitialize(NULL);
 
+	
+
 	this->threadNotifier = threadNotifier;
 	this->threadLock = threadLock;
 
@@ -1555,9 +1557,6 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 		newEnt->Initialize();
 
 		globalEntities.push_back(newEnt);
-
-		shouldSendUpdateMessage = false;
-		newEnt->Freeze();
 
 		return newEnt;
 	}

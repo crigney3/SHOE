@@ -164,6 +164,8 @@ void Game::LoadScene() {
 	printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
 #endif
 
+	entityUIIndex = -1;
+
 	// Start the loading thread and the loading screen thread
 	std::thread loadingThread = std::thread([this] { globalAssets.LoadScene("structureTest.json", notification, loadingMutex); });
 	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(globalAssets.GetAMLoadState()); });
@@ -1084,7 +1086,7 @@ void Game::Update()
 	// Quit if the escape key is pressed
 	if (input.TestKeyAction(KeyActions::QuitGame)) Quit();
 
-	if(globalAssets.shouldSendUpdateMessage) globalAssets.BroadcastGlobalEntityEvent(EntityEventType::Update);
+	globalAssets.BroadcastGlobalEntityEvent(EntityEventType::Update);
 
 	if (movingEnabled) {
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+1.5f, (float)sin(Time::totalTime) + 2.5f, +0.0f);
@@ -1139,7 +1141,6 @@ void Game::Update()
 	}*/
 
 	mainCamera->Update(this->hWnd);
-	globalAssets.shouldSendUpdateMessage = true;
 }
 
 void Game::DrawLoadingScreen(AMLoadState loadType) {
