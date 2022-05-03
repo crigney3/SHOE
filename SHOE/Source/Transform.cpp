@@ -333,7 +333,7 @@ void Transform::AddChild(std::shared_ptr<Transform> child) {
 		childEntities.push_back(child->GetGameEntity());
 		child->parent = shared_from_this();
 
-		child->GetGameEntity()->UpdateHierarchyIsEnabled(GetGameEntity()->GetEnableDisable());
+		child->GetGameEntity()->UpdateHierarchyIsEnabled(GetGameEntity()->GetEnabled());
 	}
 }
 

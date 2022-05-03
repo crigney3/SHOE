@@ -193,6 +193,7 @@
 #include "rapidjson\filereadstream.h"
 #include "rapidjson\filewritestream.h"
 #include "rapidjson\writer.h"
+#include "ShadowProjector.h"
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 #define FILE_BUFFER_SIZE 65536
@@ -217,6 +218,9 @@ enum ComponentTypes {
 	PARTICLE_SYSTEM,
 	LIGHT,
 	MESH_RENDERER,
+	CAMERA,
+	NOCLIP_CHAR_CONTROLLER,
+	FLASHLIGHT_CONTROLLER,
 	// Must always be the final enum
 	COMPONENT_TYPE_COUNT
 };
@@ -296,7 +300,6 @@ private:
 	std::vector<std::shared_ptr<SimpleVertexShader>> vertexShaders;
 	std::vector<std::shared_ptr<SimpleComputeShader>> computeShaders;
 	std::vector<std::shared_ptr<Sky>> skies;
-	std::vector<std::shared_ptr<Camera>> globalCameras;
 	std::vector<std::shared_ptr<Mesh>> globalMeshes;
 	std::vector<std::shared_ptr<Material>> globalMaterials;
 	std::vector<std::shared_ptr<GameEntity>> globalEntities;
@@ -318,6 +321,8 @@ private:
 	std::string currentSceneName;
 	std::string loadingSceneName;
 
+	std::shared_ptr<Camera> editingCamera;
+	std::shared_ptr<Camera> mainCamera;
 public:
 	static bool materialSortDirty;
 
@@ -365,13 +370,11 @@ public:
 	std::string GetFullPathToExternalAssetFile(std::string filename);
 
 	// Camera Tag Functions
+	std::shared_ptr<Camera> GetEditingCamera();
 	std::shared_ptr<Camera> GetMainCamera();
-	std::shared_ptr<Camera> GetPlayCamera();
-	std::vector<std::shared_ptr<Camera>> GetCamerasByTag(CameraType type);
-	void SetCameraTag(std::shared_ptr<Camera> cam, CameraType tag);
+	void SetMainCamera(std::shared_ptr<Camera> newMain);
 
-	// Methods to create new assets
-
+	// Methods to create new entities
 	std::shared_ptr<GameEntity> CreateGameEntity(std::string name = "GameEntity");
 	std::shared_ptr<GameEntity> CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name = "GameEntity");
 
@@ -388,7 +391,8 @@ public:
 	std::shared_ptr<SimplePixelShader> CreatePixelShader(std::string id, std::string nameToLoad);
 	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::string nameToLoad);
 	std::shared_ptr<Mesh> CreateMesh(std::string id, std::string nameToLoad);
-	std::shared_ptr<Camera> CreateCamera(std::string id, DirectX::XMFLOAT3 pos, float aspectRatio, int type);
+	std::shared_ptr<Camera> CreateCamera(std::string name, float aspectRatio = 0);
+	std::shared_ptr<ShadowProjector> CreateShadowProjector(std::string name, float aspectRatio = 0);
 	std::shared_ptr<Light> CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 direction, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Light> CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Light> CreateSpotLight(std::string name, DirectX::XMFLOAT3 direction, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
@@ -460,6 +464,8 @@ public:
 												   float range,
 												   DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
 												   float intensity = 1.0f);
+	std::shared_ptr<Camera> CreateCameraOnEntity(std::shared_ptr<GameEntity> entityToEdit, float aspectRatio = 0);
+	std::shared_ptr<ShadowProjector> CreateShadowProjectorOnEntity(std::shared_ptr<GameEntity> entityToEdit, float aspectRatio = 0);
 
 	// Creation Helper Methods
 	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType);
@@ -484,19 +490,12 @@ public:
 	void RemovePixelShader(int id);
 	void RemoveMesh(std::string name);
 	void RemoveMesh(int id);
-	void RemoveCamera(std::string name);
-	void RemoveCamera(int id);
 	void RemoveMaterial(std::string name);
 	void RemoveMaterial(int id);
 	void RemoveTerrainMaterial(std::string name);
 	void RemoveTerrainMaterial(int id);
 
 	void CleanAllVectors();
-
-	// Methods to disable and enable assets for rendering
-	// Currently not implemented except for lights
-	void EnableDisableCamera(std::string name, bool value);
-	void EnableDisableCamera(int id, bool value);
 
 	// Asset search-by-name methods
 
@@ -506,7 +505,6 @@ public:
 	std::shared_ptr<SimplePixelShader> GetPixelShaderByName(std::string name);
 	std::shared_ptr<SimpleComputeShader> GetComputeShaderByName(std::string name);
 	std::shared_ptr<Mesh> GetMeshByName(std::string name);
-	std::shared_ptr<Camera> GetCameraByName(std::string name);
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
 	std::shared_ptr<TerrainMaterial> GetTerrainMaterialByName(std::string name);
 	FMOD::Sound* GetSoundByName();
@@ -518,7 +516,6 @@ public:
 	int GetPixelShaderIDByName(std::string name);
 	int GetComputeShaderIDByName(std::string name);
 	int GetMeshIDByName(std::string name);
-	int GetCameraIDByName(std::string name);
 	int GetMaterialIDByName(std::string name);
 	//int GetTerrainMaterialIDByName(std::string name);
 
@@ -529,7 +526,6 @@ public:
 	size_t GetVertexShaderArraySize();
 	size_t GetComputeShaderArraySize();
 	size_t GetSkyArraySize();
-	size_t GetCameraArraySize();
 	size_t GetMeshArraySize();
 	size_t GetMaterialArraySize();
 	size_t GetGameEntityArraySize();
@@ -537,7 +533,6 @@ public:
 	size_t GetSoundArraySize();
 
 	FMOD::Sound* GetSoundAtID(int id);
-	std::shared_ptr<Camera> GetCameraAtID(int id);
 	std::shared_ptr<Material> GetMaterialAtID(int id);
 	std::shared_ptr<Mesh> GetMeshAtID(int id);
 	std::shared_ptr<SimpleVertexShader> GetVertexShaderAtID(int id);

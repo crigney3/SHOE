@@ -4,13 +4,12 @@ Texture2D textureAlbedo					: register(t0);
 Texture2D textureNormal					: register(t1);
 Texture2D textureRough					: register(t2);
 Texture2D textureMetal					: register(t3);
-Texture2D shadowMap						: register(t4);
-Texture2D envShadowMap					: register(t5);
+Texture2DArray shadowMaps				: register(t4);
 
 // IBL Textures
-Texture2D brdfLookUpMap					: register(t6);
-TextureCube irradianceIBLMap			: register(t7);
-TextureCube specularIBLMap				: register(t8);
+Texture2D brdfLookUpMap					: register(t5);
+TextureCube irradianceIBLMap			: register(t6);
+TextureCube specularIBLMap				: register(t7);
 
 SamplerState sampleState				: register(s0);
 SamplerState clampSampler				: register(s1);

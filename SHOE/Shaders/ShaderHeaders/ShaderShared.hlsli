@@ -177,8 +177,7 @@ struct VertexToPixelNormal
 	//  |    |                |
 	//  v    v                v
 	float4 position		: SV_POSITION;
-	float4 shadowPos1	: SHADOW_POSITION;
-	float4 shadowPos2	: ENV_SHADOW_POSITION;
+	float4 shadowPos[64]: SHADOW_POSITION;
 	float4 surfaceColor	: COLOR;
 	float3 normal		: NORMAL;
 	float3 worldPos		: POSITION;

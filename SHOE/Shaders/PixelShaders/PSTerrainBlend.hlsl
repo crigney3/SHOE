@@ -19,8 +19,7 @@ Texture2D brdfLookUpMap					: register(t13);
 TextureCube irradianceIBLMap			: register(t14);
 TextureCube specularIBLMap				: register(t15);
 
-Texture2D shadowMap						: register(t16);
-Texture2D envShadowMap					: register(t17);
+Texture2DArray shadowMaps				: register(t16);
 SamplerState sampleState				: register(s0);
 SamplerState clampSampler				: register(s1);
 SamplerComparisonState shadowState		: register(s2);

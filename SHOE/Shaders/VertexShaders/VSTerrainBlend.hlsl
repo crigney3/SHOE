@@ -24,10 +24,9 @@ cbuffer ExternalData : register(b0)
 	matrix world;
 	matrix view;
 	matrix projection;
-	matrix lightView;
-	matrix lightProjection;
-	matrix envLightView;
-	matrix envLightProjection;
+	matrix shadowViews[64];
+	matrix shadowProjections[64];
+	int shadowCount;
 }
 
 // --------------------------------------------------------
@@ -54,9 +53,10 @@ VertexToPixelNormal main(VertexShaderInput input)
 	//   a perspective projection matrix, which we'll get to in future assignments).
 	output.position = mul(wvp, float4(input.position, 1.0f));
 
-	output.shadowPos1 = mul(mul(lightProjection, mul(lightView, world)), float4(input.position, 1.0f));
-
-	output.shadowPos2 = mul(mul(envLightProjection, mul(envLightView, world)), float4(input.position, 1.0f));
+	//Calculate shadowPos
+	for (int i = 0; i < shadowCount; i++) {
+		output.shadowPos[i] = mul(mul(shadowProjections[i], mul(shadowViews[i], world)), float4(input.position, 1.0f));
+	}
 
 	// Pass the color through 
 	// - The values will be interpolated per-pixel by the rasterizer

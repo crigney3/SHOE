@@ -1,4 +1,5 @@
 #include "../Headers/AssetManager.h"
+#include "..\Headers\FlashlightController.h"
 
 using namespace DirectX;
 
@@ -24,6 +25,7 @@ AssetManager::~AssetManager() {
 	for (auto ge : globalEntities) {
 		ge->Release();
 	}
+	editingCamera->GetGameEntity()->Release();
 }
 
 void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock, HWND hwnd) {
@@ -64,6 +66,11 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	Input::GetInstance().Initialize(hwnd);
 
 	SetLoadedAndWait("Post-Initialization", "Preparing to render");
+
+	std::shared_ptr<GameEntity> editingCamObj = std::make_shared<GameEntity>("editingCamera");
+	editingCamObj->Initialize();
+	editingCamObj->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, -20.0f));
+	editingCamera = CreateCameraOnEntity(editingCamObj);
 
 	this->assetManagerLoadState = AMLoadState::NOT_LOADING;
 	this->singleLoadComplete = true;
@@ -295,37 +302,9 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 		const rapidjson::Value& cameraBlock = sceneDoc[CAMERAS];
 		assert(cameraBlock.IsArray());
 		for (rapidjson::SizeType i = 0; i < cameraBlock.Size(); i++) {
-			DirectX::XMFLOAT3 cameraPos;
-			DirectX::XMFLOAT3 cameraRot;
-			DirectX::XMFLOAT3 cameraScale;
-
-			const rapidjson::Value& cameraTransformBlock = cameraBlock[i].FindMember(CAMERA_TRANSFORM)->value;
-			const rapidjson::Value& transformPosBlock = cameraTransformBlock.FindMember(TRANSFORM_LOCAL_POSITION)->value;
-			const rapidjson::Value& transformRotBlock = cameraTransformBlock.FindMember(TRANSFORM_LOCAL_ROTATION)->value;
-			const rapidjson::Value& transformScaleBlock = cameraTransformBlock.FindMember(TRANSFORM_LOCAL_SCALE)->value;
-
-			cameraPos.x = transformPosBlock[0].GetDouble();
-			cameraPos.y = transformPosBlock[1].GetDouble();
-			cameraPos.z = transformPosBlock[2].GetDouble();
-
-			cameraRot.x = transformRotBlock[0].GetDouble();
-			cameraRot.y = transformRotBlock[1].GetDouble();
-			cameraRot.z = transformRotBlock[2].GetDouble();
-
-			cameraScale.x = transformScaleBlock[0].GetDouble();
-			cameraScale.y = transformScaleBlock[1].GetDouble();
-			cameraScale.z = transformScaleBlock[2].GetDouble();
-
 			std::shared_ptr<Camera> loadedCam = CreateCamera(cameraBlock[i].FindMember(CAMERA_NAME)->value.GetString(),
-															 cameraPos,
 															 cameraBlock[i].FindMember(CAMERA_ASPECT_RATIO)->value.GetDouble(),
-															 (int)cameraBlock[i].FindMember(CAMERA_PROJECTION_MATRIX_TYPE)->value.GetBool());
-
-			loadedCam->GetTransform()->SetRotation(cameraRot);
-
-			loadedCam->GetTransform()->SetScale(cameraScale);
-
-			loadedCam->SetTag((CameraType)cameraBlock[i].FindMember(CAMERA_TAG)->value.GetInt());
+															 cameraBlock[i].FindMember(CAMERA_PROJECTION_MATRIX_TYPE)->value.GetBool());
 
 			loadedCam->SetLookSpeed(cameraBlock[i].FindMember(CAMERA_LOOK_SPEED)->value.GetDouble());
 
@@ -337,7 +316,7 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 
 			loadedCam->SetFOV(cameraBlock[i].FindMember(CAMERA_FIELD_OF_VIEW)->value.GetDouble());
 
-			loadedCam->SetEnableDisable(cameraBlock[i].FindMember(CAMERA_ENABLED)->value.GetBool());
+			loadedCam->SetEnabled(cameraBlock[i].FindMember(CAMERA_ENABLED)->value.GetBool());
 		}
 
 		const rapidjson::Value& materialBlock = sceneDoc[MATERIALS];
@@ -424,7 +403,7 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 			std::string name = entityBlock[i].FindMember(ENTITY_NAME)->value.GetString();
 
 			std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-			newEnt->SetEnableDisable(entityBlock[i].FindMember(ENTITY_ENABLED)->value.GetBool());
+			newEnt->SetEnabled(entityBlock[i].FindMember(ENTITY_ENABLED)->value.GetBool());
 			newEnt->UpdateHierarchyIsEnabled(entityBlock[i].FindMember(ENTITY_HIERARCHY_ENABLED)->value.GetBool());
 
 			const rapidjson::Value& componentBlock = entityBlock[i].FindMember(COMPONENTS)->value;
@@ -774,7 +753,7 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 			rapidjson::Value geName;
 			geName.SetString(ge->GetName().c_str(), allocator);
 			geValue.AddMember(ENTITY_NAME, geName, allocator);
-			geValue.AddMember(ENTITY_ENABLED, ge->GetEnableDisable(), allocator);
+			geValue.AddMember(ENTITY_ENABLED, ge->GetEnabled(), allocator);
 			geValue.AddMember(ENTITY_HIERARCHY_ENABLED, ge->GetHierarchyIsEnabled(), allocator);
 
 			rapidjson::Value geComponents(rapidjson::kArrayType);
@@ -1289,22 +1268,38 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 	}
 }
 
-std::shared_ptr<Camera> AssetManager::CreateCamera(std::string id, DirectX::XMFLOAT3 pos, float aspectRatio, int type) {
+std::shared_ptr<Camera> AssetManager::CreateCamera(std::string name, float aspectRatio) {
 	try {
-		SetLoadingAndWait("Cameras", id);
+		SetLoadingAndWait("Cameras", name);
 
-		std::shared_ptr<Camera> newCam = std::make_shared<Camera>(pos, aspectRatio, type, id);
-
-		this->globalCameras.push_back(newCam);
-
-		return newCam;
+		float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
+		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+		std::shared_ptr<Camera> cam = CreateCameraOnEntity(newEnt, ar);
+		return cam;
 	}
 	catch (...) {
-		SetLoadedAndWait("Camera", id, std::current_exception());
+		SetLoadedAndWait("Camera", name, std::current_exception());
 
 		return NULL;
 	}
 	
+}
+
+std::shared_ptr<ShadowProjector> AssetManager::CreateShadowProjector(std::string name, float aspectRatio)
+{
+	try {
+		SetLoadingAndWait("Shadow Projectors", name);
+
+		float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
+		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+		std::shared_ptr<ShadowProjector> sP = CreateShadowProjectorOnEntity(newEnt, ar);
+		return sP;
+	}
+	catch (...) {
+		SetLoadedAndWait("Shadow Projector", name, std::current_exception());
+
+		return NULL;
+	}
 }
 
 std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::string nameToLoad) {
@@ -1568,7 +1563,7 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 		// Don't show loading if it's an empty entity
 		//SetLoadingAndWait("Game Entities", name);
 
-		std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(XMMatrixIdentity(), name);
+		std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(name);
 		newEnt->Initialize();
 
 		globalEntities.push_back(newEnt);
@@ -2109,6 +2104,22 @@ std::shared_ptr<Light> AssetManager::CreateSpotLightOnEntity(std::shared_ptr<Gam
 	return light;
 }
 
+std::shared_ptr<Camera> AssetManager::CreateCameraOnEntity(std::shared_ptr<GameEntity> entityToEdit, float aspectRatio)
+{
+	float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
+	std::shared_ptr<Camera> cam = entityToEdit->AddComponent<Camera>();
+	cam->SetAspectRatio(ar);
+	return cam;
+}
+
+std::shared_ptr<ShadowProjector> AssetManager::CreateShadowProjectorOnEntity(std::shared_ptr<GameEntity> entityToEdit, float aspectRatio)
+{
+	float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
+	std::shared_ptr<ShadowProjector> sP = entityToEdit->AddComponent<ShadowProjector>();
+	sP->SetAspectRatio(ar);
+	return sP;
+}
+
 #pragma endregion
 
 #pragma region initAssets
@@ -2386,6 +2397,9 @@ void AssetManager::InitializeLights() {
 
 		//flashlight attached to camera +.5z and x
 		std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", DirectX::XMFLOAT3(0, 0, -1), 10.0f);
+		CreateShadowProjectorOnEntity(flashlight->GetGameEntity(), 1.0f);
+		flashlight->GetGameEntity()->AddComponent<FlashlightController>();
+		flashlight->GetTransform()->SetParent(mainCamera->GetTransform());
 		flashlight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f));
 		flashlight->SetEnabled(false);
 
@@ -2482,18 +2496,13 @@ void AssetManager::InitializeTerrainMaterials() {
 }
 
 void AssetManager::InitializeCameras() {
-	globalCameras = std::vector<std::shared_ptr<Camera>>();
+	mainCamera = CreateCamera("mainCamera");
+	mainCamera->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, -20.0f));
 
-	float aspectRatio = (float)(dxInstance->width / dxInstance->height);
-	CreateCamera("mainCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -20.0f), aspectRatio, 1)->SetTag(CameraType::MAIN);
-	std::shared_ptr<Camera> scTemp = CreateCamera("mainShadowCamera", DirectX::XMFLOAT3(0.0f, 20.0f, -200.0f), 1.0f, 0);
-	std::shared_ptr<Camera> fscTemp = CreateCamera("flashShadowCamera", DirectX::XMFLOAT3(0.0f, 0.0f, -5.5f), 1.0f, 1);
-
-	scTemp->SetTag(CameraType::MISC_SHADOW);
+	std::shared_ptr<ShadowProjector> scTemp = CreateShadowProjector("mainShadowProjector", 1.0f);
+	scTemp->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 20.0f, -200.0f));
 	scTemp->GetTransform()->SetRotation(-10.0f, 0.0f, 0.0f);
-
-	fscTemp->SetTag(CameraType::MISC_SHADOW);
-	fscTemp->GetTransform()->SetRotation(0, 0, 0);
+	scTemp->SetProjectionMatrixType(false);
 }
 
 // --------------------------------------------------------
@@ -2706,10 +2715,6 @@ size_t AssetManager::GetSkyArraySize() {
 	return this->skies.size();
 }
 
-size_t AssetManager::GetCameraArraySize() {
-	return this->globalCameras.size();
-}
-
 size_t AssetManager::GetMeshArraySize() {
 	return this->globalMeshes.size();
 }
@@ -2732,10 +2737,6 @@ size_t AssetManager::GetSoundArraySize() {
 
 FMOD::Sound* AssetManager::GetSoundAtID(int id) {
 	return this->globalSounds[id];
-}
-
-std::shared_ptr<Camera> AssetManager::GetCameraAtID(int id) {
-	return this->globalCameras[id];
 }
 
 std::shared_ptr<Sky> AssetManager::GetSkyAtID(int id) {
@@ -2783,53 +2784,19 @@ std::shared_ptr<TerrainMaterial> AssetManager::GetTerrainMaterialAtID(int id) {
 }
 
 std::shared_ptr<Camera> AssetManager::GetMainCamera() {
-	for (auto ca : globalCameras) {
-		if (ca->GetTag() == CameraType::MAIN) {
-			return ca;
-		}
-	}
-	return nullptr;
+	if(mainCamera != nullptr)
+		return mainCamera;
+	return editingCamera;
 }
 
-std::shared_ptr<Camera> AssetManager::GetPlayCamera() {
-	for (auto ca : globalCameras) {
-		if (ca->GetTag() == CameraType::PLAY) {
-			return ca;
-		}
-	}
-	return nullptr;
+void AssetManager::SetMainCamera(std::shared_ptr<Camera> newMain)
+{
+	mainCamera = newMain;
 }
 
-std::vector<std::shared_ptr<Camera>> AssetManager::GetCamerasByTag(CameraType type) {
-	std::vector<std::shared_ptr<Camera>> cams;
-
-	for (auto ca : globalCameras) {
-		if (ca->GetTag() == type) {
-			cams.push_back(ca);
-		}
-	}
-
-	return cams;
+std::shared_ptr<Camera> AssetManager::GetEditingCamera() {
+	return editingCamera;
 }
-
-/// <summary>
-/// Safely sets volatile camera tags such as MAIN and PLAY.
-/// If one of these is passed, whichever camera previously had the tag
-/// will be swapped to Misc.
-/// </summary>
-/// <param name="cam"></param>
-/// <param name="tag"></param>
-void AssetManager::SetCameraTag(std::shared_ptr<Camera> cam, CameraType tag) {
-	if (tag == CameraType::MAIN) {
-		GetMainCamera()->SetTag(CameraType::MISC);
-	}
-	else if (tag == CameraType::PLAY) {
-		GetPlayCamera()->SetTag(CameraType::MISC);
-	}
-
-	cam->SetTag(tag);
-}
-#pragma endregion
 
 #pragma region buildAssetData
 std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale) {
@@ -3277,7 +3244,6 @@ void AssetManager::CleanAllVectors() {
 	vertexShaders.clear();
 	computeShaders.clear();
 	skies.clear();
-	globalCameras.clear();
 	globalMeshes.clear();
 	globalMaterials.clear();
 	globalEntities.clear();
@@ -3332,14 +3298,6 @@ void AssetManager::RemoveMesh(int id) {
 	globalMeshes.erase(globalMeshes.begin() + id);
 }
 
-void AssetManager::RemoveCamera(std::string name) {
-	globalCameras.erase(globalCameras.begin() + GetCameraIDByName(name));
-}
-
-void AssetManager::RemoveCamera(int id) {
-	globalCameras.erase(globalCameras.begin() + id);
-}
-
 void AssetManager::RemoveMaterial(std::string name) {
 	globalMaterials.erase(globalMaterials.begin() + GetMaterialIDByName(name));
 }
@@ -3356,23 +3314,6 @@ void AssetManager::RemoveTerrainMaterial(int id) {
 	globalEntities.erase(globalEntities.begin() + id);
 }
 */
-#pragma endregion
-
-#pragma region enableDisableAssets
-
-//
-// Enables or disables assets into or
-// out of the rendering pipeline
-//
-
-void AssetManager::EnableDisableCamera(std::string name, bool value) {
-	GetCameraByName(name)->SetEnableDisable(value);
-}
-
-void AssetManager::EnableDisableCamera(int id, bool value) {
-	globalCameras[id]->SetEnableDisable(value);
-}
-
 #pragma endregion
 
 #pragma region nameSearch
@@ -3430,15 +3371,6 @@ std::shared_ptr<Mesh> AssetManager::GetMeshByName(std::string name) {
 	for (int i = 0; i < globalMeshes.size(); i++) {
 		if (globalMeshes[i]->GetName() == name) {
 			return globalMeshes[i];
-		}
-	}
-	return nullptr;
-}
-
-std::shared_ptr<Camera> AssetManager::GetCameraByName(std::string name) {
-	for (int i = 0; i < globalCameras.size(); i++) {
-		if (globalCameras[i]->GetName() == name) {
-			return globalCameras[i];
 		}
 	}
 	return nullptr;
@@ -3521,15 +3453,6 @@ int AssetManager::GetPixelShaderIDByName(std::string name) {
 int AssetManager::GetMeshIDByName(std::string name) {
 	for (int i = 0; i < globalMeshes.size(); i++) {
 		if (globalMeshes[i]->GetName() == name) {
-			return i;
-		}
-	}
-	return -1;
-}
-
-int AssetManager::GetCameraIDByName(std::string name) {
-	for (int i = 0; i < globalCameras.size(); i++) {
-		if (globalCameras[i]->GetName() == name) {
 			return i;
 		}
 	}

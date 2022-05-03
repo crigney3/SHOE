@@ -30,8 +30,6 @@ enum RTVTypes
 
 enum MiscEffectSRVTypes
 {
-    FLASHLIGHT_SHADOW,
-    ENV_SHADOW,
     REFRACTION_SILHOUETTE_DEPTHS,
     TRANSPARENT_PREPASS_DEPTHS,
     RENDER_PREPASS_DEPTHS,
@@ -44,10 +42,8 @@ struct VSPerFrameData
 {
     DirectX::XMFLOAT4X4 ViewMatrix;
     DirectX::XMFLOAT4X4 ProjectionMatrix;
-    DirectX::XMFLOAT4X4 LightViewMatrix;
-    DirectX::XMFLOAT4X4 LightProjectionMatrix;
-    DirectX::XMFLOAT4X4 EnvLightViewMatrix;
-    DirectX::XMFLOAT4X4 EnvLightProjectionMatrix;
+    DirectX::XMFLOAT4X4 ShadowViewMatrices[MAX_SHADOW_PROJECTORS];
+    DirectX::XMFLOAT4X4 ShadowProjectionMatrices[MAX_SHADOW_PROJECTORS];
 };
 
 struct VSPerMaterialData
@@ -86,7 +82,6 @@ private:
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV;
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV;
 
-    std::shared_ptr<Sky> currentSky;
     DirectX::XMFLOAT3 ambientColor;
 
     //General shaders
@@ -102,10 +97,14 @@ private:
     std::shared_ptr<Mesh> cubeMesh;
     std::shared_ptr<Mesh> sphereMesh;
 
-    //components for shadows
-    int shadowSize;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> miscEffectSRVs[MiscEffectSRVTypes::MISC_EFFECT_SRV_COUNT];
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView> miscEffectDepthBuffers[MiscEffectSRVTypes::MISC_EFFECT_SRV_COUNT];
+
+    //components for shadows
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shadowDSVArraySRV;
+    std::vector<Microsoft::WRL::ComPtr<ID3D11DepthStencilView>> shadowDSVArray;
+    std::vector<DirectX::XMFLOAT4X4> shadowProjMatArray;
+    std::vector<DirectX::XMFLOAT4X4> shadowViewMatArray;
     Microsoft::WRL::ComPtr<ID3D11SamplerState> shadowSampler;
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> shadowRasterizer;
     std::shared_ptr<SimpleVertexShader> VSShadow;
@@ -149,13 +148,6 @@ private:
     // Depth pre-pass data
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> prePassDepthState;
 
-    //Camera pointer
-    std::shared_ptr<Camera> mainCamera;
-
-    //Camera pointers for shadows
-    std::shared_ptr<Camera> flashShadowCamera;
-    std::shared_ptr<Camera> mainShadowCamera;
-
     //Selected Entity Outline targets
     Microsoft::WRL::ComPtr<ID3D11Texture2D> outlineTexture;
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> outlineRTV;
@@ -194,10 +186,8 @@ public:
     void DrawPointLights();
     void Draw(std::shared_ptr<Camera> camera);
 
-    void SetActiveSky(std::shared_ptr<Sky> sky);
-
     void InitShadows();
-    void RenderShadows(std::shared_ptr<Camera> shadowCam, MiscEffectSRVTypes type);
+    void RenderShadows();
     void RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type);
     void RenderColliders(std::shared_ptr<Camera> cam);
     void RenderMeshBounds(std::shared_ptr<Camera> cam);

@@ -1,10 +1,12 @@
 #include "../Headers/Game.h"
 #include "../Headers/Time.h"
+#include "..\Headers\ComponentManager.h"
+#include "..\Headers\ShadowProjector.h"
 
 // Needed for a helper function to read compiled shader files from the hard drive
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3dcompiler.h>
-#include "..\Headers\ComponentManager.h"
+#include "..\Headers\FlashlightController.h"
 
 #pragma warning( disable : 26495)
 
@@ -108,16 +110,12 @@ void Game::Init()
 	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
 #endif
 
-	mainCamera = globalAssets.GetMainCamera();
-	mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
-	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
 
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(this->hWnd);
 	statsEnabled = true;
 	movingEnabled = true;
-	lightWindowEnabled = false;
 	objWindowEnabled = false;
 	skyWindowEnabled = false;
 	objHierarchyEnabled = true;
@@ -125,7 +123,6 @@ void Game::Init()
 
 	flashMenuToggle = false;
 	entityUIIndex = -1;
-	camUIIndex = 0;
 	skyUIIndex = 0;
 
 	// Tell the input assembler stage of the pipeline what kind of
@@ -178,9 +175,6 @@ void Game::LoadScene() {
 	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
 #endif
 
-	mainCamera = globalAssets.GetMainCamera();
-	mainShadowCamera = globalAssets.GetCameraByName("mainShadowCamera");
-	flashShadowCamera = globalAssets.GetCameraByName("flashShadowCamera");
 	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
 
 	renderer.reset();
@@ -276,7 +270,7 @@ void Game::GenerateEditingUI() {
 			if (skyUIIndex < 0) {
 				skyUIIndex = globalAssets.GetSkyArraySize() - 1;
 			}
-			renderer->SetActiveSky(globalAssets.GetSkyAtID(skyUIIndex));
+			globalAssets.currentSky = globalAssets.GetSkyAtID(skyUIIndex);
 		};
 		ImGui::SameLine();
 
@@ -285,7 +279,7 @@ void Game::GenerateEditingUI() {
 			if (skyUIIndex > globalAssets.GetSkyArraySize() - 1) {
 				skyUIIndex = 0;
 			}
-			renderer->SetActiveSky(globalAssets.GetSkyAtID(skyUIIndex));
+			globalAssets.currentSky = globalAssets.GetSkyAtID(skyUIIndex);
 		};
 
 		std::string nameBuffer;
@@ -335,9 +329,9 @@ void Game::GenerateEditingUI() {
 
 		currentEntity->SetName(nameBuf);
 
-		bool entityEnabled = currentEntity->GetEnableDisable();
+		bool entityEnabled = currentEntity->GetEnabled();
 		ImGui::Checkbox("Enabled: ", &entityEnabled);
-		currentEntity->SetEnableDisable(entityEnabled);
+		currentEntity->SetEnabled(entityEnabled);
 
 		//Displays all components on the object
 		std::vector<std::shared_ptr<IComponent>> componentList = currentEntity->GetAllComponents();
@@ -723,10 +717,10 @@ void Game::GenerateEditingUI() {
 		}
 
 		if (ImGui::CollapsingHeader("Shadow Depth Views")) {
-			ImGui::Text("Environmental Shadows");
-			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::ENV_SHADOW).Get(), ImVec2(500, 300));
-			ImGui::Text("Flashlight Shadows");
-			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::FLASHLIGHT_SHADOW).Get(), ImVec2(500, 300));
+			for (std::shared_ptr<ShadowProjector> projector : ComponentManager::GetAll<ShadowProjector>()) {
+				ImGui::Text((projector->GetGameEntity()->GetName() + " SRV").c_str());
+				ImGui::Image(projector->GetSRV().Get(), ImVec2(500, 300));
+			}
 		}
 
 		if (ImGui::CollapsingHeader("Depth Prepass Views")) {
@@ -747,37 +741,6 @@ void Game::GenerateEditingUI() {
 	}
 
 	if (camWindowEnabled) {
-		ImGui::Begin("Camera Editor");
-
-		std::shared_ptr<Camera> currentCam = globalAssets.GetCameraAtID(camUIIndex);
-
-		std::string indexStr = currentCam->GetName();
-		std::string node = "Editing Camera " + indexStr;
-		ImGui::Text(node.c_str());
-
-		if (ImGui::ArrowButton("Previous Camera", ImGuiDir_Left)) {
-			camUIIndex--;
-			if (camUIIndex < 0) {
-				camUIIndex = globalAssets.GetCameraArraySize() - 1;
-			}
-		};
-		ImGui::SameLine();
-
-		if (ImGui::ArrowButton("Next Camera", ImGuiDir_Right)) {
-			camUIIndex++;
-			if (camUIIndex > globalAssets.GetCameraArraySize() - 1) {
-				camUIIndex = 0;
-			}
-		};
-
-		std::string nameBuffer;
-		static char nameBuf[64] = "";
-		nameBuffer = currentCam->GetName();
-		strcpy_s(nameBuf, nameBuffer.c_str());
-		ImGui::InputText("Rename Camera (disabled) ", nameBuf, sizeof(nameBuffer));
-
-		// It's not a bad idea any more!
-		currentCam->SetName(nameBuf);
 
 		float fov = currentCam->GetFOV();
 		ImGui::SliderFloat("FOV", &fov, 0, XM_PI - 0.01f);
@@ -832,18 +795,15 @@ void Game::GenerateEditingUI() {
 			if (ImGui::MenuItem("Load Scene", "ctrl+s")) {
 				LoadScene();
 			}
-			//ImGui::MenuItem("Toggle Flashlight", "f", &flashMenuToggle);
 
 			ImGui::EndMenu();
 		}
 
 		if (ImGui::BeginMenu("Edit")) {
-			ImGui::MenuItem("Lights", "l", &lightWindowEnabled);
 			ImGui::MenuItem("GameObjects", "g", &objWindowEnabled);
 			ImGui::MenuItem("Object Hierarchy", "h", &objHierarchyEnabled);
 			ImGui::MenuItem("Skies", "", &skyWindowEnabled);
 			ImGui::MenuItem("Sound", "", &soundWindowEnabled);
-			ImGui::MenuItem("Camera", "c", &camWindowEnabled);
 			ImGui::MenuItem("Colliders", "", &collidersWindowEnabled);
 
 			ImGui::EndMenu();
@@ -875,8 +835,7 @@ void Game::GenerateEditingUI() {
 		}
 
 		if (ImGui::BeginMenu("Toggleables")) {
-			ImGui::MenuItem("Toggle Flashlight", "f", &flashMenuToggle);
-			ImGui::MenuItem("Toggle Flashlight Flickering", "v", &flickeringEnabled);
+			//ImGui::MenuItem("Toggle Flashlight Flickering", "v", &flickeringEnabled);
 			ImGui::MenuItem("Toggle Stats Menu", ".", &statsEnabled);
 			ImGui::MenuItem("Toggle movement", "m", &movingEnabled);
 
@@ -940,8 +899,8 @@ void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
 std::shared_ptr<GameEntity> Game::GetClickedEntity()
 {
 	//Load necessary vectors and matrices
-	XMMATRIX projectionMatrix = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
-	XMMATRIX viewMatrix = XMLoadFloat4x4(&mainCamera->GetViewMatrix());
+	XMMATRIX projectionMatrix = XMLoadFloat4x4(&globalAssets.GetMainCamera()->GetProjectionMatrix());
+	XMMATRIX viewMatrix = XMLoadFloat4x4(&globalAssets.GetMainCamera()->GetViewMatrix());
 
 	//Convert screen position to ray
 	//Based on https://stackoverflow.com/questions/39376687/mouse-picking-with-ray-casting-in-directx
@@ -973,8 +932,8 @@ std::shared_ptr<GameEntity> Game::GetClickedEntity()
 
 	//Raycast against MeshRenderer bounds
 	std::shared_ptr<GameEntity> closestHitEntity = nullptr;
-	float distToHit = mainCamera->GetFarDist();
-	float rayLength = mainCamera->GetFarDist();
+	float distToHit = globalAssets.GetMainCamera()->GetFarDist();
+	float rayLength = globalAssets.GetMainCamera()->GetFarDist();
 
 	for (std::shared_ptr<MeshRenderer> meshRenderer : ComponentManager::GetAllEnabled<MeshRenderer>())
 	{
@@ -1002,38 +961,7 @@ std::shared_ptr<GameEntity> Game::GetClickedEntity()
 }
 
 void Game::SelectSky() {
-	if (input.KeyPress(VK_RIGHT)) {
-		skyUIIndex++;
-		if (skyUIIndex > globalAssets.GetSkyArraySize() - 1) {
-			skyUIIndex = 0;
-		}
-	}
-	else if (input.KeyPress(VK_LEFT)) {
-		skyUIIndex--;
-		if (skyUIIndex < 0) {
-			skyUIIndex = globalAssets.GetSkyArraySize() - 1;
-		}
-	}
-	renderer->SetActiveSky(globalAssets.GetSkyAtID(skyUIIndex));
-}
-
-void Game::Flashlight() {
-	if (input.TestKeyAction(KeyActions::ToggleFlashlight)) {
-		flashMenuToggle = !flashMenuToggle;
-		flashlight->SetEnabled(flashMenuToggle);
-	}
-
-	if (flashMenuToggle) {
-		XMFLOAT3 camPos = mainCamera->GetTransform()->GetGlobalPosition();
-		flashlight->GetTransform()->SetPosition(XMFLOAT3(camPos.x + 0.5f, camPos.y, camPos.z + 0.5f));
-		flashlight->SetDirection(mainCamera->GetTransform()->GetForward());
-		flashShadowCamera->GetTransform()->SetPosition(flashlight->GetTransform()->GetGlobalPosition());
-		flashShadowCamera->GetTransform()->SetRotation(mainCamera->GetTransform()->GetLocalPitchYawRoll());
-		flashShadowCamera->UpdateViewMatrix();
-		if (input.TestKeyAction(KeyActions::ToggleFlashlightFlicker)) {
-			flickeringEnabled = !flickeringEnabled;
-		}
-	}
+	
 }
 
 // --------------------------------------------------------
@@ -1042,8 +970,9 @@ void Game::Flashlight() {
 // --------------------------------------------------------
 void Game::OnResize()
 {
-	if (mainCamera != 0) {
-		mainCamera->UpdateProjectionMatrix((float)this->width / (float)this->height, 1);
+	globalAssets.GetEditingCamera()->SetAspectRatio((float)this->width / (float)this->height);
+	if (globalAssets.GetMainCamera() != globalAssets.GetEditingCamera()) {
+		globalAssets.GetMainCamera()->SetAspectRatio((float)this->width / (float)this->height);
 	}
 
 	renderer->PreResize();
@@ -1068,12 +997,10 @@ void Game::Update()
 	// Quit if the escape key is pressed
 	if (input.TestKeyAction(KeyActions::QuitGame)) Quit();
 
-	globalAssets.BroadcastGlobalEntityEvent(EntityEventType::Update);
-
 	if (movingEnabled) {
 		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+1.5f, (float)sin(Time::totalTime) + 2.5f, +0.0f);
-		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate(0.0f, 0.0f, -(float)sin(Time::deltaTime));
-		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate(0.0f, (float)sin(Time::deltaTime), 0.0f);
+		globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate(0.0f, (float)sin(Time::deltaTime), -(float)sin(Time::deltaTime));
+
 		globalAssets.GetGameEntityByName("Scratched Cube")->GetTransform()->Rotate(-(float)sin(Time::deltaTime), 0.0f, 0.0f);
 
 		globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(Time::totalTime), +0.0f);
@@ -1083,8 +1010,26 @@ void Game::Update()
 		globalAssets.GetGameEntityByName("Rough Torus")->GetTransform()->Rotate(+0.0f, +0.0f, +1.0f * Time::deltaTime);
 	}
 
-	Flashlight();
-	SelectSky();
+	if (input.TestKeyAction(KeyActions::ToggleFlashlight)) {
+		for (std::shared_ptr<FlashlightController> flashlight : ComponentManager::GetAll<FlashlightController>()) {
+			flashlight->GetGameEntity()->SetEnabled(!flashlight->GetGameEntity()->GetLocallyEnabled());
+		}
+	}
+
+	if (input.KeyPress(VK_RIGHT)) {
+		skyUIIndex++;
+		if (skyUIIndex > globalAssets.GetSkyArraySize() - 1) {
+			skyUIIndex = 0;
+		}
+		globalAssets.GetSkyAtID(skyUIIndex);
+	}
+	else if (input.KeyPress(VK_LEFT)) {
+		skyUIIndex--;
+		if (skyUIIndex < 0) {
+			skyUIIndex = globalAssets.GetSkyArraySize() - 1;
+		}
+		globalAssets.GetSkyAtID(skyUIIndex);
+	}
 
 	CollisionManager::GetInstance().Update();
 
@@ -1122,7 +1067,7 @@ void Game::Update()
 		}
 	}*/
 
-	mainCamera->Update(this->hWnd);
+	globalAssets.BroadcastGlobalEntityEvent(EntityEventType::Update);
 }
 
 void Game::DrawLoadingScreen(AMLoadState loadType) {
@@ -1215,13 +1160,6 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 void Game::Draw()
 {
 	if (globalAssets.GetAMLoadState() != INITIALIZING && globalAssets.GetAMLoadState() != SCENE_LOAD) {
-		//Render shadows before anything else
-		if (flashMenuToggle) {
-			renderer->RenderShadows(flashShadowCamera, MiscEffectSRVTypes::FLASHLIGHT_SHADOW);
-		}
-
-		renderer->RenderShadows(mainShadowCamera, MiscEffectSRVTypes::ENV_SHADOW);
-
-		renderer->Draw(mainCamera);
+		renderer->Draw(globalAssets.GetMainCamera());
 	}
 }

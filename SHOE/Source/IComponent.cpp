@@ -231,7 +231,7 @@ void IComponent::Free()
  */
 bool IComponent::IsEnabled()
 {
-	return enabled && gameEntity->GetEnableDisable();
+	return enabled && gameEntity->GetEnabled();
 }
 
 /// <summary>
@@ -251,7 +251,7 @@ void IComponent::SetEnabled(bool enabled)
 	if (this->enabled != enabled) {
 		this->enabled = enabled;
 		if (IsEnabled()) OnEnable(); 
-		else if(gameEntity->GetEnableDisable()) OnDisable();
+		else if(gameEntity->GetEnabled()) OnDisable();
 	}
 }
 

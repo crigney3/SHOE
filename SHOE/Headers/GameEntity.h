@@ -26,7 +26,7 @@ private:
 
 	void UpdateHierarchyIsEnabled(bool active, bool head = false);
 public:
-	GameEntity(DirectX::XMMATRIX worldIn, std::string name);
+	GameEntity(std::string name);
 	~GameEntity();
 
 	void Initialize();
@@ -36,8 +36,9 @@ public:
 	std::string GetName();
 	void SetName(std::string Name);
 
-	void SetEnableDisable(bool value);
-	bool GetEnableDisable();
+	void SetEnabled(bool value);
+	bool GetEnabled();
+	bool GetLocallyEnabled();
 	bool GetHierarchyIsEnabled();
 
 	//Component stuff

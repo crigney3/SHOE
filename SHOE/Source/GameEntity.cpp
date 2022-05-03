@@ -15,12 +15,12 @@ void GameEntity::UpdateHierarchyIsEnabled(bool active, bool head)
 		for (std::shared_ptr<GameEntity> children : transform->GetChildrenEntities())
 		{
 			if (children != nullptr)
-				children->UpdateHierarchyIsEnabled(GetEnableDisable());
+				children->UpdateHierarchyIsEnabled(GetEnabled());
 		}
 	}
 }
 
-GameEntity::GameEntity(DirectX::XMMATRIX worldIn, std::string name) {
+GameEntity::GameEntity(std::string name) {
 	this->componentList = std::vector<std::shared_ptr<IComponent>>();
 	this->componentDeallocList = std::vector<std::function<void(std::shared_ptr<IComponent>)>>();
 	this->name = name;
@@ -55,7 +55,7 @@ void GameEntity::PropagateEvent(EntityEventType event, std::shared_ptr<void> mes
 	}
 
 	//Propagates the event to all attached components
-	if (GetEnableDisable() || event == EntityEventType::OnDisable){
+	if (GetEnabled() || event == EntityEventType::OnDisable){
 		transform->ReceiveEvent(event, message);
 		for (std::shared_ptr<IComponent> component : componentList) {
 			if (component->IsEnabled() || (event == EntityEventType::OnDisable && component->IsLocallyEnabled()))
@@ -124,11 +124,11 @@ void GameEntity::SetName(std::string Name) {
 /// Sets whether this GameEntity is enabled
 /// </summary>
 /// <param name="value">New enabled state of the entity</param>
-void GameEntity::SetEnableDisable(bool value) {
+void GameEntity::SetEnabled(bool value) {
 	if (enabled != value) {
 		this->enabled = value;
 		if (!value && hierarchyIsEnabled) PropagateEvent(EntityEventType::OnDisable);
-		UpdateHierarchyIsEnabled(GetEnableDisable(), true);
+		UpdateHierarchyIsEnabled(GetEnabled(), true);
 	}
 }
 
@@ -136,8 +136,16 @@ void GameEntity::SetEnableDisable(bool value) {
 /// Whether this GameEntity is enabled and all generations of parent(s) are also enabled
 /// </summary>
 /// <returns>True if all are enabled</returns>
-bool GameEntity::GetEnableDisable() {
+bool GameEntity::GetEnabled() {
 	return enabled && hierarchyIsEnabled;
+}
+
+/// <summary>
+/// Whether this GameEntity is enabled, ignoring hierarchy
+/// </summary>
+bool GameEntity::GetLocallyEnabled()
+{
+	return enabled;
 }
 
 /// <summary>
