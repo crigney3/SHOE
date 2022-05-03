@@ -71,6 +71,16 @@ void ShadowProjector::Start()
 	boundLight = nullptr;
 }
 
+void ShadowProjector::OnEnable()
+{
+	if (!boundLight->IsEnabled() || !boundLight->CastsShadows()) {
+		SetEnabled(false);
+	}
+	else {
+		UpdateFieldsByLightType();
+	}
+}
+
 void ShadowProjector::RegenerateResources()
 {
 	Microsoft::WRL::ComPtr<ID3D11Device> device = AssetManager::GetInstance().GetDevice();

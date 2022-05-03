@@ -177,7 +177,6 @@
 #include <assimp/types.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include <map>
 #include <random>
 #include "DXCore.h"
 #include "experimental\filesystem"
@@ -188,12 +187,11 @@
 #include <mutex>
 #include <exception>
 #include "SpriteBatch.h"
-#include "CollisionManager.h"
+#include "Collider.h"
 #include "rapidjson\document.h"
 #include "rapidjson\filereadstream.h"
 #include "rapidjson\filewritestream.h"
 #include "rapidjson\writer.h"
-#include "ShadowProjector.h"
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 #define FILE_BUFFER_SIZE 65536
@@ -320,6 +318,9 @@ private:
 
 	std::string currentSceneName;
 	std::string loadingSceneName;
+
+	DirectX::XMFLOAT3 LoadFloat3(const rapidjson::Value& jsonBlock, const char* memberName);
+	void SaveFloat3();
 
 	std::shared_ptr<Camera> editingCamera;
 	std::shared_ptr<Camera> mainCamera;

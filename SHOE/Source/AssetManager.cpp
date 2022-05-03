@@ -186,6 +186,19 @@ void AssetManager::SetLoadingAndWait(std::string category, std::string object) {
 	}
 }
 
+DirectX::XMFLOAT3 AssetManager::LoadFloat3(const rapidjson::Value& jsonBlock, const char* memberName)
+{
+	DirectX::XMFLOAT3 vec;
+
+	const rapidjson::Value& vecBlock = jsonBlock.FindMember(memberName)->value;
+
+	vec.x = vecBlock[0].GetDouble();
+	vec.y = vecBlock[1].GetDouble();
+	vec.z = vecBlock[2].GetDouble();
+
+	return vec;
+}
+
 std::string AssetManager::GetLoadingSceneName() {
 	return loadingSceneName;
 }
@@ -418,29 +431,10 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 				int componentType = componentBlock[i].FindMember(COMPONENT_TYPE)->value.GetInt();
 				if (componentType == ComponentTypes::TRANSFORM) {
 					std::shared_ptr<Transform> trans = newEnt->GetTransform();
-					DirectX::XMFLOAT3 pos;
-					DirectX::XMFLOAT3 rot;
-					DirectX::XMFLOAT3 scale;
 
-					const rapidjson::Value& posBlock = componentBlock[i].FindMember(TRANSFORM_LOCAL_POSITION)->value;
-					const rapidjson::Value& rotBlock = componentBlock[i].FindMember(TRANSFORM_LOCAL_ROTATION)->value;
-					const rapidjson::Value& scaleBlock = componentBlock[i].FindMember(TRANSFORM_LOCAL_SCALE)->value;
-
-					pos.x = posBlock[0].GetDouble();
-					pos.y = posBlock[1].GetDouble();
-					pos.z = posBlock[2].GetDouble();
-
-					rot.x = rotBlock[0].GetDouble();
-					rot.y = rotBlock[1].GetDouble();
-					rot.z = rotBlock[2].GetDouble();
-
-					scale.x = scaleBlock[0].GetDouble();
-					scale.y = scaleBlock[1].GetDouble();
-					scale.z = scaleBlock[2].GetDouble();
-
-					trans->SetPosition(pos);
-					trans->SetRotation(rot);
-					trans->SetScale(scale);
+					trans->SetPosition(LoadFloat3(componentBlock[i], TRANSFORM_LOCAL_POSITION));
+					trans->SetRotation(LoadFloat3(componentBlock[i], TRANSFORM_LOCAL_ROTATION));
+					trans->SetScale(LoadFloat3(componentBlock[i], TRANSFORM_LOCAL_SCALE));
 				}
 				else if (componentType == ComponentTypes::COLLIDER) {
 					std::shared_ptr<Collider> collider = newEnt->AddComponent<Collider>();
@@ -449,29 +443,9 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 					collider->SetVisible(componentBlock[i].FindMember(COLLIDER_IS_VISIBLE)->value.GetBool());
 					collider->SetIsTrigger(componentBlock[i].FindMember(COLLIDER_TYPE)->value.GetBool());
 
-					DirectX::XMFLOAT3 pos;
-					DirectX::XMFLOAT3 rot;
-					DirectX::XMFLOAT3 scale;
-
-					const rapidjson::Value& posBlock = componentBlock[i].FindMember(COLLIDER_POSITION_OFFSET)->value;
-					const rapidjson::Value& rotBlock = componentBlock[i].FindMember(COLLIDER_ROTATION_OFFSET)->value;
-					const rapidjson::Value& scaleBlock = componentBlock[i].FindMember(COLLIDER_SCALE_OFFSET)->value;
-
-					pos.x = posBlock[0].GetDouble();
-					pos.y = posBlock[1].GetDouble();
-					pos.z = posBlock[2].GetDouble();
-
-					rot.x = rotBlock[0].GetDouble();
-					rot.y = rotBlock[1].GetDouble();
-					rot.z = rotBlock[2].GetDouble();
-
-					scale.x = scaleBlock[0].GetDouble();
-					scale.y = scaleBlock[1].GetDouble();
-					scale.z = scaleBlock[2].GetDouble();
-
-					collider->SetPositionOffset(pos);
-					collider->SetRotationOffset(rot);
-					collider->SetScale(pos);
+					collider->SetPositionOffset(LoadFloat3(componentBlock[i], COLLIDER_POSITION_OFFSET));
+					collider->SetRotationOffset(LoadFloat3(componentBlock[i], COLLIDER_ROTATION_OFFSET));
+					collider->SetScale(LoadFloat3(componentBlock[i], COLLIDER_SCALE_OFFSET));
 				}
 				else if (componentType == ComponentTypes::TERRAIN) {
 					std::string heightmapKey = DeSerializeFileName(componentBlock[i].FindMember(TERRAIN_HEIGHTMAP_FILENAME_KEY)->value.GetString());
@@ -491,17 +465,12 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 
 					newParticles->SetScale(componentBlock[i].FindMember(PARTICLE_SYSTEM_SCALE)->value.GetDouble());
 					newParticles->SetSpeed(componentBlock[i].FindMember(PARTICLE_SYSTEM_SPEED)->value.GetDouble());
-
-					DirectX::XMFLOAT3 destination;
-					DirectX::XMFLOAT4 color;
+					newParticles->SetDestination(LoadFloat3(componentBlock[i], PARTICLE_SYSTEM_DESTINATION));
 					bool enabled = componentBlock[i].FindMember(PARTICLE_SYSTEM_ENABLED)->value.GetBool();
 
-					const rapidjson::Value& destBlock = componentBlock[i].FindMember(PARTICLE_SYSTEM_DESTINATION)->value;
-					const rapidjson::Value& colorBlock = componentBlock[i].FindMember(PARTICLE_SYSTEM_COLOR_TINT)->value;
+					DirectX::XMFLOAT4 color;
 
-					destination.x = destBlock[0].GetDouble();
-					destination.y = destBlock[1].GetDouble();
-					destination.z = destBlock[2].GetDouble();
+					const rapidjson::Value& colorBlock = componentBlock[i].FindMember(PARTICLE_SYSTEM_COLOR_TINT)->value;
 
 					color.x = colorBlock[0].GetDouble();
 					color.y = colorBlock[1].GetDouble();
@@ -509,7 +478,6 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 					color.w = colorBlock[3].GetDouble();
 
 					newParticles->SetColorTint(color);
-					newParticles->SetDestination(destination);
 
 					// Particles are a bit of a mess, and need to be initially disabled for at least the first frame.
 					newParticles->SetEnabled(false);
@@ -517,23 +485,12 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 				else if (componentType == ComponentTypes::LIGHT) {
 					std::shared_ptr<Light> light;
 
-					DirectX::XMFLOAT3 direction;
-					DirectX::XMFLOAT3 color;
 					float type = componentBlock[i].FindMember(LIGHT_TYPE)->value.GetDouble();
 					float intensity = componentBlock[i].FindMember(LIGHT_INTENSITY)->value.GetDouble();
 					float range = componentBlock[i].FindMember(LIGHT_RANGE)->value.GetDouble();
 					bool enabled = componentBlock[i].FindMember(LIGHT_ENABLED)->value.GetBool();
-
-					const rapidjson::Value& dirBlock = componentBlock[i].FindMember(LIGHT_DIRECTION)->value;
-					const rapidjson::Value& colorBlock = componentBlock[i].FindMember(LIGHT_COLOR)->value;
-
-					direction.x = dirBlock[0].GetDouble();
-					direction.y = dirBlock[1].GetDouble();
-					direction.z = dirBlock[2].GetDouble();
-
-					color.x = colorBlock[0].GetDouble();
-					color.y = colorBlock[1].GetDouble();
-					color.z = colorBlock[2].GetDouble();
+					DirectX::XMFLOAT3 direction = LoadFloat3(componentBlock[i], LIGHT_DIRECTION);
+					DirectX::XMFLOAT3 color = LoadFloat3(componentBlock[i], LIGHT_COLOR);
 
 					if (type == 0.0f) {
 						light = CreateDirectionalLightOnEntity(newEnt, direction, color, intensity);
@@ -2771,7 +2728,7 @@ std::shared_ptr<Camera> AssetManager::GetMainCamera() {
 void AssetManager::SetMainCamera(std::shared_ptr<Camera> newMain)
 {
 	mainCamera = newMain;
-	mainCamera->SetAspectRatio((float)windowWidth / (float)this->height);
+	//mainCamera->SetAspectRatio((float)windowWidth / (float)this->height);
 }
 
 std::shared_ptr<Camera> AssetManager::GetEditingCamera() {

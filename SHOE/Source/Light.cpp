@@ -102,19 +102,15 @@ void Light::OnParentRotate(std::shared_ptr<GameEntity> parent)
 void Light::OnEnable()
 {
 	lightArrayDirty = true;
-	if (shadowProjector != nullptr) {
-		shadowProjector->SetEnabled(castsShadows && IsEnabled());
-		shadowProjector->UpdateFieldsByLightType();
-	}
+	if (shadowProjector != nullptr)
+		shadowProjector->SetEnabled(castsShadows);
 }
 
 void Light::OnDisable()
 {
 	lightArrayDirty = true;
-	if (shadowProjector != nullptr) {
-		shadowProjector->SetEnabled(castsShadows && IsEnabled());
-		shadowProjector->UpdateFieldsByLightType();
-	}
+	if (shadowProjector != nullptr)
+		shadowProjector->SetEnabled(castsShadows);
 }
 
 float Light::GetType()
@@ -207,8 +203,7 @@ void Light::SetCastsShadows(bool castsShadows)
 			shadowProjector = ComponentManager::Instantiate<ShadowProjector>(GetGameEntity());
 			shadowProjector->BindLight(shared_from_this());
 		}
-		shadowProjector->SetEnabled(castsShadows && IsEnabled());
-		shadowProjector->UpdateFieldsByLightType();
+		shadowProjector->SetEnabled(castsShadows);
 	}
 }
 

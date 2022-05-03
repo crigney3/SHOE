@@ -28,6 +28,7 @@ private:
 	int projectionHeight;
 
 	void Start() override;
+	void OnEnable() override;
 	void RegenerateResources();
 	//Might be public later, but would make shader logic more complex
 	void SetProjectionDimensions(int projectionWidth, int projectionHeight);
