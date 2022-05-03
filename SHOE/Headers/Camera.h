@@ -14,7 +14,7 @@ public:
 	DirectX::XMFLOAT4X4 GetProjectionMatrix();
 
 	void UpdateProjectionMatrix();
-	void UpdateViewMatrix();
+	virtual void UpdateViewMatrix();
 
 	float GetFOV();
 	void SetFOV(float fov);
@@ -32,8 +32,8 @@ public:
 	void SetProjectionMatrixType(bool newProjMatrixType);
 protected:
 	void Start() override;
-private:
 	DirectX::XMFLOAT4X4 vMatrix;
+private:
 	DirectX::XMFLOAT4X4 projMatrix;
 
 	float fov;

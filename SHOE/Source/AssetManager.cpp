@@ -1,5 +1,6 @@
 #include "../Headers/AssetManager.h"
 #include "..\Headers\FlashlightController.h"
+#include "..\Headers\NoclipMovement.h"
 
 using namespace DirectX;
 
@@ -21,11 +22,14 @@ AssetManager::~AssetManager() {
 	globalSounds.clear();
 	globalMeshes.clear();
 
-	// And components
+	// And entities
 	for (auto ge : globalEntities) {
 		ge->Release();
 	}
+	globalEntities.clear();
 	editingCamera->GetGameEntity()->Release();
+	editingCamera = nullptr;
+	mainCamera = nullptr;
 }
 
 void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock, HWND hwnd) {
@@ -67,10 +71,12 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 
 	SetLoadedAndWait("Post-Initialization", "Preparing to render");
 
+	//Intentionally not tracked by the asset manager
 	std::shared_ptr<GameEntity> editingCamObj = std::make_shared<GameEntity>("editingCamera");
 	editingCamObj->Initialize();
 	editingCamObj->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, -20.0f));
 	editingCamera = CreateCameraOnEntity(editingCamObj);
+	editingCamObj->AddComponent<NoclipMovement>();
 
 	this->assetManagerLoadState = AMLoadState::NOT_LOADING;
 	this->singleLoadComplete = true;
@@ -1285,23 +1291,6 @@ std::shared_ptr<Camera> AssetManager::CreateCamera(std::string name, float aspec
 	
 }
 
-std::shared_ptr<ShadowProjector> AssetManager::CreateShadowProjector(std::string name, float aspectRatio)
-{
-	try {
-		SetLoadingAndWait("Shadow Projectors", name);
-
-		float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<ShadowProjector> sP = CreateShadowProjectorOnEntity(newEnt, ar);
-		return sP;
-	}
-	catch (...) {
-		SetLoadedAndWait("Shadow Projector", name, std::current_exception());
-
-		return NULL;
-	}
-}
-
 std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::string nameToLoad) {
 	try {
 		SetLoadingAndWait("Vertex Shaders", id);
@@ -2112,14 +2101,6 @@ std::shared_ptr<Camera> AssetManager::CreateCameraOnEntity(std::shared_ptr<GameE
 	return cam;
 }
 
-std::shared_ptr<ShadowProjector> AssetManager::CreateShadowProjectorOnEntity(std::shared_ptr<GameEntity> entityToEdit, float aspectRatio)
-{
-	float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
-	std::shared_ptr<ShadowProjector> sP = entityToEdit->AddComponent<ShadowProjector>();
-	sP->SetAspectRatio(ar);
-	return sP;
-}
-
 #pragma endregion
 
 #pragma region initAssets
@@ -2377,7 +2358,9 @@ void AssetManager::InitializeSkies() {
 void AssetManager::InitializeLights() {
 	try {
 		//white light from the top left
-		CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1, -1, 0), DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 0.7f);
+		std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1, -1, 0), DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 0.7f);
+		mainLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 20.0f, -200.0f));
+		mainLight->SetCastsShadows(true);
 
 		//white light from the back
 		CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, -1));
@@ -2397,10 +2380,10 @@ void AssetManager::InitializeLights() {
 
 		//flashlight attached to camera +.5z and x
 		std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", DirectX::XMFLOAT3(0, 0, -1), 10.0f);
-		CreateShadowProjectorOnEntity(flashlight->GetGameEntity(), 1.0f);
 		flashlight->GetGameEntity()->AddComponent<FlashlightController>();
 		flashlight->GetTransform()->SetParent(mainCamera->GetTransform());
 		flashlight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f));
+		flashlight->SetCastsShadows(true);
 		flashlight->SetEnabled(false);
 
 		SetLoadingAndWait("Lights", "flashLight");
@@ -2498,11 +2481,7 @@ void AssetManager::InitializeTerrainMaterials() {
 void AssetManager::InitializeCameras() {
 	mainCamera = CreateCamera("mainCamera");
 	mainCamera->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, -20.0f));
-
-	std::shared_ptr<ShadowProjector> scTemp = CreateShadowProjector("mainShadowProjector", 1.0f);
-	scTemp->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 20.0f, -200.0f));
-	scTemp->GetTransform()->SetRotation(-10.0f, 0.0f, 0.0f);
-	scTemp->SetProjectionMatrixType(false);
+	mainCamera->GetGameEntity()->AddComponent<NoclipMovement>();
 }
 
 // --------------------------------------------------------
@@ -2792,6 +2771,7 @@ std::shared_ptr<Camera> AssetManager::GetMainCamera() {
 void AssetManager::SetMainCamera(std::shared_ptr<Camera> newMain)
 {
 	mainCamera = newMain;
+	mainCamera->SetAspectRatio((float)windowWidth / (float)this->height);
 }
 
 std::shared_ptr<Camera> AssetManager::GetEditingCamera() {

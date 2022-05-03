@@ -1,5 +1,43 @@
 #include "..\Headers\ShadowProjector.h"
 #include "..\Headers\AssetManager.h"
+#include "..\Headers\Light.h"
+#include <DirectXMath.h>
+
+using namespace DirectX;
+
+void ShadowProjector::BindLight(std::shared_ptr<Light> light)
+{
+	boundLight = light;
+	Camera::Start();
+	SetProjectionDimensions(2048, 2048);
+}
+
+void ShadowProjector::UpdateFieldsByLightType()
+{
+	if (IsEnabled()) {
+		//Directional Light
+		if (boundLight->GetType() == 0.0f) {
+			SetProjectionMatrixType(false);
+			SetFarDist(500.0f);
+		}
+		//Spot Light
+		else if (boundLight->GetType() == 2.0f) {
+			SetProjectionMatrixType(true);
+			SetFarDist(std::max<float>(boundLight->GetRange(), GetNearDist() + 0.1f));
+		}
+	}
+}
+
+void ShadowProjector::UpdateViewMatrix()
+{
+	XMVECTOR position = XMLoadFloat3(&GetTransform()->GetGlobalPosition());
+
+	DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&boundLight->GetDirection());
+	DirectX::XMVECTOR rot = DirectX::XMLoadFloat4(&GetTransform()->GetGlobalRotation());
+
+	XMMATRIX view = XMMatrixLookToLH(position, DirectX::XMVector3Rotate(dir, rot), XMVectorSet(0, 1, 0, 0));
+	XMStoreFloat4x4(&vMatrix, view);
+}
 
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ShadowProjector::GetSRV()
 {
@@ -30,8 +68,7 @@ void ShadowProjector::SetProjectionDimensions(int projectionWidth, int projectio
 
 void ShadowProjector::Start()
 {
-	Camera::Start();
-	SetProjectionDimensions(2048, 2048);
+	boundLight = nullptr;
 }
 
 void ShadowProjector::RegenerateResources()

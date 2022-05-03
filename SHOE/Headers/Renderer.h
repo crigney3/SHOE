@@ -101,6 +101,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView> miscEffectDepthBuffers[MiscEffectSRVTypes::MISC_EFFECT_SRV_COUNT];
 
     //components for shadows
+    int shadowCount;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shadowDSVArraySRV;
     std::vector<Microsoft::WRL::ComPtr<ID3D11DepthStencilView>> shadowDSVArray;
     std::vector<DirectX::XMFLOAT4X4> shadowProjMatArray;
@@ -183,7 +184,7 @@ public:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(RTVTypes type);
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMiscEffectSRV(MiscEffectSRVTypes type);
 
-    void DrawPointLights();
+    void DrawPointLights(std::shared_ptr<Camera> cam);
     void Draw(std::shared_ptr<Camera> camera);
 
     void InitShadows();

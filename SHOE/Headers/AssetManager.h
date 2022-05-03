@@ -392,7 +392,6 @@ public:
 	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::string nameToLoad);
 	std::shared_ptr<Mesh> CreateMesh(std::string id, std::string nameToLoad);
 	std::shared_ptr<Camera> CreateCamera(std::string name, float aspectRatio = 0);
-	std::shared_ptr<ShadowProjector> CreateShadowProjector(std::string name, float aspectRatio = 0);
 	std::shared_ptr<Light> CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 direction, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Light> CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Light> CreateSpotLight(std::string name, DirectX::XMFLOAT3 direction, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
@@ -465,7 +464,6 @@ public:
 												   DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
 												   float intensity = 1.0f);
 	std::shared_ptr<Camera> CreateCameraOnEntity(std::shared_ptr<GameEntity> entityToEdit, float aspectRatio = 0);
-	std::shared_ptr<ShadowProjector> CreateShadowProjectorOnEntity(std::shared_ptr<GameEntity> entityToEdit, float aspectRatio = 0);
 
 	// Creation Helper Methods
 	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType);

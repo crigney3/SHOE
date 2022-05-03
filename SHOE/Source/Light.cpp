@@ -12,7 +12,7 @@ std::vector<LightData> Light::lightData = std::vector<LightData>();
 LightData Light::GetData()
 {
 	DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&direction);
-	DirectX::XMVECTOR rot = DirectX::XMLoadFloat4(&GetGameEntity()->GetTransform()->GetGlobalRotation());
+	DirectX::XMVECTOR rot = DirectX::XMLoadFloat4(&GetTransform()->GetGlobalRotation());
 	DirectX::XMFLOAT3 finalFacing;
 	DirectX::XMStoreFloat3(&finalFacing, DirectX::XMVector3Rotate(dir, rot));
 	return LightData{
@@ -21,8 +21,9 @@ LightData Light::GetData()
 		intensity,
 		finalFacing,
 		(float)IsEnabled(),
-		GetGameEntity()->GetTransform()->GetGlobalPosition(),
-		range
+		GetTransform()->GetGlobalPosition(),
+		range,
+		(float)castsShadows
 	};
 }
 
@@ -58,6 +59,8 @@ void Light::Start()
 	intensity = 1.0f;
 	direction = DirectX::XMFLOAT3(1, 0, 0);
 	range = 100.0f;
+	castsShadows = false;
+	shadowProjector = nullptr;
 
 	lightArrayDirty = true;
 }
@@ -65,6 +68,11 @@ void Light::Start()
 void Light::OnDestroy()
 {
 	lightArrayDirty = true;
+	if (shadowProjector != nullptr) {
+		shadowProjector->OnDestroy();
+		ComponentManager::Free<ShadowProjector>(shadowProjector);
+		shadowProjector = nullptr;
+	}
 }
 
 void Light::OnMove(DirectX::XMFLOAT3 delta)
@@ -75,6 +83,8 @@ void Light::OnMove(DirectX::XMFLOAT3 delta)
 void Light::OnRotate(DirectX::XMFLOAT3 delta)
 {
 	lightArrayDirty = true;
+	if (shadowProjector != nullptr)
+		shadowProjector->UpdateViewMatrix();
 }
 
 void Light::OnParentMove(std::shared_ptr<GameEntity> parent)
@@ -85,16 +95,26 @@ void Light::OnParentMove(std::shared_ptr<GameEntity> parent)
 void Light::OnParentRotate(std::shared_ptr<GameEntity> parent)
 {
 	lightArrayDirty = true;
+	if (shadowProjector != nullptr)
+		shadowProjector->UpdateViewMatrix();
 }
 
 void Light::OnEnable()
 {
 	lightArrayDirty = true;
+	if (shadowProjector != nullptr) {
+		shadowProjector->SetEnabled(castsShadows && IsEnabled());
+		shadowProjector->UpdateFieldsByLightType();
+	}
 }
 
 void Light::OnDisable()
 {
 	lightArrayDirty = true;
+	if (shadowProjector != nullptr) {
+		shadowProjector->SetEnabled(castsShadows && IsEnabled());
+		shadowProjector->UpdateFieldsByLightType();
+	}
 }
 
 float Light::GetType()
@@ -105,7 +125,12 @@ float Light::GetType()
 void Light::SetType(float type)
 {
 	if (this->type != type) {
+		//Point lights can't cast shadows for now
+		if (type == 1.0f)
+			SetCastsShadows(false);
 		this->type = type;
+		if(shadowProjector != nullptr)
+			shadowProjector->UpdateFieldsByLightType();
 		lightArrayDirty = true;
 	}
 }
@@ -146,6 +171,8 @@ void Light::SetDirection(DirectX::XMFLOAT3 direction)
 	if (this->direction.x != direction.x || this->direction.y != direction.y || this->direction.z != direction.z) {
 		this->direction = direction;
 		lightArrayDirty = true;
+		if (shadowProjector != nullptr)
+			shadowProjector->UpdateViewMatrix();
 	}
 }
 
@@ -158,6 +185,34 @@ void Light::SetRange(float range)
 {
 	if (this->range != range) {
 		this->range = range;
+		if (shadowProjector != nullptr && shadowProjector->IsEnabled() && type == 2.0f)
+			shadowProjector->SetFarDist(max(range, shadowProjector->GetNearDist() + 0.1f));
 		lightArrayDirty = true;
 	}
+}
+
+bool Light::CastsShadows()
+{
+	return castsShadows;
+}
+
+void Light::SetCastsShadows(bool castsShadows)
+{
+	//Point lights can't cast shadows for now
+	if (type == 1.0f)
+		return;
+	if (this->castsShadows != castsShadows) {
+		this->castsShadows = castsShadows;
+		if (castsShadows && shadowProjector == nullptr) {
+			shadowProjector = ComponentManager::Instantiate<ShadowProjector>(GetGameEntity());
+			shadowProjector->BindLight(shared_from_this());
+		}
+		shadowProjector->SetEnabled(castsShadows && IsEnabled());
+		shadowProjector->UpdateFieldsByLightType();
+	}
+}
+
+std::shared_ptr<ShadowProjector> Light::GetShadowProjector()
+{
+	return shadowProjector;
 }

@@ -215,7 +215,8 @@ struct LightStruct {
 	float enabled;
 	float3 position;
 	float range;
-	float3 padding;
+	float castsShadows;
+	float2 padding;
 };
 
 float calcSpecularity(float3 worldPos, float3 normal, float3 lightDirection, float specularity, float3 cameraPos) {

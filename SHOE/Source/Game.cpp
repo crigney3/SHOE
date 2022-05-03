@@ -110,8 +110,6 @@ void Game::Init()
 	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
 #endif
 
-	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
-
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(this->hWnd);
 	statsEnabled = true;
@@ -121,7 +119,6 @@ void Game::Init()
 	objHierarchyEnabled = true;
 	rtvWindowEnabled = false;
 
-	flashMenuToggle = false;
 	entityUIIndex = -1;
 	skyUIIndex = 0;
 
@@ -174,8 +171,6 @@ void Game::LoadScene() {
 #if defined(DEBUG) || defined(_DEBUG)
 	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
 #endif
-
-	flashlight = globalAssets.GetGameEntityByName("Flashlight")->GetComponent<Light>();
 
 	renderer.reset();
 
@@ -718,8 +713,10 @@ void Game::GenerateEditingUI() {
 
 		if (ImGui::CollapsingHeader("Shadow Depth Views")) {
 			for (std::shared_ptr<ShadowProjector> projector : ComponentManager::GetAll<ShadowProjector>()) {
-				ImGui::Text((projector->GetGameEntity()->GetName() + " SRV").c_str());
-				ImGui::Image(projector->GetSRV().Get(), ImVec2(500, 300));
+				if (projector->IsEnabled()) {
+					ImGui::Text((projector->GetGameEntity()->GetName() + " SRV").c_str());
+					ImGui::Image(projector->GetSRV().Get(), ImVec2(500, 300));
+				}
 			}
 		}
 

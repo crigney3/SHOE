@@ -51,7 +51,6 @@ private:
 
 	// Flashlight checking
 	bool flickeringEnabled;
-	bool hasFlickered;
 
 	// GUI control tracking/UI toggles
 	Input& input = Input::GetInstance();

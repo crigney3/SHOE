@@ -295,6 +295,7 @@ void Renderer::InitRenderTargetViews() {
 }
 
 void Renderer::InitShadows() {
+	shadowCount = 0;
 	shadowRasterizer.Reset();
 	shadowSampler.Reset();
 	this->VSShadow.reset();
@@ -394,15 +395,15 @@ void Renderer::PostResize(unsigned int windowHeight,
 // ------------------------------------------------------------------------
 // Draws the point lights as solid color spheres - credit to Chris Cascioli
 // ------------------------------------------------------------------------
-void Renderer::DrawPointLights()
+void Renderer::DrawPointLights(std::shared_ptr<Camera> cam)
 {
 	// Turn on these shaders
 	basicVS->SetShader();
 	solidColorPS->SetShader();
 
 	// Set up vertex shader
-	basicVS->SetMatrix4x4("view", globalAssets.GetMainCamera()->GetViewMatrix());
-	basicVS->SetMatrix4x4("projection", globalAssets.GetMainCamera()->GetProjectionMatrix());
+	basicVS->SetMatrix4x4("view", cam->GetViewMatrix());
+	basicVS->SetMatrix4x4("projection", cam->GetProjectionMatrix());
 
 	context->IASetVertexBuffers(0, 1, sphereMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
 	context->IASetIndexBuffer(sphereMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
@@ -544,6 +545,7 @@ void Renderer::RenderShadows() {
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
 
+	int newShadowCount = 0;
 	for (std::shared_ptr<ShadowProjector> projector : ComponentManager::GetAll<ShadowProjector>()) {
 		if (!projector->IsEnabled()) continue;
 
@@ -584,34 +586,38 @@ void Renderer::RenderShadows() {
 		shadowDSVArray.emplace_back(projector->GetDSV());
 		shadowProjMatArray.emplace_back(projector->GetProjectionMatrix());
 		shadowViewMatArray.emplace_back(projector->GetViewMatrix());
+		newShadowCount++;
 	}
 
-	if (shadowDSVArray.size() > 0) {
-		D3D11_TEXTURE2D_DESC shadowDesc = {};
-		shadowDesc.Width = 2048; //Hard coded for simplicity, may need a more flexible solution later
-		shadowDesc.Height = 2048; //Hard coded for simplicity, may need a more flexible solution later
-		shadowDesc.ArraySize = shadowDSVArray.size();
-		shadowDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
-		shadowDesc.CPUAccessFlags = 0;
-		shadowDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-		shadowDesc.MipLevels = 1;
-		shadowDesc.MiscFlags = 0;
-		shadowDesc.SampleDesc.Count = 1;
-		shadowDesc.SampleDesc.Quality = 0;
-		shadowDesc.Usage = D3D11_USAGE_DEFAULT;
+	if (shadowCount != newShadowCount) {
+		shadowCount = newShadowCount;
+		if (shadowCount > 0) {
+			D3D11_TEXTURE2D_DESC shadowDesc = {};
+			shadowDesc.Width = 2048; //Hard coded for simplicity, may need a more flexible solution later
+			shadowDesc.Height = 2048; //Hard coded for simplicity, may need a more flexible solution later
+			shadowDesc.ArraySize = shadowCount;
+			shadowDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+			shadowDesc.CPUAccessFlags = 0;
+			shadowDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+			shadowDesc.MipLevels = 1;
+			shadowDesc.MiscFlags = 0;
+			shadowDesc.SampleDesc.Count = 1;
+			shadowDesc.SampleDesc.Quality = 0;
+			shadowDesc.Usage = D3D11_USAGE_DEFAULT;
 
-		ID3D11Texture2D* shadowTexture;
-		device->CreateTexture2D(&shadowDesc, 0, &shadowTexture);
+			ID3D11Texture2D* shadowTexture;
+			device->CreateTexture2D(&shadowDesc, 0, &shadowTexture);
 
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-		srvDesc.Texture2DArray.ArraySize = shadowDSVArray.size();
-		srvDesc.Texture2DArray.FirstArraySlice = 0;
-		srvDesc.Texture2DArray.MipLevels = 1;
-		srvDesc.Texture2DArray.MostDetailedMip = 0;
+			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+			srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+			srvDesc.Texture2DArray.ArraySize = shadowCount;
+			srvDesc.Texture2DArray.FirstArraySlice = 0;
+			srvDesc.Texture2DArray.MipLevels = 1;
+			srvDesc.Texture2DArray.MostDetailedMip = 0;
 
-		device->CreateShaderResourceView(shadowTexture, &srvDesc, shadowDSVArraySRV.GetAddressOf());
+			device->CreateShaderResourceView(shadowTexture, &srvDesc, shadowDSVArraySRV.GetAddressOf());
+		}
 	}
 
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
@@ -857,11 +863,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 	perFrameVS->SetMatrix4x4("view", cam->GetViewMatrix());
 	perFrameVS->SetMatrix4x4("projection", cam->GetProjectionMatrix());
-	if (shadowDSVArray.size() > 0) {
-		perFrameVS->SetData("shadowViews", shadowViewMatArray.data(), sizeof(XMFLOAT4X4) * MAX_SHADOW_PROJECTORS);
-		perFrameVS->SetData("shadowProjections", shadowProjMatArray.data(), sizeof(XMFLOAT4X4) * MAX_SHADOW_PROJECTORS);
+	if (shadowCount > 0) {
+		perFrameVS->SetData("shadowViews", shadowViewMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
+		perFrameVS->SetData("shadowProjections", shadowProjMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
 	}
-	perFrameVS->SetInt("shadowCount", shadowDSVArray.size());
+	perFrameVS->SetInt("shadowCount", shadowCount);
 
 	perFramePS->SetData("lights", lightData, sizeof(LightData) * MAX_LIGHTS);
 	perFramePS->SetData("lightCount", &lightCount, sizeof(lightCount));
@@ -947,7 +953,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 				currentPS->SetShaderResourceView("textureNormal", currentMaterial->GetNormalMap().Get());
 			}
 
-			if (shadowDSVArray.size() > 0) {
+			if (shadowCount > 0) {
 				currentPS->SetShaderResourceView("shadowMaps", shadowDSVArraySRV.Get());
 				currentPS->SetSamplerState("shadowState", shadowSampler.Get());
 			}
@@ -995,7 +1001,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 			PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 			PSTerrain->SetFloat("uvMultNear", 50.0f);
 			PSTerrain->SetFloat("uvMultFar", 150.0f);
-			if (shadowDSVArray.size() > 0) {
+			if (shadowCount > 0) {
 				PSTerrain->SetShaderResourceView("shadowMaps", shadowDSVArraySRV.Get());
 				PSTerrain->SetSamplerState("shadowState", shadowSampler.Get());
 			}
@@ -1028,11 +1034,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 			VSTerrain->SetMatrix4x4("world", terrains[i]->GetTransform()->GetWorldMatrix());
 			VSTerrain->SetMatrix4x4("view", cam->GetViewMatrix());
 			VSTerrain->SetMatrix4x4("projection", cam->GetProjectionMatrix());
-			if (shadowDSVArray.size() > 0) {
-				VSTerrain->SetData("shadowViews", shadowViewMatArray.data(), sizeof(XMFLOAT4X4) * MAX_SHADOW_PROJECTORS);
-				VSTerrain->SetData("shadowProjections", shadowProjMatArray.data(), sizeof(XMFLOAT4X4) * MAX_SHADOW_PROJECTORS);
+			if (shadowCount > 0) {
+				VSTerrain->SetData("shadowViews", shadowViewMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
+				VSTerrain->SetData("shadowProjections", shadowProjMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
 			}
-			VSTerrain->SetInt("shadowCount", shadowDSVArray.size());
+			VSTerrain->SetInt("shadowCount", shadowCount);
 
 			VSTerrain->CopyAllBufferData();
 
@@ -1120,16 +1126,14 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 	// Draw the point light
 	context->OMSetRenderTargets(1, currentRTV.GetAddressOf(), depthBufferDSV.Get());
-	DrawPointLights();
+	DrawPointLights(cam);
 
 	context->OMSetRenderTargets(1, renderTargets, (meshIt < activeMeshes.size()) ? depthBufferDSV.Get() : 0);
 
 	context->OMSetDepthStencilState(particleDepthState.Get(), 0);
 
 	//Render all of the emitters
-	std::vector<std::shared_ptr<ParticleSystem>> emitters = ComponentManager::GetAll<ParticleSystem>();
-
-	for (std::shared_ptr<ParticleSystem> emitter : emitters) {
+	for (std::shared_ptr<ParticleSystem> emitter : ComponentManager::GetAll<ParticleSystem>()) {
 		if (!emitter->IsEnabled() ||
 			globalAssets.GetAMLoadState() == AMLoadState::SCENE_LOAD ||
 			globalAssets.GetAMLoadState() == AMLoadState::INITIALIZING)continue;
