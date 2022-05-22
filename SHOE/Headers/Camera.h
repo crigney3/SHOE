@@ -14,7 +14,7 @@ public:
 	DirectX::XMFLOAT4X4 GetProjectionMatrix();
 
 	void UpdateProjectionMatrix();
-	virtual void UpdateViewMatrix();
+	void UpdateViewMatrix();
 
 	float GetFOV();
 	void SetFOV(float fov);
@@ -28,19 +28,19 @@ public:
 	float GetAspectRatio();
 	void SetAspectRatio(float newAspectRatio);
 
-	bool GetProjectionMatrixType();
-	void SetProjectionMatrixType(bool newProjMatrixType);
+	bool IsPerspective();
+	void SetIsPerspective(bool newProjMatrixType);
 protected:
 	void Start() override;
-	DirectX::XMFLOAT4X4 vMatrix;
 private:
 	DirectX::XMFLOAT4X4 projMatrix;
+	DirectX::XMFLOAT4X4 vMatrix;
 
 	float fov;
 	float nearDist;
 	float farDist;
 	float aspectRatio;
-	bool projMatrixType;
+	bool isPerspective;
 
 	void OnTransform() override;
 	void OnParentTransform(std::shared_ptr<GameEntity> parent) override;

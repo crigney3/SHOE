@@ -367,7 +367,7 @@ void Renderer::InitShadows() {
 	shadowRastDesc.FillMode = D3D11_FILL_SOLID;
 	shadowRastDesc.CullMode = D3D11_CULL_BACK;
 	shadowRastDesc.DepthClipEnable = true;
-	shadowRastDesc.DepthBias = 100;
+	shadowRastDesc.DepthBias = 1000;
 	shadowRastDesc.DepthBiasClamp = 0.0f;
 	shadowRastDesc.SlopeScaledDepthBias = 10.0f;
 	device->CreateRasterizerState(&shadowRastDesc, &shadowRasterizer);
@@ -534,6 +534,9 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 	//context->RSSetState(0);
 }
 
+/// <summary>
+/// Renders out the shadow maps for all active shadow projectors
+/// </summary>
 void Renderer::RenderShadows() {
 	shadowDSVArray.clear();
 	shadowProjMatArray.clear();
@@ -546,24 +549,25 @@ void Renderer::RenderShadows() {
 	vp.MaxDepth = 1.0f;
 
 	int newShadowCount = 0;
-	for (std::shared_ptr<ShadowProjector> projector : ComponentManager::GetAll<ShadowProjector>()) {
-		if (!projector->IsEnabled()) continue;
+	//Renders each shadow map
+	for (std::shared_ptr<Light> light : ComponentManager::GetAll<Light>()) {
+		if (!light->IsEnabled() || !light->CastsShadows()) continue;
+
+		std::shared_ptr<ShadowProjector> projector = light->GetShadowProjector();
 
 		context->OMSetRenderTargets(0, 0, projector->GetDSV().Get());
-
 		context->ClearDepthStencilView(projector->GetDSV().Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-
 		context->RSSetState(shadowRasterizer.Get());
 
 		vp.Width = (float)projector->GetProjectionWidth();
 		vp.Height = (float)projector->GetProjectionHeight();
 		context->RSSetViewports(1, &vp);
 
-		context->PSSetShader(0, 0, 0);
 		VSShadow->SetShader();
-
 		VSShadow->SetMatrix4x4("view", projector->GetViewMatrix());
 		VSShadow->SetMatrix4x4("projection", projector->GetProjectionMatrix());
+		VSShadow->CopyBufferData("perFrame");
+		context->PSSetShader(0, 0, 0);
 
 		for (std::shared_ptr<MeshRenderer> mesh : ComponentManager::GetAll<MeshRenderer>()) {
 			//Ignores transparent meshes
@@ -571,8 +575,7 @@ void Renderer::RenderShadows() {
 
 			// This is similar to what I'd need for any depth pre-pass
 			VSShadow->SetMatrix4x4("world", mesh->GetTransform()->GetWorldMatrix());
-
-			VSShadow->CopyAllBufferData();
+			VSShadow->CopyBufferData("perObject");
 
 			context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
 			context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
@@ -589,9 +592,12 @@ void Renderer::RenderShadows() {
 		newShadowCount++;
 	}
 
+	//Regenerates the shadow array srv if the number of active maps changed
 	if (shadowCount != newShadowCount) {
 		shadowCount = newShadowCount;
 		if (shadowCount > 0) {
+			shadowDSVArraySRV.Reset();
+
 			D3D11_TEXTURE2D_DESC shadowDesc = {};
 			shadowDesc.Width = 2048; //Hard coded for simplicity, may need a more flexible solution later
 			shadowDesc.Height = 2048; //Hard coded for simplicity, may need a more flexible solution later
@@ -605,8 +611,16 @@ void Renderer::RenderShadows() {
 			shadowDesc.SampleDesc.Quality = 0;
 			shadowDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			ID3D11Texture2D* shadowTexture;
-			device->CreateTexture2D(&shadowDesc, 0, &shadowTexture);
+			Microsoft::WRL::ComPtr<ID3D11Texture2D> shadowTexture;
+			device->CreateTexture2D(&shadowDesc, 0, shadowTexture.GetAddressOf());
+
+			D3D11_DEPTH_STENCIL_VIEW_DESC shadowDSDesc = {};
+			shadowDSDesc.Format = DXGI_FORMAT_D32_FLOAT;
+			shadowDSDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+			shadowDSDesc.Texture2DArray.ArraySize = shadowCount;
+			shadowDSDesc.Texture2DArray.FirstArraySlice = 0;
+			shadowDSDesc.Texture2DArray.MipSlice = 0;
+			device->CreateDepthStencilView(shadowTexture.Get(), &shadowDSDesc, &shadowDSVArray[0]);
 
 			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
@@ -616,7 +630,18 @@ void Renderer::RenderShadows() {
 			srvDesc.Texture2DArray.MipLevels = 1;
 			srvDesc.Texture2DArray.MostDetailedMip = 0;
 
-			device->CreateShaderResourceView(shadowTexture, &srvDesc, shadowDSVArraySRV.GetAddressOf());
+			device->CreateShaderResourceView(shadowTexture.Get(), &srvDesc, shadowDSVArraySRV.GetAddressOf());
+		}
+	}
+
+	//Copies the shadow maps to the array srv
+	if (shadowCount > 0) {
+		ID3D11Resource* arraySRVr = nullptr;
+		shadowDSVArraySRV.Get()->GetResource(&arraySRVr);
+		ID3D11Resource* shadowDSVr = nullptr;
+		for (int i = 0; i < shadowCount; i++) {
+			shadowDSVArray[i].Get()->GetResource(&shadowDSVr);
+			context->CopySubresourceRegion(arraySRVr, i, 0, 0, 0, shadowDSVr, 0, 0);
 		}
 	}
 
@@ -996,7 +1021,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 			std::shared_ptr<SimpleVertexShader> VSTerrain = terrains[i]->GetMaterial()->GetVertexShader();
 
 			PSTerrain->SetShader();
-			PSTerrain->SetData("lights", lightData, sizeof(Light) * 64);
+			PSTerrain->SetData("lights", lightData, sizeof(Light) * MAX_LIGHTS);
 			PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
 			PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 			PSTerrain->SetFloat("uvMultNear", 50.0f);
@@ -1174,7 +1199,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		refractivePS->SetMatrix4x4("projMatrix", cam->GetProjectionMatrix());
 		refractivePS->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 
-		refractivePS->SetData("lights", lightData, sizeof(Light) * 64);
+		refractivePS->SetData("lights", lightData, sizeof(Light) * MAX_LIGHTS);
 		refractivePS->SetData("lightCount", &lightCount, sizeof(unsigned int));
 
 		refractivePS->SetShaderResourceView("environmentMap", globalAssets.currentSky->GetSkyTexture().Get());

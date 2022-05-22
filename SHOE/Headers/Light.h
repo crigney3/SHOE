@@ -3,7 +3,7 @@
 #include "ShadowProjector.h"
 #include <vector>
 
-#define MAX_LIGHTS 64
+#define MAX_LIGHTS 24
 
 struct LightData {
 	float type;
@@ -24,10 +24,8 @@ private:
 	static std::vector<LightData> lightData;
 
 	void Start() override;
-	void OnMove(DirectX::XMFLOAT3 delta) override;
-	void OnRotate(DirectX::XMFLOAT3 delta) override;
-	void OnParentMove(std::shared_ptr<GameEntity> parent) override;
-	void OnParentRotate(std::shared_ptr<GameEntity> parent) override;
+	void OnTransform() override;
+	void OnParentTransform(std::shared_ptr<GameEntity> parent) override;
 	void OnEnable() override;
 	void OnDisable() override;
 
@@ -36,7 +34,6 @@ private:
 	float type;
 	DirectX::XMFLOAT3 color;
 	float intensity;
-	DirectX::XMFLOAT3 direction;
 	float range;
 	bool castsShadows;
 
@@ -53,8 +50,6 @@ public:
 	void SetColor(DirectX::XMFLOAT3 color);
 	float GetIntensity();
 	void SetIntensity(float intensity);
-	DirectX::XMFLOAT3 GetDirection();
-	void SetDirection(DirectX::XMFLOAT3 direction);
 	float GetRange();
 	void SetRange(float range);
 	bool CastsShadows();

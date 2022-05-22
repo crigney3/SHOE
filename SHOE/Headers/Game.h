@@ -45,7 +45,6 @@ private:
 	void SaveSceneAs();
 
 	// Rendering helper methods
-	void SelectSky();
 	void GenerateEditingUI();
 	std::unique_ptr<Renderer> renderer;
 

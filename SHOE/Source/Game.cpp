@@ -7,6 +7,7 @@
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3dcompiler.h>
 #include "..\Headers\FlashlightController.h"
+#include "..\Headers\NoclipMovement.h"
 
 #pragma warning( disable : 26495)
 
@@ -129,12 +130,12 @@ void Game::Init()
 
 	//With everything initialized, start the renderer
 	renderer = std::make_unique<Renderer>(height,
-										  width,
-										  device,
-										  context,
-										  swapChain,
-										  backBufferRTV,
-										  depthStencilView);
+		width,
+		device,
+		context,
+		swapChain,
+		backBufferRTV,
+		depthStencilView);
 
 #if defined(DEBUG) || defined(_DEBUG)
 	printf("Took %3.4f seconds for  post-initialization. \n", this->GetDeltaTime());
@@ -178,12 +179,12 @@ void Game::LoadScene() {
 
 	//With everything initialized, start the renderer
 	renderer = std::make_unique<Renderer>(height,
-										  width,
-										  device,
-										  context,
-										  swapChain,
-										  backBufferRTV,
-										  depthStencilView);
+		width,
+		device,
+		context,
+		swapChain,
+		backBufferRTV,
+		depthStencilView);
 }
 
 void Game::SaveScene() {
@@ -351,9 +352,8 @@ void Game::GenerateEditingUI() {
 			ImGui::Separator();
 			ImGui::PushID(101 + c);
 
-			if (std::dynamic_pointer_cast<MeshRenderer>(componentList[c]) != nullptr)
+			if (std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(componentList[c]))
 			{
-				std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(componentList[c]);
 				ImGui::Text("MeshRenderer");
 
 				bool meshEnabled = meshRenderer->IsLocallyEnabled();
@@ -424,9 +424,8 @@ void Game::GenerateEditingUI() {
 				}
 			}
 
-			if (std::dynamic_pointer_cast<ParticleSystem>(componentList[c]) != nullptr)
+			else if (std::shared_ptr<ParticleSystem> particleSystem = std::dynamic_pointer_cast<ParticleSystem>(componentList[c]))
 			{
-				std::shared_ptr<ParticleSystem> particleSystem = std::dynamic_pointer_cast<ParticleSystem>(componentList[c]);
 				ImGui::Text("ParticleSystem");
 
 				bool emitterEnabled = particleSystem->IsLocallyEnabled();
@@ -478,9 +477,8 @@ void Game::GenerateEditingUI() {
 				particleSystem->SetMaxParticles(maxParticles);
 			}
 
-			if (std::dynamic_pointer_cast<Terrain>(componentList[c]) != nullptr)
+			else if (std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(componentList[c]))
 			{
-				std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(componentList[c]);
 				ImGui::Text("Terrain");
 
 				bool terrainEnabled = terrain->IsLocallyEnabled();
@@ -547,9 +545,8 @@ void Game::GenerateEditingUI() {
 				}
 			}
 
-			if (std::dynamic_pointer_cast<Collider>(componentList[c]) != nullptr)
+			else if (std::shared_ptr<Collider> currentCollider = std::dynamic_pointer_cast<Collider>(componentList[c]))
 			{
-				std::shared_ptr<Collider> currentCollider = std::dynamic_pointer_cast<Collider>(componentList[c]);
 				ImGui::Text(currentCollider->IsTrigger() ? "Trigger" : "Collider");
 
 				bool colliderEnabled = currentCollider->IsLocallyEnabled();
@@ -564,11 +561,22 @@ void Game::GenerateEditingUI() {
 				bool UITriggerSwitch = currentCollider->IsTrigger();
 				ImGui::Checkbox("Is Trigger", &UITriggerSwitch);
 				currentCollider->SetIsTrigger(UITriggerSwitch);
+
+				XMFLOAT3 offsetPos = currentCollider->GetPositionOffset();
+				XMFLOAT3 offsetRot = currentCollider->GetRotationOffset();
+				XMFLOAT3 offsetScale = currentCollider->GetScale();
+
+				ImGui::DragFloat3("Position Offset ", &offsetPos.x, 0.5f);
+				ImGui::DragFloat3("Rotation Offset ", &offsetRot.x, 0.5f, 0, 360);
+				ImGui::InputFloat3("Scale ", &offsetScale.x);
+
+				currentCollider->SetPositionOffset(offsetPos);
+				currentCollider->SetRotationOffset(offsetRot);
+				currentCollider->SetScale(offsetScale);
 			}
 
-			if (std::dynamic_pointer_cast<Light>(componentList[c]) != nullptr)
+			else if (std::shared_ptr<Light> light = std::dynamic_pointer_cast<Light>(componentList[c]))
 			{
-				std::shared_ptr<Light> light = std::dynamic_pointer_cast<Light>(componentList[c]);
 				ImGui::Text("Light");
 
 				bool lightEnabled = light->IsLocallyEnabled();
@@ -582,9 +590,9 @@ void Game::GenerateEditingUI() {
 
 				//Directional Light
 				if (light->GetType() == 0.0f || light->GetType() == 2.0f) {
-					UILightDirectionEdit = light->GetDirection();
-					ImGui::InputFloat3("Direction ", &UILightDirectionEdit.x);
-					light->SetDirection(UILightDirectionEdit);
+					bool castsShadows = light->CastsShadows();
+					ImGui::Checkbox("Casts Shadows ", &castsShadows);
+					light->SetCastsShadows(castsShadows);
 				}
 				//Point Light
 				if (light->GetType() == 1.0f || light->GetType() == 2.0f) {
@@ -598,6 +606,66 @@ void Game::GenerateEditingUI() {
 				UILightIntensity = light->GetIntensity();
 				ImGui::DragFloat("Intensity ", &UILightIntensity, 0.1f, 0.01f, 1.0f);
 				light->SetIntensity(UILightIntensity);
+
+				if (ImGui::Button("Mark as main")) {
+					globalAssets.SetMainCamera(light->GetShadowProjector());
+				}
+			}
+
+			else if (std::shared_ptr<Camera> camera = std::dynamic_pointer_cast<Camera>(componentList[c]))
+			{
+				ImGui::Text("Camera");
+
+				bool camEnabled = camera->IsLocallyEnabled();
+				ImGui::Checkbox("Enabled ", &camEnabled);
+				if (camEnabled != camera->IsLocallyEnabled())
+					camera->SetEnabled(camEnabled);
+
+				bool isPerspective = camera->IsPerspective();
+				ImGui::Checkbox("Is Perspective ", &isPerspective);
+				camera->SetIsPerspective(isPerspective);
+
+				if (camera->IsPerspective()) {
+					float fov = camera->GetFOV();
+					ImGui::SliderFloat("FOV", &fov, 0, XM_PI - 0.01f);
+					camera->SetFOV(fov);
+				}
+
+				float nearDist = camera->GetNearDist();
+				ImGui::SliderFloat("Near Distance", &nearDist, 0.001f, 1.0f);
+				camera->SetNearDist(nearDist);
+
+				float farDist = camera->GetFarDist();
+				ImGui::SliderFloat("Far Distance", &farDist, 100.0f, 1000.0f);
+				camera->SetFarDist(farDist);
+
+				if (ImGui::Button("Mark as main")) {
+					globalAssets.SetMainCamera(camera);
+				}
+			}
+
+			else if (std::shared_ptr<NoclipMovement> noclip = std::dynamic_pointer_cast<NoclipMovement>(componentList[c]))
+			{
+				ImGui::Text("Noclip Movement");
+
+				bool ncEnabled = noclip->IsLocallyEnabled();
+				ImGui::Checkbox("Enabled ", &ncEnabled);
+				if (ncEnabled != noclip->IsLocallyEnabled())
+					noclip->SetEnabled(ncEnabled);
+
+				ImGui::SliderFloat("Move Speed", &noclip->moveSpeed, 1.0f, 20.0f);
+
+				ImGui::SliderFloat("Look Speed", &noclip->lookSpeed, 0.5f, 10.0f);
+			}
+
+			else if (std::shared_ptr<FlashlightController> flashlight = std::dynamic_pointer_cast<FlashlightController>(componentList[c]))
+			{
+				ImGui::Text("Flashlight Controller");
+
+				bool flEnabled = flashlight->IsLocallyEnabled();
+				ImGui::Checkbox("Enabled ", &flEnabled);
+				if (flEnabled != flashlight->IsLocallyEnabled())
+					flashlight->SetEnabled(flEnabled);
 			}
 
 			// Remove Component Button
@@ -616,7 +684,7 @@ void Game::GenerateEditingUI() {
 		// Dropdown and Collapsible Header to add components
 		if (ImGui::CollapsingHeader("Add Component")) {
 			static ComponentTypes selectedComponent = ComponentTypes::MESH_RENDERER;
-			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Transform", "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light" };
+			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Transform", "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light", "Camera", "Noclip Character Controller", "Flashlight Controller"};
 
 			if (ImGui::BeginListBox("Component Listbox")) {
 				for (int i = 0; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
@@ -628,32 +696,39 @@ void Game::GenerateEditingUI() {
 				ImGui::EndListBox();
 			}
 
-			ImGui::SameLine();
-
 			ImGui::PushID(100);
 			ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.3f, 1.0f, 0.56f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.3f, 1.0f, 0.87f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.65f, 1.0f, 0.5f));
 			if (ImGui::Button("Add Selected Component")) {
 				switch (selectedComponent) {
-					case ComponentTypes::TRANSFORM:
-						// No.
-						break;
-					case ComponentTypes::MESH_RENDERER:
-						currentEntity->AddComponent<MeshRenderer>();
-						break;
-					case ComponentTypes::PARTICLE_SYSTEM:
-						currentEntity->AddComponent<ParticleSystem>();
-						break;
-					case ComponentTypes::COLLIDER:
-						currentEntity->AddComponent<Collider>();
-						break;
-					case ComponentTypes::TERRAIN:
-						currentEntity->AddComponent<Terrain>();
-						break;
-					case ComponentTypes::LIGHT:
-						currentEntity->AddComponent<Light>();
-						break;
+				case ComponentTypes::TRANSFORM:
+					// No.
+					break;
+				case ComponentTypes::MESH_RENDERER:
+					currentEntity->AddComponent<MeshRenderer>();
+					break;
+				case ComponentTypes::PARTICLE_SYSTEM:
+					currentEntity->AddComponent<ParticleSystem>();
+					break;
+				case ComponentTypes::COLLIDER:
+					currentEntity->AddComponent<Collider>();
+					break;
+				case ComponentTypes::TERRAIN:
+					currentEntity->AddComponent<Terrain>();
+					break;
+				case ComponentTypes::LIGHT:
+					currentEntity->AddComponent<Light>();
+					break;
+				case ComponentTypes::CAMERA:
+					currentEntity->AddComponent<Camera>();
+					break;
+				case ComponentTypes::NOCLIP_CHAR_CONTROLLER:
+					currentEntity->AddComponent<NoclipMovement>();
+					break;
+				case ComponentTypes::FLASHLIGHT_CONTROLLER:
+					currentEntity->AddComponent<FlashlightController>();
+					break;
 				}
 			}
 			ImGui::PopStyleColor(3);
@@ -728,36 +803,11 @@ void Game::GenerateEditingUI() {
 			ImGui::Text("Render Depth Prepass (used for optimization)");
 			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
 		}
-		
+
 		if (ImGui::CollapsingHeader("Selected Entity Filled View")) {
 			ImGui::Text("Selected Entity");
 			ImGui::Image(renderer->outlineSRV.Get(), ImVec2(500, 300));
 		}
-
-		ImGui::End();
-	}
-
-	if (camWindowEnabled) {
-
-		float fov = currentCam->GetFOV();
-		ImGui::SliderFloat("FOV", &fov, 0, XM_PI - 0.01f);
-		currentCam->SetFOV(fov);
-
-		float nearDist = currentCam->GetNearDist();
-		ImGui::SliderFloat("Near Distance", &nearDist, 0.001f, 1.0f);
-		currentCam->SetNearDist(nearDist);
-
-		float farDist = currentCam->GetFarDist();
-		ImGui::SliderFloat("Far Distance", &farDist, 100.0f, 1000.0f);
-		currentCam->SetFarDist(farDist);
-
-		float lookSpeed = currentCam->GetLookSpeed();
-		ImGui::SliderFloat("Look Speed", &lookSpeed, 0.5f, 10.0f);
-		currentCam->SetLookSpeed(lookSpeed);
-
-		float moveSpeed = currentCam->GetMoveSpeed();
-		ImGui::SliderFloat("Move Speed", &moveSpeed, 1.0f, 20.0f);
-		currentCam->SetMoveSpeed(moveSpeed);
 
 		ImGui::End();
 	}
@@ -957,10 +1007,6 @@ std::shared_ptr<GameEntity> Game::GetClickedEntity()
 	return closestHitEntity;
 }
 
-void Game::SelectSky() {
-	
-}
-
 // --------------------------------------------------------
 // Handle resizing DirectX "stuff" to match the new window size.
 // For instance, updating our projection matrix's aspect ratio.
@@ -1065,6 +1111,7 @@ void Game::Update()
 	}*/
 
 	globalAssets.BroadcastGlobalEntityEvent(EntityEventType::Update);
+	//globalAssets.UpdateEditingCamera();
 }
 
 void Game::DrawLoadingScreen(AMLoadState loadType) {

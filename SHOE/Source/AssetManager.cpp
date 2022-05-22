@@ -53,10 +53,10 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 
 	// The rest signal the loading screen each time an object loads
 	InitializeShaders();
-	InitializeCameras();
 	InitializeMaterials();
 	InitializeMeshes();
 	InitializeGameEntities();
+	InitializeCameras();
 	InitializeTerrainMaterials();
 	InitializeTerrainEntities();
 	InitializeLights();
@@ -199,6 +199,15 @@ DirectX::XMFLOAT3 AssetManager::LoadFloat3(const rapidjson::Value& jsonBlock, co
 	return vec;
 }
 
+void AssetManager::SaveFloat3(rapidjson::Value jsonObject, const char* memberName, DirectX::XMFLOAT3 vec, rapidjson::MemoryPoolAllocator<>& allocator)
+{
+	rapidjson::Value float3(rapidjson::kArrayType);
+	float3.PushBack(vec.x, allocator);
+	float3.PushBack(vec.y, allocator);
+	float3.PushBack(vec.z, allocator);
+	//jsonObject.AddMember(memberName, float3, allocator);
+}
+
 std::string AssetManager::GetLoadingSceneName() {
 	return loadingSceneName;
 }
@@ -315,27 +324,6 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 		for (rapidjson::SizeType i = 0; i < computeShaderBlock.Size(); i++) {
 			std::string fileKey = DeSerializeFileName(computeShaderBlock[i].FindMember(SHADER_FILE_PATH)->value.GetString());
 			CreateComputeShader(computeShaderBlock[i].FindMember(SHADER_NAME)->value.GetString(), fileKey);
-		}
-
-		// Cameras
-		const rapidjson::Value& cameraBlock = sceneDoc[CAMERAS];
-		assert(cameraBlock.IsArray());
-		for (rapidjson::SizeType i = 0; i < cameraBlock.Size(); i++) {
-			std::shared_ptr<Camera> loadedCam = CreateCamera(cameraBlock[i].FindMember(CAMERA_NAME)->value.GetString(),
-															 cameraBlock[i].FindMember(CAMERA_ASPECT_RATIO)->value.GetDouble(),
-															 cameraBlock[i].FindMember(CAMERA_PROJECTION_MATRIX_TYPE)->value.GetBool());
-
-			loadedCam->SetLookSpeed(cameraBlock[i].FindMember(CAMERA_LOOK_SPEED)->value.GetDouble());
-
-			loadedCam->SetMoveSpeed(cameraBlock[i].FindMember(CAMERA_MOVE_SPEED)->value.GetDouble());
-
-			loadedCam->SetNearDist(cameraBlock[i].FindMember(CAMERA_NEAR_DISTANCE)->value.GetDouble());
-
-			loadedCam->SetFarDist(cameraBlock[i].FindMember(CAMERA_FAR_DISTANCE)->value.GetDouble());
-
-			loadedCam->SetFOV(cameraBlock[i].FindMember(CAMERA_FIELD_OF_VIEW)->value.GetDouble());
-
-			loadedCam->SetEnabled(cameraBlock[i].FindMember(CAMERA_ENABLED)->value.GetBool());
 		}
 
 		const rapidjson::Value& materialBlock = sceneDoc[MATERIALS];
@@ -489,26 +477,43 @@ void AssetManager::LoadScene(std::string filepath, std::condition_variable* thre
 					float intensity = componentBlock[i].FindMember(LIGHT_INTENSITY)->value.GetDouble();
 					float range = componentBlock[i].FindMember(LIGHT_RANGE)->value.GetDouble();
 					bool enabled = componentBlock[i].FindMember(LIGHT_ENABLED)->value.GetBool();
-					DirectX::XMFLOAT3 direction = LoadFloat3(componentBlock[i], LIGHT_DIRECTION);
 					DirectX::XMFLOAT3 color = LoadFloat3(componentBlock[i], LIGHT_COLOR);
 
 					if (type == 0.0f) {
-						light = CreateDirectionalLightOnEntity(newEnt, direction, color, intensity);
+						light = CreateDirectionalLightOnEntity(newEnt, color, intensity);
 					}
 					else if (type == 1.0f) {
 						light = CreatePointLightOnEntity(newEnt, range, color, intensity);
 					}
 					else if (type == 2.0f) {
-						light = CreateSpotLightOnEntity(newEnt, direction, range, color, intensity);
+						light = CreateSpotLightOnEntity(newEnt, range, color, intensity);
 					}
 					else {
 						// Unrecognized light type, do nothing
 					}
+					light->SetCastsShadows(componentBlock[i].FindMember(LIGHT_CASTS_SHADOWS)->value.GetBool());
 				}
 				else if (componentType == ComponentTypes::MESH_RENDERER) {
 					std::shared_ptr<MeshRenderer> mRenderer = newEnt->AddComponent<MeshRenderer>();
 					mRenderer->SetMaterial(GetMaterialAtID(componentBlock[i].FindMember(MATERIAL_COMPONENT_INDEX)->value.GetInt()));
 					mRenderer->SetMesh(GetMeshAtID(componentBlock[i].FindMember(MESH_COMPONENT_INDEX)->value.GetInt()));
+				}
+				else if (componentType == ComponentTypes::CAMERA) {
+					std::shared_ptr<Camera> loadedCam = CreateCameraOnEntity(newEnt, componentBlock[i].FindMember(CAMERA_ASPECT_RATIO)->value.GetDouble());
+					loadedCam->SetIsPerspective(componentBlock[i].FindMember(CAMERA_PROJECTION_MATRIX_TYPE)->value.GetBool());
+					loadedCam->SetNearDist(componentBlock[i].FindMember(CAMERA_NEAR_DISTANCE)->value.GetDouble());
+					loadedCam->SetFarDist(componentBlock[i].FindMember(CAMERA_FAR_DISTANCE)->value.GetDouble());
+					loadedCam->SetFOV(componentBlock[i].FindMember(CAMERA_FIELD_OF_VIEW)->value.GetDouble());
+					if (componentBlock[i].FindMember(CAMERA_IS_MAIN)->value.GetBool())
+						mainCamera = loadedCam;
+				}
+				else if (componentType == ComponentTypes::NOCLIP_CHAR_CONTROLLER) {
+					std::shared_ptr<NoclipMovement> ncMovement = newEnt->AddComponent<NoclipMovement>();
+					ncMovement->moveSpeed = componentBlock[i].FindMember(NOCLIP_MOVE_SPEED)->value.GetDouble();
+					ncMovement->lookSpeed = componentBlock[i].FindMember(NOCLIP_LOOK_SPEED)->value.GetDouble();
+				}
+				else if (componentType == ComponentTypes::FLASHLIGHT_CONTROLLER) {
+					newEnt->AddComponent<FlashlightController>();
 				}
 				else {
 					// Unkown Component Type, do nothing
@@ -731,6 +736,7 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 					coValue.AddMember(LIGHT_INTENSITY, light->GetIntensity(), allocator);
 					coValue.AddMember(LIGHT_ENABLED, light->IsEnabled(), allocator);
 					coValue.AddMember(LIGHT_RANGE, light->GetRange(), allocator);
+					coValue.AddMember(LIGHT_CASTS_SHADOWS, light->CastsShadows(), allocator);
 
 					// Treat FLOATX as float array[x]
 					rapidjson::Value color(rapidjson::kArrayType);
@@ -740,14 +746,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 					color.PushBack(lightColor.z, allocator);
 
 					coValue.AddMember(LIGHT_COLOR, color, allocator);
-
-					rapidjson::Value direction(rapidjson::kArrayType);
-					DirectX::XMFLOAT3 lightDir = light->GetDirection();
-					direction.PushBack(lightDir.x, allocator);
-					direction.PushBack(lightDir.y, allocator);
-					direction.PushBack(lightDir.z, allocator);
-
-					coValue.AddMember(LIGHT_DIRECTION, direction, allocator);
 					
 					// No need to store position, as it's pulled from ge's transform
 					// Padding is always empty
@@ -858,6 +856,29 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 						}
 					}
 					coValue.AddMember(MATERIAL_COMPONENT_INDEX, materialIndex, allocator);
+				}
+
+				// Is it a Camera?
+				else if (std::shared_ptr<Camera> camera = std::dynamic_pointer_cast<Camera>(co)) {
+				coValue.AddMember(COMPONENT_TYPE, ComponentTypes::CAMERA, allocator); 
+				coValue.AddMember(CAMERA_ASPECT_RATIO, camera->GetAspectRatio(), allocator);
+				coValue.AddMember(CAMERA_PROJECTION_MATRIX_TYPE, camera->IsPerspective(), allocator);
+				coValue.AddMember(CAMERA_NEAR_DISTANCE, camera->GetNearDist(), allocator);
+				coValue.AddMember(CAMERA_FAR_DISTANCE, camera->GetFarDist(), allocator);
+				coValue.AddMember(CAMERA_FIELD_OF_VIEW, camera->GetFOV(), allocator);
+				coValue.AddMember(CAMERA_IS_MAIN, camera == mainCamera, allocator);
+				}
+
+				// Is it a Noclip Movement Controller?
+				else if (std::shared_ptr<NoclipMovement> noclip = std::dynamic_pointer_cast<NoclipMovement>(co)) {
+				coValue.AddMember(COMPONENT_TYPE, ComponentTypes::NOCLIP_CHAR_CONTROLLER, allocator);
+				coValue.AddMember(NOCLIP_MOVE_SPEED, noclip->moveSpeed, allocator);
+				coValue.AddMember(NOCLIP_LOOK_SPEED, noclip->lookSpeed, allocator);
+				}
+
+				// Is it a Flashlight Controller?
+				else if (std::shared_ptr<FlashlightController> flashlight = std::dynamic_pointer_cast<FlashlightController>(co)) {
+				coValue.AddMember(COMPONENT_TYPE, ComponentTypes::FLASHLIGHT_CONTROLLER, allocator);
 				}
 
 				geComponents.PushBack(coValue, allocator);
@@ -1011,60 +1032,6 @@ void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
 		}
 
 		sceneDocToSave.AddMember(COMPUTE_SHADERS, computeShaderBlock, allocator);
-
-		rapidjson::Value cameraBlock(rapidjson::kArrayType);
-		for (auto ca : globalCameras) {
-			rapidjson::Value caObject(rapidjson::kObjectType);
-			rapidjson::Value caName;
-
-			caObject.AddMember(CAMERA_NAME, caName.SetString(ca->GetName().c_str(), allocator), allocator);
-			caObject.AddMember(CAMERA_ASPECT_RATIO, ca->GetAspectRatio(), allocator);
-			caObject.AddMember(CAMERA_PROJECTION_MATRIX_TYPE, ca->GetProjectionMatrixType(), allocator);
-			caObject.AddMember(CAMERA_TAG, ca->GetTag(), allocator);
-			caObject.AddMember(CAMERA_LOOK_SPEED, ca->GetLookSpeed(), allocator);
-			caObject.AddMember(CAMERA_MOVE_SPEED, ca->GetMoveSpeed(), allocator);
-			caObject.AddMember(CAMERA_ENABLED, ca->GetEnableDisable(), allocator);
-			caObject.AddMember(CAMERA_NEAR_DISTANCE, ca->GetNearDist(), allocator);
-			caObject.AddMember(CAMERA_FAR_DISTANCE, ca->GetFarDist(), allocator);
-			caObject.AddMember(CAMERA_FIELD_OF_VIEW, ca->GetFOV(), allocator);
-
-			rapidjson::Value caTransform(rapidjson::kObjectType);
-			std::shared_ptr<Transform> transform = ca->GetTransform();
-			
-			{
-				// Treat FLOATX as float array[x]
-				rapidjson::Value pos(rapidjson::kArrayType);
-				rapidjson::Value rot(rapidjson::kArrayType);
-				rapidjson::Value scale(rapidjson::kArrayType);
-
-				// I have no idea how to serialize this
-				// I'd need to essentially create a unique id system - GUIDs?
-				rapidjson::Value parent;
-				rapidjson::Value children;
-
-				pos.PushBack(transform->GetLocalPosition().x, allocator);
-				pos.PushBack(transform->GetLocalPosition().y, allocator);
-				pos.PushBack(transform->GetLocalPosition().z, allocator);
-
-				scale.PushBack(transform->GetLocalPosition().x, allocator);
-				scale.PushBack(transform->GetLocalPosition().y, allocator);
-				scale.PushBack(transform->GetLocalPosition().z, allocator);
-
-				rot.PushBack(transform->GetLocalPitchYawRoll().x, allocator);
-				rot.PushBack(transform->GetLocalPitchYawRoll().y, allocator);
-				rot.PushBack(transform->GetLocalPitchYawRoll().z, allocator);
-
-				caTransform.AddMember(TRANSFORM_LOCAL_POSITION, pos, allocator);
-				caTransform.AddMember(TRANSFORM_LOCAL_SCALE, scale, allocator);
-				caTransform.AddMember(TRANSFORM_LOCAL_ROTATION, rot, allocator);
-			}
-
-			caObject.AddMember(CAMERA_TRANSFORM, caTransform, allocator);
-
-			cameraBlock.PushBack(caObject, allocator);
-		}
-
-		sceneDocToSave.AddMember(CAMERAS, cameraBlock, allocator);
 
 		rapidjson::Value skyBlock(rapidjson::kArrayType);
 		for (auto sy : skies) {
@@ -1557,13 +1524,13 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 /// <param name="color">Color of the light</param>
 /// <param name="intensity">Intensity of the light</param>
 /// <returns>Pointer to the new Light component</returns>
-std::shared_ptr<Light> AssetManager::CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 direction, DirectX::XMFLOAT3 color, float intensity)
+std::shared_ptr<Light> AssetManager::CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 color, float intensity)
 {
 	try {
 		SetLoadingAndWait("Lights", name);
 
 		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Light> light = CreateDirectionalLightOnEntity(newEnt, direction, color, intensity);
+		std::shared_ptr<Light> light = CreateDirectionalLightOnEntity(newEnt, color, intensity);
 		return light;
 	}
 	catch (...) {
@@ -1606,13 +1573,13 @@ std::shared_ptr<Light> AssetManager::CreatePointLight(std::string name, float ra
 /// <param name="color">Color of the light</param>
 /// <param name="intensity">Intensity of the light</param>
 /// <returns>Pointer to the new Light component</returns>
-std::shared_ptr<Light> AssetManager::CreateSpotLight(std::string name, DirectX::XMFLOAT3 direction, float range, DirectX::XMFLOAT3 color, float intensity)
+std::shared_ptr<Light> AssetManager::CreateSpotLight(std::string name, float range, DirectX::XMFLOAT3 color, float intensity)
 {
 	try {
 		SetLoadingAndWait("Lights", name);
 
 		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Light> light = CreateSpotLightOnEntity(newEnt, direction, range, color, intensity);
+		std::shared_ptr<Light> light = CreateSpotLightOnEntity(newEnt, range, color, intensity);
 		return light;
 	}
 	catch (...) {
@@ -2001,14 +1968,12 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitterOnEntity(std:
 }
 
 std::shared_ptr<Light> AssetManager::CreateDirectionalLightOnEntity(std::shared_ptr<GameEntity> entityToEdit,
-	DirectX::XMFLOAT3 direction,
 	DirectX::XMFLOAT3 color,
 	float intensity) {
 
 	std::shared_ptr<Light> light = entityToEdit->AddComponent<Light>();
 	if (light != nullptr) {
 		light->SetType(0.0f);
-		light->SetDirection(direction);
 		light->SetColor(color);
 		light->SetIntensity(intensity);
 	}
@@ -2033,7 +1998,6 @@ std::shared_ptr<Light> AssetManager::CreatePointLightOnEntity(std::shared_ptr<Ga
 }
 
 std::shared_ptr<Light> AssetManager::CreateSpotLightOnEntity(std::shared_ptr<GameEntity> entityToEdit,
-	DirectX::XMFLOAT3 direction,
 	float range,
 	DirectX::XMFLOAT3 color,
 	float intensity) {
@@ -2041,7 +2005,6 @@ std::shared_ptr<Light> AssetManager::CreateSpotLightOnEntity(std::shared_ptr<Gam
 	std::shared_ptr<Light> light = entityToEdit->AddComponent<Light>();
 	if (light != nullptr) {
 		light->SetType(2.0f);
-		light->SetDirection(direction);
 		light->SetRange(range);
 		light->SetColor(color);
 		light->SetIntensity(intensity);
@@ -2315,8 +2278,9 @@ void AssetManager::InitializeSkies() {
 void AssetManager::InitializeLights() {
 	try {
 		//white light from the top left
-		std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1, -1, 0), DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 0.7f);
+		std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 0.7f);
 		mainLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 20.0f, -200.0f));
+		mainLight->GetTransform()->Rotate(XM_PIDIV2, XM_PI, 0);
 		mainLight->SetCastsShadows(true);
 
 		//white light from the back
@@ -2325,23 +2289,24 @@ void AssetManager::InitializeLights() {
 		SetLoadingAndWait("Lights", "backLight");
 
 		//red light on the bottom
-		CreateDirectionalLight("BottomLight", DirectX::XMFLOAT3(0, 1, 0), DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f));
+		std::shared_ptr<Light> bottomLight = CreateDirectionalLight("BottomLight", DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f));
+		bottomLight->GetTransform()->Rotate(-XM_PIDIV2, 0, 0);
 
 		SetLoadingAndWait("Lights", "bottomLight");
 
 		//red pointlight in the center
-		std::shared_ptr<Light> bottomLight = CreatePointLight("CenterLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
-		bottomLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
+		std::shared_ptr<Light> centerLight = CreatePointLight("CenterLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
+		centerLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
 
 		SetLoadingAndWait("Lights", "centerLight");
 
 		//flashlight attached to camera +.5z and x
-		std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", DirectX::XMFLOAT3(0, 0, -1), 10.0f);
+		std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", 10.0f);
 		flashlight->GetGameEntity()->AddComponent<FlashlightController>();
 		flashlight->GetTransform()->SetParent(mainCamera->GetTransform());
 		flashlight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f));
 		flashlight->SetCastsShadows(true);
-		flashlight->SetEnabled(false);
+		flashlight->GetGameEntity()->SetEnabled(false);
 
 		SetLoadingAndWait("Lights", "flashLight");
 	}
@@ -2733,6 +2698,11 @@ void AssetManager::SetMainCamera(std::shared_ptr<Camera> newMain)
 
 std::shared_ptr<Camera> AssetManager::GetEditingCamera() {
 	return editingCamera;
+}
+
+void AssetManager::UpdateEditingCamera()
+{
+	editingCamera->GetGameEntity()->PropagateEvent(EntityEventType::Update);
 }
 
 #pragma region buildAssetData

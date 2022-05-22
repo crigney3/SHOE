@@ -24,8 +24,8 @@ cbuffer PerFrame : register(b0)
 {
 	matrix view;
 	matrix projection;
-	matrix shadowViews[64];
-	matrix shadowProjections[64];
+	matrix shadowViews[MAX_LIGHTS];
+	matrix shadowProjections[MAX_LIGHTS];
 	int shadowCount;
 }
 

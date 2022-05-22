@@ -17,26 +17,15 @@ void ShadowProjector::UpdateFieldsByLightType()
 	if (IsEnabled()) {
 		//Directional Light
 		if (boundLight->GetType() == 0.0f) {
-			SetProjectionMatrixType(false);
+			SetIsPerspective(false);
 			SetFarDist(500.0f);
 		}
 		//Spot Light
 		else if (boundLight->GetType() == 2.0f) {
-			SetProjectionMatrixType(true);
+			SetIsPerspective(true);
 			SetFarDist(std::max<float>(boundLight->GetRange(), GetNearDist() + 0.1f));
 		}
 	}
-}
-
-void ShadowProjector::UpdateViewMatrix()
-{
-	XMVECTOR position = XMLoadFloat3(&GetTransform()->GetGlobalPosition());
-
-	DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&boundLight->GetDirection());
-	DirectX::XMVECTOR rot = DirectX::XMLoadFloat4(&GetTransform()->GetGlobalRotation());
-
-	XMMATRIX view = XMMatrixLookToLH(position, DirectX::XMVector3Rotate(dir, rot), XMVectorSet(0, 1, 0, 0));
-	XMStoreFloat4x4(&vMatrix, view);
 }
 
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ShadowProjector::GetSRV()
@@ -78,6 +67,7 @@ void ShadowProjector::OnEnable()
 	}
 	else {
 		UpdateFieldsByLightType();
+		UpdateViewMatrix();
 	}
 }
 
@@ -85,8 +75,10 @@ void ShadowProjector::RegenerateResources()
 {
 	Microsoft::WRL::ComPtr<ID3D11Device> device = AssetManager::GetInstance().GetDevice();
 
-	shadowDSV->Release();
-	shadowSRV->Release();
+	if(shadowDSV != nullptr)
+		shadowDSV->Release();
+	if (shadowSRV != nullptr)
+		shadowSRV->Release();
 
 	D3D11_TEXTURE2D_DESC shadowDesc = {};
 	shadowDesc.Width = projectionWidth;

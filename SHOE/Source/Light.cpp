@@ -11,15 +11,11 @@ std::vector<LightData> Light::lightData = std::vector<LightData>();
 /// <returns>A LightData populated with this frame's data</returns>
 LightData Light::GetData()
 {
-	DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&direction);
-	DirectX::XMVECTOR rot = DirectX::XMLoadFloat4(&GetTransform()->GetGlobalRotation());
-	DirectX::XMFLOAT3 finalFacing;
-	DirectX::XMStoreFloat3(&finalFacing, DirectX::XMVector3Rotate(dir, rot));
 	return LightData{
 		type,
 		color,
 		intensity,
-		finalFacing,
+		GetTransform()->GetForward(),
 		(float)IsEnabled(),
 		GetTransform()->GetGlobalPosition(),
 		range,
@@ -57,7 +53,6 @@ void Light::Start()
 	type = 0.0f;
 	color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
 	intensity = 1.0f;
-	direction = DirectX::XMFLOAT3(1, 0, 0);
 	range = 100.0f;
 	castsShadows = false;
 	shadowProjector = nullptr;
@@ -75,24 +70,14 @@ void Light::OnDestroy()
 	}
 }
 
-void Light::OnMove(DirectX::XMFLOAT3 delta)
-{
-	lightArrayDirty = true;
-}
-
-void Light::OnRotate(DirectX::XMFLOAT3 delta)
+void Light::OnTransform()
 {
 	lightArrayDirty = true;
 	if (shadowProjector != nullptr)
 		shadowProjector->UpdateViewMatrix();
 }
 
-void Light::OnParentMove(std::shared_ptr<GameEntity> parent)
-{
-	lightArrayDirty = true;
-}
-
-void Light::OnParentRotate(std::shared_ptr<GameEntity> parent)
+void Light::OnParentTransform(std::shared_ptr<GameEntity> parent)
 {
 	lightArrayDirty = true;
 	if (shadowProjector != nullptr)
@@ -157,21 +142,6 @@ void Light::SetIntensity(float intensity)
 	}
 }
 
-DirectX::XMFLOAT3 Light::GetDirection()
-{
-	return direction;
-}
-
-void Light::SetDirection(DirectX::XMFLOAT3 direction)
-{
-	if (this->direction.x != direction.x || this->direction.y != direction.y || this->direction.z != direction.z) {
-		this->direction = direction;
-		lightArrayDirty = true;
-		if (shadowProjector != nullptr)
-			shadowProjector->UpdateViewMatrix();
-	}
-}
-
 float Light::GetRange()
 {
 	return range;
@@ -204,6 +174,7 @@ void Light::SetCastsShadows(bool castsShadows)
 			shadowProjector->BindLight(shared_from_this());
 		}
 		shadowProjector->SetEnabled(castsShadows);
+		lightArrayDirty = true;
 	}
 }
 

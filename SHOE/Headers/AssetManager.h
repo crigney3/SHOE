@@ -19,7 +19,6 @@
 #define COMPUTE_SHADERS "cS" // category - only used to fetch actual data
 #define FONTS "fn" // category - only used to fetch actual data
 #define TEXTURE_SAMPLE_STATES "eS" // category - only used to fetch actual data
-#define CAMERAS "ca" // category - only used to fetch actual data
 #define SKIES "s" // category - only used to fetch actual data
 #define SOUNDS "sO" // category - only used to fetch actual data
 #define TERRAIN_MATERIALS "tM" // category - only used to fetch actual data
@@ -38,7 +37,7 @@
 #define LIGHT_ENABLED "lE" // bool
 #define LIGHT_RANGE "lR" // float
 #define LIGHT_COLOR "lC" // float array 4
-#define LIGHT_DIRECTION "lD" // float array 3
+#define LIGHT_CASTS_SHADOWS "lS" // bool
 
 // Mesh Renderer Components:
 #define MESH_OBJECT "mO" // category - only used to fetch actual data
@@ -47,7 +46,6 @@
 #define MATERIAL_COMPONENT_INDEX "aCI" // int
 
 // Mesh Data:
-
 #define MESH_INDEX_COUNT "iC" // int
 #define MESH_MATERIAL_INDEX "mI" // int
 #define MESH_ENABLED "mE" // bool
@@ -109,17 +107,12 @@
 #define COMPUTE_SHADER_OBJECT "cSO" // category - only used to fetch actual data
 
 // Camera Data:
-#define CAMERA_NAME "cN" // string
-#define CAMERA_TRANSFORM "cT" // category - only used to fetch actual data
 #define CAMERA_ASPECT_RATIO "cAR" // float
 #define CAMERA_PROJECTION_MATRIX_TYPE "cPM" // int
-#define CAMERA_TAG "cG" // int
-#define CAMERA_LOOK_SPEED "cLS" // float
-#define CAMERA_MOVE_SPEED "cMS" // float
-#define CAMERA_ENABLED "cE" // bool
 #define CAMERA_NEAR_DISTANCE "cND" // float
 #define CAMERA_FAR_DISTANCE "cFD" // float
 #define CAMERA_FIELD_OF_VIEW "cF" //float
+#define CAMERA_IS_MAIN "cM" // bool
 
 // Sky Data:
 #define SKY_NAME "sN" // string
@@ -163,6 +156,10 @@
 #define PARTICLE_SYSTEM_DESTINATION "pD" //float array 3
 #define PARTICLE_SYSTEM_PARTICLES_PER_SECOND "pPS" //float
 #define PARTICLE_SYSTEM_PARTICLE_LIFETIME "pL" //float
+
+// Noclip Movement Data:
+#define NOCLIP_LOOK_SPEED "cLS" // float
+#define NOCLIP_MOVE_SPEED "cMS" // float
 
 #pragma endregion
 
@@ -320,7 +317,7 @@ private:
 	std::string loadingSceneName;
 
 	DirectX::XMFLOAT3 LoadFloat3(const rapidjson::Value& jsonBlock, const char* memberName);
-	void SaveFloat3();
+	void SaveFloat3(rapidjson::Value jsonObject, const char* memberName, DirectX::XMFLOAT3 vec, rapidjson::MemoryPoolAllocator<>& allocator);
 
 	std::shared_ptr<Camera> editingCamera;
 	std::shared_ptr<Camera> mainCamera;
@@ -372,6 +369,7 @@ public:
 
 	// Camera Tag Functions
 	std::shared_ptr<Camera> GetEditingCamera();
+	void UpdateEditingCamera();
 	std::shared_ptr<Camera> GetMainCamera();
 	void SetMainCamera(std::shared_ptr<Camera> newMain);
 
@@ -393,9 +391,9 @@ public:
 	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::string nameToLoad);
 	std::shared_ptr<Mesh> CreateMesh(std::string id, std::string nameToLoad);
 	std::shared_ptr<Camera> CreateCamera(std::string name, float aspectRatio = 0);
-	std::shared_ptr<Light> CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 direction, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
+	std::shared_ptr<Light> CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Light> CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
-	std::shared_ptr<Light> CreateSpotLight(std::string name, DirectX::XMFLOAT3 direction, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
+	std::shared_ptr<Light> CreateSpotLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Material> CreatePBRMaterial(std::string id,
 											    std::string albedoNameToLoad,
 											    std::string normalNameToLoad,
@@ -452,7 +450,6 @@ public:
 																  std::string textureNameToLoad,
 																  bool isMultiParticle);
 	std::shared_ptr<Light> CreateDirectionalLightOnEntity(std::shared_ptr<GameEntity> entityToEdit,
-														  DirectX::XMFLOAT3 direction,
 														  DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
 														  float intensity = 1.0f);
 	std::shared_ptr<Light> CreatePointLightOnEntity(std::shared_ptr<GameEntity> entityToEdit,
@@ -460,7 +457,6 @@ public:
 													DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
 													float intensity = 1.0f);
 	std::shared_ptr<Light> CreateSpotLightOnEntity(std::shared_ptr<GameEntity> entityToEdit, 
-												   DirectX::XMFLOAT3 direction,
 												   float range,
 												   DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
 												   float intensity = 1.0f);

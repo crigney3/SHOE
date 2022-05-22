@@ -42,8 +42,8 @@ struct VSPerFrameData
 {
     DirectX::XMFLOAT4X4 ViewMatrix;
     DirectX::XMFLOAT4X4 ProjectionMatrix;
-    DirectX::XMFLOAT4X4 ShadowViewMatrices[MAX_SHADOW_PROJECTORS];
-    DirectX::XMFLOAT4X4 ShadowProjectionMatrices[MAX_SHADOW_PROJECTORS];
+    DirectX::XMFLOAT4X4 ShadowViewMatrices[MAX_LIGHTS];
+    DirectX::XMFLOAT4X4 ShadowProjectionMatrices[MAX_LIGHTS];
 };
 
 struct VSPerMaterialData

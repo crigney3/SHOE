@@ -26,7 +26,7 @@ SamplerComparisonState shadowState		: register(s2);
 
 cbuffer ExternalData : register(b0)
 {
-	LightStruct lights[64];
+	LightStruct lights[MAX_LIGHTS];
 	float3 cameraPos;
 	float uvMultNear;
 	float uvMultFar;
@@ -145,6 +145,22 @@ PS_Output main(VertexToPixelNormal input)
 
 	//Calculate shadows
 
+	int currentShadow = 0;
+	for (uint i = 0; i < lightCount; i++) {
+		if (lights[i].enabled) {
+			float shadowAmt = 1.0f;
+			if (lights[i].castsShadows) {
+				float lightDepth = input.shadowPos[currentShadow].z / input.shadowPos[currentShadow].w;
+				float3 shadowUV = float3(input.shadowPos[currentShadow].xy / input.shadowPos[currentShadow].w * 0.5f + 0.5f, currentShadow);
+				shadowUV.y = 1.0f - shadowUV.y;
+				shadowAmt = shadowMaps.SampleCmpLevelZero(shadowState, shadowUV, lightDepth).r;
+				currentShadow++;
+			}
+			totalLighting += calcLightExternal(input, lights[i], specularColorMain, roughnessMain.r, metalMain.r) * shadowAmt;
+		}
+	}
+
+	/*
 	float envLightDepth = input.shadowPos2.z / input.shadowPos2.w;
 
 	float2 envShadowUV = input.shadowPos2.xy / input.shadowPos2.w * 0.5f + 0.5f;
@@ -170,7 +186,7 @@ PS_Output main(VertexToPixelNormal input)
 				totalLighting += calcLightExternal(input, lights[i], specularColorMain, roughnessMain.r, metalMain.r); // *envShadowAmount;
 			}
 		}
-	}
+	}*/
 
 	float3 viewToCam = normalize(cameraPos - input.worldPos);
 	float3 viewRefl = normalize(reflect(-viewToCam, input.normal));

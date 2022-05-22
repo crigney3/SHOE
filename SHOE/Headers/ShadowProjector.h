@@ -10,7 +10,6 @@ class ShadowProjector : public Camera
 public:
 	void BindLight(std::shared_ptr<Light> light);
 	void UpdateFieldsByLightType();
-	void UpdateViewMatrix() override;
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetSRV();
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> GetDSV();

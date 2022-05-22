@@ -16,7 +16,7 @@ void Camera::UpdateViewMatrix()
 void Camera::UpdateProjectionMatrix()
 {
 	XMMATRIX proj;
-	if(projMatrixType) proj = XMMatrixPerspectiveFovLH(this->fov, aspectRatio, this->nearDist, this->farDist);
+	if(isPerspective) proj = XMMatrixPerspectiveFovLH(this->fov, aspectRatio, this->nearDist, this->farDist);
 	else proj = XMMatrixOrthographicLH(10.0f, 10.0f, this->nearDist, this->farDist);
 
 	XMStoreFloat4x4(&projMatrix, proj);
@@ -28,7 +28,7 @@ void Camera::Start()
 	this->farDist = 500.0f;
 	this->nearDist = 0.01f;
 	this->aspectRatio = 1.0f;
-	this->projMatrixType = true;
+	this->isPerspective = true;
 
 	UpdateViewMatrix();
 	UpdateProjectionMatrix();
@@ -66,40 +66,45 @@ float Camera::GetFarDist() {
 	return this->farDist;
 }
 
-void Camera::SetFOV(float fov) {
-	this->fov = fov;
-
-	UpdateProjectionMatrix();
-}
-
-void Camera::SetNearDist(float nearDist) {
-	this->nearDist = nearDist;
-
-	UpdateProjectionMatrix();
-}
-
-void Camera::SetFarDist(float farDist) {
-	this->farDist = farDist;
-
-	UpdateProjectionMatrix();
-}
-
 float Camera::GetAspectRatio() {
 	return this->aspectRatio;
 }
 
+bool Camera::IsPerspective() {
+	return this->isPerspective;
+}
+
+void Camera::SetFOV(float fov) {
+	if (this->fov != fov) {
+		this->fov = fov;
+		UpdateProjectionMatrix();
+	}
+}
+
+void Camera::SetNearDist(float nearDist) {
+	if (this->nearDist != nearDist) {
+		this->nearDist = nearDist;
+		UpdateProjectionMatrix();
+	}
+}
+
+void Camera::SetFarDist(float farDist) {
+	if (this->farDist != farDist) {
+		this->farDist = farDist;
+		UpdateProjectionMatrix();
+	}
+}
+
 void Camera::SetAspectRatio(float newAspectRatio) {
-	this->aspectRatio = newAspectRatio;
-
-	UpdateProjectionMatrix();
+	if (this->aspectRatio != newAspectRatio) {
+		this->aspectRatio = newAspectRatio;
+		UpdateProjectionMatrix();
+	}
 }
 
-bool Camera::GetProjectionMatrixType() {
-	return this->projMatrixType;
-}
-
-void Camera::SetProjectionMatrixType(bool newProjMatrixType) {
-	this->projMatrixType = newProjMatrixType;
-
-	UpdateProjectionMatrix();
+void Camera::SetIsPerspective(bool newProjMatrixType) {
+	if (this->isPerspective != newProjMatrixType) {
+		this->isPerspective = newProjMatrixType;
+		UpdateProjectionMatrix();
+	}
 }

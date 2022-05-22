@@ -19,7 +19,7 @@ SamplerState clampSampler				: register(s1);
 
 cbuffer PerFrame : register(b0)
 {
-	LightStruct lights[64];
+	LightStruct lights[MAX_LIGHTS];
 	float3 cameraPos;
 	uint lightCount;
 	int specIBLTotalMipLevels;

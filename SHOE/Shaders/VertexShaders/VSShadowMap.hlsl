@@ -18,12 +18,16 @@ struct VertexShaderInput
 	float2 uv			: TEXCOORD;
 };
 
-cbuffer ExternalData : register(b0)
+cbuffer perFrame : register(b0)
 {
-	matrix world;
 	matrix view;
 	matrix projection;
 }
+
+cbuffer perObject : register(b1)
+{
+	matrix world;
+};
 
 // --------------------------------------------------------
 // The entry point (main method) for our vertex shader
