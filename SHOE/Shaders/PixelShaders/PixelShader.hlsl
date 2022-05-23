@@ -7,7 +7,7 @@ SamplerState sampleState	: register(s0);
 
 cbuffer ExternalData : register(b0)
 {
-	LightStruct lights[64];
+	LightStruct lights[MAX_LIGHTS];
 	float3 ambientColor;
 	float specularity;
 	float3 cameraPos;

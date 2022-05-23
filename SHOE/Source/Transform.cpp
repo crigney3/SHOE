@@ -281,7 +281,7 @@ void Transform::UpdateVectors()
 	if (!vectorsDirty) return;
 
 	// Update all three vectors
-	XMVECTOR rotationQuat = XMQuaternionRotationRollPitchYawFromVector(XMLoadFloat3(&pitchYawRoll));
+	XMVECTOR rotationQuat = XMLoadFloat4(&GetGlobalRotation());
 	XMStoreFloat3(&up, XMVector3Rotate(XMVectorSet(0, 1, 0, 0), rotationQuat));
 	XMStoreFloat3(&right, XMVector3Rotate(XMVectorSet(1, 0, 0, 0), rotationQuat));
 	XMStoreFloat3(&forward, XMVector3Rotate(XMVectorSet(0, 0, 1, 0), rotationQuat));
@@ -333,7 +333,7 @@ void Transform::AddChild(std::shared_ptr<Transform> child) {
 		childEntities.push_back(child->GetGameEntity());
 		child->parent = shared_from_this();
 
-		child->GetGameEntity()->UpdateHierarchyIsEnabled(GetGameEntity()->GetEnableDisable());
+		child->GetGameEntity()->UpdateHierarchyIsEnabled(GetGameEntity()->GetEnabled());
 	}
 }
 

@@ -51,9 +51,6 @@
     <ClInclude Include="Headers\AssetManager.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\Camera.h">
-      <Filter>Header Files\SHOE-Headers</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\DXCore.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
@@ -152,6 +149,18 @@
     </ClInclude>
     <ClInclude Include="Headers\InputAxis.h">
       <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\NoclipMovement.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\FlashlightController.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\ShadowProjector.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Camera.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -262,9 +271,6 @@
     <ClCompile Include="Source\AssetManager.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Camera.cpp">
-      <Filter>Source Files\SHOE-Source</Filter>
-    </ClCompile>
     <ClCompile Include="Source\DXCore.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
@@ -333,6 +339,18 @@
     </ClCompile>
     <ClCompile Include="Source\InputAxis.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\NoclipMovement.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\FlashlightController.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ShadowProjector.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Camera.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

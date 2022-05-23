@@ -45,35 +45,21 @@ private:
 	void SaveSceneAs();
 
 	// Rendering helper methods
-	void SelectSky();
 	void GenerateEditingUI();
 	std::unique_ptr<Renderer> renderer;
 
-	//Camera pointer
-	std::shared_ptr<Camera> mainCamera;
-
-	//Camera pointers for shadows
-	std::shared_ptr<Camera> flashShadowCamera;
-	std::shared_ptr<Camera> mainShadowCamera;
-
 	// Flashlight checking
-	std::shared_ptr<Light> flashlight;
-	bool flashMenuToggle;
 	bool flickeringEnabled;
-	bool hasFlickered;
-	void Flashlight();
 
 	// GUI control tracking/UI toggles
 	Input& input = Input::GetInstance();
 	bool statsEnabled;
-	bool lightWindowEnabled;
 	bool objWindowEnabled;
 	bool objHierarchyEnabled;
 	bool skyWindowEnabled;
 	bool movingEnabled;
 	bool rtvWindowEnabled;
 	bool soundWindowEnabled;
-	bool camWindowEnabled;
 	bool collidersWindowEnabled;
 
 	// Loading screen info
@@ -85,7 +71,6 @@ private:
 	// Transfer these to static locals
 	// Then add helper functions for setting them?
 	int entityUIIndex;
-	int camUIIndex;
 	int skyUIIndex;
 	DirectX::XMFLOAT3 UIPositionEdit;
 	DirectX::XMFLOAT3 UIRotationEdit;

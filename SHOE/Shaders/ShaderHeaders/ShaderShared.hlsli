@@ -13,6 +13,7 @@ static const float MIN_ROUGHNESS = 0.0000001f; // 6 zeros after decimal
 static const float PI = 3.14159265359f;
 static const float TWO_PI = PI * 2.0f;
 static const float PI_OVER_2 = PI / 2.0f;
+static const int MAX_LIGHTS = 24;
 
 // Lambert diffuse BRDF - Same as the basic lighting diffuse calculation!
 // - NOTE: this function assumes the vectors are already NORMALIZED!
@@ -176,14 +177,13 @@ struct VertexToPixelNormal
 	//  |   Name          Semantic
 	//  |    |                |
 	//  v    v                v
-	float4 position		: SV_POSITION;
-	float4 shadowPos1	: SHADOW_POSITION;
-	float4 shadowPos2	: ENV_SHADOW_POSITION;
-	float4 surfaceColor	: COLOR;
-	float3 normal		: NORMAL;
-	float3 worldPos		: POSITION;
-	float3 tangent		: TANGENT;
-	float2 uv			: TEXCOORD;
+	float4 position				: SV_POSITION;
+	float4 shadowPos[MAX_LIGHTS]: SHADOW_POSITION;
+	float4 surfaceColor			: COLOR;
+	float3 normal				: NORMAL;
+	float3 worldPos				: POSITION;
+	float3 tangent				: TANGENT;
+	float2 uv					: TEXCOORD;
 };
 
 struct VertexToShadow
@@ -216,7 +216,8 @@ struct LightStruct {
 	float enabled;
 	float3 position;
 	float range;
-	float3 padding;
+	float castsShadows;
+	float2 padding;
 };
 
 float calcSpecularity(float3 worldPos, float3 normal, float3 lightDirection, float specularity, float3 cameraPos) {

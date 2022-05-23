@@ -7,40 +7,14 @@
 #include <Windows.h>
 #include <string>
 
-enum CameraType {
-	// Only one camera may be main at a time
-	MAIN,
-	MISC_SHADOW,
-	// Play is also unique
-	PLAY,
-	MISC,
-	CAMERA_TYPE_COUNT
-};
-
-class Camera
+class Camera : public IComponent
 {
 public:
-	Camera(float x,
-		   float y,
-		   float z,
-		   float aspectRatio,
-		   bool projMatrixType,
-		   std::string name = "camera",
-		   CameraType cameraTag = MISC);
-	Camera(DirectX::XMFLOAT3 pos,
-		   float aspectRatio,
-		   bool projMatrixType,
-		   std::string name = "camera",
-		   CameraType cameraTag = MISC);
-	~Camera();
-
 	DirectX::XMFLOAT4X4 GetViewMatrix();
 	DirectX::XMFLOAT4X4 GetProjectionMatrix();
-	std::shared_ptr<Transform> GetTransform();
 
-	void UpdateProjectionMatrix(float aspectRatio, bool type);
+	void UpdateProjectionMatrix();
 	void UpdateViewMatrix();
-	void Update(HWND windowHandle);
 
 	float GetFOV();
 	void SetFOV(float fov);
@@ -51,43 +25,24 @@ public:
 	float GetFarDist();
 	void SetFarDist(float farDist);
 
-	float GetMoveSpeed();
-	void SetMoveSpeed(float moveSpeed);
-
-	float GetLookSpeed();
-	void SetLookSpeed(float lookSpeed);
-
 	float GetAspectRatio();
 	void SetAspectRatio(float newAspectRatio);
 
-	bool GetProjectionMatrixType();
-	void SetProjectionMatrixType(bool newProjMatrixType);
-
-	void SetEnableDisable(bool value);
-	bool GetEnableDisable();
-
-	std::string GetName();
-	void SetName(std::string name);
-
-	CameraType GetTag();
-	void SetTag(CameraType tag);
-
+	bool IsPerspective();
+	void SetIsPerspective(bool newProjMatrixType);
+protected:
+	void Start() override;
 private:
-	std::shared_ptr<Transform> transform;
-	DirectX::XMFLOAT4X4 vMatrix;
 	DirectX::XMFLOAT4X4 projMatrix;
-	POINT previousMousePoint;
+	DirectX::XMFLOAT4X4 vMatrix;
 
 	float fov;
 	float nearDist;
 	float farDist;
-	float moveSpeed;
-	float lookSpeed;
 	float aspectRatio;
-	bool projMatrixType;
+	bool isPerspective;
 
-	bool enabled;
-	std::string name;
-	CameraType tag;
+	void OnTransform() override;
+	void OnParentTransform(std::shared_ptr<GameEntity> parent) override;
 };
 
