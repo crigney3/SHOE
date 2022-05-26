@@ -1123,7 +1123,7 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 			// Background color (Cornflower Blue in this case) for clearing
 			const float color[4] = { 0.0f, 0.0f, 0.1f, 0.0f };
 
-			std::string loadedCategoryString = "Loading " + globalAssets.GetLastLoadedCategory();
+			std::string loadedCategoryString = "Loading " + globalAssets.GetLoadingCategory();
 			std::string loadedObjectString;
 
 			if (globalAssets.GetLoadingException()) {
@@ -1131,14 +1131,14 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 					std::rethrow_exception(globalAssets.GetLoadingException());
 				}
 				catch (const std::exception& e) {
-					loadedObjectString = globalAssets.GetLastLoadedObject() + " Failed to Load! Error is printed to DBG console.";
+					loadedObjectString = globalAssets.GetLoadingObjectName() + " Failed to Load! Error is printed to DBG console.";
 #if defined(DEBUG) || defined(_DEBUG)
 					printf(e.what());
 #endif
 				}
 			}
 			else {
-				loadedObjectString = "Loading Object: " + globalAssets.GetLastLoadedObject();
+				loadedObjectString = "Loading Object: " + globalAssets.GetLoadingObjectName();
 			}
 
 			context->ClearRenderTargetView(backBufferRTV.Get(), color);
@@ -1163,16 +1163,15 @@ void Game::DrawLoadingScreen(AMLoadState loadType) {
 
 			if (loadType == AMLoadState::INITIALIZING) {
 				titleString = "SHOE";
-				DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
 			}
 			else if (loadType == AMLoadState::SCENE_LOAD) {
 				titleString = "Loading '";
 				titleString += globalAssets.GetLoadingSceneName();
 				titleString += "'";
-				DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
 			}
 
 			// Certified conversion moment
+			DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
 			DirectX::XMStoreFloat2(&categoryOrigin, categoryFont->MeasureString(loadedCategoryString.c_str()) / 2.0f);
 			DirectX::XMStoreFloat2(&objectOrigin, objectFont->MeasureString(loadedObjectString.c_str()) / 2.0f);
 

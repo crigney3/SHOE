@@ -189,6 +189,7 @@
     <ClInclude Include="Headers\NoclipMovement.h" />
     <ClInclude Include="Headers\ParticleSystem.h" />
     <ClInclude Include="Headers\Renderer.h" />
+    <ClInclude Include="Headers\SceneManager.h" />
     <ClInclude Include="Headers\ShadowProjector.h" />
     <ClInclude Include="Headers\SimpleShader.h" />
     <ClInclude Include="Headers\Sky.h" />
@@ -399,6 +400,7 @@
     <ClCompile Include="Source\NoclipMovement.cpp" />
     <ClCompile Include="Source\ParticleSystem.cpp" />
     <ClCompile Include="Source\Renderer.cpp" />
+    <ClCompile Include="Source\SceneManager.cpp" />
     <ClCompile Include="Source\ShadowProjector.cpp" />
     <ClCompile Include="Source\SimpleShader.cpp" />
     <ClCompile Include="Source\Sky.cpp" />

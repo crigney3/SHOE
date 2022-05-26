@@ -162,6 +162,9 @@
     <ClInclude Include="Headers\Camera.h">
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\SceneManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\PixelShaders\IBLBrdfLookUpTablePS.hlsl">
@@ -351,6 +354,9 @@
     </ClCompile>
     <ClCompile Include="Source\Camera.cpp">
       <Filter>Source Files\SHOE-Source\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\SceneManager.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

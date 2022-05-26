@@ -9,44 +9,6 @@
 #include "../IMGUI/Headers/imgui_impl_dx11.h"
 #include "Input.h"
 
-#pragma region paths
-
-enum AssetPathIndex {
-	ASSET_MODEL_PATH,
-	ASSET_SCENE_PATH,
-	ASSET_HEIGHTMAP_PATH,
-	ASSET_FONT_PATH,
-	ASSET_PARTICLE_PATH,
-	ASSET_SOUND_PATH,
-	ASSET_TEXTURE_PATH_BASIC,
-	ASSET_TEXTURE_PATH_SKIES,
-	ASSET_TEXTURE_PATH_PBR,
-	ASSET_TEXTURE_PATH_PBR_ALBEDO,
-	ASSET_TEXTURE_PATH_PBR_NORMALS,
-	ASSET_TEXTURE_PATH_PBR_METALNESS,
-	ASSET_TEXTURE_PATH_PBR_ROUGHNESS,
-	ASSET_SHADER_PATH,
-	ASSET_PATH_COUNT
-};
-
-#pragma endregion
-
-// State machine used to track what type of load
-// AssetManager is doing on calling any Create() function
-enum AMLoadState {
-	// Used when SHOE isn't loading
-	NOT_LOADING,
-	// Used when SHOE first loads
-	INITIALIZING,
-	// Used when something calls a Create() function
-	SINGLE_CREATION,
-	// In the future, used for complex asset imports
-	COMPLEX_CREATION,
-	// In the future, used for loading a scene with
-	// a loading screen running parallel
-	SCENE_LOAD
-};
-
 // We can include the correct library files here
 // instead of in Visual Studio settings if we want
 #pragma comment(lib, "d3d11.lib")
