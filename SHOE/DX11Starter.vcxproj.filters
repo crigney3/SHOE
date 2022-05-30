@@ -163,7 +163,10 @@
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
     <ClInclude Include="Headers\SceneManager.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\EngineState.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

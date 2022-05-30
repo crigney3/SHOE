@@ -8,6 +8,7 @@
 #include "rapidjson\writer.h"
 #include <mutex>
 #include "AssetManager.h"
+#include "EngineState.h"
 
 #pragma region saveLoadIdentifiers
 // Saving and loading shorthand identifiers
@@ -27,33 +28,10 @@
 #define SKIES "s" // category - only used to fetch actual data
 #define SOUNDS "sO" // category - only used to fetch actual data
 #define TERRAIN_MATERIALS "tM" // category - only used to fetch actual data
-#define TERRAIN_ENTITIES "tE" // category - only used to fetch actual data
-
-// Entities:
-#define ENTITY_NAME "n" // string
-#define ENTITY_ENABLED "e" // bool
-#define ENTITY_HIERARCHY_ENABLED "hE" // bool
-#define COMPONENT_TYPE "ct" // int
-#define COMPONENTS "cm" // category - only used to fetch actual data
-
-// Light Components:
-#define LIGHT_TYPE "lT" // int
-#define LIGHT_INTENSITY "i" // float
-#define LIGHT_ENABLED "lE" // bool
-#define LIGHT_RANGE "lR" // float
-#define LIGHT_COLOR "lC" // float array 4
-#define LIGHT_CASTS_SHADOWS "lS" // bool
-
-// Mesh Renderer Components:
-#define MESH_OBJECT "mO" // category - only used to fetch actual data
-#define MATERIAL_OBJECT "mA" // category - only used to fetch actual data
-#define MESH_COMPONENT_INDEX "mCI" // int
-#define MATERIAL_COMPONENT_INDEX "aCI" // int
 
 // Mesh Data:
 #define MESH_INDEX_COUNT "iC" // int
 #define MESH_MATERIAL_INDEX "mI" // int
-#define MESH_ENABLED "mE" // bool
 #define MESH_NEEDS_DEPTH_PREPASS "nDP" // bool
 #define MESH_NAME "mN" // string
 #define MESH_FILENAME_KEY "mFK" // string
@@ -61,7 +39,6 @@
 // Material Data:
 #define MAT_UV_TILING "aUT" // float
 #define MAT_NAME "aN" //string
-#define MAT_ENABLED "aE" // bool
 #define MAT_IS_TRANSPARENT "aIT" // bool
 #define MAT_IS_REFRACTIVE "aIR" // bool
 #define MAT_INDEX_OF_REFRACTION "aOR" // float
@@ -93,11 +70,6 @@
 #define FONT_FILENAME_KEY "fFK" // string
 #define FONT_NAME "fN" // string
 
-// Transform Data:
-#define TRANSFORM_LOCAL_POSITION "tLP" // float array 3
-#define TRANSFORM_LOCAL_SCALE "tLS" // float array 3
-#define TRANSFORM_LOCAL_ROTATION "tLR" // float array 3
-
 // Generic Shader Data:
 #define SHADER_NAME "sN" // string
 #define SHADER_FILE_PATH "sK" // string
@@ -111,27 +83,11 @@
 // Compute Shader Data:
 #define COMPUTE_SHADER_OBJECT "cSO" // category - only used to fetch actual data
 
-// Camera Data:
-#define CAMERA_ASPECT_RATIO "cAR" // float
-#define CAMERA_PROJECTION_MATRIX_TYPE "cPM" // int
-#define CAMERA_NEAR_DISTANCE "cND" // float
-#define CAMERA_FAR_DISTANCE "cFD" // float
-#define CAMERA_FIELD_OF_VIEW "cF" //float
-#define CAMERA_IS_MAIN "cM" // bool
-
 // Sky Data:
 #define SKY_NAME "sN" // string
 #define SKY_FILENAME_KEY_TYPE "sFT" // bool
 #define SKY_FILENAME_KEY "sFK" // string
 #define SKY_FILENAME_EXTENSION "sFE" //string
-
-// Collider Data:
-#define COLLIDER_TYPE "cT" // bool
-#define COLLIDER_ENABLED "cE" // bool
-#define COLLIDER_IS_VISIBLE "cIV" // bool
-#define COLLIDER_POSITION_OFFSET "cPO" // float array 3
-#define COLLIDER_SCALE_OFFSET "cOS" // float array 3
-#define COLLIDER_ROTATION_OFFSET "cRO" // float array 3
 
 // Sound Data:
 #define SOUND_FILENAME_KEY "oFK" // string
@@ -140,21 +96,61 @@
 
 // Terrain Material Data:
 #define TERRAIN_MATERIAL_NAME "tN" // string
-#define TERRAIN_MATERIAL_ENABLED "tE" // bool
 #define TERRAIN_MATERIAL_BLEND_MAP_PATH "tBP" // string
 #define TERRAIN_MATERIAL_BLEND_MAP_ENABLED "tBE" // bool
 #define TERRAIN_MATERIAL_MATERIAL_ARRAY "tMA" // array of Materials
 
+// Entities:
+#define ENTITY_NAME "n" // string
+#define ENTITY_ENABLED "e" // bool
+#define COMPONENT_TYPE "ct" // int
+#define COMPONENTS "cm" // category - only used to fetch actual data
+
+// Transform Data:
+#define TRANSFORM_LOCAL_POSITION "tLP" // float array 3
+#define TRANSFORM_LOCAL_SCALE "tLS" // float array 3
+#define TRANSFORM_LOCAL_ROTATION "tLR" // float array 3
+
+//All Components:
+#define COMPONENT_ENABLED "cE" // bool
+
+// Light Components:
+#define LIGHT_TYPE "lT" // int
+#define LIGHT_INTENSITY "i" // float
+#define LIGHT_RANGE "lR" // float
+#define LIGHT_COLOR "lC" // float array 4
+#define LIGHT_CASTS_SHADOWS "lS" // bool
+
+// Mesh Renderer Components:
+#define MESH_OBJECT "mO" // category - only used to fetch actual data
+#define MATERIAL_OBJECT "mA" // category - only used to fetch actual data
+#define MESH_COMPONENT_INDEX "mCI" // int
+#define MATERIAL_COMPONENT_INDEX "aCI" // int
+
+// Collider Data:
+#define COLLIDER_TYPE "cT" // bool
+#define COLLIDER_IS_VISIBLE "cIV" // bool
+#define COLLIDER_POSITION_OFFSET "cPO" // float array 3
+#define COLLIDER_SCALE_OFFSET "cOS" // float array 3
+#define COLLIDER_ROTATION_OFFSET "cRO" // float array 3
+
 // Terrain Data:
 #define TERRAIN_HEIGHTMAP_FILENAME_KEY "hFK" // string
 #define TERRAIN_INDEX_OF_TERRAIN_MATERIAL "hIM" // int
+
+// Camera Data:
+#define CAMERA_ASPECT_RATIO "cAR" // float
+#define CAMERA_PROJECTION_MATRIX_TYPE "cPM" // int
+#define CAMERA_NEAR_DISTANCE "cND" // float
+#define CAMERA_FAR_DISTANCE "cFD" // float
+#define CAMERA_FIELD_OF_VIEW "cF" //float
+#define CAMERA_IS_MAIN "cM" // bool
 
 // Particle System Data:
 #define PARTICLE_SYSTEM_MAX_PARTICLES "pMP" // int
 #define PARTICLE_SYSTEM_FILENAME_KEY "pFK" // string
 #define PARTICLE_SYSTEM_IS_MULTI_PARTICLE "pIP" // bool
 #define PARTICLE_SYSTEM_ADDITIVE_BLEND "pAB" // bool
-#define PARTICLE_SYSTEM_ENABLED "pEN" // bool
 #define PARTICLE_SYSTEM_COLOR_TINT "pCT" // float array 4
 #define PARTICLE_SYSTEM_SCALE "pS" // float
 #define PARTICLE_SYSTEM_SPEED "pE" //float
@@ -188,22 +184,6 @@ enum AssetPathIndex {
 	ASSET_PATH_COUNT
 };
 
-// State machine used to track what type of load
-// AssetManager is doing on calling any Create() function
-enum AMLoadState {
-	// Used when SHOE isn't loading
-	NOT_LOADING,
-	// Used when SHOE first loads
-	INITIALIZING,
-	// Used when something calls a Create() function
-	SINGLE_CREATION,
-	// In the future, used for complex asset imports
-	COMPLEX_CREATION,
-	// In the future, used for loading a scene with
-	// a loading screen running parallel
-	SCENE_LOAD
-};
-
 class SceneManager
 {
 #pragma region Singleton
@@ -231,7 +211,9 @@ private:
 	};
 #pragma endregion
 private:
-	AssetManager& assetManager;
+	AssetManager& assetManager = AssetManager::GetInstance();
+
+	EngineState engineState;
 
 	std::string currentSceneName;
 	std::string loadingSceneName;
@@ -246,25 +228,24 @@ private:
 	// Helper functions for threads
 	void SetLoadingAndWait(std::string category, std::string object);
 	void CaughtLoadError(std::exception_ptr error);
-	AMLoadState assetManagerLoadState;
 	bool singleLoadComplete;
 
 	DirectX::XMFLOAT2 LoadFloat2(const rapidjson::Value& jsonBlock, const char* memberName);
 	DirectX::XMFLOAT3 LoadFloat3(const rapidjson::Value& jsonBlock, const char* memberName);
 	DirectX::XMFLOAT4 LoadFloat4(const rapidjson::Value& jsonBlock, const char* memberName);
-	void SaveFloat2(rapidjson::Value jsonObject, const char* memberName, DirectX::XMFLOAT2 vec, rapidjson::Document sceneDoc);
-	void SaveFloat3(rapidjson::Value jsonObject, const char* memberName, DirectX::XMFLOAT3 vec, rapidjson::Document sceneDoc);
-	void SaveFloat4(rapidjson::Value jsonObject, const char* memberName, DirectX::XMFLOAT4 vec, rapidjson::Document sceneDoc);
+	void SaveFloat2(rapidjson::Value& jsonObject, const char* memberName, DirectX::XMFLOAT2 vec, rapidjson::Document& sceneDoc);
+	void SaveFloat3(rapidjson::Value& jsonObject, const char* memberName, DirectX::XMFLOAT3 vec, rapidjson::Document& sceneDoc);
+	void SaveFloat4(rapidjson::Value& jsonObject, const char* memberName, DirectX::XMFLOAT4 vec, rapidjson::Document& sceneDoc);
 
-	void LoadAssets();
-	void LoadEntities();
+	std::string LoadDeserializedFileName(const rapidjson::Value& jsonBlock, const char* memberName);
 
-	void SaveAssets();
-	void SaveEntities();
+	void LoadAssets(const rapidjson::Value& sceneDoc);
+	void LoadEntities(const rapidjson::Value& sceneDoc);
+
+	void SaveAssets(rapidjson::Document& sceneDocToSave);
+	void SaveEntities(rapidjson::Document& sceneDocToSave);
 public:
 	void Initialize(std::condition_variable* threadNotifier, std::mutex* threadLock);
-
-	std::string GetLoadingSceneName();
 
 	void LoadScene(std::string filepath, std::condition_variable* threadNotifier, std::mutex* threadLock);
 	void SaveScene(std::string filepath, std::string sceneName = "");
@@ -272,9 +253,9 @@ public:
 	void PrePlaySave();
 	void PostPlayLoad();
 
-	std::string GetCurrentSceneName();
-
 	// Loading helper methods for other classes
+	std::string GetLoadingSceneName();
+	std::string GetCurrentSceneName();
 	std::string GetLoadingCategory();
 	std::string GetLoadingObjectName();
 

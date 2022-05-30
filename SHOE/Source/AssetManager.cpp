@@ -64,8 +64,6 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(hwnd);
 
-	CaughtLoadError("Post-Initialization", "Preparing to render");
-
 	//Intentionally not tracked by the asset manager
 	std::shared_ptr<GameEntity> editingCamObj = std::make_shared<GameEntity>("editingCamera");
 	editingCamObj->Initialize();
@@ -73,7 +71,6 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	editingCamera = CreateCameraOnEntity(editingCamObj);
 	editingCamObj->AddComponent<NoclipMovement>();
 
-	this->singleLoadComplete = true;
 	threadNotifier->notify_all();
 }
 #pragma endregion
@@ -82,164 +79,109 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 bool AssetManager::materialSortDirty = false;
 
 FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::string name) {
-	try
-	{
-		SetLoadingAndWait("Sounds", path);
+	FMODUserData* uData = new FMODUserData;
+	FMOD::Sound* sound;
 
-		FMODUserData* uData = new FMODUserData;
-		FMOD::Sound* sound;
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
+	sound = audioInstance.LoadSound(namePath, mode);
 
-		sound = audioInstance.LoadSound(namePath, mode);
+	// Serialize the filename if it's in the right folder
+	std::string assetPathStr = "Assets\\Sounds\\";
 
-		// Serialize the filename if it's in the right folder
-		std::string assetPathStr = "Assets\\Sounds\\";
+	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
+	uData->filenameKey = std::make_shared<std::string>(baseFilename);
+	uData->name = std::make_shared<std::string>(name);
 
-		uData->filenameKey = std::make_shared<std::string>(baseFilename);
-		uData->name = std::make_shared<std::string>(name);
+	// On getUserData, we will receive the whole struct
+	sound->setUserData(uData);
 
-		// On getUserData, we will receive the whole struct
-		sound->setUserData(uData);
+	globalSounds.push_back(sound);
 
-		globalSounds.push_back(sound);
-
-		return sound;
-	}
-	catch (...) {
-		CaughtLoadError("Sounds", path, std::current_exception());
-
-		return NULL;
-	}
+	return sound;
 }
 
 std::shared_ptr<Camera> AssetManager::CreateCamera(std::string name, float aspectRatio) {
-	try {
-		SetLoadingAndWait("Cameras", name);
+	float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	std::shared_ptr<Camera> cam = CreateCameraOnEntity(newEnt, ar);
+	return cam;
 
-		float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Camera> cam = CreateCameraOnEntity(newEnt, ar);
-		return cam;
-	}
-	catch (...) {
-		CaughtLoadError("Camera", name, std::current_exception());
-
-		return NULL;
-	}
-	
 }
 
 std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::string nameToLoad) {
-	try {
-		SetLoadingAndWait("Vertex Shaders", id);
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::shared_ptr<SimpleVertexShader> newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), namePath, id);
 
-		std::shared_ptr<SimpleVertexShader> newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), namePath, id);
+	// Serialize the filename if it's in the right folder
+	std::string assetPathStr = "Assets\\Shaders\\";
 
-		// Serialize the filename if it's in the right folder
-		std::string assetPathStr = "Assets\\Shaders\\";
+	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
+	newVS->SetFileNameKey(baseFilename);
 
-		newVS->SetFileNameKey(baseFilename);
+	vertexShaders.push_back(newVS);
 
-		vertexShaders.push_back(newVS);
-
-		return newVS;
-	}
-	catch (...) {
-		CaughtLoadError("Vertex Shaders", id, std::current_exception());
-
-		return NULL;
-	}
+	return newVS;
 }
 
 std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string id, std::string nameToLoad) {
-	try {
-		SetLoadingAndWait("Pixel Shaders", id);
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::shared_ptr<SimplePixelShader> newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), namePath, id);
 
-		std::shared_ptr<SimplePixelShader> newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), namePath, id);
+	// Serialize the filename if it's in the right folder
+	std::string assetPathStr = "Assets\\Shaders\\";
 
-		// Serialize the filename if it's in the right folder
-		std::string assetPathStr = "Assets\\Shaders\\";
+	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
+	newPS->SetFileNameKey(baseFilename);
 
-		newPS->SetFileNameKey(baseFilename);
+	pixelShaders.push_back(newPS);
 
-		pixelShaders.push_back(newPS);
-
-		return newPS;
-	}
-	catch (...) {
-		CaughtLoadError("Pixel Shaders", id, std::current_exception());
-
-		return NULL;
-	}
+	return newPS;
 }
 
 std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::string nameToLoad) {
-	try {
-		SetLoadingAndWait("Compute Shaders", id);
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::shared_ptr<SimpleComputeShader> newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), namePath.c_str(), id);
 
-		std::shared_ptr<SimpleComputeShader> newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), namePath.c_str(), id);
+	// Serialize the filename if it's in the right folder
+	std::string assetPathStr = "Assets\\Shaders\\";
 
-		// Serialize the filename if it's in the right folder
-		std::string assetPathStr = "Assets\\Shaders\\";
-		
-		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
+	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-		newCS->SetFileNameKey(baseFilename);
+	newCS->SetFileNameKey(baseFilename);
 
-		computeShaders.push_back(newCS);
+	computeShaders.push_back(newCS);
 
-		// Prints the shader to a readable blob
-		/*Microsoft::WRL::ComPtr<ID3DBlob> assembly;
-		Microsoft::WRL::ComPtr<ID3DBlob> binary;
+	// Prints the shader to a readable blob
+	/*Microsoft::WRL::ComPtr<ID3DBlob> assembly;
+	Microsoft::WRL::ComPtr<ID3DBlob> binary;
 
-		binary = newCS->GetShaderBlob();
+	binary = newCS->GetShaderBlob();
 
-		HRESULT hr = D3DDisassemble(
-			binary->GetBufferPointer(),
-			binary->GetBufferSize(),
-			D3D_DISASM_ENABLE_INSTRUCTION_NUMBERING, nullptr,
-			&assembly);
+	HRESULT hr = D3DDisassemble(
+		binary->GetBufferPointer(),
+		binary->GetBufferSize(),
+		D3D_DISASM_ENABLE_INSTRUCTION_NUMBERING, nullptr,
+		&assembly);
 
-		D3DWriteBlobToFile(assembly.Get(), nameToLoad.c_str(), 1);*/
+	D3DWriteBlobToFile(assembly.Get(), nameToLoad.c_str(), 1);*/
 
-		return newCS;
-	}
-	catch (...) {
-		CaughtLoadError("Compute Shaders", id, std::current_exception());
-
-		return NULL;
-	}
+	return newCS;
 }
 
 std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameToLoad) {
-	try {
-		SetLoadingAndWait("Meshes", id);
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, nameToLoad);
+	std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(namePath.c_str(), device, id);
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, nameToLoad);
-		std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(namePath.c_str(), device, id);
+	globalMeshes.push_back(newMesh);
 
-		globalMeshes.push_back(newMesh);
-
-		return newMesh;
-	}
-	catch (...) {
-		CaughtLoadError("Mesh", id, std::current_exception());
-
-		return NULL;
-	}
+	return newMesh;
 }
 
 /// <summary>
@@ -281,18 +223,18 @@ HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL:
 	AssetPathIndex assetPath;
 
 	switch (textureType) {
-		case PBRTextureTypes::ALBEDO:
-			assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
-			break;
-		case PBRTextureTypes::NORMAL:
-			assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
-			break;
-		case PBRTextureTypes::METAL:
-			assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
-			break;
-		case PBRTextureTypes::ROUGH:
-			assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
-			break;
+	case PBRTextureTypes::ALBEDO:
+		assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
+		break;
+	case PBRTextureTypes::NORMAL:
+		assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
+		break;
+	case PBRTextureTypes::METAL:
+		assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
+		break;
+	case PBRTextureTypes::ROUGH:
+		assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
+		break;
 	};
 
 	std::string namePath = GetFullPathToAssetFile(assetPath, nameToLoad);
@@ -310,22 +252,22 @@ void AssetManager::SetMaterialTextureFileKey(std::string textureFilename, std::s
 	std::string directAssetPath;
 
 	switch (textureType) {
-		case PBRTextureTypes::ALBEDO:
-			assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
-			directAssetPath = "Assets\\PBR\\Albedo\\";
-			break;
-		case PBRTextureTypes::NORMAL:
-			assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
-			directAssetPath = "Assets\\PBR\\Normals\\";
-			break;
-		case PBRTextureTypes::METAL:
-			assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
-			directAssetPath = "Assets\\PBR\\Metalness\\";
-			break;
-		case PBRTextureTypes::ROUGH:
-			assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
-			directAssetPath = "Assets\\PBR\\Roughness\\";
-			break;
+	case PBRTextureTypes::ALBEDO:
+		assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
+		directAssetPath = "Assets\\PBR\\Albedo\\";
+		break;
+	case PBRTextureTypes::NORMAL:
+		assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
+		directAssetPath = "Assets\\PBR\\Normals\\";
+		break;
+	case PBRTextureTypes::METAL:
+		assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
+		directAssetPath = "Assets\\PBR\\Metalness\\";
+		break;
+	case PBRTextureTypes::ROUGH:
+		assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
+		directAssetPath = "Assets\\PBR\\Roughness\\";
+		break;
 	};
 
 	std::string namePath = GetFullPathToAssetFile(assetPath, textureFilename);
@@ -334,52 +276,43 @@ void AssetManager::SetMaterialTextureFileKey(std::string textureFilename, std::s
 }
 
 std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
-														  std::string albedoNameToLoad,
-														  std::string normalNameToLoad,
-														  std::string metalnessNameToLoad,
-														  std::string roughnessNameToLoad,
-														  bool addToGlobalList) {
-	try {
-		SetLoadingAndWait("PBR Materials", id);
+	std::string albedoNameToLoad,
+	std::string normalNameToLoad,
+	std::string metalnessNameToLoad,
+	std::string roughnessNameToLoad,
+	bool addToGlobalList) {
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
 
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
+	std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
+	std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
 
-		std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
-		std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
+	LoadPBRTexture(albedoNameToLoad, &albedo, PBRTextureTypes::ALBEDO);
+	LoadPBRTexture(normalNameToLoad, &normals, PBRTextureTypes::NORMAL);
+	LoadPBRTexture(metalnessNameToLoad, &metalness, PBRTextureTypes::METAL);
+	LoadPBRTexture(roughnessNameToLoad, &roughness, PBRTextureTypes::ROUGH);
 
-		LoadPBRTexture(albedoNameToLoad, &albedo, PBRTextureTypes::ALBEDO);
-		LoadPBRTexture(normalNameToLoad, &normals, PBRTextureTypes::NORMAL);
-		LoadPBRTexture(metalnessNameToLoad, &metalness, PBRTextureTypes::METAL);
-		LoadPBRTexture(roughnessNameToLoad, &roughness, PBRTextureTypes::ROUGH);
+	std::shared_ptr<Material> newMat = std::make_shared<Material>(whiteTint,
+		PSNormal,
+		VSNormal,
+		albedo,
+		textureState,
+		clampState,
+		normals,
+		roughness,
+		metalness,
+		id);
 
-		std::shared_ptr<Material> newMat = std::make_shared<Material>(whiteTint,
-			PSNormal,
-			VSNormal,
-			albedo,
-			textureState,
-			clampState,
-			normals,
-			roughness,
-			metalness,
-			id);
+	SetMaterialTextureFileKey(albedoNameToLoad, newMat, PBRTextureTypes::ALBEDO);
+	SetMaterialTextureFileKey(normalNameToLoad, newMat, PBRTextureTypes::NORMAL);
+	SetMaterialTextureFileKey(metalnessNameToLoad, newMat, PBRTextureTypes::METAL);
+	SetMaterialTextureFileKey(roughnessNameToLoad, newMat, PBRTextureTypes::ROUGH);
 
-		SetMaterialTextureFileKey(albedoNameToLoad, newMat, PBRTextureTypes::ALBEDO);
-		SetMaterialTextureFileKey(normalNameToLoad, newMat, PBRTextureTypes::NORMAL);
-		SetMaterialTextureFileKey(metalnessNameToLoad, newMat, PBRTextureTypes::METAL);
-		SetMaterialTextureFileKey(roughnessNameToLoad, newMat, PBRTextureTypes::ROUGH);
+	if (addToGlobalList) globalMaterials.push_back(newMat);
 
-		if (addToGlobalList) globalMaterials.push_back(newMat);
-
-		return newMat;
-	}
-	catch (...) {
-		CaughtLoadError("PBR Material", id, std::current_exception());
-
-		return NULL;
-	}
+	return newMat;
 }
 
 /// <summary>
@@ -389,22 +322,12 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 /// <returns>Pointer to the new GameEntity</returns>
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 {
-	try {
-		// Don't show loading if it's an empty entity
-		//SetLoadingAndWait("Game Entities", name);
+	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(name);
+	newEnt->Initialize();
 
-		std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(name);
-		newEnt->Initialize();
+	globalEntities.push_back(newEnt);
 
-		globalEntities.push_back(newEnt);
-
-		return newEnt;
-	}
-	catch (...) {
-		CaughtLoadError("Game Entities", name, std::current_exception());
-
-		return NULL;
-	}
+	return newEnt;
 }
 
 /// <summary>
@@ -415,22 +338,13 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 /// <param name="name">Name of the GameEntity</param>
 /// <returns>Pointer to the new GameEntity</returns>
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name) {
-	try {
-		SetLoadingAndWait("Game Entities", name + " Components");
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
 
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	std::shared_ptr<MeshRenderer> renderer = newEnt->AddComponent<MeshRenderer>();
+	renderer->SetMesh(mesh);
+	renderer->SetMaterial(mat);
 
-		std::shared_ptr<MeshRenderer> renderer = newEnt->AddComponent<MeshRenderer>();
-		renderer->SetMesh(mesh);
-		renderer->SetMaterial(mat);
-
-		return newEnt;
-	}
-	catch (...) {
-		CaughtLoadError("Game Entities", name + " Components", std::current_exception());
-
-		return NULL;
-	}
+	return newEnt;
 }
 
 /// <summary>
@@ -443,18 +357,9 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 /// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 color, float intensity)
 {
-	try {
-		SetLoadingAndWait("Lights", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Light> light = CreateDirectionalLightOnEntity(newEnt, color, intensity);
-		return light;
-	}
-	catch (...) {
-		CaughtLoadError("Lights", name, std::current_exception());
-
-		return NULL;
-	}
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	std::shared_ptr<Light> light = CreateDirectionalLightOnEntity(newEnt, color, intensity);
+	return light;
 }
 
 /// <summary>
@@ -467,18 +372,9 @@ std::shared_ptr<Light> AssetManager::CreateDirectionalLight(std::string name, Di
 /// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color, float intensity)
 {
-	try {
-		SetLoadingAndWait("Lights", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Light> light = CreatePointLightOnEntity(newEnt, range, color, intensity);
-		return light;
-	}
-	catch (...) {
-		CaughtLoadError("Lights", name, std::current_exception());
-	
-		return NULL;
-	}
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	std::shared_ptr<Light> light = CreatePointLightOnEntity(newEnt, range, color, intensity);
+	return light;
 }
 
 /// <summary>
@@ -492,18 +388,9 @@ std::shared_ptr<Light> AssetManager::CreatePointLight(std::string name, float ra
 /// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreateSpotLight(std::string name, float range, DirectX::XMFLOAT3 color, float intensity)
 {
-	try {
-		SetLoadingAndWait("Lights", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Light> light = CreateSpotLightOnEntity(newEnt, range, color, intensity);
-		return light;
-	}
-	catch (...) {
-		CaughtLoadError("Lights", name, std::current_exception());
-
-		return NULL;
-	}
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	std::shared_ptr<Light> light = CreateSpotLightOnEntity(newEnt, range, color, intensity);
+	return light;
 }
 
 /// <summary>
@@ -512,18 +399,7 @@ std::shared_ptr<Light> AssetManager::CreateSpotLight(std::string name, float ran
 /// <param name="name">Name of the GameEntity</param>
 /// <returns>Pointer to the new Terrain</returns>
 std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::string name) {
-	try {
-		SetLoadingAndWait("Terrain Entities", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-
-		return newEnt->AddComponent<Terrain>();
-	}
-	catch (...) {
-		CaughtLoadError("Terrain Entities", name, std::current_exception());
-
-		return NULL;
-	}
+	return CreateGameEntity(name)->AddComponent<Terrain>();
 }
 
 /// <summary>
@@ -538,25 +414,13 @@ std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::string name) {
 /// <param name="heightScale"></param>
 /// <returns></returns>
 std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(const char* heightmap,
-														   std::shared_ptr<TerrainMaterial> material,
-														   std::string name,
-														   unsigned int mapWidth,
-														   unsigned int mapHeight,
-														   float heightScale) 
+	std::shared_ptr<TerrainMaterial> material,
+	std::string name,
+	unsigned int mapWidth,
+	unsigned int mapHeight,
+	float heightScale)
 {
-	try {
-		SetLoadingAndWait("Terrain Entities", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Terrain> newTerrain = CreateTerrainOnEntity(newEnt, heightmap, material, mapWidth, mapHeight, heightScale);
-
-		return newTerrain;
-	}
-	catch (...) {
-		CaughtLoadError("Terrain Entities", name, std::current_exception());
-
-		return NULL;
-	}
+	return CreateTerrainOnEntity(CreateGameEntity(name), heightmap, material, mapWidth, mapHeight, heightScale);
 }
 
 /// <summary>
@@ -567,28 +431,14 @@ std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(const char* heightmap
 /// <param name="material"></param>
 /// <param name="name"></param>
 /// <returns></returns>
-std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::shared_ptr<Mesh> terrainMesh, 
-														   std::shared_ptr<TerrainMaterial> material, 
-														   std::string name) 
+std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::shared_ptr<Mesh> terrainMesh,
+	std::shared_ptr<TerrainMaterial> material,
+	std::string name)
 {
-	try {
-		SetLoadingAndWait("Terrain Entities", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Terrain> newTerrain = CreateTerrainOnEntity(newEnt, terrainMesh, material);
-
-		return newTerrain;
-	}
-	catch (...) {
-		CaughtLoadError("Terrain Entities", name, std::current_exception());
-
-		return NULL;
-	}
+	return CreateTerrainOnEntity(CreateGameEntity(name), terrainMesh, material);
 }
 
 std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string name, std::vector<std::shared_ptr<Material>> materials, std::string blendMapPath) {
-	SetLoadingAndWait("Terrain Materials", name);
-
 	std::shared_ptr<TerrainMaterial> newTMat = std::make_shared<TerrainMaterial>(name);
 
 	for (auto m : materials) {
@@ -618,13 +468,11 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 }
 
 std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string name,
-																	 std::vector<std::string> texturePaths,
-																	 std::vector<std::string> matNames,
-																	 bool isPBRMat,
-																	 std::string blendMapPath)
+	std::vector<std::string> texturePaths,
+	std::vector<std::string> matNames,
+	bool isPBRMat,
+	std::string blendMapPath)
 {
-	SetLoadingAndWait("Terrain Materials", name);
-
 	std::shared_ptr<TerrainMaterial> newTMat = std::make_shared<TerrainMaterial>(name);
 
 	for (int i = 0; i < matNames.size(); i++) {
@@ -663,67 +511,58 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 }
 
 std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension) {
-	try {
-		SetLoadingAndWait("Skies", name);
+	std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
 
-		std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
+	std::vector<std::shared_ptr<SimplePixelShader>> importantSkyPixelShaders;
+	std::vector<std::shared_ptr<SimpleVertexShader>> importantSkyVertexShaders;
 
-		std::vector<std::shared_ptr<SimplePixelShader>> importantSkyPixelShaders;
-		std::vector<std::shared_ptr<SimpleVertexShader>> importantSkyVertexShaders;
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("SkyPS"));
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("IrradiancePS"));
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("SpecularConvolutionPS"));
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("BRDFLookupTablePS"));
 
-		importantSkyPixelShaders.push_back(GetPixelShaderByName("SkyPS"));
-		importantSkyPixelShaders.push_back(GetPixelShaderByName("IrradiancePS"));
-		importantSkyPixelShaders.push_back(GetPixelShaderByName("SpecularConvolutionPS"));
-		importantSkyPixelShaders.push_back(GetPixelShaderByName("BRDFLookupTablePS"));
+	importantSkyVertexShaders.push_back(GetVertexShaderByName("SkyVS"));
+	importantSkyVertexShaders.push_back(GetVertexShaderByName("FullscreenVS"));
 
-		importantSkyVertexShaders.push_back(GetVertexShaderByName("SkyVS"));
-		importantSkyVertexShaders.push_back(GetVertexShaderByName("FullscreenVS"));
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newSkyTexture;
 
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newSkyTexture;
+	std::string assetPath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
 
-		std::string assetPath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
+	if (fileType) {
+		// Process as 6 textures in a directory
 
-		if (fileType) {
-			// Process as 6 textures in a directory
+		std::wstring skyDirWide;
+		std::wstring fileExtensionW;
+		ISimpleShader::ConvertToWide(assetPath, skyDirWide);
+		ISimpleShader::ConvertToWide(fileExtension, fileExtensionW);
 
-			std::wstring skyDirWide;
-			std::wstring fileExtensionW;
-			ISimpleShader::ConvertToWide(assetPath, skyDirWide);
-			ISimpleShader::ConvertToWide(fileExtension, fileExtensionW);
-
-			newSkyTexture = CreateCubemap((skyDirWide + L"right" + fileExtensionW).c_str(),
-				(skyDirWide + L"left" + fileExtensionW).c_str(),
-				(skyDirWide + L"up" + fileExtensionW).c_str(),
-				(skyDirWide + L"down" + fileExtensionW).c_str(),
-				(skyDirWide + L"forward" + fileExtensionW).c_str(),
-				(skyDirWide + L"back" + fileExtensionW).c_str());
-		}
-		else {
-			// Process as a .dds
-
-			std::wstring skyDDSWide;
-			ISimpleShader::ConvertToWide(assetPath, skyDDSWide);
-
-			CreateDDSTextureFromFile(device.Get(), context.Get(), skyDDSWide.c_str(), nullptr, &newSkyTexture);
-		}
-
-		std::string filenameKey = SerializeFileName("Assets\\Textures\\Skies\\", assetPath);
-
-		std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, newSkyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
-
-		newSky->SetFilenameKeyType(fileType);
-		newSky->SetFilenameKey(filenameKey);
-		newSky->SetFileExtension(fileExtension);
-
-		skies.push_back(newSky);
-
-		return newSky;
+		newSkyTexture = CreateCubemap((skyDirWide + L"right" + fileExtensionW).c_str(),
+			(skyDirWide + L"left" + fileExtensionW).c_str(),
+			(skyDirWide + L"up" + fileExtensionW).c_str(),
+			(skyDirWide + L"down" + fileExtensionW).c_str(),
+			(skyDirWide + L"forward" + fileExtensionW).c_str(),
+			(skyDirWide + L"back" + fileExtensionW).c_str());
 	}
-	catch (...) {
-		CaughtLoadError("Skies", name, std::current_exception());
+	else {
+		// Process as a .dds
 
-		return NULL;
+		std::wstring skyDDSWide;
+		ISimpleShader::ConvertToWide(assetPath, skyDDSWide);
+
+		CreateDDSTextureFromFile(device.Get(), context.Get(), skyDDSWide.c_str(), nullptr, &newSkyTexture);
 	}
+
+	std::string filenameKey = SerializeFileName("Assets\\Textures\\Skies\\", assetPath);
+
+	std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, newSkyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
+
+	newSky->SetFilenameKeyType(fileType);
+	newSky->SetFilenameKey(filenameKey);
+	newSky->SetFileExtension(fileExtension);
+
+	skies.push_back(newSky);
+
+	return newSky;
 }
 
 /// <summary>
@@ -737,19 +576,7 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 	std::string textureNameToLoad,
 	bool isMultiParticle)
 {
-	try {
-		SetLoadingAndWait("Particle Emitter", name);
-
-		std::shared_ptr<GameEntity> emitterEntity = CreateGameEntity(name);
-		std::shared_ptr<ParticleSystem> newEmitter = CreateParticleEmitterOnEntity(emitterEntity, textureNameToLoad, isMultiParticle);
-
-		return newEmitter;
-	}
-	catch (...) {
-		CaughtLoadError("Particle Emitter", name, std::current_exception());
-
-		return NULL;
-	}
+	return CreateParticleEmitterOnEntity(CreateGameEntity(name), textureNameToLoad, isMultiParticle);
 }
 
 /// <summary>
@@ -764,54 +591,29 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 /// <param name="additiveBlendState">Whether to use an additive blend state when rendering</param>
 /// <returns></returns>
 std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string name,
-															 std::string textureNameToLoad,
-															 int maxParticles,
-															 float particleLifeTime,
-															 float particlesPerSecond,
-															 bool isMultiParticle,
-															 bool additiveBlendState) {
-	try {
-		SetLoadingAndWait("Particle Emitter", name);
-
-		std::shared_ptr<GameEntity> emitterEntity = CreateGameEntity(name);
-		std::shared_ptr<ParticleSystem> newEmitter = CreateParticleEmitterOnEntity(emitterEntity, textureNameToLoad, maxParticles, particleLifeTime, particlesPerSecond, isMultiParticle, additiveBlendState);
-
-		return newEmitter;
-	}
-	catch (...) {
-		CaughtLoadError("Particle Emitter", name, std::current_exception());
-
-		return NULL;
-	}
+	std::string textureNameToLoad,
+	int maxParticles,
+	float particleLifeTime,
+	float particlesPerSecond,
+	bool isMultiParticle,
+	bool additiveBlendState) {
+	return CreateParticleEmitterOnEntity(CreateGameEntity(name), textureNameToLoad, maxParticles, particleLifeTime, particlesPerSecond, isMultiParticle, additiveBlendState);
 }
 
 std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::string filePath, bool preInitializing) {
-	try {
-		// If the loading screen fonts aren't loaded, don't trigger
-		// the loading screen.
-		if (!preInitializing) SetLoadingAndWait("Font", name);
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_FONT_PATH, filePath);
+	std::wstring wPathBuf;
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_FONT_PATH, filePath);
-		std::wstring wPathBuf;
+	ISimpleShader::ConvertToWide(namePath, wPathBuf);
 
-		std::string baseFilename = SerializeFileName("Assets\\Fonts\\", namePath);
+	std::shared_ptr<SHOEFont> newFont = std::make_shared<SHOEFont>();
+	newFont->fileNameKey = SerializeFileName("Assets\\Fonts\\", namePath);
+	newFont->name = name;
+	newFont->spritefont = std::make_shared<DirectX::SpriteFont>(device.Get(), wPathBuf.c_str());
 
-		ISimpleShader::ConvertToWide(namePath, wPathBuf);
+	globalFonts.push_back(newFont);
 
-		std::shared_ptr<SHOEFont> newFont = std::make_shared<SHOEFont>();
-		newFont->fileNameKey = baseFilename;
-		newFont->name = name;
-		newFont->spritefont = std::make_shared<DirectX::SpriteFont>(device.Get(), wPathBuf.c_str());
-
-		globalFonts.push_back(newFont);
-
-		return newFont;
-	}
-	catch (...) {
-		if (!preInitializing) CaughtLoadError("Font", name, std::current_exception());
-
-		return NULL;
-	}
+	return newFont;
 }
 #pragma endregion
 
@@ -1050,116 +852,116 @@ void AssetManager::InitializeMaterials() {
 
 	// Make reflective PBR materials
 	CreatePBRMaterial(std::string("reflectiveMetal"),
-					  "BlankAlbedo.png",
-					  "blank_normals.png",
-					  "bronze_metal.png",
-					  "GenericRoughness0.png");
+		"BlankAlbedo.png",
+		"blank_normals.png",
+		"bronze_metal.png",
+		"GenericRoughness0.png");
 
 	CreatePBRMaterial(std::string("reflective"),
-					  "BlankAlbedo.png",
-					  "blank_normals.png",
-					  "wood_metal.png",
-					  "GenericRoughness0.png");
+		"BlankAlbedo.png",
+		"blank_normals.png",
+		"wood_metal.png",
+		"GenericRoughness0.png");
 
 	CreatePBRMaterial(std::string("reflectiveRough"),
-					  "BlankAlbedo.png",
-					  "blank_normals.png",
-					  "wood_metal.png",
-					  "GenericRoughness100.png");
+		"BlankAlbedo.png",
+		"blank_normals.png",
+		"wood_metal.png",
+		"GenericRoughness100.png");
 
 	CreatePBRMaterial(std::string("reflectiveRoughMetal"),
-					  "BlankAlbedo.png",
-					  "blank_normals.png",
-					  "bronze_metal.png",
-					  "GenericRoughness100.png");
+		"BlankAlbedo.png",
+		"blank_normals.png",
+		"bronze_metal.png",
+		"GenericRoughness100.png");
 
 	//Make PBR materials
 	CreatePBRMaterial(std::string("bronzeMat"),
-					  "bronze_albedo.png",
-					  "bronze_normals.png",
-					  "bronze_metal.png",
-					  "bronze_roughness.png")->SetTiling(0.3f);
+		"bronze_albedo.png",
+		"bronze_normals.png",
+		"bronze_metal.png",
+		"bronze_roughness.png")->SetTiling(0.3f);
 
 	CreatePBRMaterial(std::string("cobbleMat"),
-					  "cobblestone_albedo.png",
-					  "cobblestone_normals.png",
-					  "cobblestone_metal.png",
-					  "cobblestone_roughness.png");
+		"cobblestone_albedo.png",
+		"cobblestone_normals.png",
+		"cobblestone_metal.png",
+		"cobblestone_roughness.png");
 
 	CreatePBRMaterial(std::string("largeCobbleMat"),
-					  "cobblestone_albedo.png",
-					  "cobblestone_normals.png",
-					  "cobblestone_metal.png",
-					  "cobblestone_roughness.png")->SetTiling(5.0f);
+		"cobblestone_albedo.png",
+		"cobblestone_normals.png",
+		"cobblestone_metal.png",
+		"cobblestone_roughness.png")->SetTiling(5.0f);
 
 	CreatePBRMaterial(std::string("floorMat"),
-					  "floor_albedo.png",
-					  "floor_normals.png",
-					  "floor_metal.png",
-					  "floor_roughness.png");
+		"floor_albedo.png",
+		"floor_normals.png",
+		"floor_metal.png",
+		"floor_roughness.png");
 
 	CreatePBRMaterial(std::string("terrainFloorMat"),
-					  "floor_albedo.png",
-					  "floor_normals.png",
-					  "floor_metal.png",
-					  "floor_roughness.png")->SetTiling(256.0f);
+		"floor_albedo.png",
+		"floor_normals.png",
+		"floor_metal.png",
+		"floor_roughness.png")->SetTiling(256.0f);
 
 	CreatePBRMaterial(std::string("paintMat"),
-					  "paint_albedo.png",
-					  "paint_normals.png",
-					  "paint_metal.png",
-					  "paint_roughness.png");
+		"paint_albedo.png",
+		"paint_normals.png",
+		"paint_metal.png",
+		"paint_roughness.png");
 
 	CreatePBRMaterial(std::string("largePaintMat"),
-					  "paint_albedo.png",
-					  "paint_normals.png",
-					  "paint_metal.png",
-					  "paint_roughness.png")->SetTiling(5.0f);
+		"paint_albedo.png",
+		"paint_normals.png",
+		"paint_metal.png",
+		"paint_roughness.png")->SetTiling(5.0f);
 
 	CreatePBRMaterial(std::string("roughMat"),
-					  "rough_albedo.png",
-					  "rough_normals.png",
-					  "rough_metal.png",
-					  "rough_roughness.png");
+		"rough_albedo.png",
+		"rough_normals.png",
+		"rough_metal.png",
+		"rough_roughness.png");
 
 	CreatePBRMaterial(std::string("scratchMat"),
-					  "scratched_albedo.png",
-					  "scratched_normals.png",
-					  "scratched_metal.png",
-					  "scratched_roughness.png");
+		"scratched_albedo.png",
+		"scratched_normals.png",
+		"scratched_metal.png",
+		"scratched_roughness.png");
 
 	CreatePBRMaterial(std::string("woodMat"),
-					  "wood_albedo.png",
-					  "wood_normals.png",
-					  "wood_metal.png",
-					  "wood_roughness.png");
+		"wood_albedo.png",
+		"wood_normals.png",
+		"wood_metal.png",
+		"wood_roughness.png");
 
 	CreatePBRMaterial(std::string("refractivePaintMat"),
-					  "paint_albedo.png",
-					  "paint_normals.png",
-					  "paint_metal.png",
-					  "paint_roughness.png")->SetRefractive(true);
+		"paint_albedo.png",
+		"paint_normals.png",
+		"paint_metal.png",
+		"paint_roughness.png")->SetRefractive(true);
 	GetMaterialByName("refractivePaintMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 	CreatePBRMaterial(std::string("refractiveWoodMat"),
-					  "wood_albedo.png",
-					  "wood_normals.png",
-					  "wood_metal.png",
-					  "wood_roughness.png")->SetTransparent(true);
+		"wood_albedo.png",
+		"wood_normals.png",
+		"wood_metal.png",
+		"wood_roughness.png")->SetTransparent(true);
 	GetMaterialByName("refractiveWoodMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 	CreatePBRMaterial(std::string("refractiveRoughMat"),
-					  "rough_albedo.png",
-					  "rough_normals.png",
-					  "rough_metal.png",
-					  "rough_roughness.png")->SetRefractive(true);
+		"rough_albedo.png",
+		"rough_normals.png",
+		"rough_metal.png",
+		"rough_roughness.png")->SetRefractive(true);
 	GetMaterialByName("refractiveRoughMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 	CreatePBRMaterial(std::string("refractiveBronzeMat"),
-					  "bronze_albedo.png",
-					  "bronze_normals.png",
-					  "bronze_metal.png",
-					  "bronze_roughness.png")->SetRefractive(true);
+		"bronze_albedo.png",
+		"bronze_normals.png",
+		"bronze_metal.png",
+		"bronze_roughness.png")->SetRefractive(true);
 	GetMaterialByName("refractiveBronzeMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 }
 
@@ -1193,45 +995,38 @@ void AssetManager::InitializeSkies() {
 }
 
 void AssetManager::InitializeLights() {
-	try {
-		//white light from the top left
-		std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 0.7f);
-		mainLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 20.0f, -200.0f));
-		mainLight->GetTransform()->Rotate(XM_PIDIV2, XM_PI, 0);
-		mainLight->SetCastsShadows(true);
+	//white light from the top left
+	std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 0.7f);
+	mainLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 20.0f, -200.0f));
+	mainLight->GetTransform()->Rotate(XM_PIDIV2, XM_PI, 0);
+	mainLight->SetCastsShadows(true);
 
-		//white light from the back
-		CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, -1));
+	//white light from the back
+	CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, -1));
 
-		SetLoadingAndWait("Lights", "backLight");
+	SetLoadingAndWait("Lights", "backLight");
 
-		//red light on the bottom
-		std::shared_ptr<Light> bottomLight = CreateDirectionalLight("BottomLight", DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f));
-		bottomLight->GetTransform()->Rotate(-XM_PIDIV2, 0, 0);
+	//red light on the bottom
+	std::shared_ptr<Light> bottomLight = CreateDirectionalLight("BottomLight", DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f));
+	bottomLight->GetTransform()->Rotate(-XM_PIDIV2, 0, 0);
 
-		SetLoadingAndWait("Lights", "bottomLight");
+	SetLoadingAndWait("Lights", "bottomLight");
 
-		//red pointlight in the center
-		std::shared_ptr<Light> centerLight = CreatePointLight("CenterLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
-		centerLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
+	//red pointlight in the center
+	std::shared_ptr<Light> centerLight = CreatePointLight("CenterLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
+	centerLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
 
-		SetLoadingAndWait("Lights", "centerLight");
+	SetLoadingAndWait("Lights", "centerLight");
 
-		//flashlight attached to camera +.5z and x
-		std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", 10.0f);
-		flashlight->GetGameEntity()->AddComponent<FlashlightController>();
-		flashlight->GetTransform()->SetParent(mainCamera->GetTransform());
-		flashlight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f));
-		flashlight->SetCastsShadows(true);
-		flashlight->GetGameEntity()->SetEnabled(false);
+	//flashlight attached to camera +.5z and x
+	std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", 10.0f);
+	flashlight->GetGameEntity()->AddComponent<FlashlightController>();
+	flashlight->GetTransform()->SetParent(mainCamera->GetTransform());
+	flashlight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f));
+	flashlight->SetCastsShadows(true);
+	flashlight->GetGameEntity()->SetEnabled(false);
 
-		SetLoadingAndWait("Lights", "flashLight");
-	}
-	catch (...) {
-		CaughtLoadError("Lights", "Unknown Light", std::current_exception());
-
-		return;
-	}
+	SetLoadingAndWait("Lights", "flashLight");
 }
 
 void AssetManager::InitializeTerrainEntities() {
@@ -1242,79 +1037,72 @@ void AssetManager::InitializeTerrainEntities() {
 }
 
 void AssetManager::InitializeTerrainMaterials() {
-	try {
-		globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMaterial>>();
+	globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMaterial>>();
 
-		std::vector<std::shared_ptr<Material>> tMats = std::vector<std::shared_ptr<Material>>();
+	std::vector<std::shared_ptr<Material>> tMats = std::vector<std::shared_ptr<Material>>();
 
-		std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", "forest_floor_albedo.png", "forest_floor_Normal-ogl.png", "wood_metal.png", "forest_floor_Roughness.png");
-		std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", "bog_albedo.png", "bog_normal-ogl.png", "wood_metal.png", "bog_roughness.png");
-		std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", "rocky_dirt1-albedo.png", "rocky_dirt1-normal-ogl.png", "wood_metal.png", "rocky_dirt1_Roughness.png");
+	std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", "forest_floor_albedo.png", "forest_floor_Normal-ogl.png", "wood_metal.png", "forest_floor_Roughness.png");
+	std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", "bog_albedo.png", "bog_normal-ogl.png", "wood_metal.png", "bog_roughness.png");
+	std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", "rocky_dirt1-albedo.png", "rocky_dirt1-normal-ogl.png", "wood_metal.png", "rocky_dirt1_Roughness.png");
 
-		tMats.push_back(forestMat);
-		tMats.push_back(bogMat);
-		tMats.push_back(rockyMat);
+	tMats.push_back(forestMat);
+	tMats.push_back(bogMat);
+	tMats.push_back(rockyMat);
 
-		//Set appropriate tiling
-		forestMat->SetTiling(10.0f);
-		bogMat->SetTiling(10.0f);
+	//Set appropriate tiling
+	forestMat->SetTiling(10.0f);
+	bogMat->SetTiling(10.0f);
 
-		std::shared_ptr<TerrainMaterial> forestTerrainMaterial = CreateTerrainMaterial("Forest Terrain Material", tMats, "blendMap.png");
+	std::shared_ptr<TerrainMaterial> forestTerrainMaterial = CreateTerrainMaterial("Forest Terrain Material", tMats, "blendMap.png");
 
-		tMats.clear();
+	tMats.clear();
 
-		std::vector<std::string> metalPaths;
-		std::vector<std::string> metalNames;
+	std::vector<std::string> metalPaths;
+	std::vector<std::string> metalNames;
 
-		// Must be kept in PBR order!
-		// This sections is only for testing and should be commented on push.
-		// Since these materials already exist, it's quicker and more efficient
-		// to just grab them.
-		std::shared_ptr<TerrainMaterial> industrialTerrainMaterial;
+	// Must be kept in PBR order!
+	// This sections is only for testing and should be commented on push.
+	// Since these materials already exist, it's quicker and more efficient
+	// to just grab them.
+	std::shared_ptr<TerrainMaterial> industrialTerrainMaterial;
 
-		/*metalPaths.push_back("floor_albedo.png");
-		metalPaths.push_back("floor_normals.png");
-		metalPaths.push_back("floor_metal.png");
-		metalPaths.push_back("floor_roughness.png");
+	/*metalPaths.push_back("floor_albedo.png");
+	metalPaths.push_back("floor_normals.png");
+	metalPaths.push_back("floor_metal.png");
+	metalPaths.push_back("floor_roughness.png");
 
-		metalPaths.push_back("cobblestone_albedo.png");
-		metalPaths.push_back("cobblestone_normals.png");
-		metalPaths.push_back("cobblestone_metal.png");
-		metalPaths.push_back("cobblestone_roughness.png");
+	metalPaths.push_back("cobblestone_albedo.png");
+	metalPaths.push_back("cobblestone_normals.png");
+	metalPaths.push_back("cobblestone_metal.png");
+	metalPaths.push_back("cobblestone_roughness.png");
 
-		metalPaths.push_back("rough_albedo.png");
-		metalPaths.push_back("rough_normals.png");
-		metalPaths.push_back("rough_metal.png");
-		metalPaths.push_back("rough_roughness.png");
+	metalPaths.push_back("rough_albedo.png");
+	metalPaths.push_back("rough_normals.png");
+	metalPaths.push_back("rough_metal.png");
+	metalPaths.push_back("rough_roughness.png");
 
-		metalNames.push_back("Floor");
-		metalNames.push_back("Stone");
-		metalNames.push_back("Rough");
+	metalNames.push_back("Floor");
+	metalNames.push_back("Stone");
+	metalNames.push_back("Rough");
 
-		industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", metalPaths, metalNames, true, "blendMap.png");*/
+	industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", metalPaths, metalNames, true, "blendMap.png");*/
 
-		// This is the correct way to create a tMat when the materials are already loaded:
-		tMats.push_back(GetMaterialByName("floorMat"));
-		tMats.push_back(GetMaterialByName("cobbleMat"));
-		tMats.push_back(GetMaterialByName("roughMat"));
+	// This is the correct way to create a tMat when the materials are already loaded:
+	tMats.push_back(GetMaterialByName("floorMat"));
+	tMats.push_back(GetMaterialByName("cobbleMat"));
+	tMats.push_back(GetMaterialByName("roughMat"));
 
-		industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", tMats, "blendMap.png");
+	industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", tMats, "blendMap.png");
 
-		// This is the correct way to load a tMat that doesn't use blend mapping
-		// Note that even with one material, it must be pushed to the vector
-		std::shared_ptr<TerrainMaterial> floorTerrainMaterial;
+	// This is the correct way to load a tMat that doesn't use blend mapping
+	// Note that even with one material, it must be pushed to the vector
+	std::shared_ptr<TerrainMaterial> floorTerrainMaterial;
 
-		tMats.clear();
+	tMats.clear();
 
-		tMats.push_back(GetMaterialByName("terrainFloorMat"));
+	tMats.push_back(GetMaterialByName("terrainFloorMat"));
 
-		floorTerrainMaterial = CreateTerrainMaterial("Floor Terrain Material", tMats);
-	}
-	catch (...) {
-		CaughtLoadError("Terrain Materials", "Unknown Terrain Material", std::current_exception());
-
-		return;
-	}
+	floorTerrainMaterial = CreateTerrainMaterial("Floor Terrain Material", tMats);
 }
 
 void AssetManager::InitializeCameras() {
@@ -1414,7 +1202,7 @@ void AssetManager::InitializeAudio() {
 	audioInstance.Initialize();
 
 	globalSounds = std::vector<FMOD::Sound*>();
-	
+
 	CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_DEFAULT, "piano-a");
 	CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_DEFAULT, "piano-b");
 	CreateSound("PianoNotes/pinkyfinger__piano-bb.wav", FMOD_DEFAULT, "piano-bb");
@@ -1442,8 +1230,6 @@ void AssetManager::InitializeFonts() {
 }
 
 void AssetManager::InitializeIMGUI(HWND hwnd) {
-	SetLoadingAndWait("UI", "Window Initialization");
-
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 
@@ -1471,35 +1257,15 @@ void AssetManager::InitializeColliders() {
 #pragma region addComponent
 
 std::shared_ptr<Collider> AssetManager::AddColliderToGameEntity(OUT std::shared_ptr<GameEntity> entity) {
-	try {
-		SetLoadingAndWait("Colliders", "Generic Collider");
-
-		std::shared_ptr<Collider> c = entity->AddComponent<Collider>();
-
-		return c;
-	}
-	catch (...) {
-		CaughtLoadError("Colliders", "Generic Collider", std::current_exception());
-
-		return nullptr;
-	}
+	return entity->AddComponent<Collider>();
 }
 
 std::shared_ptr<Collider> AssetManager::AddTriggerBoxToGameEntity(OUT std::shared_ptr<GameEntity> entity) {
-	try {
-		SetLoadingAndWait("Colliders", "Generic Trigger Box");
+	std::shared_ptr<Collider> c = entity->AddComponent<Collider>();
 
-		std::shared_ptr<Collider> c = entity->AddComponent<Collider>();
+	c->SetIsTrigger(true);
 
-		c->SetIsTrigger(true);
-
-		return c;
-	}
-	catch (...) {
-		CaughtLoadError("Colliders", "Generic Trigger Box", std::current_exception());
-
-		return nullptr;
-	}
+	return c;
 }
 
 #pragma endregion
@@ -1602,7 +1368,7 @@ std::shared_ptr<TerrainMaterial> AssetManager::GetTerrainMaterialAtID(int id) {
 }
 
 std::shared_ptr<Camera> AssetManager::GetMainCamera() {
-	if(mainCamera != nullptr)
+	if (mainCamera != nullptr)
 		return mainCamera;
 	return editingCamera;
 }
@@ -1959,7 +1725,7 @@ void AssetManager::CreateComplexGeometry() {
 	if (hatModel != NULL) {
 		ProcessComplexModel(hatModel->mRootNode, hatModel, serializedKey, "Hat");
 	}
-	
+
 }
 
 void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey, std::string name) {
@@ -1971,7 +1737,7 @@ void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene, std::
 		std::shared_ptr<GameEntity> newEntity = CreateGameEntity(newMesh, GetMaterialByName("cobbleMat"), mesh->mName.C_Str());;
 
 		globalMeshes.push_back(newMesh);
-		
+
 		newEntity->GetTransform()->SetPosition(0.0f, 3.0f * i, 1.0f);
 		newEntity->GetTransform()->SetScale(0.25f, 0.25f, 0.25f);
 

@@ -50,6 +50,8 @@ enum ComponentTypes {
 	COMPONENT_TYPE_COUNT
 };
 
+class SceneManager; //Predeclaration
+
 class AssetManager
 {
 #pragma region Singleton
@@ -134,6 +136,8 @@ private:
 
 	std::shared_ptr<Camera> editingCamera;
 	std::shared_ptr<Camera> mainCamera;
+
+	friend SceneManager;
 public:
 	static bool materialSortDirty;
 
