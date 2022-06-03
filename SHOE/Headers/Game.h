@@ -15,6 +15,7 @@
 #include "AssetManager.h"
 #include <thread>
 #include <chrono>
+#include "SceneManager.h"
 
 class Game : public DXCore
 {
@@ -30,11 +31,11 @@ public:
 	void Draw();
 
 	// Loading screen info
-	void DrawLoadingScreen(AMLoadState loadType);
 
 private:
 	// Asset Manager instance
 	AssetManager& globalAssets = AssetManager::GetInstance();
+	SceneManager& sceneManager = SceneManager::GetInstance();
 	AudioHandler& audioHandler = AudioHandler::GetInstance();
 
 	// Loading methods for initializing threads.
@@ -45,11 +46,11 @@ private:
 	void SaveSceneAs();
 
 	// Rendering helper methods
+	void DrawInitializingScreen(std::string category);
+	void DrawLoadingScreen();
 	void GenerateEditingUI();
+	void RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity);
 	std::unique_ptr<Renderer> renderer;
-
-	// Flashlight checking
-	bool flickeringEnabled;
 
 	// GUI control tracking/UI toggles
 	Input& input = Input::GetInstance();
@@ -85,11 +86,10 @@ private:
 	//Assimp material pointers
 	std::vector<std::shared_ptr<Material>> specialMaterials;
 
-	// UI Helper/Recursive Functions
-	void RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity);
-
 	//For selecting objects with a click
 	std::shared_ptr<GameEntity> GetClickedEntity();
 	std::shared_ptr<GameEntity> clickedEntityBuffer;
+
+	EngineState engineState;
 };
 

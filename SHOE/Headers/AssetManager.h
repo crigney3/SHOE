@@ -26,6 +26,7 @@
 #include <exception>
 #include "SpriteBatch.h"
 #include "Collider.h"
+#include "EngineState.h"
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 
@@ -49,8 +50,6 @@ enum ComponentTypes {
 	// Must always be the final enum
 	COMPONENT_TYPE_COUNT
 };
-
-class SceneManager; //Predeclaration
 
 class AssetManager
 {
@@ -85,6 +84,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
+	EngineState* engineState;
 
 	std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>> textureSampleStates;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState;
@@ -137,7 +137,7 @@ private:
 	std::shared_ptr<Camera> editingCamera;
 	std::shared_ptr<Camera> mainCamera;
 
-	friend SceneManager;
+	friend class SceneManager;
 public:
 	static bool materialSortDirty;
 
@@ -146,7 +146,7 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11Device> GetDevice();
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> GetContext();
 
-	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock, HWND hwnd);
+	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, HWND hwnd, EngineState* engineState, std::function<void(std::string)> progressListener = {});
 
 	/// <summary>
 	/// Gets the full path to an asset that is inside the Assets/ dir.
@@ -287,6 +287,7 @@ public:
 	void RemoveTerrainMaterial(std::string name);
 	void RemoveTerrainMaterial(int id);
 
+	void CleanAllEntities();
 	void CleanAllVectors();
 
 	// Asset search-by-name methods

@@ -1159,9 +1159,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 	//Render all of the emitters
 	for (std::shared_ptr<ParticleSystem> emitter : ComponentManager::GetAll<ParticleSystem>()) {
-		if (!emitter->IsEnabled() ||
-			globalAssets.GetAMLoadState() == AMLoadState::SCENE_LOAD ||
-			globalAssets.GetAMLoadState() == AMLoadState::INITIALIZING)continue;
+		if (!emitter->IsEnabled()) continue;
 		emitter->Draw(cam, particleBlendAdditive);
 	}
 

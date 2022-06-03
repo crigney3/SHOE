@@ -166,24 +166,6 @@
 
 #define FILE_BUFFER_SIZE 65536
 
-enum AssetPathIndex {
-	ASSET_MODEL_PATH,
-	ASSET_SCENE_PATH,
-	ASSET_HEIGHTMAP_PATH,
-	ASSET_FONT_PATH,
-	ASSET_PARTICLE_PATH,
-	ASSET_SOUND_PATH,
-	ASSET_TEXTURE_PATH_BASIC,
-	ASSET_TEXTURE_PATH_SKIES,
-	ASSET_TEXTURE_PATH_PBR,
-	ASSET_TEXTURE_PATH_PBR_ALBEDO,
-	ASSET_TEXTURE_PATH_PBR_NORMALS,
-	ASSET_TEXTURE_PATH_PBR_METALNESS,
-	ASSET_TEXTURE_PATH_PBR_ROUGHNESS,
-	ASSET_SHADER_PATH,
-	ASSET_PATH_COUNT
-};
-
 class SceneManager
 {
 #pragma region Singleton
@@ -213,7 +195,7 @@ private:
 private:
 	AssetManager& assetManager = AssetManager::GetInstance();
 
-	EngineState engineState;
+	EngineState* engineState;
 
 	std::string currentSceneName;
 	std::string loadingSceneName;
@@ -245,7 +227,7 @@ private:
 	void SaveAssets(rapidjson::Document& sceneDocToSave);
 	void SaveEntities(rapidjson::Document& sceneDocToSave);
 public:
-	void Initialize(std::condition_variable* threadNotifier, std::mutex* threadLock);
+	void Initialize(std::condition_variable* threadNotifier, std::mutex* threadLock, EngineState* engineState);
 
 	void LoadScene(std::string filepath, std::condition_variable* threadNotifier, std::mutex* threadLock);
 	void SaveScene(std::string filepath, std::string sceneName = "");

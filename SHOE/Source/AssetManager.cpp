@@ -23,21 +23,21 @@ AssetManager::~AssetManager() {
 	globalMeshes.clear();
 
 	// And entities
-	for (auto ge : globalEntities) {
-		ge->Release();
-	}
-	globalEntities.clear();
+	CleanAllEntities();
 	editingCamera->GetGameEntity()->Release();
 	editingCamera = nullptr;
 	mainCamera = nullptr;
 }
 
-void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock, HWND hwnd) {
+void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, HWND hwnd, EngineState* engineState, std::function<void(std::string)> progressListener) {
+	*engineState = EngineState::INIT;
+
 	HRESULT hr = CoInitialize(NULL);
 
 	dxInstance = DXCore::DXCoreInstance;
 	this->context = context;
 	this->device = device;
+	this->engineState = engineState;
 
 	textureSampleStates = std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>>();
 
@@ -47,23 +47,34 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	InitializeTextureSampleStates();
 
 	// The rest signal the loading screen each time an object loads
+	progressListener("Shaders");
 	InitializeShaders();
+	progressListener("Materials");
 	InitializeMaterials();
+	progressListener("Meshes");
 	InitializeMeshes();
+	progressListener("Entities");
 	InitializeGameEntities();
+	progressListener("Cameras");
 	InitializeCameras();
+	progressListener("Terrain Materials");
 	InitializeTerrainMaterials();
+	progressListener("Terrain");
 	InitializeTerrainEntities();
+	progressListener("Lights");
 	InitializeLights();
+	progressListener("Colliders");
 	InitializeColliders();
+	progressListener("Emitters");
 	InitializeEmitters();
+	progressListener("Skies");
 	InitializeSkies();
+	progressListener("Audio");
 	InitializeAudio();
+	progressListener("IMGUI");
 	InitializeIMGUI(hwnd);
 
-	// Initialize the input manager with the window's handle
-	Input::GetInstance().Initialize(hwnd);
-
+	progressListener("Editing Camera");
 	//Intentionally not tracked by the asset manager
 	std::shared_ptr<GameEntity> editingCamObj = std::make_shared<GameEntity>("editingCamera");
 	editingCamObj->Initialize();
@@ -71,7 +82,7 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	editingCamera = CreateCameraOnEntity(editingCamObj);
 	editingCamObj->AddComponent<NoclipMovement>();
 
-	threadNotifier->notify_all();
+	*engineState = EngineState::EDITING;
 }
 #pragma endregion
 
@@ -1004,19 +1015,13 @@ void AssetManager::InitializeLights() {
 	//white light from the back
 	CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, -1));
 
-	SetLoadingAndWait("Lights", "backLight");
-
 	//red light on the bottom
 	std::shared_ptr<Light> bottomLight = CreateDirectionalLight("BottomLight", DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f));
 	bottomLight->GetTransform()->Rotate(-XM_PIDIV2, 0, 0);
 
-	SetLoadingAndWait("Lights", "bottomLight");
-
 	//red pointlight in the center
 	std::shared_ptr<Light> centerLight = CreatePointLight("CenterLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
 	centerLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
-
-	SetLoadingAndWait("Lights", "centerLight");
 
 	//flashlight attached to camera +.5z and x
 	std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", 10.0f);
@@ -1025,8 +1030,6 @@ void AssetManager::InitializeLights() {
 	flashlight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f));
 	flashlight->SetCastsShadows(true);
 	flashlight->GetGameEntity()->SetEnabled(false);
-
-	SetLoadingAndWait("Lights", "flashLight");
 }
 
 void AssetManager::InitializeTerrainEntities() {
@@ -1817,10 +1820,16 @@ std::shared_ptr<Mesh> AssetManager::ProcessComplexMesh(aiMesh* mesh, const aiSce
 // Asset Removal methods
 //
 
-void AssetManager::CleanAllVectors() {
+void AssetManager::CleanAllEntities()
+{
 	for (auto ge : globalEntities) {
 		ge->Release();
 	}
+	globalEntities.clear();
+}
+
+void AssetManager::CleanAllVectors() {
+	CleanAllEntities();
 
 	for (int i = 0; i < globalSounds.size(); i++) {
 		FMODUserData* uData;
@@ -1836,7 +1845,6 @@ void AssetManager::CleanAllVectors() {
 	skies.clear();
 	globalMeshes.clear();
 	globalMaterials.clear();
-	globalEntities.clear();
 	globalTerrainMaterials.clear();
 	globalSounds.clear();
 	globalFonts.clear();
