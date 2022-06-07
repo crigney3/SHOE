@@ -4,18 +4,36 @@
 
 SceneManager* SceneManager::instance;
 
+/// <summary>
+/// Gets what object category is currently being loaded in
+/// </summary>
+/// <returns>Name of the category</returns>
 std::string SceneManager::GetLoadingCategory() {
 	return currentLoadCategory;
 }
 
+/// <summary>
+/// Gets what object is currently being loaded in
+/// </summary>
+/// <returns>Name of the object</returns>
 std::string SceneManager::GetLoadingObjectName() {
 	return currentLoadName;
 }
 
+/// <summary>
+/// Gets the current loading exception, should there be one
+/// </summary>
+/// <returns></returns>
 std::exception_ptr SceneManager::GetLoadingException() {
 	return error;
 }
 
+/// <summary>
+/// Loads a Float2 stored in a JSON block
+/// </summary>
+/// <param name="jsonBlock">The block to load from</param>
+/// <param name="memberName">The key to search</param>
+/// <returns>Float2 populated from the given array type</returns>
 DirectX::XMFLOAT2 SceneManager::LoadFloat2(const rapidjson::Value& jsonBlock, const char* memberName)
 {
 	const rapidjson::Value& vecBlock = jsonBlock.FindMember(memberName)->value;
@@ -23,6 +41,12 @@ DirectX::XMFLOAT2 SceneManager::LoadFloat2(const rapidjson::Value& jsonBlock, co
 		vecBlock[1].GetDouble());
 }
 
+/// <summary>
+/// Loads a Float3 stored in a JSON block
+/// </summary>
+/// <param name="jsonBlock">The block to load from</param>
+/// <param name="memberName">The key to search</param>
+/// <returns>Float3 populated from the given array type</returns>
 DirectX::XMFLOAT3 SceneManager::LoadFloat3(const rapidjson::Value& jsonBlock, const char* memberName)
 {
 	const rapidjson::Value& vecBlock = jsonBlock.FindMember(memberName)->value;
@@ -31,6 +55,12 @@ DirectX::XMFLOAT3 SceneManager::LoadFloat3(const rapidjson::Value& jsonBlock, co
 		vecBlock[2].GetDouble());
 }
 
+/// <summary>
+/// Loads a Float3 stored in a JSON block
+/// </summary>
+/// <param name="jsonBlock">The block to load from</param>
+/// <param name="memberName">The key to search</param>
+/// <returns>Float3 populated from the given array type</returns>
 DirectX::XMFLOAT4 SceneManager::LoadFloat4(const rapidjson::Value& jsonBlock, const char* memberName)
 {
 	const rapidjson::Value& vecBlock = jsonBlock.FindMember(memberName)->value;
@@ -40,6 +70,13 @@ DirectX::XMFLOAT4 SceneManager::LoadFloat4(const rapidjson::Value& jsonBlock, co
 		vecBlock[3].GetDouble());
 }
 
+/// <summary>
+/// Stores a Float2 as a float array in JSON
+/// </summary>
+/// <param name="jsonObject">The JSON object to store the data into</param>
+/// <param name="memberName">The key to store the data array under</param>
+/// <param name="vec">The Float2 to store</param>
+/// <param name="sceneDoc">The document the JSON is going into</param>
 void SceneManager::SaveFloat2(rapidjson::Value& jsonObject, const char* memberName, DirectX::XMFLOAT2 vec, rapidjson::Document& sceneDoc)
 {
 	rapidjson::Value float2(rapidjson::kArrayType);
@@ -51,6 +88,13 @@ void SceneManager::SaveFloat2(rapidjson::Value& jsonObject, const char* memberNa
 		sceneDoc.GetAllocator());
 }
 
+/// <summary>
+/// Stores a Float3 as a float array in JSON
+/// </summary>
+/// <param name="jsonObject">The JSON object to store the data into</param>
+/// <param name="memberName">The key to store the data array under</param>
+/// <param name="vec">The Float3 to store</param>
+/// <param name="sceneDoc">The document the JSON is going into</param>
 void SceneManager::SaveFloat3(rapidjson::Value& jsonObject, const char* memberName, DirectX::XMFLOAT3 vec, rapidjson::Document& sceneDoc)
 {
 	rapidjson::Value float3(rapidjson::kArrayType);
@@ -63,6 +107,13 @@ void SceneManager::SaveFloat3(rapidjson::Value& jsonObject, const char* memberNa
 		sceneDoc.GetAllocator());
 }
 
+/// <summary>
+/// Stores a Float4 as a float array in JSON
+/// </summary>
+/// <param name="jsonObject">The JSON object to store the data into</param>
+/// <param name="memberName">The key to store the data array under</param>
+/// <param name="vec">The Float4 to store</param>
+/// <param name="sceneDoc">The document the JSON is going into</param>
 void SceneManager::SaveFloat4(rapidjson::Value& jsonObject, const char* memberName, DirectX::XMFLOAT4 vec, rapidjson::Document& sceneDoc)
 {
 	rapidjson::Value float4(rapidjson::kArrayType);
@@ -76,11 +127,22 @@ void SceneManager::SaveFloat4(rapidjson::Value& jsonObject, const char* memberNa
 		sceneDoc.GetAllocator());
 }
 
+/// <summary>
+/// Deserializes a file name in a JSON block
+/// </summary>
+/// <param name="jsonBlock">JSON block data is in</param>
+/// <param name="memberName">Key of the value to deserialize</param>
+/// <returns>The deserialized file name</returns>
 std::string SceneManager::LoadDeserializedFileName(const rapidjson::Value& jsonBlock, const char* memberName)
 {
 	return assetManager.DeSerializeFileName(jsonBlock.FindMember(memberName)->value.GetString());
 }
 
+/// <summary>
+/// Loads the scene assets
+/// </summary>
+/// <param name="sceneDoc">JSON block to load from</param>
+/// <param name="progressListener">Function to call when progressing to each new object load</param>
 void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<void()> progressListener)
 {
 	// Load order:
@@ -275,6 +337,11 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	}
 }
 
+/// <summary>
+/// Loads the scene entities
+/// </summary>
+/// <param name="sceneDoc">JSON block to load from</param>
+/// <param name="progressListener">Function to call when progressing to each new entity load</param>
 void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<void()> progressListener)
 {
 	currentLoadCategory = "Entities";
@@ -386,6 +453,10 @@ void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<
 	}
 }
 
+/// <summary>
+/// Saves the scene's assets
+/// </summary>
+/// <param name="sceneDocToSave">JSON document to save them into</param>
 void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 {
 	rapidjson::MemoryPoolAllocator<>& allocator = sceneDocToSave.GetAllocator();
@@ -616,6 +687,10 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 	sceneDocToSave.AddMember(TERRAIN_MATERIALS, terrainMatBlock, allocator);
 }
 
+/// <summary>
+/// Saves the scene's entities
+/// </summary>
+/// <param name="sceneDocToSave">JSON document to save them into</param>
 void SceneManager::SaveEntities(rapidjson::Document& sceneDocToSave)
 {
 	rapidjson::MemoryPoolAllocator<>& allocator = sceneDocToSave.GetAllocator();
@@ -765,19 +840,34 @@ void SceneManager::SaveEntities(rapidjson::Document& sceneDocToSave)
 	sceneDocToSave.AddMember(ENTITIES, gameEntityBlock, allocator);
 }
 
+/// <summary>
+/// Allows for tracking of the engine state
+/// </summary>
+/// <param name="engineState">Pointer to the engine state's storage</param>
 void SceneManager::Initialize(EngineState* engineState)
 {
 	this->engineState = engineState;
 }
 
+/// <summary>
+/// Gets the name of the scene that is currently loading
+/// </summary>
 std::string SceneManager::GetLoadingSceneName() {
 	return loadingSceneName;
 }
 
+/// <summary>
+/// Gets the name of the scene that is currently loaded
+/// </summary>
 std::string SceneManager::GetCurrentSceneName() {
 	return currentSceneName;
 }
 
+/// <summary>
+/// Loads a scene from a JSON file
+/// </summary>
+/// <param name="filepath">Path to the file</param>
+/// <param name="progressListener">Function to call when progressing to each new object load</param>
 void SceneManager::LoadScene(std::string filepath, std::function<void()> progressListener) {
 	HRESULT hr = CoInitialize(NULL);
 
@@ -827,6 +917,11 @@ void SceneManager::LoadScene(std::string filepath, std::function<void()> progres
 	}
 }
 
+/// <summary>
+/// Saves a scene to a JSON file
+/// </summary>
+/// <param name="filepath">Path to the file</param>
+/// <param name="sceneName">Name to store the scene under</param>
 void SceneManager::SaveScene(std::string filepath, std::string sceneName) {
 	//Cannot save scene during play
 	if (*engineState == EngineState::PLAY)
@@ -878,6 +973,9 @@ void SceneManager::SaveScene(std::string filepath, std::string sceneName) {
 	}
 }
 
+/// <summary>
+/// Saves the state of the entities in the scene before moving to play state
+/// </summary>
 void SceneManager::PrePlaySave()
 {
 	if (*engineState != EngineState::EDITING)
@@ -921,6 +1019,9 @@ void SceneManager::PrePlaySave()
 	}
 }
 
+/// <summary>
+/// Loads the state of the scene how it was just before moving to play state
+/// </summary>
 void SceneManager::PostPlayLoad()
 {
 	if (*engineState != EngineState::PLAY)
