@@ -160,9 +160,9 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	const rapidjson::Value& fontBlock = sceneDoc[FONTS];
 	assert(fontBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < fontBlock.Size(); i++) {
-		currentLoadName = fontBlock[i].FindMember(FONT_NAME)->value.GetString();
+		currentLoadName = fontBlock[i].FindMember(NAME)->value.GetString();
 		//if(progressListener) progressListener(); NEEDS PRE-LOADED FONTS
-		assetManager.CreateSHOEFont(currentLoadName, LoadDeserializedFileName(fontBlock[i], FONT_FILENAME_KEY));
+		assetManager.CreateSHOEFont(currentLoadName, LoadDeserializedFileName(fontBlock[i], FILENAME_KEY));
 	}
 
 	// Texture Sampler States
@@ -203,7 +203,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	const rapidjson::Value& pixelShaderBlock = sceneDoc[PIXEL_SHADERS];
 	assert(pixelShaderBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < pixelShaderBlock.Size(); i++) {
-		currentLoadName = pixelShaderBlock[i].FindMember(SHADER_NAME)->value.GetString();
+		currentLoadName = pixelShaderBlock[i].FindMember(NAME)->value.GetString();
 		if(progressListener) progressListener();
 		assetManager.CreatePixelShader(currentLoadName, LoadDeserializedFileName(pixelShaderBlock[i], SHADER_FILE_PATH));
 	}
@@ -213,7 +213,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	const rapidjson::Value& vertexShaderBlock = sceneDoc[VERTEX_SHADERS];
 	assert(vertexShaderBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < vertexShaderBlock.Size(); i++) {
-		currentLoadName = vertexShaderBlock[i].FindMember(SHADER_NAME)->value.GetString();
+		currentLoadName = vertexShaderBlock[i].FindMember(NAME)->value.GetString();
 		if(progressListener) progressListener();
 		assetManager.CreateVertexShader(currentLoadName, LoadDeserializedFileName(vertexShaderBlock[i], SHADER_FILE_PATH));
 	}
@@ -223,7 +223,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	const rapidjson::Value& computeShaderBlock = sceneDoc[COMPUTE_SHADERS];
 	assert(computeShaderBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < computeShaderBlock.Size(); i++) {
-		currentLoadName = computeShaderBlock[i].FindMember(SHADER_NAME)->value.GetString();
+		currentLoadName = computeShaderBlock[i].FindMember(NAME)->value.GetString();
 		if(progressListener) progressListener();
 		assetManager.CreateComputeShader(currentLoadName, LoadDeserializedFileName(computeShaderBlock[i], SHADER_FILE_PATH));
 	}
@@ -232,7 +232,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	const rapidjson::Value& materialBlock = sceneDoc[MATERIALS];
 	assert(materialBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < materialBlock.Size(); i++) {
-		currentLoadName = LoadDeserializedFileName(materialBlock[i], MAT_NAME);
+		currentLoadName = LoadDeserializedFileName(materialBlock[i], NAME);
 		if(progressListener) progressListener();
 
 		std::shared_ptr<Material> newMaterial = assetManager.CreatePBRMaterial(
@@ -271,10 +271,10 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	currentLoadCategory = "Meshes";
 	const rapidjson::Value& meshBlock = sceneDoc[MESHES];
 	for (rapidjson::SizeType i = 0; i < meshBlock.Size(); i++) {
-		currentLoadName = meshBlock[i].FindMember(MESH_NAME)->value.GetString();
+		currentLoadName = meshBlock[i].FindMember(NAME)->value.GetString();
 		if(progressListener) progressListener();
 
-		std::shared_ptr<Mesh> newMesh = assetManager.CreateMesh(currentLoadName, LoadDeserializedFileName(meshBlock[i], MESH_FILENAME_KEY));
+		std::shared_ptr<Mesh> newMesh = assetManager.CreateMesh(currentLoadName, LoadDeserializedFileName(meshBlock[i], FILENAME_KEY));
 		newMesh->SetDepthPrePass(meshBlock[i].FindMember(MESH_NEEDS_DEPTH_PREPASS)->value.GetBool());
 		newMesh->SetMaterialIndex(meshBlock[i].FindMember(MESH_MATERIAL_INDEX)->value.GetInt());
 
@@ -288,7 +288,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	assert(terrainMaterialBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < terrainMaterialBlock.Size(); i++) {
 		const rapidjson::Value& tMatInternalBlock = terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_MATERIAL_ARRAY)->value;
-		currentLoadName = terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_NAME)->value.GetString();
+		currentLoadName = terrainMaterialBlock[i].FindMember(NAME)->value.GetString();
 		if(progressListener) progressListener();
 
 		std::vector<std::shared_ptr<Material>> internalMaterials;
@@ -309,9 +309,9 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	const rapidjson::Value& skyBlock = sceneDoc[SKIES];
 	assert(skyBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < skyBlock.Size(); i++) {
-		currentLoadName = skyBlock[i].FindMember(SKY_NAME)->value.GetString();
+		currentLoadName = skyBlock[i].FindMember(NAME)->value.GetString();
 		if(progressListener) progressListener();
-		std::string filename = LoadDeserializedFileName(skyBlock[i], SKY_FILENAME_KEY);
+		std::string filename = LoadDeserializedFileName(skyBlock[i], FILENAME_KEY);
 		bool keyType = skyBlock[i].FindMember(SKY_FILENAME_KEY_TYPE)->value.GetBool();
 
 		if (keyType) {
@@ -330,10 +330,10 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	const rapidjson::Value& soundBlock = sceneDoc[SOUNDS];
 	assert(soundBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < soundBlock.Size(); i++) {
-		currentLoadName = soundBlock[i].FindMember(SOUND_NAME)->value.GetString();
+		currentLoadName = soundBlock[i].FindMember(NAME)->value.GetString();
 		if(progressListener) progressListener();
 		int mode = soundBlock[i].FindMember(SOUND_FMOD_MODE)->value.GetInt();
-		FMOD::Sound* newSound = assetManager.CreateSound(LoadDeserializedFileName(soundBlock[i], SOUND_FILENAME_KEY), mode, currentLoadName);
+		FMOD::Sound* newSound = assetManager.CreateSound(LoadDeserializedFileName(soundBlock[i], FILENAME_KEY), mode, currentLoadName);
 	}
 }
 
@@ -348,11 +348,11 @@ void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<
 	const rapidjson::Value& entityBlock = sceneDoc[ENTITIES];
 	assert(entityBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < entityBlock.Size(); i++) {
-		currentLoadName = entityBlock[i].FindMember(ENTITY_NAME)->value.GetString();
+		currentLoadName = entityBlock[i].FindMember(NAME)->value.GetString();
 		if(progressListener) progressListener();
 
 		std::shared_ptr<GameEntity> newEnt = assetManager.CreateGameEntity(currentLoadName);
-		newEnt->SetEnabled(entityBlock[i].FindMember(ENTITY_ENABLED)->value.GetBool());
+		newEnt->SetEnabled(entityBlock[i].FindMember(ENABLED)->value.GetBool());
 
 		newEnt->GetTransform()->SetPosition(LoadFloat3(entityBlock[i], TRANSFORM_LOCAL_POSITION));
 		newEnt->GetTransform()->SetRotation(LoadFloat3(entityBlock[i], TRANSFORM_LOCAL_ROTATION));
@@ -365,7 +365,7 @@ void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<
 			if (componentType == ComponentTypes::COLLIDER) {
 				std::shared_ptr<Collider> collider = newEnt->AddComponent<Collider>();
 
-				collider->SetEnabled(componentBlock[i].FindMember(COMPONENT_ENABLED)->value.GetBool());
+				collider->SetEnabled(componentBlock[i].FindMember(ENABLED)->value.GetBool());
 				collider->SetVisible(componentBlock[i].FindMember(COLLIDER_IS_VISIBLE)->value.GetBool());
 				collider->SetIsTrigger(componentBlock[i].FindMember(COLLIDER_TYPE)->value.GetBool());
 
@@ -376,10 +376,10 @@ void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<
 			else if (componentType == ComponentTypes::TERRAIN) {
 				std::shared_ptr<TerrainMaterial> tMat = assetManager.GetTerrainMaterialAtID(componentBlock[i].FindMember(TERRAIN_INDEX_OF_TERRAIN_MATERIAL)->value.GetInt());
 
-				assetManager.CreateTerrainOnEntity(newEnt, LoadDeserializedFileName(componentBlock[i], TERRAIN_HEIGHTMAP_FILENAME_KEY).c_str(), tMat)->SetEnabled(componentBlock[i].FindMember(COMPONENT_ENABLED)->value.GetBool());
+				assetManager.CreateTerrainOnEntity(newEnt, LoadDeserializedFileName(componentBlock[i], FILENAME_KEY).c_str(), tMat)->SetEnabled(componentBlock[i].FindMember(ENABLED)->value.GetBool());
 			}
 			else if (componentType == ComponentTypes::PARTICLE_SYSTEM) {
-				std::string filename = LoadDeserializedFileName(componentBlock[i], PARTICLE_SYSTEM_FILENAME_KEY);
+				std::string filename = LoadDeserializedFileName(componentBlock[i], FILENAME_KEY);
 				int maxParticles = componentBlock[i].FindMember(PARTICLE_SYSTEM_MAX_PARTICLES)->value.GetInt();
 				bool blendState = componentBlock[i].FindMember(PARTICLE_SYSTEM_ADDITIVE_BLEND)->value.GetBool();
 				bool isMultiParticle = componentBlock[i].FindMember(PARTICLE_SYSTEM_IS_MULTI_PARTICLE)->value.GetBool();
@@ -391,7 +391,7 @@ void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<
 				newParticles->SetScale(componentBlock[i].FindMember(PARTICLE_SYSTEM_SCALE)->value.GetDouble());
 				newParticles->SetSpeed(componentBlock[i].FindMember(PARTICLE_SYSTEM_SPEED)->value.GetDouble());
 				newParticles->SetDestination(LoadFloat3(componentBlock[i], PARTICLE_SYSTEM_DESTINATION));
-				bool enabled = componentBlock[i].FindMember(COMPONENT_ENABLED)->value.GetBool();
+				bool enabled = componentBlock[i].FindMember(ENABLED)->value.GetBool();
 
 				newParticles->SetColorTint(LoadFloat4(componentBlock[i], PARTICLE_SYSTEM_COLOR_TINT));
 
@@ -418,14 +418,14 @@ void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<
 				else {
 					// Unrecognized light type, do nothing
 				}
-				light->SetEnabled(componentBlock[i].FindMember(COMPONENT_ENABLED)->value.GetBool());
+				light->SetEnabled(componentBlock[i].FindMember(ENABLED)->value.GetBool());
 				light->SetCastsShadows(componentBlock[i].FindMember(LIGHT_CASTS_SHADOWS)->value.GetBool());
 			}
 			else if (componentType == ComponentTypes::MESH_RENDERER) {
 				std::shared_ptr<MeshRenderer> mRenderer = newEnt->AddComponent<MeshRenderer>();
 				mRenderer->SetMaterial(assetManager.GetMaterialAtID(componentBlock[i].FindMember(MATERIAL_COMPONENT_INDEX)->value.GetInt()));
 				mRenderer->SetMesh(assetManager.GetMeshAtID(componentBlock[i].FindMember(MESH_COMPONENT_INDEX)->value.GetInt()));
-				mRenderer->SetEnabled(componentBlock[i].FindMember(COMPONENT_ENABLED)->value.GetBool());
+				mRenderer->SetEnabled(componentBlock[i].FindMember(ENABLED)->value.GetBool());
 			}
 			else if (componentType == ComponentTypes::CAMERA) {
 				std::shared_ptr<Camera> loadedCam = assetManager.CreateCameraOnEntity(newEnt, componentBlock[i].FindMember(CAMERA_ASPECT_RATIO)->value.GetDouble());
@@ -435,16 +435,16 @@ void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<
 				loadedCam->SetFOV(componentBlock[i].FindMember(CAMERA_FIELD_OF_VIEW)->value.GetDouble());
 				if (componentBlock[i].FindMember(CAMERA_IS_MAIN)->value.GetBool())
 					assetManager.SetMainCamera(loadedCam);
-				loadedCam->SetEnabled(componentBlock[i].FindMember(COMPONENT_ENABLED)->value.GetBool());
+				loadedCam->SetEnabled(componentBlock[i].FindMember(ENABLED)->value.GetBool());
 			}
 			else if (componentType == ComponentTypes::NOCLIP_CHAR_CONTROLLER) {
 				std::shared_ptr<NoclipMovement> ncMovement = newEnt->AddComponent<NoclipMovement>();
 				ncMovement->moveSpeed = componentBlock[i].FindMember(NOCLIP_MOVE_SPEED)->value.GetDouble();
 				ncMovement->lookSpeed = componentBlock[i].FindMember(NOCLIP_LOOK_SPEED)->value.GetDouble();
-				ncMovement->SetEnabled(componentBlock[i].FindMember(COMPONENT_ENABLED)->value.GetBool());
+				ncMovement->SetEnabled(componentBlock[i].FindMember(ENABLED)->value.GetBool());
 			}
 			else if (componentType == ComponentTypes::FLASHLIGHT_CONTROLLER) {
-				newEnt->AddComponent<FlashlightController>()->SetEnabled(componentBlock[i].FindMember(COMPONENT_ENABLED)->value.GetBool());
+				newEnt->AddComponent<FlashlightController>()->SetEnabled(componentBlock[i].FindMember(ENABLED)->value.GetBool());
 			}
 			else {
 				// Unkown Component Type, do nothing
@@ -476,8 +476,8 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 		meshValue.AddMember(MESH_MATERIAL_INDEX, me->GetMaterialIndex(), allocator);
 		meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, me->GetDepthPrePass(), allocator); 
 		
-		meshValue.AddMember(MESH_NAME, rapidjson::Value().SetString(me->GetName().c_str(), allocator), allocator);
-		meshValue.AddMember(MESH_FILENAME_KEY, rapidjson::Value().SetString(me->GetFileNameKey().c_str(), allocator), allocator);
+		meshValue.AddMember(NAME, rapidjson::Value().SetString(me->GetName().c_str(), allocator), allocator);
+		meshValue.AddMember(FILENAME_KEY, rapidjson::Value().SetString(me->GetFileNameKey().c_str(), allocator), allocator);
 
 		meshBlock.PushBack(meshValue, allocator);
 	}
@@ -498,7 +498,7 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 		matValue.AddMember(MAT_PIXEL_SHADER, assetManager.GetPixelShaderIDByPointer(mat->GetPixShader()), allocator);
 		matValue.AddMember(MAT_VERTEX_SHADER, assetManager.GetVertexShaderIDByPointer(mat->GetVertShader()), allocator);
 
-		matValue.AddMember(MAT_NAME, rapidjson::Value().SetString(mat->GetName().c_str(), allocator), allocator);
+		matValue.AddMember(NAME, rapidjson::Value().SetString(mat->GetName().c_str(), allocator), allocator);
 		matValue.AddMember(MAT_TEXTURE_OR_ALBEDO_MAP, rapidjson::Value().SetString(mat->GetTextureFilenameKey(PBRTextureTypes::ALBEDO).c_str(), allocator), allocator);
 		matValue.AddMember(MAT_NORMAL_MAP, rapidjson::Value().SetString(mat->GetTextureFilenameKey(PBRTextureTypes::NORMAL).c_str(), allocator), allocator);
 		matValue.AddMember(MAT_METAL_MAP, rapidjson::Value().SetString(mat->GetTextureFilenameKey(PBRTextureTypes::METAL).c_str(), allocator), allocator);
@@ -539,8 +539,8 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 	for (auto font : assetManager.globalFonts) {
 		rapidjson::Value fontObject(rapidjson::kObjectType);
 
-		fontObject.AddMember(FONT_FILENAME_KEY, rapidjson::Value().SetString(font->fileNameKey.c_str(), allocator), allocator);
-		fontObject.AddMember(FONT_NAME, rapidjson::Value().SetString(font->name.c_str(), allocator), allocator);
+		fontObject.AddMember(FILENAME_KEY, rapidjson::Value().SetString(font->fileNameKey.c_str(), allocator), allocator);
+		fontObject.AddMember(NAME, rapidjson::Value().SetString(font->name.c_str(), allocator), allocator);
 
 		fontBlock.PushBack(fontObject, allocator);
 	}
@@ -582,7 +582,7 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 	for (auto vs : assetManager.vertexShaders) {
 		rapidjson::Value vsObject(rapidjson::kObjectType);
 
-		vsObject.AddMember(SHADER_NAME, rapidjson::Value().SetString(vs->GetName().c_str(), allocator), allocator);
+		vsObject.AddMember(NAME, rapidjson::Value().SetString(vs->GetName().c_str(), allocator), allocator);
 		vsObject.AddMember(SHADER_FILE_PATH, rapidjson::Value().SetString(vs->GetFileNameKey().c_str(), allocator), allocator);
 
 		vertexShaderBlock.PushBack(vsObject, allocator);
@@ -594,7 +594,7 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 	for (auto ps : assetManager.pixelShaders) {
 		rapidjson::Value psObject(rapidjson::kObjectType);
 
-		psObject.AddMember(SHADER_NAME, rapidjson::Value().SetString(ps->GetName().c_str(), allocator), allocator);
+		psObject.AddMember(NAME, rapidjson::Value().SetString(ps->GetName().c_str(), allocator), allocator);
 		psObject.AddMember(SHADER_FILE_PATH, rapidjson::Value().SetString(ps->GetFileNameKey().c_str(), allocator), allocator);
 
 		pixelShaderBlock.PushBack(psObject, allocator);
@@ -606,7 +606,7 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 	for (auto cs : assetManager.computeShaders) {
 		rapidjson::Value csObject(rapidjson::kObjectType);
 
-		csObject.AddMember(SHADER_NAME, rapidjson::Value().SetString(cs->GetName().c_str(), allocator), allocator);
+		csObject.AddMember(NAME, rapidjson::Value().SetString(cs->GetName().c_str(), allocator), allocator);
 		csObject.AddMember(SHADER_FILE_PATH, rapidjson::Value().SetString(cs->GetFileNameKey().c_str(), allocator), allocator);
 
 		computeShaderBlock.PushBack(csObject, allocator);
@@ -618,9 +618,9 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 	for (auto sy : assetManager.skies) {
 		rapidjson::Value skyObject(rapidjson::kObjectType);
 
-		skyObject.AddMember(SKY_NAME, rapidjson::Value().SetString(sy->GetName().c_str(), allocator), allocator);
+		skyObject.AddMember(NAME, rapidjson::Value().SetString(sy->GetName().c_str(), allocator), allocator);
 		skyObject.AddMember(SKY_FILENAME_KEY_TYPE, sy->GetFilenameKeyType(), allocator);
-		skyObject.AddMember(SKY_FILENAME_KEY, rapidjson::Value().SetString(sy->GetFilenameKey().c_str(), allocator), allocator);
+		skyObject.AddMember(FILENAME_KEY, rapidjson::Value().SetString(sy->GetFilenameKey().c_str(), allocator), allocator);
 		skyObject.AddMember(SKY_FILENAME_EXTENSION, rapidjson::Value().SetString(sy->GetFileExtension().c_str(), allocator), allocator);
 
 		skyBlock.PushBack(skyObject, allocator);
@@ -650,8 +650,8 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 		}
 #endif
 
-		soundObject.AddMember(SOUND_FILENAME_KEY, rapidjson::Value().SetString(uData->filenameKey->c_str(), allocator), allocator);
-		soundObject.AddMember(SOUND_NAME, rapidjson::Value().SetString(uData->name->c_str(), allocator), allocator);
+		soundObject.AddMember(FILENAME_KEY, rapidjson::Value().SetString(uData->filenameKey->c_str(), allocator), allocator);
+		soundObject.AddMember(NAME, rapidjson::Value().SetString(uData->name->c_str(), allocator), allocator);
 		soundObject.AddMember(SOUND_FMOD_MODE, sMode, allocator);
 
 		soundBlock.PushBack(soundObject, allocator);
@@ -664,7 +664,7 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 		rapidjson::Value terrainMatObj(rapidjson::kObjectType);
 
 		terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_ENABLED, tm->GetUsingBlendMap(), allocator);
-		terrainMatObj.AddMember(TERRAIN_MATERIAL_NAME, rapidjson::Value().SetString(tm->GetName().c_str(), allocator), allocator);
+		terrainMatObj.AddMember(NAME, rapidjson::Value().SetString(tm->GetName().c_str(), allocator), allocator);
 		terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_PATH, rapidjson::Value().SetString(tm->GetBlendMapFilenameKey().c_str(), allocator), allocator);
 
 		// The internal materials are already tracked as regular materials,
@@ -702,13 +702,13 @@ void SceneManager::SaveEntities(rapidjson::Document& sceneDocToSave)
 		// First add entity-level types
 		rapidjson::Value eName;
 		eName.SetString(ge->GetName().c_str(), allocator);
-		geValue.AddMember(ENTITY_NAME, eName, allocator);
-		geValue.AddMember(ENTITY_ENABLED, ge->GetEnabled(), allocator);
+		geValue.AddMember(NAME, eName, allocator);
+		geValue.AddMember(ENABLED, ge->GetEnabled(), allocator);
 
 		rapidjson::Value geComponents(rapidjson::kArrayType);
 		rapidjson::Value coValue(rapidjson::kObjectType);
 		for (auto co : ge->GetAllComponents()) {
-			coValue.AddMember(COMPONENT_ENABLED, co->IsLocallyEnabled(), allocator);
+			coValue.AddMember(ENABLED, co->IsLocallyEnabled(), allocator);
 
 			// Is it a Light?
 			if (std::shared_ptr<Light> light = std::dynamic_pointer_cast<Light>(co)) {
@@ -738,7 +738,7 @@ void SceneManager::SaveEntities(rapidjson::Document& sceneDocToSave)
 			else if (std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(co)) {
 				coValue.AddMember(COMPONENT_TYPE, ComponentTypes::TERRAIN, allocator);
 
-				coValue.AddMember(TERRAIN_HEIGHTMAP_FILENAME_KEY, rapidjson::Value().SetString(terrain->GetMesh()->GetFileNameKey().c_str(), allocator), allocator);
+				coValue.AddMember(FILENAME_KEY, rapidjson::Value().SetString(terrain->GetMesh()->GetFileNameKey().c_str(), allocator), allocator);
 
 				int index;
 				for (index = 0; index < assetManager.globalTerrainMaterials.size(); index++) {
@@ -762,7 +762,7 @@ void SceneManager::SaveEntities(rapidjson::Document& sceneDocToSave)
 				SaveFloat3(coValue, PARTICLE_SYSTEM_DESTINATION, ps->GetDestination(), sceneDocToSave);
 				SaveFloat4(coValue, PARTICLE_SYSTEM_COLOR_TINT, ps->GetColorTint(), sceneDocToSave);
 
-				coValue.AddMember(PARTICLE_SYSTEM_FILENAME_KEY, rapidjson::Value().SetString(ps->GetFilenameKey().c_str(), allocator), allocator);
+				coValue.AddMember(FILENAME_KEY, rapidjson::Value().SetString(ps->GetFilenameKey().c_str(), allocator), allocator);
 			}
 
 			// Is it a MeshRenderer?
@@ -894,7 +894,7 @@ void SceneManager::LoadScene(std::string filepath, std::function<void()> progres
 		assert(sceneDoc[VALID_SHOE_SCENE].GetBool());
 
 		// Get the scene name for loading purposes
-		loadingSceneName = sceneDoc[SCENE_NAME].GetString();
+		loadingSceneName = sceneDoc[NAME].GetString();
 
 		// Remove the current scene from memory
 		assetManager.CleanAllVectors();
@@ -938,16 +938,12 @@ void SceneManager::SaveScene(std::string filepath, std::string sceneName) {
 		// RapidJSON doesn't know about our file types directly, so they
 		// have to be reconstructed and stored as individual values.
 		sceneDocToSave.AddMember(VALID_SHOE_SCENE, true, allocator);
-
-		rapidjson::Value sName;
-		sName.SetString(sceneName.c_str(), allocator);
-		sceneDocToSave.AddMember(SCENE_NAME, sName, allocator);
+		sceneDocToSave.AddMember(NAME, rapidjson::Value().SetString(sceneName.c_str(), allocator), allocator);
 
 		//
 		// In all rapidjson saving and loading instances, defines are used to 
 		// create shorthand strings to optimize memory while keeping the code readable.
 		//
-
 		SaveAssets(sceneDocToSave);
 		SaveEntities(sceneDocToSave);
 

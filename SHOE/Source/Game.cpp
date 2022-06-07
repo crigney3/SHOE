@@ -164,7 +164,7 @@ void Game::LoadScene() {
 }
 
 void Game::SaveScene() {
-	sceneManager.SaveScene("structureTest.json");
+	sceneManager.SaveScene("structureTest.json", "Default Scene");
 }
 
 void Game::SaveSceneAs() {

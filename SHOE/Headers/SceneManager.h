@@ -12,18 +12,23 @@
 #pragma region saveLoadIdentifiers
 // Saving and loading shorthand identifiers
 // General:
-#define VALID_SHOE_SCENE "ivs" // bool
+#define VALID_SHOE_SCENE "v" // bool
 #define SCENE_NAME "sN" // string
 
+//Shared
+#define NAME "n"
+#define FILENAME_KEY "fK" // string
+#define ENABLED "e" // bool
+
 // Categories:
-#define ENTITIES "en" // category - only used to fetch actual data
+#define ENTITIES "e" // category - only used to fetch actual data
 #define MESHES "m" // category - only used to fetch actual data
 #define MATERIALS "a" // category - only used to fetch actual data
 #define VERTEX_SHADERS "vS" // category - only used to fetch actual data
 #define PIXEL_SHADERS "pS" // category - only used to fetch actual data
 #define COMPUTE_SHADERS "cS" // category - only used to fetch actual data
-#define FONTS "fn" // category - only used to fetch actual data
-#define TEXTURE_SAMPLE_STATES "eS" // category - only used to fetch actual data
+#define FONTS "f" // category - only used to fetch actual data
+#define TEXTURE_SAMPLE_STATES "tS" // category - only used to fetch actual data
 #define SKIES "s" // category - only used to fetch actual data
 #define SOUNDS "sO" // category - only used to fetch actual data
 #define TERRAIN_MATERIALS "tM" // category - only used to fetch actual data
@@ -32,134 +37,103 @@
 #define MESH_INDEX_COUNT "iC" // int
 #define MESH_MATERIAL_INDEX "mI" // int
 #define MESH_NEEDS_DEPTH_PREPASS "nDP" // bool
-#define MESH_NAME "mN" // string
-#define MESH_FILENAME_KEY "mFK" // string
 
 // Material Data:
-#define MAT_UV_TILING "aUT" // float
-#define MAT_NAME "aN" //string
-#define MAT_IS_TRANSPARENT "aIT" // bool
-#define MAT_IS_REFRACTIVE "aIR" // bool
-#define MAT_INDEX_OF_REFRACTION "aOR" // float
-#define MAT_REFRACTION_SCALE "aRS" // float
-#define MAT_COLOR_TINT "aCT" // float array 4
-#define MAT_PIXEL_SHADER "aPS" // int
-#define MAT_REFRACTION_PIXEL_SHADER "aRP" // int
-#define MAT_VERTEX_SHADER "aVS" // int
-#define MAT_TEXTURE_OR_ALBEDO_MAP "aAM" // string 
-#define MAT_NORMAL_MAP "aNM" // string
-#define MAT_METAL_MAP "aMM" // string
-#define MAT_ROUGHNESS_MAP "aRM" // string
-#define MAT_TEXTURE_SAMPLER_STATE "aTS" // int
-#define MAT_CLAMP_SAMPLER_STATE "aCS" // int
+#define MAT_UV_TILING "uT" // float
+#define MAT_IS_TRANSPARENT "t" // bool
+#define MAT_IS_REFRACTIVE "r" // bool
+#define MAT_INDEX_OF_REFRACTION "iOR" // float
+#define MAT_REFRACTION_SCALE "rS" // float
+#define MAT_COLOR_TINT "cT" // float array 4
+#define MAT_PIXEL_SHADER "pS" // int
+#define MAT_REFRACTION_PIXEL_SHADER "rPS" // int
+#define MAT_VERTEX_SHADER "vS" // int
+#define MAT_TEXTURE_OR_ALBEDO_MAP "aM" // string 
+#define MAT_NORMAL_MAP "nM" // string
+#define MAT_METAL_MAP "mM" // string
+#define MAT_ROUGHNESS_MAP "rM" // string
+#define MAT_TEXTURE_SAMPLER_STATE "tS" // int
+#define MAT_CLAMP_SAMPLER_STATE "cS" // int
 
 // Texture Sampler data:
-#define SAMPLER_ADDRESS_U "sAU" // int
-#define SAMPLER_ADDRESS_V "sAV" // int
-#define SAMPLER_ADDRESS_W "sAW" // int
-#define SAMPLER_BORDER_COLOR "sBC" // float array 4
-#define SAMPLER_COMPARISON_FUNCTION "sCF" // int?
-#define SAMPLER_FILTER "sF" // int
-#define SAMPLER_MAX_ANISOTROPY "sMA" // int
+#define SAMPLER_ADDRESS_U "u" // int
+#define SAMPLER_ADDRESS_V "v" // int
+#define SAMPLER_ADDRESS_W "w" // int
+#define SAMPLER_BORDER_COLOR "bC" // float array 4
+#define SAMPLER_COMPARISON_FUNCTION "cF" // int?
+#define SAMPLER_FILTER "f" // int
+#define SAMPLER_MAX_ANISOTROPY "mA" // int
 #define SAMPLER_MAX_LOD "sML" // float
 #define SAMPLER_MIN_LOD "sIL" // float
-#define SAMPLER_MIP_LOD_BIAS "sPB" // float
-
-// Font Data:
-#define FONT_FILENAME_KEY "fFK" // string
-#define FONT_NAME "fN" // string
+#define SAMPLER_MIP_LOD_BIAS "b" // float
 
 // Generic Shader Data:
-#define SHADER_NAME "sN" // string
-#define SHADER_FILE_PATH "sK" // string
-
-// Vertex Shader Data:
-#define VERTEX_SHADER_OBJECT "vSO" // category - only used to fetch actual data
-
-// Pixel Shader Data:
-#define PIXEL_SHADER_OBJECT "pSO" // category - only used to fetch actual data
-
-// Compute Shader Data:
-#define COMPUTE_SHADER_OBJECT "cSO" // category - only used to fetch actual data
+#define SHADER_FILE_PATH "p" // string
 
 // Sky Data:
-#define SKY_NAME "sN" // string
-#define SKY_FILENAME_KEY_TYPE "sFT" // bool
-#define SKY_FILENAME_KEY "sFK" // string
-#define SKY_FILENAME_EXTENSION "sFE" //string
+#define SKY_FILENAME_KEY_TYPE "fKT" // bool
+#define SKY_FILENAME_EXTENSION "fE" //string
 
 // Sound Data:
-#define SOUND_FILENAME_KEY "oFK" // string
-#define SOUND_NAME "oN" // string
-#define SOUND_FMOD_MODE "oFM" // int
+#define SOUND_FMOD_MODE "fM" // int
 
 // Terrain Material Data:
-#define TERRAIN_MATERIAL_NAME "tN" // string
-#define TERRAIN_MATERIAL_BLEND_MAP_PATH "tBP" // string
-#define TERRAIN_MATERIAL_BLEND_MAP_ENABLED "tBE" // bool
-#define TERRAIN_MATERIAL_MATERIAL_ARRAY "tMA" // array of Materials
+#define TERRAIN_MATERIAL_BLEND_MAP_PATH "bP" // string
+#define TERRAIN_MATERIAL_BLEND_MAP_ENABLED "bE" // bool
+#define TERRAIN_MATERIAL_MATERIAL_ARRAY "mA" // array of Materials
 
 // Entities:
-#define ENTITY_NAME "n" // string
-#define ENTITY_ENABLED "e" // bool
-#define COMPONENT_TYPE "ct" // int
-#define COMPONENTS "cm" // category - only used to fetch actual data
+#define COMPONENTS "c" // category - only used to fetch actual data
+#define COMPONENT_TYPE "t" // int
 
 // Transform Data:
-#define TRANSFORM_LOCAL_POSITION "tLP" // float array 3
-#define TRANSFORM_LOCAL_SCALE "tLS" // float array 3
-#define TRANSFORM_LOCAL_ROTATION "tLR" // float array 3
-
-//All Components:
-#define COMPONENT_ENABLED "cE" // bool
+#define TRANSFORM_LOCAL_POSITION "p" // float array 3
+#define TRANSFORM_LOCAL_ROTATION "r" // float array 3
+#define TRANSFORM_LOCAL_SCALE "s" // float array 3
 
 // Light Components:
 #define LIGHT_TYPE "lT" // int
 #define LIGHT_INTENSITY "i" // float
-#define LIGHT_RANGE "lR" // float
-#define LIGHT_COLOR "lC" // float array 4
-#define LIGHT_CASTS_SHADOWS "lS" // bool
+#define LIGHT_RANGE "r" // float
+#define LIGHT_COLOR "c" // float array 4
+#define LIGHT_CASTS_SHADOWS "s" // bool
 
 // Mesh Renderer Components:
-#define MESH_OBJECT "mO" // category - only used to fetch actual data
-#define MATERIAL_OBJECT "mA" // category - only used to fetch actual data
 #define MESH_COMPONENT_INDEX "mCI" // int
 #define MATERIAL_COMPONENT_INDEX "aCI" // int
 
 // Collider Data:
 #define COLLIDER_TYPE "cT" // bool
-#define COLLIDER_IS_VISIBLE "cIV" // bool
-#define COLLIDER_POSITION_OFFSET "cPO" // float array 3
-#define COLLIDER_SCALE_OFFSET "cOS" // float array 3
-#define COLLIDER_ROTATION_OFFSET "cRO" // float array 3
+#define COLLIDER_IS_VISIBLE "v" // bool
+#define COLLIDER_POSITION_OFFSET "p" // float array 3
+#define COLLIDER_ROTATION_OFFSET "r" // float array 3
+#define COLLIDER_SCALE_OFFSET "s" // float array 3
 
 // Terrain Data:
-#define TERRAIN_HEIGHTMAP_FILENAME_KEY "hFK" // string
 #define TERRAIN_INDEX_OF_TERRAIN_MATERIAL "hIM" // int
 
 // Camera Data:
-#define CAMERA_ASPECT_RATIO "cAR" // float
-#define CAMERA_PROJECTION_MATRIX_TYPE "cPM" // int
-#define CAMERA_NEAR_DISTANCE "cND" // float
-#define CAMERA_FAR_DISTANCE "cFD" // float
-#define CAMERA_FIELD_OF_VIEW "cF" //float
-#define CAMERA_IS_MAIN "cM" // bool
+#define CAMERA_ASPECT_RATIO "aR" // float
+#define CAMERA_PROJECTION_MATRIX_TYPE "pM" // int
+#define CAMERA_NEAR_DISTANCE "nD" // float
+#define CAMERA_FAR_DISTANCE "fD" // float
+#define CAMERA_FIELD_OF_VIEW "f" //float
+#define CAMERA_IS_MAIN "m" // bool
 
 // Particle System Data:
-#define PARTICLE_SYSTEM_MAX_PARTICLES "pMP" // int
-#define PARTICLE_SYSTEM_FILENAME_KEY "pFK" // string
-#define PARTICLE_SYSTEM_IS_MULTI_PARTICLE "pIP" // bool
-#define PARTICLE_SYSTEM_ADDITIVE_BLEND "pAB" // bool
-#define PARTICLE_SYSTEM_COLOR_TINT "pCT" // float array 4
-#define PARTICLE_SYSTEM_SCALE "pS" // float
-#define PARTICLE_SYSTEM_SPEED "pE" //float
-#define PARTICLE_SYSTEM_DESTINATION "pD" //float array 3
+#define PARTICLE_SYSTEM_MAX_PARTICLES "mP" // int
+#define PARTICLE_SYSTEM_IS_MULTI_PARTICLE "iM" // bool
+#define PARTICLE_SYSTEM_ADDITIVE_BLEND "aB" // bool
+#define PARTICLE_SYSTEM_COLOR_TINT "c" // float array 4
+#define PARTICLE_SYSTEM_SCALE "s" // float
+#define PARTICLE_SYSTEM_SPEED "sP" //float
+#define PARTICLE_SYSTEM_DESTINATION "d" //float array 3
 #define PARTICLE_SYSTEM_PARTICLES_PER_SECOND "pPS" //float
 #define PARTICLE_SYSTEM_PARTICLE_LIFETIME "pL" //float
 
 // Noclip Movement Data:
-#define NOCLIP_LOOK_SPEED "cLS" // float
-#define NOCLIP_MOVE_SPEED "cMS" // float
+#define NOCLIP_LOOK_SPEED "lS" // float
+#define NOCLIP_MOVE_SPEED "mS" // float
 
 #pragma endregion
 
