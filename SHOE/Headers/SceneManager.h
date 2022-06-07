@@ -6,7 +6,6 @@
 #include "rapidjson\filereadstream.h"
 #include "rapidjson\filewritestream.h"
 #include "rapidjson\writer.h"
-#include <mutex>
 #include "AssetManager.h"
 #include "EngineState.h"
 
@@ -204,14 +203,6 @@ private:
 	std::string currentLoadName;
 	std::exception_ptr error;
 
-	std::condition_variable* threadNotifier;
-	std::mutex* threadLock;
-
-	// Helper functions for threads
-	void SetLoadingAndWait(std::string category, std::string object);
-	void CaughtLoadError(std::exception_ptr error);
-	bool singleLoadComplete;
-
 	DirectX::XMFLOAT2 LoadFloat2(const rapidjson::Value& jsonBlock, const char* memberName);
 	DirectX::XMFLOAT3 LoadFloat3(const rapidjson::Value& jsonBlock, const char* memberName);
 	DirectX::XMFLOAT4 LoadFloat4(const rapidjson::Value& jsonBlock, const char* memberName);
@@ -221,15 +212,15 @@ private:
 
 	std::string LoadDeserializedFileName(const rapidjson::Value& jsonBlock, const char* memberName);
 
-	void LoadAssets(const rapidjson::Value& sceneDoc);
-	void LoadEntities(const rapidjson::Value& sceneDoc);
+	void LoadAssets(const rapidjson::Value& sceneDoc, std::function<void()> progressListener = {});
+	void LoadEntities(const rapidjson::Value& sceneDoc, std::function<void()> progressListener = {});
 
 	void SaveAssets(rapidjson::Document& sceneDocToSave);
 	void SaveEntities(rapidjson::Document& sceneDocToSave);
 public:
-	void Initialize(std::condition_variable* threadNotifier, std::mutex* threadLock, EngineState* engineState);
+	void Initialize(EngineState* engineState);
 
-	void LoadScene(std::string filepath, std::condition_variable* threadNotifier, std::mutex* threadLock);
+	void LoadScene(std::string filepath, std::function<void()> progressListener = {});
 	void SaveScene(std::string filepath, std::string sceneName = "");
 
 	void PrePlaySave();
@@ -242,8 +233,5 @@ public:
 	std::string GetLoadingObjectName();
 
 	std::exception_ptr GetLoadingException();
-
-	bool GetSingleLoadComplete();
-	void SetSingleLoadComplete(bool loadComplete);
 };
 

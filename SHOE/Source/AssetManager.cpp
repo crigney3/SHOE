@@ -39,42 +39,41 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	this->device = device;
 	this->engineState = engineState;
 
-	textureSampleStates = std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>>();
+	CleanAllVectors();
 
 	// This must occur before the loading screen starts
 	InitializeFonts();
-
 	InitializeTextureSampleStates();
 
 	// The rest signal the loading screen each time an object loads
-	progressListener("Shaders");
+	if(progressListener) progressListener("Shaders");
 	InitializeShaders();
-	progressListener("Materials");
+	if(progressListener) progressListener("Materials");
 	InitializeMaterials();
-	progressListener("Meshes");
-	InitializeMeshes();
-	progressListener("Entities");
-	InitializeGameEntities();
-	progressListener("Cameras");
-	InitializeCameras();
-	progressListener("Terrain Materials");
+	if(progressListener) progressListener("Terrain Materials");
 	InitializeTerrainMaterials();
-	progressListener("Terrain");
+	if(progressListener) progressListener("Meshes");
+	InitializeMeshes();
+	if(progressListener) progressListener("Entities");
+	InitializeGameEntities();
+	if(progressListener) progressListener("Cameras");
+	InitializeCameras();
+	if(progressListener) progressListener("Terrain");
 	InitializeTerrainEntities();
-	progressListener("Lights");
+	if(progressListener) progressListener("Lights");
 	InitializeLights();
-	progressListener("Colliders");
+	if(progressListener) progressListener("Colliders");
 	InitializeColliders();
-	progressListener("Emitters");
+	if(progressListener) progressListener("Emitters");
 	InitializeEmitters();
-	progressListener("Skies");
+	if(progressListener) progressListener("Skies");
 	InitializeSkies();
-	progressListener("Audio");
+	if(progressListener) progressListener("Audio");
 	InitializeAudio();
-	progressListener("IMGUI");
+	if(progressListener) progressListener("IMGUI");
 	InitializeIMGUI(hwnd);
 
-	progressListener("Editing Camera");
+	if(progressListener) progressListener("Editing Camera");
 	//Intentionally not tracked by the asset manager
 	std::shared_ptr<GameEntity> editingCamObj = std::make_shared<GameEntity>("editingCamera");
 	editingCamObj->Initialize();
@@ -522,8 +521,6 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 }
 
 std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension) {
-	std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
-
 	std::vector<std::shared_ptr<SimplePixelShader>> importantSkyPixelShaders;
 	std::vector<std::shared_ptr<SimpleVertexShader>> importantSkyVertexShaders;
 
@@ -565,7 +562,7 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 
 	std::string filenameKey = SerializeFileName("Assets\\Textures\\Skies\\", assetPath);
 
-	std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, newSkyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
+	std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, newSkyTexture, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
 
 	newSky->SetFilenameKeyType(fileType);
 	newSky->SetFilenameKey(filenameKey);
@@ -751,13 +748,20 @@ std::shared_ptr<Camera> AssetManager::CreateCameraOnEntity(std::shared_ptr<GameE
 	return cam;
 }
 
+std::shared_ptr<Collider> AssetManager::CreateColliderOnEntity(std::shared_ptr<GameEntity> entityToEdit) {
+	return entityToEdit->AddComponent<Collider>();
+}
+
+std::shared_ptr<Collider> AssetManager::CreateTriggerBoxOnEntity(std::shared_ptr<GameEntity> entityToEdit) {
+	std::shared_ptr<Collider> c = entityToEdit->AddComponent<Collider>();
+	c->SetIsTrigger(true);
+	return c;
+}
+
 #pragma endregion
 
 #pragma region initAssets
 void AssetManager::InitializeTextureSampleStates() {
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> basicSampler;
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSampler;
-
 	//Create sampler state
 	D3D11_SAMPLER_DESC textureDesc;
 	textureDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -769,7 +773,7 @@ void AssetManager::InitializeTextureSampleStates() {
 	textureDesc.MipLODBias = 0;
 	textureDesc.MinLOD = 0;
 
-	device->CreateSamplerState(&textureDesc, &basicSampler);
+	device->CreateSamplerState(&textureDesc, &textureState);
 
 	//Create clamp sampler state
 	D3D11_SAMPLER_DESC clampDesc;
@@ -782,20 +786,15 @@ void AssetManager::InitializeTextureSampleStates() {
 	clampDesc.MipLODBias = 0;
 	clampDesc.MinLOD = 0;
 
-	device->CreateSamplerState(&clampDesc, &clampSampler);
+	device->CreateSamplerState(&clampDesc, &clampState);
 
-	textureSampleStates.push_back(basicSampler);
-	textureSampleStates.push_back(clampSampler);
-
-	textureState = textureSampleStates[0];
-	clampState = textureSampleStates[1];
+	textureSampleStates.push_back(textureState);
+	textureSampleStates.push_back(clampState);
 }
 
 void AssetManager::InitializeGameEntities() {
 	//Initializes default values for components
 	MeshRenderer::SetDefaults(GetMeshByName("Cube"), GetMaterialByName("largeCobbleMat"));
-
-	globalEntities = std::vector<std::shared_ptr<GameEntity>>();
 
 	// Show example renders
 	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("bronzeMat"), "Bronze Cube");
@@ -859,8 +858,6 @@ void AssetManager::InitializeGameEntities() {
 }
 
 void AssetManager::InitializeMaterials() {
-	globalMaterials = std::vector<std::shared_ptr<Material>>();
-
 	// Make reflective PBR materials
 	CreatePBRMaterial(std::string("reflectiveMetal"),
 		"BlankAlbedo.png",
@@ -947,38 +944,40 @@ void AssetManager::InitializeMaterials() {
 		"wood_metal.png",
 		"wood_roughness.png");
 
-	CreatePBRMaterial(std::string("refractivePaintMat"),
+	std::shared_ptr<Material> refractive = CreatePBRMaterial(std::string("refractivePaintMat"),
 		"paint_albedo.png",
 		"paint_normals.png",
 		"paint_metal.png",
-		"paint_roughness.png")->SetRefractive(true);
-	GetMaterialByName("refractivePaintMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		"paint_roughness.png");
+	refractive->SetRefractive(true);
+	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-	CreatePBRMaterial(std::string("refractiveWoodMat"),
+	refractive = CreatePBRMaterial(std::string("refractiveWoodMat"),
 		"wood_albedo.png",
 		"wood_normals.png",
 		"wood_metal.png",
-		"wood_roughness.png")->SetTransparent(true);
-	GetMaterialByName("refractiveWoodMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		"wood_roughness.png");
+	refractive->SetTransparent(true);
+	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-	CreatePBRMaterial(std::string("refractiveRoughMat"),
+	refractive = CreatePBRMaterial(std::string("refractiveRoughMat"),
 		"rough_albedo.png",
 		"rough_normals.png",
 		"rough_metal.png",
-		"rough_roughness.png")->SetRefractive(true);
-	GetMaterialByName("refractiveRoughMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		"rough_roughness.png");
+	refractive->SetRefractive(true);
+	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-	CreatePBRMaterial(std::string("refractiveBronzeMat"),
+	refractive = CreatePBRMaterial(std::string("refractiveBronzeMat"),
 		"bronze_albedo.png",
 		"bronze_normals.png",
 		"bronze_metal.png",
-		"bronze_roughness.png")->SetRefractive(true);
-	GetMaterialByName("refractiveBronzeMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		"bronze_roughness.png");
+	refractive->SetRefractive(true);
+	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 }
 
 void AssetManager::InitializeMeshes() {
-	globalMeshes = std::vector<std::shared_ptr<Mesh>>();
-
 	// Test loading failure
 	//CreateMesh("ExceptionTest", "InvalidPath");
 
@@ -991,8 +990,6 @@ void AssetManager::InitializeMeshes() {
 
 
 void AssetManager::InitializeSkies() {
-	skies = std::vector<std::shared_ptr<Sky>>();
-
 	// Temporarily, we only load 3 skies, as they take a while to load
 
 	//CreateSky(spaceTexture, "space");
@@ -1040,8 +1037,6 @@ void AssetManager::InitializeTerrainEntities() {
 }
 
 void AssetManager::InitializeTerrainMaterials() {
-	globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMaterial>>();
-
 	std::vector<std::shared_ptr<Material>> tMats = std::vector<std::shared_ptr<Material>>();
 
 	std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", "forest_floor_albedo.png", "forest_floor_Normal-ogl.png", "wood_metal.png", "forest_floor_Roughness.png");
@@ -1060,14 +1055,14 @@ void AssetManager::InitializeTerrainMaterials() {
 
 	tMats.clear();
 
-	std::vector<std::string> metalPaths;
-	std::vector<std::string> metalNames;
-
 	// Must be kept in PBR order!
 	// This sections is only for testing and should be commented on push.
 	// Since these materials already exist, it's quicker and more efficient
 	// to just grab them.
 	std::shared_ptr<TerrainMaterial> industrialTerrainMaterial;
+
+	//std::vector<std::string> metalPaths;
+	//std::vector<std::string> metalNames;
 
 	/*metalPaths.push_back("floor_albedo.png");
 	metalPaths.push_back("floor_normals.png");
@@ -1123,10 +1118,6 @@ void AssetManager::InitializeCameras() {
 // - We'll have that byte code already loaded below
 // --------------------------------------------------------
 void AssetManager::InitializeShaders() {
-	vertexShaders = std::vector<std::shared_ptr<SimpleVertexShader>>();
-	pixelShaders = std::vector<std::shared_ptr<SimplePixelShader>>();
-	computeShaders = std::vector<std::shared_ptr<SimpleComputeShader>>();
-
 	// Make vertex shaders
 	CreateVertexShader("BasicVS", "VertexShader.cso");
 	CreateVertexShader("NormalsVS", "VSNormalMap.cso");
@@ -1204,8 +1195,6 @@ void AssetManager::InitializeEmitters() {
 void AssetManager::InitializeAudio() {
 	audioInstance.Initialize();
 
-	globalSounds = std::vector<FMOD::Sound*>();
-
 	CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_DEFAULT, "piano-a");
 	CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_DEFAULT, "piano-b");
 	CreateSound("PianoNotes/pinkyfinger__piano-bb.wav", FMOD_DEFAULT, "piano-bb");
@@ -1218,8 +1207,6 @@ void AssetManager::InitializeAudio() {
 }
 
 void AssetManager::InitializeFonts() {
-	globalFonts = std::vector<std::shared_ptr<SHOEFont>>();
-
 	CreateSHOEFont("Roboto-Bold-72pt", "RobotoCondensed-Bold-72pt.spritefont", true);
 	CreateSHOEFont("SmoochSans-Bold", "SmoochSans-Bold.spritefont", true);
 	CreateSHOEFont("SmoochSans-Italic", "SmoochSans-Italic.spritefont", true);
@@ -1243,34 +1230,12 @@ void AssetManager::InitializeIMGUI(HWND hwnd) {
 }
 
 void AssetManager::InitializeColliders() {
-	std::shared_ptr<GameEntity> e = GetGameEntityByName("Bronze Cube");
-	std::shared_ptr<GameEntity> e2 = GetGameEntityByName("Scratched Sphere");
-	std::shared_ptr<GameEntity> e5 = GetGameEntityByName("Shiny Rough Sphere");
-	std::shared_ptr<GameEntity> e6 = GetGameEntityByName("Floor Cube");
-	std::shared_ptr<GameEntity> e7 = GetGameEntityByName("Scratched Cube");
-
-	std::shared_ptr<Collider> c1 = AddColliderToGameEntity(e);
-	std::shared_ptr<Collider> c2 = AddColliderToGameEntity(e2);
-	std::shared_ptr<Collider> c5 = AddColliderToGameEntity(e5);
-	std::shared_ptr<Collider> c6 = AddColliderToGameEntity(e6);
-	std::shared_ptr<Collider> c7 = AddTriggerBoxToGameEntity(e7);
+	CreateColliderOnEntity(GetGameEntityByName("Bronze Cube"));
+	CreateColliderOnEntity(GetGameEntityByName("Scratched Sphere"));
+	CreateColliderOnEntity(GetGameEntityByName("Shiny Rough Sphere"));
+	CreateColliderOnEntity(GetGameEntityByName("Floor Cube"));
+	CreateTriggerBoxOnEntity(GetGameEntityByName("Scratched Cube"));
 }
-#pragma endregion
-
-#pragma region addComponent
-
-std::shared_ptr<Collider> AssetManager::AddColliderToGameEntity(OUT std::shared_ptr<GameEntity> entity) {
-	return entity->AddComponent<Collider>();
-}
-
-std::shared_ptr<Collider> AssetManager::AddTriggerBoxToGameEntity(OUT std::shared_ptr<GameEntity> entity) {
-	std::shared_ptr<Collider> c = entity->AddComponent<Collider>();
-
-	c->SetIsTrigger(true);
-
-	return c;
-}
-
 #pragma endregion
 
 #pragma region getMethods

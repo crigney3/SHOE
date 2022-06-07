@@ -149,6 +149,10 @@ private:
     // Depth pre-pass data
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> prePassDepthState;
 
+    //Sky data
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> skyRasterizer;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> skyDepthState;
+
     //Selected Entity Outline targets
     Microsoft::WRL::ComPtr<ID3D11Texture2D> outlineTexture;
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> outlineRTV;
@@ -185,14 +189,14 @@ public:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMiscEffectSRV(MiscEffectSRVTypes type);
 
     void DrawPointLights(std::shared_ptr<Camera> cam);
-    void Draw(std::shared_ptr<Camera> camera);
+    void Draw(std::shared_ptr<Camera> camera, EngineState engineState);
 
     void InitShadows();
     void RenderShadows();
     void RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type);
     void RenderColliders(std::shared_ptr<Camera> cam);
     void RenderMeshBounds(std::shared_ptr<Camera> cam);
-    void RenderSelectedHighlight(std::shared_ptr<Camera> cam);
+    void RenderSelectedHighlight(std::shared_ptr<Camera> cam, EngineState engineState);
 
     static bool GetDrawColliderStatus();
     static void SetDrawColliderStatus(bool _newState);

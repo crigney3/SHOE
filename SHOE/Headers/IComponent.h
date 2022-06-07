@@ -7,6 +7,7 @@ class Transform;
 
 enum EntityEventType {
 	Update,
+	EditingUpdate,
 	OnEnable,
 	OnDisable,
 	OnTransform,
@@ -27,7 +28,7 @@ enum EntityEventType {
 	AudioPlay,
 	AudioStop,
 	EventCount,
-	REQUIRES_MESSAGE = 0b11111111111111110000
+	REQUIRES_MESSAGE = 0b111111111111111100000
 };
 
 class IComponent
@@ -47,6 +48,7 @@ public:
 protected:
 	virtual void Start();
 	virtual void Update();
+	virtual void EditingUpdate();
 	virtual void OnCollisionEnter(std::shared_ptr<GameEntity> other);
 	virtual void OnTriggerEnter(std::shared_ptr<GameEntity> other);
 	virtual void InCollision(std::shared_ptr<GameEntity> other);

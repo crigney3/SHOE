@@ -13,7 +13,6 @@
 #include "Input.h"
 #include "Renderer.h"
 #include "AssetManager.h"
-#include <thread>
 #include <chrono>
 #include "SceneManager.h"
 
@@ -29,8 +28,6 @@ public:
 	void OnResize();
 	void Update();
 	void Draw();
-
-	// Loading screen info
 
 private:
 	// Asset Manager instance
@@ -64,8 +61,6 @@ private:
 	bool collidersWindowEnabled;
 
 	// Loading screen info
-	std::condition_variable* notification;
-	std::mutex* loadingMutex;
 	DirectX::SpriteBatch* loadingSpriteBatch;
 	DirectX::SpriteFont* loadingFont;
 

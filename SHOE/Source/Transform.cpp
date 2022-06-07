@@ -33,6 +33,15 @@ void Transform::Update()
 	}
 }
 
+void Transform::EditingUpdate()
+{
+	if (transformChangedThisFrame) {
+		transformChangedThisFrame = false;
+		GetGameEntity()->PropagateEvent(EntityEventType::OnTransform);
+		GetGameEntity()->PropagateEventToChildren(EntityEventType::OnParentTransform, GetGameEntity());
+	}
+}
+
 void Transform::OnDestroy()
 {
 	parent = nullptr;

@@ -21,8 +21,6 @@
 #include <locale>
 #include <codecvt>
 #include "AudioHandler.h"
-#include <thread>
-#include <mutex>
 #include <exception>
 #include "SpriteBatch.h"
 #include "Collider.h"
@@ -39,11 +37,11 @@ enum ComponentTypes {
 	// While Transform is tracked here, it is often skipped or handled uniquely
 	// when assessing all components, as it cannot be removed or doubled
 	TRANSFORM,
+	MESH_RENDERER,
+	PARTICLE_SYSTEM,
 	COLLIDER,
 	TERRAIN,
-	PARTICLE_SYSTEM,
 	LIGHT,
-	MESH_RENDERER,
 	CAMERA,
 	NOCLIP_CHAR_CONTROLLER,
 	FLASHLIGHT_CONTROLLER,
@@ -258,17 +256,14 @@ public:
 												   DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
 												   float intensity = 1.0f);
 	std::shared_ptr<Camera> CreateCameraOnEntity(std::shared_ptr<GameEntity> entityToEdit, float aspectRatio = 0);
+	std::shared_ptr<Collider> CreateColliderOnEntity(std::shared_ptr<GameEntity> entityToEdit);
+	std::shared_ptr<Collider> CreateTriggerBoxOnEntity(std::shared_ptr<GameEntity> entityToEdit);
 
 	// Creation Helper Methods
 	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType);
 	void SetMaterialTextureFileKey(std::string textureFilename, std::shared_ptr<Material> mat, PBRTextureTypes textureType);
 	std::string SerializeFileName(std::string assetFolderPath, std::string fullPathToAsset);
 	std::string DeSerializeFileName(std::string assetPath);
-
-	// Helper methods to add components to objects
-
-	std::shared_ptr<Collider> AddColliderToGameEntity(OUT std::shared_ptr<GameEntity> entity);
-	std::shared_ptr<Collider> AddTriggerBoxToGameEntity(OUT std::shared_ptr<GameEntity> entity);
 
 	// Methods to remove assets
 

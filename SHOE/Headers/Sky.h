@@ -12,15 +12,6 @@ class Sky
 public:
 	Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions,
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture,
-		std::shared_ptr<Mesh> cubeMesh,
-		std::vector<std::shared_ptr<SimplePixelShader>> pixShaders,
-		std::vector<std::shared_ptr<SimpleVertexShader>> vertShaders,
-		Microsoft::WRL::ComPtr<ID3D11Device> device,
-		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
-		std::string name = "sky");
-	Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions, 
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, 
-		const char* filename,
 		std::vector<std::shared_ptr<SimplePixelShader>> pixShaders,
 		std::vector<std::shared_ptr<SimpleVertexShader>> vertShaders,
 		Microsoft::WRL::ComPtr<ID3D11Device> device,
@@ -37,8 +28,12 @@ public:
 	std::string GetName();
 	void SetName(std::string name);
 
-	void SetEnableDisable(bool value);
-	bool GetEnableDisable();
+	std::shared_ptr<SimplePixelShader> GetPixShader();
+	std::shared_ptr<SimpleVertexShader> GetVertShader();
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSampler();
+
+	void SetEnabled(bool value);
+	bool IsEnabled();
 
 	bool GetFilenameKeyType();
 	void SetFilenameKeyType(bool FKType);
@@ -48,8 +43,6 @@ public:
 
 	std::string GetFileExtension();
 	void SetFileExtension(std::string fileExtension);
-
-	void Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<Camera> cam);
 private:
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext>	context;

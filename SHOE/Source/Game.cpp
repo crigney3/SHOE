@@ -74,10 +74,9 @@ Game::~Game()
 	delete& AssetManager::GetInstance();
 	delete& AudioHandler::GetInstance();
 	delete& CollisionManager::GetInstance();
+	delete& SceneManager::GetInstance();
 
 	delete loadingSpriteBatch;
-	delete loadingMutex;
-	delete notification;
 }
 
 // --------------------------------------------------------
@@ -86,10 +85,6 @@ Game::~Game()
 // --------------------------------------------------------
 void Game::Init()
 {
-	loadingMutex = new std::mutex();
-	notification = new std::condition_variable();
-
-	// Set up the multithreading for the loading screen
 	engineState = EngineState::INIT;
 
 	loadingSpriteBatch = new SpriteBatch(context.Get());
@@ -98,9 +93,8 @@ void Game::Init()
 	printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
 #endif
 
-	// Start the loading thread and the loading screen thread
+	sceneManager.Initialize(&engineState);
 	globalAssets.Initialize(device, context, hWnd, &engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
-	sceneManager.Initialize(notification, loadingMutex, &engineState);
 
 #if defined(DEBUG) || defined(_DEBUG)
 	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
@@ -139,30 +133,17 @@ void Game::Init()
 }
 
 void Game::LoadScene() {
-	delete loadingMutex;
-	delete notification;
-
-	loadingMutex = new std::mutex();
-	notification = new std::condition_variable();
-
 	engineState = EngineState::LOAD_SCENE;
 
 #if defined(DEBUG) || defined(_DEBUG)
-	printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
+	//printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
 #endif
 
 	objWindowEnabled = false;
 	skyWindowEnabled = false;
 	entityUIIndex = -1;
 
-	// Start the loading thread and the loading screen thread
-	std::thread loadingThread = std::thread([this] { sceneManager.LoadScene("structureTest.json", notification, loadingMutex); });
-	std::thread screenThread = std::thread([this] { this->DrawLoadingScreen(); });
-
-	// Once they've stopped passing control back and forth, join them
-	// to the main thread
-	screenThread.join();
-	loadingThread.join();
+	sceneManager.LoadScene("structureTest.json", std::bind(&Game::DrawLoadingScreen, this));
 
 #if defined(DEBUG) || defined(_DEBUG)
 	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
@@ -184,7 +165,6 @@ void Game::LoadScene() {
 
 void Game::SaveScene() {
 	sceneManager.SaveScene("structureTest.json");
-
 }
 
 void Game::SaveSceneAs() {
@@ -281,9 +261,9 @@ void Game::GenerateEditingUI() {
 
 		currentSky->SetName(nameBuf);
 
-		bool skyEnabled = currentSky->GetEnableDisable();
+		bool skyEnabled = currentSky->IsEnabled();
 		ImGui::Checkbox("Enabled ", &skyEnabled);
-		currentSky->SetEnableDisable(skyEnabled);
+		currentSky->SetEnabled(skyEnabled);
 
 		if (skyEnabled && ImGui::CollapsingHeader("BRDF Lookup Texture")) {
 			ImGui::Image((ImTextureID*)currentSky->GetBRDFLookupTexture().Get(), ImVec2(256, 256));
@@ -679,13 +659,13 @@ void Game::GenerateEditingUI() {
 		// Dropdown and Collapsible Header to add components
 		if (ImGui::CollapsingHeader("Add Component")) {
 			static ComponentTypes selectedComponent = ComponentTypes::MESH_RENDERER;
-			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Transform", "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light", "Camera", "Noclip Character Controller", "Flashlight Controller" };
+			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light", "Camera", "Noclip Character Controller", "Flashlight Controller" };
 
 			if (ImGui::BeginListBox("Component Listbox")) {
 				for (int i = 0; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
 					const bool is_selected = (selectedComponent == i);
 					if (ImGui::Selectable(typeArray[i].c_str(), is_selected))
-						selectedComponent = (ComponentTypes)i;
+						selectedComponent = (ComponentTypes)(i + 1);
 				}
 
 				ImGui::EndListBox();
@@ -697,9 +677,6 @@ void Game::GenerateEditingUI() {
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.65f, 1.0f, 0.5f));
 			if (ImGui::Button("Add Selected Component")) {
 				switch (selectedComponent) {
-				case ComponentTypes::TRANSFORM:
-					// No.
-					break;
 				case ComponentTypes::MESH_RENDERER:
 					currentEntity->AddComponent<MeshRenderer>();
 					break;
@@ -809,12 +786,10 @@ void Game::GenerateEditingUI() {
 
 	if (collidersWindowEnabled)
 	{
-		ImGui::Begin("Collider Inspector");
-
-		ImGui::Text("Collider bulk operations:");
+		ImGui::Begin("Collider Bulk Operations");
 
 		bool UIDrawColliders = Renderer::GetDrawColliderStatus();
-		ImGui::Checkbox("Draw Colliders?", &UIDrawColliders);
+		ImGui::Checkbox("Draw Colliders: ", &UIDrawColliders);
 		Renderer::SetDrawColliderStatus(UIDrawColliders);
 
 		ImGui::End();
@@ -1064,6 +1039,7 @@ void Game::Update()
 					entityUIIndex = -1;
 				}
 				clickedEntityBuffer = nullptr;
+				renderer->selectedEntity = entityUIIndex;
 			}
 
 			if (input.KeyPress('P')) {
@@ -1075,27 +1051,21 @@ void Game::Update()
 				sceneManager.PrePlaySave();
 			}
 
-			renderer->selectedEntity = entityUIIndex;
-
 			globalAssets.UpdateEditingCamera();
+			globalAssets.BroadcastGlobalEntityEvent(EntityEventType::EditingUpdate);
 		}
 		break;
 	case EngineState::PLAY:
 		if (input.TestKeyAction(KeyActions::QuitGame)) {
-			renderer->selectedEntity = entityUIIndex;
 			sceneManager.PostPlayLoad();
 		}
 		else {
 			if (movingEnabled) {
 				globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+1.5f, (float)sin(Time::totalTime) + 2.5f, +0.0f);
 				globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate(0.0f, (float)sin(Time::deltaTime), -(float)sin(Time::deltaTime));
-
 				globalAssets.GetGameEntityByName("Scratched Cube")->GetTransform()->Rotate(-(float)sin(Time::deltaTime), 0.0f, 0.0f);
-
 				globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(Time::totalTime), +0.0f);
-
 				globalAssets.GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(-(float)sin(Time::totalTime), -2.0f, +0.0f);
-
 				globalAssets.GetGameEntityByName("Rough Torus")->GetTransform()->Rotate(+0.0f, +0.0f, +1.0f * Time::deltaTime);
 			}
 
@@ -1122,7 +1092,7 @@ void Game::DrawInitializingScreen(std::string category)
 
 	static std::shared_ptr<SpriteFont> categoryFont = globalAssets.GetFontByName("SmoochSans-Bold")->spritefont;
 
-	std::string categoryString = "Loading Base " + category;
+	std::string categoryString = "Loading Default " + category;
 	DirectX::XMStoreFloat2(&categoryOrigin, categoryFont->MeasureString(categoryString.c_str()) / 2.0f);
 
 	context->ClearRenderTargetView(backBufferRTV.Get(), color);
@@ -1135,6 +1105,7 @@ void Game::DrawInitializingScreen(std::string category)
 	loadingSpriteBatch->Begin();
 	categoryFont->DrawString(loadingSpriteBatch, categoryString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.5), DirectX::Colors::White, 0.0f, categoryOrigin);
 	loadingSpriteBatch->End();
+
 	swapChain->Present(0, 0);
 
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthStencilView.Get());
@@ -1153,63 +1124,47 @@ void Game::DrawLoadingScreen() {
 	static std::shared_ptr<SpriteFont> objectFont = globalAssets.GetFontByName("SmoochSans-Italic")->spritefont;
 
 	std::string titleString = "Loading '" + sceneManager.GetLoadingSceneName() + "'";
-	DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
+	std::string loadedCategoryString = "Loading " + sceneManager.GetLoadingCategory();
+	std::string loadedObjectString;
 
-	while (engineState == EngineState::LOAD_SCENE) {
-		std::unique_lock<std::mutex> lock(*loadingMutex);
-		using time = std::chrono::duration<int, std::milli>;
-		if (notification->wait_for(lock, time(3000), [&] {return sceneManager.GetSingleLoadComplete(); })) {
-			std::string loadedCategoryString = "Loading " + sceneManager.GetLoadingCategory();
-			std::string loadedObjectString;
-
-			if (sceneManager.GetLoadingException()) {
-				try {
-					std::rethrow_exception(sceneManager.GetLoadingException());
-				}
-				catch (const std::exception& e) {
-					loadedObjectString = sceneManager.GetLoadingObjectName() + " Failed to Load! Error is printed to DBG console.";
-#if defined(DEBUG) || defined(_DEBUG)
-					printf(e.what());
-#endif
-				}
-			}
-			else {
-				loadedObjectString = "Loading Object: " + sceneManager.GetLoadingObjectName();
-			}
-
-			context->ClearRenderTargetView(backBufferRTV.Get(), color);
-			context->ClearDepthStencilView(
-				depthStencilView.Get(),
-				D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
-				1.0f,
-				0);
-
-			loadingSpriteBatch->Begin();
-
-			// Certified conversion moment
-			DirectX::XMStoreFloat2(&categoryOrigin, categoryFont->MeasureString(loadedCategoryString.c_str()) / 2.0f);
-			DirectX::XMStoreFloat2(&objectOrigin, objectFont->MeasureString(loadedObjectString.c_str()) / 2.0f);
-
-			titleFont->DrawString(loadingSpriteBatch, titleString.c_str(), DirectX::XMFLOAT2(width / 2, height / 5), DirectX::Colors::Gold, 0.0f, titleOrigin);
-			categoryFont->DrawString(loadingSpriteBatch, loadedCategoryString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.5), DirectX::Colors::White, 0.0f, categoryOrigin);
-			objectFont->DrawString(loadingSpriteBatch, loadedObjectString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.2), DirectX::Colors::LightGray, 0.0f, objectOrigin);
-
-			loadingSpriteBatch->End();
-
-			swapChain->Present(0, 0);
-
-			context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthStencilView.Get());
+	if (sceneManager.GetLoadingException()) {
+		try {
+			std::rethrow_exception(sceneManager.GetLoadingException());
 		}
-		else {
+		catch (const std::exception& e) {
+			loadedObjectString = sceneManager.GetLoadingObjectName() + " Failed to Load! Error is printed to DBG console.";
 #if defined(DEBUG) || defined(_DEBUG)
-			printf("Took too long to load. \n");
+			printf(e.what());
 #endif
 		}
-
-		sceneManager.SetSingleLoadComplete(false);
-		lock.unlock();
-		notification->notify_all();
 	}
+	else {
+		loadedObjectString = "Loading Object: " + sceneManager.GetLoadingObjectName();
+	}
+
+	context->ClearRenderTargetView(backBufferRTV.Get(), color);
+	context->ClearDepthStencilView(
+		depthStencilView.Get(),
+		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+		1.0f,
+		0);
+
+	loadingSpriteBatch->Begin();
+
+	// Certified conversion moment
+	DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
+	DirectX::XMStoreFloat2(&categoryOrigin, categoryFont->MeasureString(loadedCategoryString.c_str()) / 2.0f);
+	DirectX::XMStoreFloat2(&objectOrigin, objectFont->MeasureString(loadedObjectString.c_str()) / 2.0f);
+
+	titleFont->DrawString(loadingSpriteBatch, titleString.c_str(), DirectX::XMFLOAT2(width / 2, height / 5), DirectX::Colors::Gold, 0.0f, titleOrigin);
+	categoryFont->DrawString(loadingSpriteBatch, loadedCategoryString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.5), DirectX::Colors::White, 0.0f, categoryOrigin);
+	objectFont->DrawString(loadingSpriteBatch, loadedObjectString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.2), DirectX::Colors::LightGray, 0.0f, objectOrigin);
+
+	loadingSpriteBatch->End();
+
+	swapChain->Present(0, 0);
+
+	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthStencilView.Get());
 }
 
 // --------------------------------------------------------
@@ -1218,9 +1173,9 @@ void Game::DrawLoadingScreen() {
 void Game::Draw()
 {
 	if (engineState == EngineState::EDITING) {
-		renderer->Draw(globalAssets.GetEditingCamera());
+		renderer->Draw(globalAssets.GetEditingCamera(), engineState);
 	}
 	else if (engineState == EngineState::PLAY) {
-		renderer->Draw(globalAssets.GetMainCamera());
+		renderer->Draw(globalAssets.GetMainCamera(), engineState);
 	}
 }

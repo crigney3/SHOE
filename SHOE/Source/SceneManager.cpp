@@ -4,10 +4,6 @@
 
 SceneManager* SceneManager::instance;
 
-bool SceneManager::GetSingleLoadComplete() {
-	return this->singleLoadComplete;
-}
-
 std::string SceneManager::GetLoadingCategory() {
 	return currentLoadCategory;
 }
@@ -18,32 +14,6 @@ std::string SceneManager::GetLoadingObjectName() {
 
 std::exception_ptr SceneManager::GetLoadingException() {
 	return error;
-}
-
-void SceneManager::SetSingleLoadComplete(bool loadComplete) {
-	this->singleLoadComplete = loadComplete;
-}
-
-void SceneManager::CaughtLoadError(std::exception_ptr error) {
-	this->error = error;
-
-	SetSingleLoadComplete(true);
-	threadNotifier->notify_all();
-
-	std::unique_lock<std::mutex> lock(*threadLock);
-	threadNotifier->wait(lock, [&] {return singleLoadComplete == 0; });
-}
-
-void SceneManager::SetLoadingAndWait(std::string category, std::string object) {
-	currentLoadCategory = category;
-	currentLoadName = object;
-	error = NULL;
-
-	SetSingleLoadComplete(true);
-	threadNotifier->notify_all();
-
-	std::unique_lock<std::mutex> lock(*threadLock);
-	threadNotifier->wait(lock, [&] {return singleLoadComplete == 0; });
 }
 
 DirectX::XMFLOAT2 SceneManager::LoadFloat2(const rapidjson::Value& jsonBlock, const char* memberName)
@@ -111,7 +81,7 @@ std::string SceneManager::LoadDeserializedFileName(const rapidjson::Value& jsonB
 	return assetManager.DeSerializeFileName(jsonBlock.FindMember(memberName)->value.GetString());
 }
 
-void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc)
+void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<void()> progressListener)
 {
 	// Load order:
 	// Fonts
@@ -129,11 +99,14 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc)
 	assert(fontBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < fontBlock.Size(); i++) {
 		currentLoadName = fontBlock[i].FindMember(FONT_NAME)->value.GetString();
+		//if(progressListener) progressListener(); NEEDS PRE-LOADED FONTS
 		assetManager.CreateSHOEFont(currentLoadName, LoadDeserializedFileName(fontBlock[i], FONT_FILENAME_KEY));
 	}
 
 	// Texture Sampler States
 	currentLoadCategory = "Texture Sampler States";
+	currentLoadName = "";
+	if(progressListener) progressListener();
 	const rapidjson::Value& sampleStateBlock = sceneDoc[TEXTURE_SAMPLE_STATES];
 	assert(sampleStateBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < sampleStateBlock.Size(); i++) {
@@ -169,6 +142,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc)
 	assert(pixelShaderBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < pixelShaderBlock.Size(); i++) {
 		currentLoadName = pixelShaderBlock[i].FindMember(SHADER_NAME)->value.GetString();
+		if(progressListener) progressListener();
 		assetManager.CreatePixelShader(currentLoadName, LoadDeserializedFileName(pixelShaderBlock[i], SHADER_FILE_PATH));
 	}
 
@@ -178,6 +152,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc)
 	assert(vertexShaderBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < vertexShaderBlock.Size(); i++) {
 		currentLoadName = vertexShaderBlock[i].FindMember(SHADER_NAME)->value.GetString();
+		if(progressListener) progressListener();
 		assetManager.CreateVertexShader(currentLoadName, LoadDeserializedFileName(vertexShaderBlock[i], SHADER_FILE_PATH));
 	}
 
@@ -187,6 +162,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc)
 	assert(computeShaderBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < computeShaderBlock.Size(); i++) {
 		currentLoadName = computeShaderBlock[i].FindMember(SHADER_NAME)->value.GetString();
+		if(progressListener) progressListener();
 		assetManager.CreateComputeShader(currentLoadName, LoadDeserializedFileName(computeShaderBlock[i], SHADER_FILE_PATH));
 	}
 
@@ -195,6 +171,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc)
 	assert(materialBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < materialBlock.Size(); i++) {
 		currentLoadName = LoadDeserializedFileName(materialBlock[i], MAT_NAME);
+		if(progressListener) progressListener();
 
 		std::shared_ptr<Material> newMaterial = assetManager.CreatePBRMaterial(
 			currentLoadName,
@@ -233,10 +210,10 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc)
 	const rapidjson::Value& meshBlock = sceneDoc[MESHES];
 	for (rapidjson::SizeType i = 0; i < meshBlock.Size(); i++) {
 		currentLoadName = meshBlock[i].FindMember(MESH_NAME)->value.GetString();
+		if(progressListener) progressListener();
+
 		std::shared_ptr<Mesh> newMesh = assetManager.CreateMesh(currentLoadName, LoadDeserializedFileName(meshBlock[i], MESH_FILENAME_KEY));
-
 		newMesh->SetDepthPrePass(meshBlock[i].FindMember(MESH_NEEDS_DEPTH_PREPASS)->value.GetBool());
-
 		newMesh->SetMaterialIndex(meshBlock[i].FindMember(MESH_MATERIAL_INDEX)->value.GetInt());
 
 		// This is currently generated automatically. Would need to change
@@ -250,6 +227,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc)
 	for (rapidjson::SizeType i = 0; i < terrainMaterialBlock.Size(); i++) {
 		const rapidjson::Value& tMatInternalBlock = terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_MATERIAL_ARRAY)->value;
 		currentLoadName = terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_NAME)->value.GetString();
+		if(progressListener) progressListener();
 
 		std::vector<std::shared_ptr<Material>> internalMaterials;
 		for (rapidjson::SizeType j = 0; j < tMatInternalBlock.Size(); j++) {
@@ -270,6 +248,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc)
 	assert(skyBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < skyBlock.Size(); i++) {
 		currentLoadName = skyBlock[i].FindMember(SKY_NAME)->value.GetString();
+		if(progressListener) progressListener();
 		std::string filename = LoadDeserializedFileName(skyBlock[i], SKY_FILENAME_KEY);
 		bool keyType = skyBlock[i].FindMember(SKY_FILENAME_KEY_TYPE)->value.GetBool();
 
@@ -290,18 +269,20 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc)
 	assert(soundBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < soundBlock.Size(); i++) {
 		currentLoadName = soundBlock[i].FindMember(SOUND_NAME)->value.GetString();
+		if(progressListener) progressListener();
 		int mode = soundBlock[i].FindMember(SOUND_FMOD_MODE)->value.GetInt();
 		FMOD::Sound* newSound = assetManager.CreateSound(LoadDeserializedFileName(soundBlock[i], SOUND_FILENAME_KEY), mode, currentLoadName);
 	}
 }
 
-void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc)
+void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<void()> progressListener)
 {
 	currentLoadCategory = "Entities";
 	const rapidjson::Value& entityBlock = sceneDoc[ENTITIES];
 	assert(entityBlock.IsArray());
 	for (rapidjson::SizeType i = 0; i < entityBlock.Size(); i++) {
 		currentLoadName = entityBlock[i].FindMember(ENTITY_NAME)->value.GetString();
+		if(progressListener) progressListener();
 
 		std::shared_ptr<GameEntity> newEnt = assetManager.CreateGameEntity(currentLoadName);
 		newEnt->SetEnabled(entityBlock[i].FindMember(ENTITY_ENABLED)->value.GetBool());
@@ -784,10 +765,8 @@ void SceneManager::SaveEntities(rapidjson::Document& sceneDocToSave)
 	sceneDocToSave.AddMember(ENTITIES, gameEntityBlock, allocator);
 }
 
-void SceneManager::Initialize(std::condition_variable* threadNotifier, std::mutex* threadLock, EngineState* engineState)
+void SceneManager::Initialize(EngineState* engineState)
 {
-	this->threadNotifier = threadNotifier;
-	this->threadLock = threadLock;
 	this->engineState = engineState;
 }
 
@@ -799,13 +778,10 @@ std::string SceneManager::GetCurrentSceneName() {
 	return currentSceneName;
 }
 
-void SceneManager::LoadScene(std::string filepath, std::condition_variable* threadNotifier, std::mutex* threadLock) {
+void SceneManager::LoadScene(std::string filepath, std::function<void()> progressListener) {
 	HRESULT hr = CoInitialize(NULL);
 
 	*engineState = EngineState::LOAD_SCENE;
-
-	this->threadNotifier = threadNotifier;
-	this->threadLock = threadLock;
 
 	try {
 		rapidjson::Document sceneDoc;
@@ -833,18 +809,18 @@ void SceneManager::LoadScene(std::string filepath, std::condition_variable* thre
 		// Remove the current scene from memory
 		assetManager.CleanAllVectors();
 
-		LoadAssets(sceneDoc);
-		LoadEntities(sceneDoc);
+		LoadAssets(sceneDoc, progressListener);
+		LoadEntities(sceneDoc, progressListener);
 
-		SetLoadingAndWait("Post-Initialization", "Renderer and Final Setup");
+		currentLoadCategory = "Post-Initialization";
+		currentLoadName = "Renderer and Final Setup";
+		if(progressListener) progressListener();
 
 		fclose(file);
 
 		currentSceneName = loadingSceneName;
 		loadingSceneName = "";
 		*engineState = EngineState::EDITING;
-		this->singleLoadComplete = true;
-		threadNotifier->notify_all();
 	}
 	catch (...) {
 
@@ -950,7 +926,9 @@ void SceneManager::PostPlayLoad()
 	if (*engineState != EngineState::PLAY)
 		return;
 
-	try {
+//	try {
+		*engineState = EngineState::UNLOAD_PLAY;
+
 		rapidjson::Document sceneDoc;
 
 		std::string namePath = assetManager.GetFullPathToAssetFile(AssetPathIndex::ASSET_SCENE_PATH, ".temp_play_save.json");
@@ -977,8 +955,8 @@ void SceneManager::PostPlayLoad()
 		fclose(file);
 
 		*engineState = EngineState::EDITING;
-	}
-	catch (...) {
+//	}
+//	catch (...) {
 
-	}
+//	}
 }
