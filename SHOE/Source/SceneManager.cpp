@@ -311,19 +311,9 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	for (rapidjson::SizeType i = 0; i < skyBlock.Size(); i++) {
 		currentLoadName = skyBlock[i].FindMember(NAME)->value.GetString();
 		if(progressListener) progressListener();
-		std::string filename = LoadDeserializedFileName(skyBlock[i], FILENAME_KEY);
 		bool keyType = skyBlock[i].FindMember(SKY_FILENAME_KEY_TYPE)->value.GetBool();
-
-		if (keyType) {
-			assetManager.CreateSky(filename, keyType, currentLoadName, skyBlock[i].FindMember(SKY_FILENAME_EXTENSION)->value.GetString());
-		}
-		else {
-			assetManager.CreateSky(filename, keyType, currentLoadName);
-		}
-
-		// Skies are such large objects that Flush is needed to prevent
-		// the Device from timing out
-		//context->Flush();
+		std::string fileExt = keyType ? skyBlock[i].FindMember(SKY_FILENAME_EXTENSION)->value.GetString() : ".png";
+		assetManager.CreateSky(LoadDeserializedFileName(skyBlock[i], FILENAME_KEY), keyType, currentLoadName, fileExt);
 	}
 
 	currentLoadCategory = "Sounds";
