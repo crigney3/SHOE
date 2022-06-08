@@ -23,6 +23,7 @@ void MeshRenderer::Start()
 	SetMesh(defaultMesh);
 	SetMaterial(defaultMat);
 	DrawBounds = false;
+	CalculateBounds();
 }
 
 /// <summary>

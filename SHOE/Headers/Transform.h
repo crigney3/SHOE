@@ -47,6 +47,7 @@ private:
 
 	void Start() override;
 	void Update() override;
+	void EditingUpdate() override;
 	void OnMove(DirectX::XMFLOAT3 delta) override;
 	void OnRotate(DirectX::XMFLOAT3 delta) override;
 	void OnScale(DirectX::XMFLOAT3 delta) override;

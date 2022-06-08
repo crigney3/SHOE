@@ -11,10 +11,15 @@ void IComponent::Start()
 
 /**
  * \brief Called once per frame if the GameEntity and component are enabled
- * \param deltaTime Time since last frame
- * \param totalTime Time since program start
  */
 void IComponent::Update()
+{
+}
+
+/**
+ * \brief Called once per frame during editing if the GameEntity and component are enabled
+ */
+void IComponent::EditingUpdate()
 {
 }
 
@@ -23,6 +28,9 @@ void IComponent::ReceiveEvent(EntityEventType event, std::shared_ptr<void> messa
 	switch (event) {
 	case EntityEventType::Update:
 		Update();
+		break;
+	case EntityEventType::EditingUpdate:
+		EditingUpdate();
 		break;
 	case EntityEventType::OnEnable:
 		OnEnable();

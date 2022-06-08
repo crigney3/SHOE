@@ -55,6 +55,19 @@ Renderer::Renderer(
 	colliderRSdesc.SlopeScaledDepthBias = 10.0f;
 	device->CreateRasterizerState(&colliderRSdesc, &wireframeRasterizer);
 
+	//Init and store sky data
+	D3D11_RASTERIZER_DESC rDescription = {};
+	rDescription.FillMode = D3D11_FILL_SOLID;
+	rDescription.CullMode = D3D11_CULL_FRONT;
+
+	device->CreateRasterizerState(&rDescription, &this->skyRasterizer);
+
+	D3D11_DEPTH_STENCIL_DESC depthDescription = {};
+	depthDescription.DepthEnable = true;
+	depthDescription.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+
+	device->CreateDepthStencilState(&depthDescription, &this->skyDepthState);
+
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
 
@@ -463,64 +476,64 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 
 	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAll<MeshRenderer>();
 
-	switch(type) {
-		case MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS:
-		{
-			context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].GetAddressOf(), depthBufferDSV.Get());
+	switch (type) {
+	case MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS:
+	{
+		context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].GetAddressOf(), depthBufferDSV.Get());
 
-			context->OMSetDepthStencilState(refractionSilhouetteDepthState.Get(), 0);
+		context->OMSetDepthStencilState(refractionSilhouetteDepthState.Get(), 0);
 
-			for (std::shared_ptr<MeshRenderer> mesh : activeMeshes) {
-				if (!mesh->IsEnabled() || !mesh->GetMaterial()->GetTransparent()) continue;
+		for (std::shared_ptr<MeshRenderer> mesh : activeMeshes) {
+			if (!mesh->IsEnabled() || !mesh->GetMaterial()->GetTransparent()) continue;
 
-				// Standard depth pre-pass
-				VSShadow->SetMatrix4x4("world", mesh->GetTransform()->GetWorldMatrix());
+			// Standard depth pre-pass
+			VSShadow->SetMatrix4x4("world", mesh->GetTransform()->GetWorldMatrix());
 
-				VSShadow->CopyAllBufferData();
+			VSShadow->CopyAllBufferData();
 
-				solidColorPS->SetShader();
-				solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
-				solidColorPS->CopyAllBufferData();
+			solidColorPS->SetShader();
+			solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
+			solidColorPS->CopyAllBufferData();
 
-				context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-				context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
-				context->DrawIndexed(
-					mesh->GetMesh()->GetIndexCount(),
-					0,
-					0);
-			}
-
-			break;
+			context->DrawIndexed(
+				mesh->GetMesh()->GetIndexCount(),
+				0,
+				0);
 		}
 
-		case MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS:
-		{
-			context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::DEPTHS].GetAddressOf(), depthBufferDSV.Get());
+		break;
+	}
 
-			for (std::shared_ptr<MeshRenderer> mesh : activeMeshes) {
-				if (!mesh->IsEnabled() || !mesh->GetMaterial()->GetTransparent()) continue;
+	case MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS:
+	{
+		context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::DEPTHS].GetAddressOf(), depthBufferDSV.Get());
 
-				// Standard depth pre-pass
-				VSShadow->SetMatrix4x4("world", mesh->GetTransform()->GetWorldMatrix());
+		for (std::shared_ptr<MeshRenderer> mesh : activeMeshes) {
+			if (!mesh->IsEnabled() || !mesh->GetMaterial()->GetTransparent()) continue;
 
-				solidColorPS->SetShader();
-				solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
-				solidColorPS->CopyAllBufferData();
+			// Standard depth pre-pass
+			VSShadow->SetMatrix4x4("world", mesh->GetTransform()->GetWorldMatrix());
 
-				context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-				context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			solidColorPS->SetShader();
+			solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
+			solidColorPS->CopyAllBufferData();
 
-				context->DrawIndexed(
-					mesh->GetMesh()->GetIndexCount(),
-					0,
-					0);
-			}
+			context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
-			break;
+			context->DrawIndexed(
+				mesh->GetMesh()->GetIndexCount(),
+				0,
+				0);
 		}
-		default:
-			break;
+
+		break;
+	}
+	default:
+		break;
 	}
 
 	context->OMSetDepthStencilState(0, 0);
@@ -754,10 +767,10 @@ void Renderer::RenderMeshBounds(std::shared_ptr<Camera> cam)
 	context->RSSetState(0);
 }
 
-void Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam)
+void Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam, EngineState engineState)
 {
 	bool hasSelected = false;
-	if (selectedEntity != -1) {
+	if (engineState == EngineState::EDITING && selectedEntity != -1) {
 		context->RSSetState(0);
 		context->OMSetDepthStencilState(0, 0);
 
@@ -842,7 +855,7 @@ void Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam)
 bool Renderer::GetDrawColliderStatus() { return drawColliders; }
 void Renderer::SetDrawColliderStatus(bool _newState) { drawColliders = _newState; }
 
-void Renderer::Draw(std::shared_ptr<Camera> cam) {
+void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 	RenderShadows();
 
 	// Background color (Cornflower Blue in this case) for clearing
@@ -897,7 +910,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 	perFramePS->SetData("lights", lightData, sizeof(LightData) * MAX_LIGHTS);
 	perFramePS->SetData("lightCount", &lightCount, sizeof(lightCount));
 	perFramePS->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
-	if (globalAssets.currentSky->GetEnableDisable()) {
+	if (globalAssets.currentSky->IsEnabled()) {
 		perFramePS->SetInt("specIBLTotalMipLevels", globalAssets.currentSky->GetIBLMipLevelCount());
 	}
 
@@ -983,7 +996,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 				currentPS->SetSamplerState("shadowState", shadowSampler.Get());
 			}
 
-			if (globalAssets.currentSky->GetEnableDisable()) {
+			if (globalAssets.currentSky->IsEnabled()) {
 				currentPS->SetShaderResourceView("irradianceIBLMap", globalAssets.currentSky->GetIrradianceCubeMap().Get());
 				currentPS->SetShaderResourceView("brdfLookUpMap", globalAssets.currentSky->GetBRDFLookupTexture().Get());
 				currentPS->SetShaderResourceView("specularIBLMap", globalAssets.currentSky->GetConvolvedSpecularCubeMap().Get());
@@ -1009,77 +1022,98 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		}
 	}
 
-	if (drawColliders) RenderColliders(cam);
+	if (engineState == EngineState::EDITING && drawColliders) RenderColliders(cam);
 
 	//Now deal with rendering the terrain, PS data first
 	std::vector<std::shared_ptr<Terrain>> terrains = ComponentManager::GetAll<Terrain>();
-		for (int i = 0; i < terrains.size(); i++) {
-			if (!terrains[i]->IsEnabled()) continue;
+	for (int i = 0; i < terrains.size(); i++) {
+		if (!terrains[i]->IsEnabled()) continue;
 
-			std::shared_ptr<TerrainMaterial> terrainMat = terrains[i]->GetMaterial();
-			std::shared_ptr<SimplePixelShader> PSTerrain = terrains[i]->GetMaterial()->GetPixelShader();
-			std::shared_ptr<SimpleVertexShader> VSTerrain = terrains[i]->GetMaterial()->GetVertexShader();
+		std::shared_ptr<TerrainMaterial> terrainMat = terrains[i]->GetMaterial();
+		std::shared_ptr<SimplePixelShader> PSTerrain = terrains[i]->GetMaterial()->GetPixelShader();
+		std::shared_ptr<SimpleVertexShader> VSTerrain = terrains[i]->GetMaterial()->GetVertexShader();
 
-			PSTerrain->SetShader();
-			PSTerrain->SetData("lights", lightData, sizeof(Light) * MAX_LIGHTS);
-			PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
-			PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
-			PSTerrain->SetFloat("uvMultNear", 50.0f);
-			PSTerrain->SetFloat("uvMultFar", 150.0f);
-			if (shadowCount > 0) {
-				PSTerrain->SetShaderResourceView("shadowMaps", shadowDSVArraySRV.Get());
-				PSTerrain->SetSamplerState("shadowState", shadowSampler.Get());
-			}
-			PSTerrain->SetShaderResourceView("blendMap", terrainMat->GetBlendMap().Get());
-			PSTerrain->SetSamplerState("clampSampler", terrainMat->GetMaterialAtID(0)->GetClampSamplerState().Get());
+		PSTerrain->SetShader();
+		PSTerrain->SetData("lights", lightData, sizeof(Light) * MAX_LIGHTS);
+		PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
+		PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
+		PSTerrain->SetFloat("uvMultNear", 50.0f);
+		PSTerrain->SetFloat("uvMultFar", 150.0f);
+		if (shadowCount > 0) {
+			PSTerrain->SetShaderResourceView("shadowMaps", shadowDSVArraySRV.Get());
+			PSTerrain->SetSamplerState("shadowState", shadowSampler.Get());
+		}
+		PSTerrain->SetShaderResourceView("blendMap", terrainMat->GetBlendMap().Get());
+		PSTerrain->SetSamplerState("clampSampler", terrainMat->GetMaterialAtID(0)->GetClampSamplerState().Get());
 
-			for (int i = 0; i < terrainMat->GetMaterialCount(); i++) {
-				std::string a = "texture" + std::to_string(i + 1) + "Albedo";
-				std::string n = "texture" + std::to_string(i + 1) + "Normal";
-				std::string r = "texture" + std::to_string(i + 1) + "Rough";
-				std::string m = "texture" + std::to_string(i + 1) + "Metal";
-				PSTerrain->SetShaderResourceView(a, terrainMat->GetMaterialAtID(i)->GetTexture().Get());
-				PSTerrain->SetShaderResourceView(n, terrainMat->GetMaterialAtID(i)->GetNormalMap().Get());
-				PSTerrain->SetShaderResourceView(r, terrainMat->GetMaterialAtID(i)->GetRoughMap().Get());
-				PSTerrain->SetShaderResourceView(m, terrainMat->GetMaterialAtID(i)->GetMetalMap().Get());
-			}
-
-			if (globalAssets.currentSky->GetEnableDisable()) {
-				PSTerrain->SetInt("specIBLTotalMipLevels", globalAssets.currentSky->GetIBLMipLevelCount());
-				PSTerrain->SetShaderResourceView("irradianceIBLMap", globalAssets.currentSky->GetIrradianceCubeMap().Get());
-				PSTerrain->SetShaderResourceView("brdfLookUpMap", globalAssets.currentSky->GetBRDFLookupTexture().Get());
-				PSTerrain->SetShaderResourceView("specularIBLMap", globalAssets.currentSky->GetConvolvedSpecularCubeMap().Get());
-			}
-
-			PSTerrain->CopyAllBufferData();
-
-			VSTerrain->SetShader();
-
-			VSTerrain->SetFloat4("colorTint", DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-			VSTerrain->SetMatrix4x4("world", terrains[i]->GetTransform()->GetWorldMatrix());
-			VSTerrain->SetMatrix4x4("view", cam->GetViewMatrix());
-			VSTerrain->SetMatrix4x4("projection", cam->GetProjectionMatrix());
-			if (shadowCount > 0) {
-				VSTerrain->SetData("shadowViews", shadowViewMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
-				VSTerrain->SetData("shadowProjections", shadowProjMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
-			}
-			VSTerrain->SetInt("shadowCount", shadowCount);
-
-			VSTerrain->CopyAllBufferData();
-
-			context->IASetVertexBuffers(0, 1, terrains[i]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(terrains[i]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-
-			context->DrawIndexed(
-				terrains[i]->GetMesh()->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
-				0,     // Offset to the first index we want to use
-				0);    // Offset to add to each index when looking up vertices
+		for (int i = 0; i < terrainMat->GetMaterialCount(); i++) {
+			std::string a = "texture" + std::to_string(i + 1) + "Albedo";
+			std::string n = "texture" + std::to_string(i + 1) + "Normal";
+			std::string r = "texture" + std::to_string(i + 1) + "Rough";
+			std::string m = "texture" + std::to_string(i + 1) + "Metal";
+			PSTerrain->SetShaderResourceView(a, terrainMat->GetMaterialAtID(i)->GetTexture().Get());
+			PSTerrain->SetShaderResourceView(n, terrainMat->GetMaterialAtID(i)->GetNormalMap().Get());
+			PSTerrain->SetShaderResourceView(r, terrainMat->GetMaterialAtID(i)->GetRoughMap().Get());
+			PSTerrain->SetShaderResourceView(m, terrainMat->GetMaterialAtID(i)->GetMetalMap().Get());
 		}
 
-	RenderMeshBounds(cam);
+		if (globalAssets.currentSky->IsEnabled()) {
+			PSTerrain->SetInt("specIBLTotalMipLevels", globalAssets.currentSky->GetIBLMipLevelCount());
+			PSTerrain->SetShaderResourceView("irradianceIBLMap", globalAssets.currentSky->GetIrradianceCubeMap().Get());
+			PSTerrain->SetShaderResourceView("brdfLookUpMap", globalAssets.currentSky->GetBRDFLookupTexture().Get());
+			PSTerrain->SetShaderResourceView("specularIBLMap", globalAssets.currentSky->GetConvolvedSpecularCubeMap().Get());
+		}
 
-	if (globalAssets.currentSky->GetEnableDisable()) {
-		globalAssets.currentSky->Draw(context, cam);
+		PSTerrain->CopyAllBufferData();
+
+		VSTerrain->SetShader();
+
+		VSTerrain->SetFloat4("colorTint", DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+		VSTerrain->SetMatrix4x4("world", terrains[i]->GetTransform()->GetWorldMatrix());
+		VSTerrain->SetMatrix4x4("view", cam->GetViewMatrix());
+		VSTerrain->SetMatrix4x4("projection", cam->GetProjectionMatrix());
+		if (shadowCount > 0) {
+			VSTerrain->SetData("shadowViews", shadowViewMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
+			VSTerrain->SetData("shadowProjections", shadowProjMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
+		}
+		VSTerrain->SetInt("shadowCount", shadowCount);
+
+		VSTerrain->CopyAllBufferData();
+
+		context->IASetVertexBuffers(0, 1, terrains[i]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(terrains[i]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+		context->DrawIndexed(
+			terrains[i]->GetMesh()->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+			0,     // Offset to the first index we want to use
+			0);    // Offset to add to each index when looking up vertices
+	}
+
+	if (engineState == EngineState::EDITING) RenderMeshBounds(cam);
+
+	if (globalAssets.currentSky->IsEnabled()) {
+		context->RSSetState(skyRasterizer.Get());
+		context->OMSetDepthStencilState(skyDepthState.Get(), 0);
+
+		std::shared_ptr<SimplePixelShader> skyPixelShader = globalAssets.currentSky->GetPixShader();
+		skyPixelShader->SetShader();
+		skyPixelShader->SetSamplerState("sampleState", globalAssets.currentSky->GetSampler().Get());
+		skyPixelShader->SetShaderResourceView("textureSky", globalAssets.currentSky->GetSkyTexture().Get());
+		skyPixelShader->CopyAllBufferData();
+
+		std::shared_ptr<SimpleVertexShader> skyVertexShader = globalAssets.currentSky->GetVertShader();
+		skyVertexShader->SetShader();
+		skyVertexShader->SetMatrix4x4("viewMat", cam->GetViewMatrix());
+		skyVertexShader->SetMatrix4x4("projMat", cam->GetProjectionMatrix());
+		skyVertexShader->CopyAllBufferData();
+
+		context->IASetVertexBuffers(0, 1, cubeMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(cubeMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+
+		context->DrawIndexed(cubeMesh->GetIndexCount(), 0, 0);
+
+		context->RSSetState(nullptr);
+		context->OMSetDepthStencilState(nullptr, 0);
 	}
 
 	fullscreenVS->SetShader();
@@ -1151,7 +1185,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 	// Draw the point light
 	context->OMSetRenderTargets(1, currentRTV.GetAddressOf(), depthBufferDSV.Get());
-	DrawPointLights(cam);
+	if (engineState == EngineState::EDITING) DrawPointLights(cam);
 
 	context->OMSetRenderTargets(1, renderTargets, (meshIt < activeMeshes.size()) ? depthBufferDSV.Get() : 0);
 
@@ -1159,9 +1193,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 
 	//Render all of the emitters
 	for (std::shared_ptr<ParticleSystem> emitter : ComponentManager::GetAll<ParticleSystem>()) {
-		if (!emitter->IsEnabled() ||
-			globalAssets.GetAMLoadState() == AMLoadState::SCENE_LOAD ||
-			globalAssets.GetAMLoadState() == AMLoadState::INITIALIZING)continue;
+		if (!emitter->IsEnabled()) continue;
 		emitter->Draw(cam, particleBlendAdditive);
 	}
 
@@ -1177,7 +1209,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		// to a buffer that can be read by the GPU
 		renderTargets[0] = renderTargetRTVs[RTVTypes::FINAL_COMPOSITE].Get();
 		context->OMSetRenderTargets(1, renderTargets, 0);
-		
+
 		textureSamplePS->SetShader();
 		textureSamplePS->SetShaderResourceView("Pixels", renderTargetSRVs[RTVTypes::COMPOSITE].Get());
 		textureSamplePS->SetSamplerState("BasicSampler", activeMeshes[meshIt]->GetMaterial()->GetSamplerState());
@@ -1248,7 +1280,7 @@ void Renderer::Draw(std::shared_ptr<Camera> cam) {
 		}
 	}
 
-	RenderSelectedHighlight(cam);
+	RenderSelectedHighlight(cam, engineState);
 
 	context->OMSetBlendState(0, 0, 0xFFFFFFFF);
 	context->OMSetDepthStencilState(0, 0);

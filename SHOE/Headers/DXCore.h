@@ -9,7 +9,9 @@
 #include "../IMGUI/Headers/imgui_impl_dx11.h"
 #include "Input.h"
 
-#pragma region paths
+// We can include the correct library files here
+// instead of in Visual Studio settings if we want
+#pragma comment(lib, "d3d11.lib")
 
 enum AssetPathIndex {
 	ASSET_MODEL_PATH,
@@ -28,28 +30,6 @@ enum AssetPathIndex {
 	ASSET_SHADER_PATH,
 	ASSET_PATH_COUNT
 };
-
-#pragma endregion
-
-// State machine used to track what type of load
-// AssetManager is doing on calling any Create() function
-enum AMLoadState {
-	// Used when SHOE isn't loading
-	NOT_LOADING,
-	// Used when SHOE first loads
-	INITIALIZING,
-	// Used when something calls a Create() function
-	SINGLE_CREATION,
-	// In the future, used for complex asset imports
-	COMPLEX_CREATION,
-	// In the future, used for loading a scene with
-	// a loading screen running parallel
-	SCENE_LOAD
-};
-
-// We can include the correct library files here
-// instead of in Visual Studio settings if we want
-#pragma comment(lib, "d3d11.lib")
 
 class DXCore
 {

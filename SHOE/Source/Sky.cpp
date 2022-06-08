@@ -1,16 +1,13 @@
 #include "../Headers/Sky.h"
 
-
 Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions, 
 		 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, 
-		 const char* modelFile, 
 		 std::vector<std::shared_ptr<SimplePixelShader>> pixShaders,
 		 std::vector<std::shared_ptr<SimpleVertexShader>> vertShaders,
 		 Microsoft::WRL::ComPtr<ID3D11Device> device,
 		 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
 		 std::string name) {
 	this->samplerOptions = samplerOptions;
-	this->skyGeometry = std::make_shared<Mesh>(modelFile, device);
 	this->skyPixelShader = pixShaders[0];
 	this->skyVertexShader = vertShaders[0];
 	this->textureSRV = skyTexture;
@@ -20,58 +17,6 @@ Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions,
 
 	this->device = device;
 	this->context = context;
-	this->enabled = true;
-
-	D3D11_RASTERIZER_DESC rDescription = {};
-	rDescription.FillMode = D3D11_FILL_SOLID;
-	rDescription.CullMode = D3D11_CULL_FRONT;
-
-	device->CreateRasterizerState(&rDescription, &this->rasterizerOptions);
-
-	this->name = name;
-
-	D3D11_DEPTH_STENCIL_DESC depthDescription = {};
-	depthDescription.DepthEnable = true;
-	depthDescription.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-
-	device->CreateDepthStencilState(&depthDescription, &this->depthType);
-
-	IBLCreateIrradianceMap();
-	IBLCreateConvolvedSpecularMap();
-	IBLCreateBRDFLookUpTexture();
-}
-
-Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions, 
-		 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyTexture, 
-		 std::shared_ptr<Mesh> cubeMesh, 
-		 std::vector<std::shared_ptr<SimplePixelShader>> pixShaders,
-		 std::vector<std::shared_ptr<SimpleVertexShader>> vertShaders,
-		 Microsoft::WRL::ComPtr<ID3D11Device> device,
-		 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
-		 std::string name) {
-	this->samplerOptions = samplerOptions;
-	this->skyGeometry = cubeMesh;
-	this->skyPixelShader = pixShaders[0];
-	this->skyVertexShader = vertShaders[0];
-	this->textureSRV = skyTexture;
-
-	this->vertShaders = vertShaders;
-	this->pixShaders = pixShaders;
-
-	this->device = device;
-	this->context = context;
-
-	D3D11_RASTERIZER_DESC rDescription = {};
-	rDescription.FillMode = D3D11_FILL_SOLID;
-	rDescription.CullMode = D3D11_CULL_FRONT;
-
-	device->CreateRasterizerState(&rDescription, &this->rasterizerOptions);
-
-	D3D11_DEPTH_STENCIL_DESC depthDescription = {};
-	depthDescription.DepthEnable = true;
-	depthDescription.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-
-	device->CreateDepthStencilState(&depthDescription, &this->depthType);
 
 	this->name = name;
 	this->enabled = true;
@@ -83,39 +28,6 @@ Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions,
 
 Sky::~Sky() {
 
-}
-
-void Sky::Draw(Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::shared_ptr<Camera> cam) {
-	context->RSSetState(this->rasterizerOptions.Get());
-	context->OMSetDepthStencilState(this->depthType.Get(), 0);
-
-	this->skyPixelShader->SetShader();
-
-	this->skyPixelShader->SetSamplerState("sampleState", this->samplerOptions.Get());
-	this->skyPixelShader->SetShaderResourceView("textureSky", this->textureSRV.Get());
-
-	this->skyPixelShader->CopyAllBufferData();
-
-	this->skyVertexShader->SetShader();
-
-	this->skyVertexShader->SetMatrix4x4("viewMat", cam->GetViewMatrix());
-	this->skyVertexShader->SetMatrix4x4("projMat", cam->GetProjectionMatrix());
-
-	this->skyVertexShader->CopyAllBufferData();
-
-	UINT stride = sizeof(Vertex);
-	UINT offset = 0;
-	context->IASetVertexBuffers(0, 1, this->skyGeometry->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-	context->IASetIndexBuffer(this->skyGeometry->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
-
-
-	context->DrawIndexed(
-		this->skyGeometry->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
-		0,     // Offset to the first index we want to use
-		0);    // Offset to add to each index when looking up vertices
-
-	context->RSSetState(nullptr);
-	context->OMSetDepthStencilState(nullptr, 0);
 }
 
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Sky::GetBRDFLookupTexture() {
@@ -346,11 +258,24 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Sky::GetSkyTexture() {
 	return this->textureSRV;
 }
 
-void Sky::SetEnableDisable(bool value) {
+std::shared_ptr<SimplePixelShader> Sky::GetPixShader() {
+	return this->skyPixelShader;
+}
+
+std::shared_ptr<SimpleVertexShader> Sky::GetVertShader() {
+	return this->skyVertexShader;
+}
+
+Microsoft::WRL::ComPtr<ID3D11SamplerState> Sky::GetSampler()
+{
+	return samplerOptions;
+}
+
+void Sky::SetEnabled(bool value) {
 	this->enabled = value;
 }
 
-bool Sky::GetEnableDisable() {
+bool Sky::IsEnabled() {
 	return this->enabled;
 }
 

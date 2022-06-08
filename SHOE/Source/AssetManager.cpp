@@ -23,54 +23,57 @@ AssetManager::~AssetManager() {
 	globalMeshes.clear();
 
 	// And entities
-	for (auto ge : globalEntities) {
-		ge->Release();
-	}
-	globalEntities.clear();
+	CleanAllEntities();
 	editingCamera->GetGameEntity()->Release();
 	editingCamera = nullptr;
 	mainCamera = nullptr;
 }
 
-void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, std::condition_variable* threadNotifier, std::mutex* threadLock, HWND hwnd) {
+void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, HWND hwnd, EngineState* engineState, std::function<void(std::string)> progressListener) {
+	*engineState = EngineState::INIT;
+
 	HRESULT hr = CoInitialize(NULL);
 
 	dxInstance = DXCore::DXCoreInstance;
 	this->context = context;
 	this->device = device;
+	this->engineState = engineState;
 
-	this->threadNotifier = threadNotifier;
-	this->threadLock = threadLock;
-
-	this->assetManagerLoadState = AMLoadState::INITIALIZING;
-
-	textureSampleStates = std::vector<Microsoft::WRL::ComPtr<ID3D11SamplerState>>();
+	CleanAllVectors();
 
 	// This must occur before the loading screen starts
 	InitializeFonts();
-
 	InitializeTextureSampleStates();
 
 	// The rest signal the loading screen each time an object loads
+	if(progressListener) progressListener("Shaders");
 	InitializeShaders();
+	if(progressListener) progressListener("Materials");
 	InitializeMaterials();
-	InitializeMeshes();
-	InitializeGameEntities();
-	InitializeCameras();
+	if(progressListener) progressListener("Terrain Materials");
 	InitializeTerrainMaterials();
+	if(progressListener) progressListener("Meshes");
+	InitializeMeshes();
+	if(progressListener) progressListener("Entities");
+	InitializeGameEntities();
+	if(progressListener) progressListener("Cameras");
+	InitializeCameras();
+	if(progressListener) progressListener("Terrain");
 	InitializeTerrainEntities();
+	if(progressListener) progressListener("Lights");
 	InitializeLights();
+	if(progressListener) progressListener("Colliders");
 	InitializeColliders();
+	if(progressListener) progressListener("Emitters");
 	InitializeEmitters();
+	if(progressListener) progressListener("Skies");
 	InitializeSkies();
+	if(progressListener) progressListener("Audio");
 	InitializeAudio();
+	if(progressListener) progressListener("IMGUI");
 	InitializeIMGUI(hwnd);
 
-	// Initialize the input manager with the window's handle
-	Input::GetInstance().Initialize(hwnd);
-
-	SetLoadedAndWait("Post-Initialization", "Preparing to render");
-
+	if(progressListener) progressListener("Editing Camera");
 	//Intentionally not tracked by the asset manager
 	std::shared_ptr<GameEntity> editingCamObj = std::make_shared<GameEntity>("editingCamera");
 	editingCamObj->Initialize();
@@ -78,1086 +81,7 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	editingCamera = CreateCameraOnEntity(editingCamObj);
 	editingCamObj->AddComponent<NoclipMovement>();
 
-	this->assetManagerLoadState = AMLoadState::NOT_LOADING;
-	this->singleLoadComplete = true;
-	threadNotifier->notify_all();
-}
-
-bool AssetManager::GetSingleLoadComplete() {
-	return this->singleLoadComplete;
-}
-
-AMLoadState AssetManager::GetAMLoadState() {
-	return this->assetManagerLoadState;
-}
-
-std::string AssetManager::GetLastLoadedCategory() {
-	return this->loaded.category;
-}
-
-std::string AssetManager::GetLastLoadedObject() {
-	return this->loaded.object;
-}
-
-std::exception_ptr AssetManager::GetLoadingException() {
-	return this->loaded.errorCode;
-}
-
-void AssetManager::SetAMLoadState(AMLoadState state) {
-	this->assetManagerLoadState = state;
-	//dxInstance->SetDXOperatingState(state);
-}
-
-void AssetManager::SetSingleLoadComplete(bool loadComplete) {
-	this->singleLoadComplete = loadComplete;
-}
-
-void AssetManager::SetLoadedAndWait(std::string category, std::string object, std::exception_ptr error) {
-	if (assetManagerLoadState == AMLoadState::INITIALIZING) {
-		loaded.category = category;
-		loaded.object = object;
-		if (error) {
-			loaded.errorCode = error;
-		}
-		SetSingleLoadComplete(true);
-		threadNotifier->notify_all();
-
-		std::unique_lock<std::mutex> lock(*threadLock);
-		threadNotifier->wait(lock, [&] {return singleLoadComplete == 0; });
-	}
-	else if (assetManagerLoadState == AMLoadState::COMPLEX_CREATION) {
-		// TODO: handle complex asset importing by file, and do thread logic here
-		return;
-	}
-	else if (assetManagerLoadState == AMLoadState::SCENE_LOAD) {
-		// TODO: handle running a loading screen while a new scene loads
-		loaded.category = category;
-		loaded.object = object;
-		if (error) {
-			loaded.errorCode = error;
-		}
-		SetSingleLoadComplete(true);
-		threadNotifier->notify_all();
-
-		std::unique_lock<std::mutex> lock(*threadLock);
-		threadNotifier->wait(lock, [&] {return singleLoadComplete == 0; });
-		return;
-	}
-	else {
-		// This a new asset being loaded without a loading screen.
-		// Or this got called while the asset manager wasn't aware
-		// of the loading.
-		return;
-	}
-}
-
-void AssetManager::SetLoadingAndWait(std::string category, std::string object) {
-	if (assetManagerLoadState == AMLoadState::INITIALIZING) {
-		loaded.category = category;
-		loaded.object = object;
-
-		SetSingleLoadComplete(true);
-		threadNotifier->notify_all();
-
-		std::unique_lock<std::mutex> lock(*threadLock);
-		threadNotifier->wait(lock, [&] {return singleLoadComplete == 0; });
-	}
-	else if (assetManagerLoadState == AMLoadState::COMPLEX_CREATION) {
-		// TODO: handle complex asset importing by file, and do thread logic here
-		return;
-	}
-	else if (assetManagerLoadState == AMLoadState::SCENE_LOAD) {
-		// TODO: handle running a loading screen while a new scene loads
-		loaded.category = category;
-		loaded.object = object;
-
-		SetSingleLoadComplete(true);
-		threadNotifier->notify_all();
-
-		std::unique_lock<std::mutex> lock(*threadLock);
-		threadNotifier->wait(lock, [&] {return singleLoadComplete == 0; });
-		return;
-	}
-	else {
-		// This a new asset being loaded without a loading screen.
-		// Or this got called while the asset manager wasn't aware
-		// of the loading.
-		return;
-	}
-}
-
-DirectX::XMFLOAT3 AssetManager::LoadFloat3(const rapidjson::Value& jsonBlock, const char* memberName)
-{
-	DirectX::XMFLOAT3 vec;
-
-	const rapidjson::Value& vecBlock = jsonBlock.FindMember(memberName)->value;
-
-	vec.x = vecBlock[0].GetDouble();
-	vec.y = vecBlock[1].GetDouble();
-	vec.z = vecBlock[2].GetDouble();
-
-	return vec;
-}
-
-void AssetManager::SaveFloat3(rapidjson::Value jsonObject, const char* memberName, DirectX::XMFLOAT3 vec, rapidjson::MemoryPoolAllocator<>& allocator)
-{
-	rapidjson::Value float3(rapidjson::kArrayType);
-	float3.PushBack(vec.x, allocator);
-	float3.PushBack(vec.y, allocator);
-	float3.PushBack(vec.z, allocator);
-	//jsonObject.AddMember(memberName, float3, allocator);
-}
-
-std::string AssetManager::GetLoadingSceneName() {
-	return loadingSceneName;
-}
-
-std::string AssetManager::GetCurrentSceneName() {
-	return currentSceneName;
-}
-
-void AssetManager::LoadScene(std::string filepath, std::condition_variable* threadNotifier, std::mutex* threadLock) {
-	HRESULT hr = CoInitialize(NULL);
-
-	this->threadNotifier = threadNotifier;
-	this->threadLock = threadLock;
-
-	try {
-		rapidjson::Document sceneDoc;
-
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SCENE_PATH, filepath);
-
-		FILE* file;
-		fopen_s(&file, namePath.c_str(), "rb");
-
-		if (file == NULL) {
-			return;
-		}
-
-		char readBuffer[FILE_BUFFER_SIZE];
-		rapidjson::FileReadStream sceneFileStream(file, readBuffer, sizeof(readBuffer));
-
-		sceneDoc.ParseStream(sceneFileStream);
-
-		// Check if this is a valid SHOE scene
-		assert(sceneDoc[VALID_SHOE_SCENE].GetBool());
-
-		// Get the scene name for loading purposes
-		loadingSceneName = sceneDoc[SCENE_NAME].GetString();
-
-		// Remove the current scene from memory
-		CleanAllVectors();
-
-		// Load order:
-		// Fonts
-		// Texture Sample States
-		// Shaders
-		// Cameras
-		// Materials
-		// Meshes
-		// Terrain Materials
-		// Entities
-		// Terrain Entities (entity component)
-		// Emitters (entity component)
-		// Lights (entity component)
-		// Skies
-		// Audio
-		// IMGUI?
-
-		// Fonts
-		const rapidjson::Value& fontBlock = sceneDoc[FONTS];
-		assert(fontBlock.IsArray());
-		for (rapidjson::SizeType i = 0; i < fontBlock.Size(); i++) {
-			std::string fileKey = DeSerializeFileName(fontBlock[i].FindMember(FONT_FILENAME_KEY)->value.GetString());
-			CreateSHOEFont(fontBlock[i].FindMember(FONT_NAME)->value.GetString(), fileKey);
-		}
-
-		// Texture Sampler States
-		const rapidjson::Value& sampleStateBlock = sceneDoc[TEXTURE_SAMPLE_STATES];
-		assert(sampleStateBlock.IsArray());
-		for (rapidjson::SizeType i = 0; i < sampleStateBlock.Size(); i++) {
-			Microsoft::WRL::ComPtr<ID3D11SamplerState> loadedSampler;
-
-			D3D11_SAMPLER_DESC loadDesc;
-			loadDesc.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_U)->value.GetInt());
-			loadDesc.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_V)->value.GetInt());
-			loadDesc.AddressW = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_W)->value.GetInt());
-			loadDesc.Filter = (D3D11_FILTER)(sampleStateBlock[i].FindMember(SAMPLER_FILTER)->value.GetInt());
-			loadDesc.MaxAnisotropy = (sampleStateBlock[i].FindMember(SAMPLER_MAX_ANISOTROPY)->value.GetInt());
-			loadDesc.MinLOD = (sampleStateBlock[i].FindMember(SAMPLER_MIN_LOD)->value.GetDouble());
-			loadDesc.MaxLOD = (sampleStateBlock[i].FindMember(SAMPLER_MAX_LOD)->value.GetDouble());
-			loadDesc.MipLODBias = (sampleStateBlock[i].FindMember(SAMPLER_MIP_LOD_BIAS)->value.GetDouble());
-			loadDesc.ComparisonFunc = (D3D11_COMPARISON_FUNC)(sampleStateBlock[i].FindMember(SAMPLER_COMPARISON_FUNCTION)->value.GetInt());
-
-			const rapidjson::Value& borderColorBlock = sampleStateBlock[i].FindMember(SAMPLER_BORDER_COLOR)->value;
-			for (int j = 0; j < 4; j++) {
-				loadDesc.BorderColor[j] = borderColorBlock[j].GetDouble();
-			}
-
-			device->CreateSamplerState(&loadDesc, &loadedSampler);
-
-			textureSampleStates.push_back(loadedSampler);
-		}
-
-		textureState = textureSampleStates[0];
-		clampState = textureSampleStates[1];
-
-		// Pixel Shaders
-		const rapidjson::Value& pixelShaderBlock = sceneDoc[PIXEL_SHADERS];
-		assert(pixelShaderBlock.IsArray());
-		for (rapidjson::SizeType i = 0; i < pixelShaderBlock.Size(); i++) {
-			std::string fileKey = DeSerializeFileName(pixelShaderBlock[i].FindMember(SHADER_FILE_PATH)->value.GetString());
-			CreatePixelShader(pixelShaderBlock[i].FindMember(SHADER_NAME)->value.GetString(), fileKey);
-		}
-
-		// Vertex Shaders
-		const rapidjson::Value& vertexShaderBlock = sceneDoc[VERTEX_SHADERS];
-		assert(vertexShaderBlock.IsArray());
-		for (rapidjson::SizeType i = 0; i < vertexShaderBlock.Size(); i++) {
-			std::string fileKey = DeSerializeFileName(vertexShaderBlock[i].FindMember(SHADER_FILE_PATH)->value.GetString());
-			CreateVertexShader(vertexShaderBlock[i].FindMember(SHADER_NAME)->value.GetString(), fileKey);
-		}
-
-		// Compute Shaders
-		const rapidjson::Value& computeShaderBlock = sceneDoc[COMPUTE_SHADERS];
-		assert(computeShaderBlock.IsArray());
-		for (rapidjson::SizeType i = 0; i < computeShaderBlock.Size(); i++) {
-			std::string fileKey = DeSerializeFileName(computeShaderBlock[i].FindMember(SHADER_FILE_PATH)->value.GetString());
-			CreateComputeShader(computeShaderBlock[i].FindMember(SHADER_NAME)->value.GetString(), fileKey);
-		}
-
-		const rapidjson::Value& materialBlock = sceneDoc[MATERIALS];
-		assert(materialBlock.IsArray());
-		for (rapidjson::SizeType i = 0; i < materialBlock.Size(); i++) {
-			std::string name = DeSerializeFileName(materialBlock[i].FindMember(MAT_NAME)->value.GetString());
-			std::string albedo = DeSerializeFileName(materialBlock[i].FindMember(MAT_TEXTURE_OR_ALBEDO_MAP)->value.GetString());
-			std::string normal = DeSerializeFileName(materialBlock[i].FindMember(MAT_NORMAL_MAP)->value.GetString());
-			std::string metal = DeSerializeFileName(materialBlock[i].FindMember(MAT_METAL_MAP)->value.GetString());
-			std::string rough = DeSerializeFileName(materialBlock[i].FindMember(MAT_ROUGHNESS_MAP)->value.GetString());
-
-			std::shared_ptr<Material> newMaterial = CreatePBRMaterial(name, albedo, normal, metal, rough);
-
-			newMaterial->SetTransparent(materialBlock[i].FindMember(MAT_IS_TRANSPARENT)->value.GetBool());
-
-			newMaterial->SetRefractive(materialBlock[i].FindMember(MAT_IS_REFRACTIVE)->value.GetBool());
-
-			newMaterial->SetTiling(materialBlock[i].FindMember(MAT_UV_TILING)->value.GetDouble());
-
-			newMaterial->SetIndexOfRefraction(materialBlock[i].FindMember(MAT_INDEX_OF_REFRACTION)->value.GetDouble());
-
-			newMaterial->SetRefractionScale(materialBlock[i].FindMember(MAT_REFRACTION_SCALE)->value.GetDouble());
-
-			newMaterial->SetSamplerState(textureSampleStates[materialBlock[i].FindMember(MAT_TEXTURE_SAMPLER_STATE)->value.GetInt()]);
-
-			newMaterial->SetClampSamplerState(textureSampleStates[materialBlock[i].FindMember(MAT_CLAMP_SAMPLER_STATE)->value.GetInt()]);
-
-			newMaterial->SetVertexShader(vertexShaders[materialBlock[i].FindMember(MAT_VERTEX_SHADER)->value.GetInt()]);
-
-			newMaterial->SetPixelShader(pixelShaders[materialBlock[i].FindMember(MAT_PIXEL_SHADER)->value.GetInt()]);
-
-			if (newMaterial->GetRefractive() || newMaterial->GetTransparent()) {
-				int index = materialBlock[i].FindMember(MAT_REFRACTION_PIXEL_SHADER)->value.GetInt();
-				newMaterial->SetRefractivePixelShader(pixelShaders[index]);
-			}
-
-			DirectX::XMFLOAT4 tint;
-			tint.x = materialBlock[i].FindMember(MAT_COLOR_TINT)->value[0].GetDouble();
-			tint.y = materialBlock[i].FindMember(MAT_COLOR_TINT)->value[1].GetDouble();
-			tint.z = materialBlock[i].FindMember(MAT_COLOR_TINT)->value[2].GetDouble();
-			tint.w = materialBlock[i].FindMember(MAT_COLOR_TINT)->value[3].GetDouble();
-			newMaterial->SetTint(tint);
-		}
-
-		const rapidjson::Value& meshBlock = sceneDoc[MESHES];
-		for (rapidjson::SizeType i = 0; i < meshBlock.Size(); i++) {
-			std::string mFilename = DeSerializeFileName(meshBlock[i].FindMember(MESH_FILENAME_KEY)->value.GetString());
-			std::shared_ptr<Mesh> newMesh = CreateMesh(meshBlock[i].FindMember(MESH_NAME)->value.GetString(), mFilename);
-
-			newMesh->SetDepthPrePass(meshBlock[i].FindMember(MESH_NEEDS_DEPTH_PREPASS)->value.GetBool());
-
-			newMesh->SetMaterialIndex(meshBlock[i].FindMember(MESH_MATERIAL_INDEX)->value.GetInt());
-
-			// This is currently generated automatically. Would need to change
-			// if storing meshes built through code arrays becomes supported.
-			// newMesh->SetIndexCount(meshBlock[i].FindMember(MESH_INDEX_COUNT)->value.GetInt());
-		}
-
-		const rapidjson::Value& terrainMaterialBlock = sceneDoc[TERRAIN_MATERIALS];
-		assert(terrainMaterialBlock.IsArray());
-		for (rapidjson::SizeType i = 0; i < terrainMaterialBlock.Size(); i++) {
-			const rapidjson::Value& tMatInternalBlock = terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_MATERIAL_ARRAY)->value;
-			std::vector<std::shared_ptr<Material>> internalMaterials;
-
-			std::string tMatName = terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_NAME)->value.GetString();
-			std::string tMatBlendMapPath = DeSerializeFileName(terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_BLEND_MAP_PATH)->value.GetString());
-
-			for (rapidjson::SizeType j = 0; j < tMatInternalBlock.Size(); j++) {
-				// Material texture strings are being incorrectly serialized/loaded
-				internalMaterials.push_back(GetMaterialAtID(tMatInternalBlock[j].GetInt()));
-			}
-
-			if (terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_BLEND_MAP_ENABLED)->value.GetBool()) {
-				std::shared_ptr<TerrainMaterial> newTMat = CreateTerrainMaterial(tMatName, internalMaterials, tMatBlendMapPath);
-			}
-			else {
-				std::shared_ptr<TerrainMaterial> newTMat = CreateTerrainMaterial(tMatName, internalMaterials);
-			}
-		}
-
-		const rapidjson::Value& entityBlock = sceneDoc[ENTITIES];
-		assert(entityBlock.IsArray());
-		for (rapidjson::SizeType i = 0; i < entityBlock.Size(); i++) {
-			std::string name = entityBlock[i].FindMember(ENTITY_NAME)->value.GetString();
-
-			std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-			newEnt->SetEnabled(entityBlock[i].FindMember(ENTITY_ENABLED)->value.GetBool());
-			newEnt->UpdateHierarchyIsEnabled(entityBlock[i].FindMember(ENTITY_HIERARCHY_ENABLED)->value.GetBool());
-
-			const rapidjson::Value& componentBlock = entityBlock[i].FindMember(COMPONENTS)->value;
-			assert(componentBlock.IsArray());
-			for (rapidjson::SizeType i = 0; i < componentBlock.Size(); i++) {
-				int componentType = componentBlock[i].FindMember(COMPONENT_TYPE)->value.GetInt();
-				if (componentType == ComponentTypes::TRANSFORM) {
-					std::shared_ptr<Transform> trans = newEnt->GetTransform();
-
-					trans->SetPosition(LoadFloat3(componentBlock[i], TRANSFORM_LOCAL_POSITION));
-					trans->SetRotation(LoadFloat3(componentBlock[i], TRANSFORM_LOCAL_ROTATION));
-					trans->SetScale(LoadFloat3(componentBlock[i], TRANSFORM_LOCAL_SCALE));
-				}
-				else if (componentType == ComponentTypes::COLLIDER) {
-					std::shared_ptr<Collider> collider = newEnt->AddComponent<Collider>();
-
-					collider->SetEnabled(componentBlock[i].FindMember(COLLIDER_ENABLED)->value.GetBool());
-					collider->SetVisible(componentBlock[i].FindMember(COLLIDER_IS_VISIBLE)->value.GetBool());
-					collider->SetIsTrigger(componentBlock[i].FindMember(COLLIDER_TYPE)->value.GetBool());
-
-					collider->SetPositionOffset(LoadFloat3(componentBlock[i], COLLIDER_POSITION_OFFSET));
-					collider->SetRotationOffset(LoadFloat3(componentBlock[i], COLLIDER_ROTATION_OFFSET));
-					collider->SetScale(LoadFloat3(componentBlock[i], COLLIDER_SCALE_OFFSET));
-				}
-				else if (componentType == ComponentTypes::TERRAIN) {
-					std::string heightmapKey = DeSerializeFileName(componentBlock[i].FindMember(TERRAIN_HEIGHTMAP_FILENAME_KEY)->value.GetString());
-					std::shared_ptr<TerrainMaterial> tMat = GetTerrainMaterialAtID(componentBlock[i].FindMember(TERRAIN_INDEX_OF_TERRAIN_MATERIAL)->value.GetInt());
-
-					CreateTerrainOnEntity(newEnt, heightmapKey.c_str(), tMat);
-				}
-				else if (componentType == ComponentTypes::PARTICLE_SYSTEM) {
-					std::string filename = DeSerializeFileName(componentBlock[i].FindMember(PARTICLE_SYSTEM_FILENAME_KEY)->value.GetString());
-					int maxParticles = componentBlock[i].FindMember(PARTICLE_SYSTEM_MAX_PARTICLES)->value.GetInt();
-					bool blendState = componentBlock[i].FindMember(PARTICLE_SYSTEM_ADDITIVE_BLEND)->value.GetBool();
-					bool isMultiParticle = componentBlock[i].FindMember(PARTICLE_SYSTEM_IS_MULTI_PARTICLE)->value.GetBool();
-					float particlesPerSecond = componentBlock[i].FindMember(PARTICLE_SYSTEM_PARTICLES_PER_SECOND)->value.GetDouble();
-					float particleLifetime = componentBlock[i].FindMember(PARTICLE_SYSTEM_PARTICLE_LIFETIME)->value.GetDouble();
-
-					std::shared_ptr<ParticleSystem> newParticles = CreateParticleEmitterOnEntity(newEnt, filename, maxParticles, particleLifetime, particlesPerSecond, isMultiParticle, blendState);
-
-					newParticles->SetScale(componentBlock[i].FindMember(PARTICLE_SYSTEM_SCALE)->value.GetDouble());
-					newParticles->SetSpeed(componentBlock[i].FindMember(PARTICLE_SYSTEM_SPEED)->value.GetDouble());
-					newParticles->SetDestination(LoadFloat3(componentBlock[i], PARTICLE_SYSTEM_DESTINATION));
-					bool enabled = componentBlock[i].FindMember(PARTICLE_SYSTEM_ENABLED)->value.GetBool();
-
-					DirectX::XMFLOAT4 color;
-
-					const rapidjson::Value& colorBlock = componentBlock[i].FindMember(PARTICLE_SYSTEM_COLOR_TINT)->value;
-
-					color.x = colorBlock[0].GetDouble();
-					color.y = colorBlock[1].GetDouble();
-					color.z = colorBlock[2].GetDouble();
-					color.w = colorBlock[3].GetDouble();
-
-					newParticles->SetColorTint(color);
-
-					// Particles are a bit of a mess, and need to be initially disabled for at least the first frame.
-					newParticles->SetEnabled(false);
-				}
-				else if (componentType == ComponentTypes::LIGHT) {
-					std::shared_ptr<Light> light;
-
-					float type = componentBlock[i].FindMember(LIGHT_TYPE)->value.GetDouble();
-					float intensity = componentBlock[i].FindMember(LIGHT_INTENSITY)->value.GetDouble();
-					float range = componentBlock[i].FindMember(LIGHT_RANGE)->value.GetDouble();
-					bool enabled = componentBlock[i].FindMember(LIGHT_ENABLED)->value.GetBool();
-					DirectX::XMFLOAT3 color = LoadFloat3(componentBlock[i], LIGHT_COLOR);
-
-					if (type == 0.0f) {
-						light = CreateDirectionalLightOnEntity(newEnt, color, intensity);
-					}
-					else if (type == 1.0f) {
-						light = CreatePointLightOnEntity(newEnt, range, color, intensity);
-					}
-					else if (type == 2.0f) {
-						light = CreateSpotLightOnEntity(newEnt, range, color, intensity);
-					}
-					else {
-						// Unrecognized light type, do nothing
-					}
-					light->SetCastsShadows(componentBlock[i].FindMember(LIGHT_CASTS_SHADOWS)->value.GetBool());
-				}
-				else if (componentType == ComponentTypes::MESH_RENDERER) {
-					std::shared_ptr<MeshRenderer> mRenderer = newEnt->AddComponent<MeshRenderer>();
-					mRenderer->SetMaterial(GetMaterialAtID(componentBlock[i].FindMember(MATERIAL_COMPONENT_INDEX)->value.GetInt()));
-					mRenderer->SetMesh(GetMeshAtID(componentBlock[i].FindMember(MESH_COMPONENT_INDEX)->value.GetInt()));
-				}
-				else if (componentType == ComponentTypes::CAMERA) {
-					std::shared_ptr<Camera> loadedCam = CreateCameraOnEntity(newEnt, componentBlock[i].FindMember(CAMERA_ASPECT_RATIO)->value.GetDouble());
-					loadedCam->SetIsPerspective(componentBlock[i].FindMember(CAMERA_PROJECTION_MATRIX_TYPE)->value.GetBool());
-					loadedCam->SetNearDist(componentBlock[i].FindMember(CAMERA_NEAR_DISTANCE)->value.GetDouble());
-					loadedCam->SetFarDist(componentBlock[i].FindMember(CAMERA_FAR_DISTANCE)->value.GetDouble());
-					loadedCam->SetFOV(componentBlock[i].FindMember(CAMERA_FIELD_OF_VIEW)->value.GetDouble());
-					if (componentBlock[i].FindMember(CAMERA_IS_MAIN)->value.GetBool())
-						mainCamera = loadedCam;
-				}
-				else if (componentType == ComponentTypes::NOCLIP_CHAR_CONTROLLER) {
-					std::shared_ptr<NoclipMovement> ncMovement = newEnt->AddComponent<NoclipMovement>();
-					ncMovement->moveSpeed = componentBlock[i].FindMember(NOCLIP_MOVE_SPEED)->value.GetDouble();
-					ncMovement->lookSpeed = componentBlock[i].FindMember(NOCLIP_LOOK_SPEED)->value.GetDouble();
-				}
-				else if (componentType == ComponentTypes::FLASHLIGHT_CONTROLLER) {
-					newEnt->AddComponent<FlashlightController>();
-				}
-				else {
-					// Unkown Component Type, do nothing
-				}
-			}
-		}
-
-		const rapidjson::Value& skyBlock = sceneDoc[SKIES];
-		assert(skyBlock.IsArray());
-		for (rapidjson::SizeType i = 0; i < skyBlock.Size(); i++) {
-			std::string name = skyBlock[i].FindMember(SKY_NAME)->value.GetString();
-			std::string filename = DeSerializeFileName(skyBlock[i].FindMember(SKY_FILENAME_KEY)->value.GetString());
-			bool keyType = skyBlock[i].FindMember(SKY_FILENAME_KEY_TYPE)->value.GetBool();
-
-			if (keyType) {
-				std::string filenameExtension = skyBlock[i].FindMember(SKY_FILENAME_EXTENSION)->value.GetString();
-				CreateSky(filename, keyType, name, filenameExtension);
-			}
-			else {
-				CreateSky(filename, keyType, name);
-			}
-
-			// Skies are such large objects that Flush is needed to prevent
-			// the Device from timing out
-			//context->Flush();
-		}
-
-		const rapidjson::Value& soundBlock = sceneDoc[SOUNDS];
-		assert(soundBlock.IsArray());
-		for (rapidjson::SizeType i = 0; i < soundBlock.Size(); i++) {
-			std::string filename = DeSerializeFileName(soundBlock[i].FindMember(SOUND_FILENAME_KEY)->value.GetString());
-			std::string name = soundBlock[i].FindMember(SOUND_NAME)->value.GetString();
-			int mode = soundBlock[i].FindMember(SOUND_FMOD_MODE)->value.GetInt();
-
-			FMOD::Sound* newSound = CreateSound(filename, mode, name);
-		}
-
-		SetLoadingAndWait("Post-Initialization", "Renderer and Final Setup");
-
-		fclose(file);
-
-		this->assetManagerLoadState = AMLoadState::NOT_LOADING;
-		this->singleLoadComplete = true;
-		threadNotifier->notify_all();
-	}
-	catch (...) {
-
-	}	
-}
-
-void AssetManager::LoadScene(FILE* file, std::condition_variable* threadNotifier, std::mutex* threadLock) {
-	rapidjson::Document sceneDoc;
-
-	char readBuffer[FILE_BUFFER_SIZE];
-	rapidjson::FileReadStream sceneFileStream(file, readBuffer, sizeof(readBuffer));
-
-	sceneDoc.ParseStream(sceneFileStream);
-
-	fclose(file);
-}
-
-void AssetManager::SaveScene(std::string filepath, std::string sceneName) {
-	try {
-		char cbuf[4096];
-		rapidjson::MemoryPoolAllocator<> allocator(cbuf, sizeof(cbuf));
-
-		rapidjson::Document sceneDocToSave(&allocator, 256);
-
-		sceneDocToSave.SetObject();
-
-		// RapidJSON doesn't know about our file types directly, so they
-		// have to be reconstructed and stored as individual values.
-		rapidjson::Value validSceneCheck;
-		validSceneCheck.SetBool(true);
-		sceneDocToSave.AddMember(VALID_SHOE_SCENE, validSceneCheck, allocator);
-
-		rapidjson::Value sceneNameValue;
-		sceneNameValue.SetString("Test");
-		sceneDocToSave.AddMember(SCENE_NAME, sceneNameValue, allocator);
-
-		//
-		// In all rapidjson saving and loading instances, defines are used to 
-		// create shorthand strings to optimize memory while keeping the code readable.
-		//
-
-		rapidjson::Value meshBlock(rapidjson::kArrayType);
-		bool shouldBreak = false;
-		for (auto me : this->globalMeshes) {
-			for (auto te : ComponentManager::GetAll<Terrain>()) {
-				if (te->GetMesh() == me) shouldBreak = true;
-			}
-
-			if (shouldBreak) break;
-
-			// Mesh
-			rapidjson::Value meshValue(rapidjson::kObjectType);
-
-			// Simple types first
-			meshValue.AddMember(MESH_INDEX_COUNT, me->GetIndexCount(), allocator);
-			meshValue.AddMember(MESH_MATERIAL_INDEX, me->GetMaterialIndex(), allocator);
-			//meshValue.AddMember(MESH_ENABLED, me->GetEnableDisable(), allocator);
-			meshValue.AddMember(MESH_NEEDS_DEPTH_PREPASS, me->GetDepthPrePass(), allocator);
-
-			// Strings
-			rapidjson::Value meshName;
-			meshName.SetString(me->GetName().c_str(), allocator);
-			meshValue.AddMember(MESH_NAME, meshName, allocator);
-
-			// Complex data - filename string key
-			rapidjson::Value fileKeyValue;
-			fileKeyValue.SetString(me->GetFileNameKey().c_str(), allocator);
-
-			meshValue.AddMember(MESH_FILENAME_KEY, fileKeyValue, allocator);
-
-			meshBlock.PushBack(meshValue, allocator);
-		}
-
-		sceneDocToSave.AddMember(MESHES, meshBlock, allocator);
-
-		rapidjson::Value materialBlock(rapidjson::kArrayType);
-		for(auto mat : this->globalMaterials) {
-			// Material
-			rapidjson::Value matValue(rapidjson::kObjectType);
-
-			// Simple types first
-			matValue.AddMember(MAT_UV_TILING, mat->GetTiling(), allocator);
-			matValue.AddMember(MAT_IS_TRANSPARENT, mat->GetTransparent(), allocator);
-			matValue.AddMember(MAT_IS_REFRACTIVE, mat->GetRefractive(), allocator);
-			matValue.AddMember(MAT_INDEX_OF_REFRACTION, mat->GetIndexOfRefraction(), allocator);
-			matValue.AddMember(MAT_REFRACTION_SCALE, mat->GetRefractionScale(), allocator);
-
-			// String types
-			rapidjson::Value matName;
-			rapidjson::Value pixShader;
-			rapidjson::Value vertShader;
-			rapidjson::Value refractivePixShader;
-			rapidjson::Value albedoMap;
-			rapidjson::Value normalMap;
-			rapidjson::Value metalMap;
-			rapidjson::Value roughnessMap;
-
-			matName.SetString(mat->GetName().c_str(), allocator);
-			pixShader.SetInt(GetPixelShaderIDByPointer(mat->GetPixShader()));
-			vertShader.SetInt(GetVertexShaderIDByPointer(mat->GetVertShader()));
-
-			albedoMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::ALBEDO).c_str(), allocator);
-			normalMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::NORMAL).c_str(), allocator);
-			metalMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::METAL).c_str(), allocator);
-			roughnessMap.SetString(mat->GetTextureFilenameKey(PBRTextureTypes::ROUGH).c_str(), allocator);
-
-			matValue.AddMember(MAT_NAME, matName, allocator);
-			matValue.AddMember(MAT_PIXEL_SHADER, pixShader, allocator);
-			matValue.AddMember(MAT_VERTEX_SHADER, vertShader, allocator);
-
-			matValue.AddMember(MAT_TEXTURE_OR_ALBEDO_MAP, albedoMap, allocator);
-			matValue.AddMember(MAT_NORMAL_MAP, normalMap, allocator);
-			matValue.AddMember(MAT_METAL_MAP, metalMap, allocator);
-			matValue.AddMember(MAT_ROUGHNESS_MAP, roughnessMap, allocator);
-
-			// Currently, refractivePixShader also covers transparency
-			if (mat->GetRefractive() || mat->GetTransparent()) {
-				refractivePixShader.SetInt(GetPixelShaderIDByPointer(mat->GetRefractivePixelShader()));
-				matValue.AddMember(MAT_REFRACTION_PIXEL_SHADER, refractivePixShader, allocator);
-			}
-
-			// Array and Color types
-			rapidjson::Value colorTintValue(rapidjson::kArrayType);
-
-			colorTintValue.PushBack(mat->GetTint().x, allocator);
-			colorTintValue.PushBack(mat->GetTint().y, allocator);
-			colorTintValue.PushBack(mat->GetTint().z, allocator);
-			colorTintValue.PushBack(mat->GetTint().w, allocator);
-
-			matValue.AddMember(MAT_COLOR_TINT, colorTintValue, allocator);
-
-			// Complex types - Sampler States
-			// Store the index of the state being used.
-			// States are stored in the scene file.
-			// Index is determined by a pointer-match search
-			for (int i = 0; i < textureSampleStates.size(); i++) {
-				if (mat->GetSamplerState() == textureSampleStates[i]) {
-					matValue.AddMember(MAT_TEXTURE_SAMPLER_STATE, i, allocator);
-					break;
-				}
-			}
-
-			for (int i = 0; i < textureSampleStates.size(); i++) {
-				if (mat->GetClampSamplerState() == textureSampleStates[i]) {
-					matValue.AddMember(MAT_CLAMP_SAMPLER_STATE, i, allocator);
-					break;
-				}
-			}
-
-			// Add everything to the material
-			materialBlock.PushBack(matValue, allocator);
-		}
-
-		sceneDocToSave.AddMember(MATERIALS, materialBlock, allocator);
-
-		rapidjson::Value gameEntityBlock(rapidjson::kArrayType);
-		for (auto ge : this->globalEntities) {
-			rapidjson::Value geValue(rapidjson::kObjectType);
-
-			// First add entity-level types
-			rapidjson::Value geName;
-			geName.SetString(ge->GetName().c_str(), allocator);
-			geValue.AddMember(ENTITY_NAME, geName, allocator);
-			geValue.AddMember(ENTITY_ENABLED, ge->GetEnabled(), allocator);
-			geValue.AddMember(ENTITY_HIERARCHY_ENABLED, ge->GetHierarchyIsEnabled(), allocator);
-
-			rapidjson::Value geComponents(rapidjson::kArrayType);
-			rapidjson::Value coValue(rapidjson::kObjectType);
-			for (auto co : ge->GetAllComponents()) {
-				// Is it a Light?
-				if (std::shared_ptr<Light> light = std::dynamic_pointer_cast<Light>(co)) {
-					coValue.AddMember(COMPONENT_TYPE, ComponentTypes::LIGHT, allocator);
-
-					// Basic types
-					coValue.AddMember(LIGHT_TYPE, light->GetType(), allocator);
-					coValue.AddMember(LIGHT_INTENSITY, light->GetIntensity(), allocator);
-					coValue.AddMember(LIGHT_ENABLED, light->IsEnabled(), allocator);
-					coValue.AddMember(LIGHT_RANGE, light->GetRange(), allocator);
-					coValue.AddMember(LIGHT_CASTS_SHADOWS, light->CastsShadows(), allocator);
-
-					// Treat FLOATX as float array[x]
-					rapidjson::Value color(rapidjson::kArrayType);
-					DirectX::XMFLOAT3 lightColor = light->GetColor();
-					color.PushBack(lightColor.x, allocator);
-					color.PushBack(lightColor.y, allocator);
-					color.PushBack(lightColor.z, allocator);
-
-					coValue.AddMember(LIGHT_COLOR, color, allocator);
-					
-					// No need to store position, as it's pulled from ge's transform
-					// Padding is always empty
-				}
-
-				// Is it a Collider?
-				else if (std::shared_ptr<Collider> collider = std::dynamic_pointer_cast<Collider>(co)) {
-					coValue.AddMember(COMPONENT_TYPE, ComponentTypes::COLLIDER, allocator);
-					
-
-					coValue.AddMember(COLLIDER_TYPE, collider->IsTrigger(), allocator);
-					coValue.AddMember(COLLIDER_ENABLED, collider->IsEnabled(), allocator);
-					coValue.AddMember(COLLIDER_IS_VISIBLE, collider->IsVisible(), allocator);
-
-					// Treat FLOATX as float array[x]
-					rapidjson::Value pos(rapidjson::kArrayType);
-					rapidjson::Value rot(rapidjson::kArrayType);
-					rapidjson::Value scale(rapidjson::kArrayType);
-
-					pos.PushBack(collider->GetPositionOffset().x, allocator);
-					pos.PushBack(collider->GetPositionOffset().y, allocator);
-					pos.PushBack(collider->GetPositionOffset().z, allocator);
-
-					scale.PushBack(collider->GetScale().x, allocator);
-					scale.PushBack(collider->GetScale().y, allocator);
-					scale.PushBack(collider->GetScale().z, allocator);
-
-					rot.PushBack(collider->GetRotationOffset().x, allocator);
-					rot.PushBack(collider->GetRotationOffset().y, allocator);
-					rot.PushBack(collider->GetRotationOffset().z, allocator);
-
-					coValue.AddMember(COLLIDER_POSITION_OFFSET, pos, allocator);
-					coValue.AddMember(COLLIDER_SCALE_OFFSET, scale, allocator);
-					coValue.AddMember(COLLIDER_ROTATION_OFFSET, rot, allocator);
-				}
-
-				// Is it Terrain?
-				else if (std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(co)) {
-					coValue.AddMember(COMPONENT_TYPE, ComponentTypes::TERRAIN, allocator);
-
-					rapidjson::Value hmKey;
-					hmKey.SetString(terrain->GetMesh()->GetFileNameKey().c_str(), allocator);
-
-					coValue.AddMember(TERRAIN_HEIGHTMAP_FILENAME_KEY, hmKey, allocator);
-
-					int index;
-					for (index = 0; index < globalTerrainMaterials.size(); index++) {
-						if (globalTerrainMaterials[index] == terrain->GetMaterial()) break;
-					}
-					coValue.AddMember(TERRAIN_INDEX_OF_TERRAIN_MATERIAL, index, allocator);
-				}
-
-				// Is it a Particle System?
-				else if (std::shared_ptr<ParticleSystem> ps = std::dynamic_pointer_cast<ParticleSystem>(co)) {
-					coValue.AddMember(COMPONENT_TYPE, ComponentTypes::PARTICLE_SYSTEM, allocator);
-
-					coValue.AddMember(PARTICLE_SYSTEM_MAX_PARTICLES, ps->GetMaxParticles(), allocator);
-					coValue.AddMember(PARTICLE_SYSTEM_IS_MULTI_PARTICLE, ps->IsMultiParticle(), allocator);
-					coValue.AddMember(PARTICLE_SYSTEM_ENABLED, ps->IsLocallyEnabled(), allocator);
-					coValue.AddMember(PARTICLE_SYSTEM_ADDITIVE_BLEND, ps->GetBlendState(), allocator);
-					coValue.AddMember(PARTICLE_SYSTEM_SCALE, ps->GetScale(), allocator);
-					coValue.AddMember(PARTICLE_SYSTEM_SPEED, ps->GetSpeed(), allocator);
-					coValue.AddMember(PARTICLE_SYSTEM_PARTICLES_PER_SECOND, ps->GetParticlesPerSecond(), allocator);
-					coValue.AddMember(PARTICLE_SYSTEM_PARTICLE_LIFETIME, ps->GetParticleLifetime(), allocator);
-
-					// Float arrays
-					rapidjson::Value psDestination(rapidjson::kArrayType);
-					psDestination.PushBack(ps->GetDestination().x, allocator);
-					psDestination.PushBack(ps->GetDestination().y, allocator);
-					psDestination.PushBack(ps->GetDestination().z, allocator);
-					coValue.AddMember(PARTICLE_SYSTEM_DESTINATION, psDestination, allocator);
-
-					rapidjson::Value psColorTint(rapidjson::kArrayType);
-					psColorTint.PushBack(ps->GetColorTint().x, allocator);
-					psColorTint.PushBack(ps->GetColorTint().y, allocator);
-					psColorTint.PushBack(ps->GetColorTint().z, allocator);
-					psColorTint.PushBack(ps->GetColorTint().w, allocator);
-					coValue.AddMember(PARTICLE_SYSTEM_COLOR_TINT, psColorTint, allocator);
-
-					// Strings
-					rapidjson::Value psFileKey;
-					psFileKey.SetString(ps->GetFilenameKey().c_str(), allocator);
-					coValue.AddMember(PARTICLE_SYSTEM_FILENAME_KEY, psFileKey, allocator);
-				}
-
-				// Is it a MeshRenderer?
-				else if (std::shared_ptr<MeshRenderer> meshRenderer = std::dynamic_pointer_cast<MeshRenderer>(co)) {
-					coValue.AddMember(COMPONENT_TYPE, ComponentTypes::MESH_RENDERER, allocator);
-
-					// Mesh Renderers are really just storage for a Mesh
-					// and a Material, so get the indices for those in the 
-					// stored list
-
-					rapidjson::Value meshIndex;
-					for (int i = 0; i < globalMeshes.size(); i++) {
-						if (globalMeshes[i] == meshRenderer->GetMesh()) {
-							meshIndex.SetInt(i);
-							break;
-						}
-					}
-					coValue.AddMember(MESH_COMPONENT_INDEX, meshIndex, allocator);
-
-					rapidjson::Value materialIndex;
-					for (int i = 0; i < globalMaterials.size(); i++) {
-						if (globalMaterials[i] == meshRenderer->GetMaterial()) {
-							materialIndex.SetInt(i);
-							break;
-						}
-					}
-					coValue.AddMember(MATERIAL_COMPONENT_INDEX, materialIndex, allocator);
-				}
-
-				// Is it a Camera?
-				else if (std::shared_ptr<Camera> camera = std::dynamic_pointer_cast<Camera>(co)) {
-				coValue.AddMember(COMPONENT_TYPE, ComponentTypes::CAMERA, allocator); 
-				coValue.AddMember(CAMERA_ASPECT_RATIO, camera->GetAspectRatio(), allocator);
-				coValue.AddMember(CAMERA_PROJECTION_MATRIX_TYPE, camera->IsPerspective(), allocator);
-				coValue.AddMember(CAMERA_NEAR_DISTANCE, camera->GetNearDist(), allocator);
-				coValue.AddMember(CAMERA_FAR_DISTANCE, camera->GetFarDist(), allocator);
-				coValue.AddMember(CAMERA_FIELD_OF_VIEW, camera->GetFOV(), allocator);
-				coValue.AddMember(CAMERA_IS_MAIN, camera == mainCamera, allocator);
-				}
-
-				// Is it a Noclip Movement Controller?
-				else if (std::shared_ptr<NoclipMovement> noclip = std::dynamic_pointer_cast<NoclipMovement>(co)) {
-				coValue.AddMember(COMPONENT_TYPE, ComponentTypes::NOCLIP_CHAR_CONTROLLER, allocator);
-				coValue.AddMember(NOCLIP_MOVE_SPEED, noclip->moveSpeed, allocator);
-				coValue.AddMember(NOCLIP_LOOK_SPEED, noclip->lookSpeed, allocator);
-				}
-
-				// Is it a Flashlight Controller?
-				else if (std::shared_ptr<FlashlightController> flashlight = std::dynamic_pointer_cast<FlashlightController>(co)) {
-				coValue.AddMember(COMPONENT_TYPE, ComponentTypes::FLASHLIGHT_CONTROLLER, allocator);
-				}
-
-				geComponents.PushBack(coValue, allocator);
-				coValue.SetObject();
-			}
-
-			// Transforms are treated and stored differently
-			coValue.AddMember(COMPONENT_TYPE, ComponentTypes::TRANSFORM, allocator);
-			std::shared_ptr<Transform> transform = ge->GetTransform();
-
-			// Treat FLOATX as float array[x]
-			rapidjson::Value pos(rapidjson::kArrayType);
-			rapidjson::Value rot(rapidjson::kArrayType);
-			rapidjson::Value scale(rapidjson::kArrayType);
-
-			// I have no idea how to serialize this
-			// I'd need to essentially create a unique id system - GUIDs?
-			rapidjson::Value parent;
-			rapidjson::Value children;
-
-			pos.PushBack(transform->GetLocalPosition().x, allocator);
-			pos.PushBack(transform->GetLocalPosition().y, allocator);
-			pos.PushBack(transform->GetLocalPosition().z, allocator);
-
-			scale.PushBack(transform->GetLocalScale().x, allocator);
-			scale.PushBack(transform->GetLocalScale().y, allocator);
-			scale.PushBack(transform->GetLocalScale().z, allocator);
-
-			rot.PushBack(transform->GetLocalPitchYawRoll().x, allocator);
-			rot.PushBack(transform->GetLocalPitchYawRoll().y, allocator);
-			rot.PushBack(transform->GetLocalPitchYawRoll().z, allocator);
-
-			coValue.AddMember(TRANSFORM_LOCAL_POSITION, pos, allocator);
-			coValue.AddMember(TRANSFORM_LOCAL_SCALE, scale, allocator);
-			coValue.AddMember(TRANSFORM_LOCAL_ROTATION, rot, allocator);
-
-			// Push transform to the components list
-			geComponents.PushBack(coValue, allocator);
-
-			// Push all the components to the game entity
-			geValue.AddMember(COMPONENTS, geComponents, allocator);
-
-			// Push everything to the game entity array
-			gameEntityBlock.PushBack(geValue, allocator);
-		}
-
-		// Add the game entity array to the doc
-		sceneDocToSave.AddMember(ENTITIES, gameEntityBlock, allocator);
-
-		rapidjson::Value fontBlock(rapidjson::kArrayType);
-		for (auto font : globalFonts) {
-			rapidjson::Value fontObject(rapidjson::kObjectType);
-
-			fontObject.AddMember(FONT_FILENAME_KEY, rapidjson::Value().SetString(font->fileNameKey.c_str(), allocator), allocator);
-			fontObject.AddMember(FONT_NAME, rapidjson::Value().SetString(font->name.c_str(), allocator), allocator);
-
-			fontBlock.PushBack(fontObject, allocator);
-		}
-
-		sceneDocToSave.AddMember(FONTS, fontBlock, allocator);
-
-		// Save all texture sample states
-		rapidjson::Value texSampleStateBlock(rapidjson::kArrayType);
-		for (auto tss : textureSampleStates) {
-			// Future optimization - If these are 0, don't store,
-			// and in Load(), default all of these to 0 if not found
-			rapidjson::Value sampleState(rapidjson::kObjectType);
-
-			D3D11_SAMPLER_DESC texSamplerDesc;
-			tss->GetDesc(&texSamplerDesc);
-
-			// Read each value of the description and add it to the
-			// JSON object
-			sampleState.AddMember(SAMPLER_ADDRESS_U, texSamplerDesc.AddressU, allocator);
-			sampleState.AddMember(SAMPLER_ADDRESS_V, texSamplerDesc.AddressV, allocator);
-			sampleState.AddMember(SAMPLER_ADDRESS_W, texSamplerDesc.AddressW, allocator);
-			sampleState.AddMember(SAMPLER_COMPARISON_FUNCTION, texSamplerDesc.ComparisonFunc, allocator);
-			sampleState.AddMember(SAMPLER_FILTER, texSamplerDesc.Filter, allocator);
-			sampleState.AddMember(SAMPLER_MAX_ANISOTROPY, texSamplerDesc.MaxAnisotropy, allocator);
-			sampleState.AddMember(SAMPLER_MAX_LOD, texSamplerDesc.MaxLOD, allocator);
-			sampleState.AddMember(SAMPLER_MIN_LOD, texSamplerDesc.MinLOD, allocator);
-			sampleState.AddMember(SAMPLER_MIP_LOD_BIAS, texSamplerDesc.MipLODBias, allocator);
-
-			// Some of these are complex types
-			rapidjson::Value borderColorValue(rapidjson::kArrayType);
-
-			borderColorValue.PushBack(texSamplerDesc.BorderColor[0], allocator);
-			borderColorValue.PushBack(texSamplerDesc.BorderColor[1], allocator);
-			borderColorValue.PushBack(texSamplerDesc.BorderColor[2], allocator);
-			borderColorValue.PushBack(texSamplerDesc.BorderColor[3], allocator);
-
-			sampleState.AddMember(SAMPLER_BORDER_COLOR, borderColorValue, allocator);
-
-			// Add all that to array
-			texSampleStateBlock.PushBack(sampleState, allocator);
-		}
-
-		sceneDocToSave.AddMember(TEXTURE_SAMPLE_STATES, texSampleStateBlock, allocator);
-
-		// Save all shaders
-		rapidjson::Value vertexShaderBlock(rapidjson::kArrayType);
-		for (auto vs : vertexShaders) {
-			rapidjson::Value vsObject(rapidjson::kObjectType);
-
-			rapidjson::Value vsName;
-			rapidjson::Value vsKey;
-
-			vsName.SetString(vs->GetName().c_str(), allocator);
-			vsKey.SetString(vs->GetFileNameKey().c_str(), allocator);
-
-			vsObject.AddMember(SHADER_NAME, vsName, allocator);
-			vsObject.AddMember(SHADER_FILE_PATH, vsKey, allocator);
-
-			vertexShaderBlock.PushBack(vsObject, allocator);
-		}
-
-		sceneDocToSave.AddMember(VERTEX_SHADERS, vertexShaderBlock, allocator);
-
-		rapidjson::Value pixelShaderBlock(rapidjson::kArrayType);
-		for (auto ps : pixelShaders) {
-			rapidjson::Value psObject(rapidjson::kObjectType);
-
-			rapidjson::Value psName;
-			rapidjson::Value psKey;
-
-			psName.SetString(ps->GetName().c_str(), allocator);
-			psKey.SetString(ps->GetFileNameKey().c_str(), allocator);
-
-			psObject.AddMember(SHADER_NAME, psName, allocator);
-			psObject.AddMember(SHADER_FILE_PATH, psKey, allocator);
-
-			pixelShaderBlock.PushBack(psObject, allocator);
-		}
-
-		sceneDocToSave.AddMember(PIXEL_SHADERS, pixelShaderBlock, allocator);
-
-		rapidjson::Value computeShaderBlock(rapidjson::kArrayType);
-		for (auto cs : computeShaders) {
-			rapidjson::Value csObject(rapidjson::kObjectType);
-
-			rapidjson::Value csName;
-			rapidjson::Value csKey;
-
-			csName.SetString(cs->GetName().c_str(), allocator);
-			csKey.SetString(cs->GetFileNameKey().c_str(), allocator);
-
-			csObject.AddMember(SHADER_NAME, csName, allocator);
-			csObject.AddMember(SHADER_FILE_PATH, csKey, allocator);
-
-			computeShaderBlock.PushBack(csObject, allocator);
-		}
-
-		sceneDocToSave.AddMember(COMPUTE_SHADERS, computeShaderBlock, allocator);
-
-		rapidjson::Value skyBlock(rapidjson::kArrayType);
-		for (auto sy : skies) {
-			rapidjson::Value skyObject(rapidjson::kObjectType);
-			rapidjson::Value skyName;
-			rapidjson::Value skyFilenameKey;
-			rapidjson::Value skyFilenameExtension;
-			skyName.SetString(sy->GetName().c_str(), allocator);
-			skyFilenameKey.SetString(sy->GetFilenameKey().c_str(), allocator);
-			skyFilenameExtension.SetString(sy->GetFileExtension().c_str(), allocator);
-
-			skyObject.AddMember(SKY_NAME, skyName, allocator);
-			skyObject.AddMember(SKY_FILENAME_KEY_TYPE, sy->GetFilenameKeyType(), allocator);
-			skyObject.AddMember(SKY_FILENAME_KEY, skyFilenameKey, allocator);
-			skyObject.AddMember(SKY_FILENAME_EXTENSION, skyFilenameExtension, allocator);
-
-			skyBlock.PushBack(skyObject, allocator);
-		}
-
-		sceneDocToSave.AddMember(SKIES, skyBlock, allocator);
-
-		rapidjson::Value soundBlock(rapidjson::kArrayType);
-		for (int i = 0; i < globalSounds.size(); i++) {
-			rapidjson::Value soundObject(rapidjson::kObjectType);
-			FMODUserData* uData;
-			FMOD_MODE sMode;
-
-			FMOD_RESULT uDataResult = globalSounds[i]->getUserData((void**)&uData);
-
-#if defined(DEBUG) || defined(_DEBUG)
-			if (uDataResult != FMOD_OK) {
-				printf("Failed to save sound with user data error!");
-			}	
-#endif
-
-			uDataResult = globalSounds[i]->getMode(&sMode);
-
-#if defined(DEBUG) || defined(_DEBUG)
-			if (uDataResult != FMOD_OK) {
-				printf("Failed to save sound with mode error!");
-			}
-#endif
-
-			rapidjson::Value soundFK;
-			rapidjson::Value soundN;
-
-			soundFK.SetString(uData->filenameKey->c_str(), allocator);
-			soundN.SetString(uData->name->c_str(), allocator);
-
-			soundObject.AddMember(SOUND_FILENAME_KEY, soundFK, allocator);
-			soundObject.AddMember(SOUND_NAME, soundN, allocator);
-			soundObject.AddMember(SOUND_FMOD_MODE, sMode, allocator);
-
-			soundBlock.PushBack(soundObject, allocator);
-		}
-
-		sceneDocToSave.AddMember(SOUNDS, soundBlock, allocator);
-
-		rapidjson::Value terrainMatBlock(rapidjson::kArrayType);
-		for (auto tm : globalTerrainMaterials) {
-			rapidjson::Value terrainMatObj(rapidjson::kObjectType);
-			rapidjson::Value tmName;
-			rapidjson::Value tmBlendPath;
-
-			tmName.SetString(tm->GetName().c_str(), allocator);
-			tmBlendPath.SetString(tm->GetBlendMapFilenameKey().c_str(), allocator);
-
-			terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_ENABLED, tm->GetUsingBlendMap(), allocator);
-			terrainMatObj.AddMember(TERRAIN_MATERIAL_NAME, tmName, allocator);
-			terrainMatObj.AddMember(TERRAIN_MATERIAL_BLEND_MAP_PATH, tmBlendPath, allocator);
-
-			// The internal materials are already tracked as regular materials,
-			// So we just need an array of pointers to them
-			rapidjson::Value terrainInternalMats(rapidjson::kArrayType);
-			for (int i = 0; i < tm->GetMaterialCount(); i++) {
-				// GUIDs aren't implemented yet, so store array indices for now
-				int index;
-				for (index = 0; index < globalMaterials.size(); index++) {
-					if (globalMaterials[index] == tm->GetMaterialAtID(i)) break;
-				}
-
-				terrainInternalMats.PushBack(index, allocator);
-			}
-			terrainMatObj.AddMember(TERRAIN_MATERIAL_MATERIAL_ARRAY, terrainInternalMats, allocator);
-
-			terrainMatBlock.PushBack(terrainMatObj, allocator);
-		}
-		
-		sceneDocToSave.AddMember(TERRAIN_MATERIALS, terrainMatBlock, allocator);
-
-		// At the end of gathering data, write it all
-		// to the appropriate file
-		std::string assetPath;
-
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SCENE_PATH, filepath);
-
-		FILE* file;
-		fopen_s(&file, namePath.c_str(), "w");
-
-		char writeBuffer[FILE_BUFFER_SIZE];
-		rapidjson::FileWriteStream sceneFileStream(file, writeBuffer, sizeof(writeBuffer));
-
-		rapidjson::Writer<rapidjson::FileWriteStream> writer(sceneFileStream);
-		sceneDocToSave.Accept(writer);
-
-		fclose(file);
-	}
-	catch (...) {
-#if defined(DEBUG) || defined(_DEBUG)
-		printf("Failed to save scene with error:\n %s \n", std::current_exception());
-#endif
-	}
-}
-
-void AssetManager::SaveScene(FILE* file, std::string sceneName) {
-	rapidjson::Document sceneDocToSave;
-
-	// At the end of gathering data, write it all
-	// to the appropriate file
-	char writeBuffer[FILE_BUFFER_SIZE];
-	rapidjson::FileWriteStream sceneFileStream(file, writeBuffer, sizeof(writeBuffer));
-
-	rapidjson::Writer<rapidjson::FileWriteStream> writer(sceneFileStream);
-	sceneDocToSave.Accept(writer);
-
-	fclose(file);
+	*engineState = EngineState::EDITING;
 }
 #pragma endregion
 
@@ -1165,164 +89,109 @@ void AssetManager::SaveScene(FILE* file, std::string sceneName) {
 bool AssetManager::materialSortDirty = false;
 
 FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::string name) {
-	try
-	{
-		SetLoadingAndWait("Sounds", path);
+	FMODUserData* uData = new FMODUserData;
+	FMOD::Sound* sound;
 
-		FMODUserData* uData = new FMODUserData;
-		FMOD::Sound* sound;
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
+	sound = audioInstance.LoadSound(namePath, mode);
 
-		sound = audioInstance.LoadSound(namePath, mode);
+	// Serialize the filename if it's in the right folder
+	std::string assetPathStr = "Assets\\Sounds\\";
 
-		// Serialize the filename if it's in the right folder
-		std::string assetPathStr = "Assets\\Sounds\\";
+	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
+	uData->filenameKey = std::make_shared<std::string>(baseFilename);
+	uData->name = std::make_shared<std::string>(name);
 
-		uData->filenameKey = std::make_shared<std::string>(baseFilename);
-		uData->name = std::make_shared<std::string>(name);
+	// On getUserData, we will receive the whole struct
+	sound->setUserData(uData);
 
-		// On getUserData, we will receive the whole struct
-		sound->setUserData(uData);
+	globalSounds.push_back(sound);
 
-		globalSounds.push_back(sound);
-
-		return sound;
-	}
-	catch (...) {
-		SetLoadedAndWait("Sounds", path, std::current_exception());
-
-		return NULL;
-	}
+	return sound;
 }
 
 std::shared_ptr<Camera> AssetManager::CreateCamera(std::string name, float aspectRatio) {
-	try {
-		SetLoadingAndWait("Cameras", name);
+	float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	std::shared_ptr<Camera> cam = CreateCameraOnEntity(newEnt, ar);
+	return cam;
 
-		float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Camera> cam = CreateCameraOnEntity(newEnt, ar);
-		return cam;
-	}
-	catch (...) {
-		SetLoadedAndWait("Camera", name, std::current_exception());
-
-		return NULL;
-	}
-	
 }
 
 std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::string nameToLoad) {
-	try {
-		SetLoadingAndWait("Vertex Shaders", id);
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::shared_ptr<SimpleVertexShader> newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), namePath, id);
 
-		std::shared_ptr<SimpleVertexShader> newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), namePath, id);
+	// Serialize the filename if it's in the right folder
+	std::string assetPathStr = "Assets\\Shaders\\";
 
-		// Serialize the filename if it's in the right folder
-		std::string assetPathStr = "Assets\\Shaders\\";
+	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
+	newVS->SetFileNameKey(baseFilename);
 
-		newVS->SetFileNameKey(baseFilename);
+	vertexShaders.push_back(newVS);
 
-		vertexShaders.push_back(newVS);
-
-		return newVS;
-	}
-	catch (...) {
-		SetLoadedAndWait("Vertex Shaders", id, std::current_exception());
-
-		return NULL;
-	}
+	return newVS;
 }
 
 std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string id, std::string nameToLoad) {
-	try {
-		SetLoadingAndWait("Pixel Shaders", id);
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::shared_ptr<SimplePixelShader> newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), namePath, id);
 
-		std::shared_ptr<SimplePixelShader> newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), namePath, id);
+	// Serialize the filename if it's in the right folder
+	std::string assetPathStr = "Assets\\Shaders\\";
 
-		// Serialize the filename if it's in the right folder
-		std::string assetPathStr = "Assets\\Shaders\\";
+	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
+	newPS->SetFileNameKey(baseFilename);
 
-		newPS->SetFileNameKey(baseFilename);
+	pixelShaders.push_back(newPS);
 
-		pixelShaders.push_back(newPS);
-
-		return newPS;
-	}
-	catch (...) {
-		SetLoadedAndWait("Pixel Shaders", id, std::current_exception());
-
-		return NULL;
-	}
+	return newPS;
 }
 
 std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::string nameToLoad) {
-	try {
-		SetLoadingAndWait("Compute Shaders", id);
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::shared_ptr<SimpleComputeShader> newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), namePath.c_str(), id);
 
-		std::shared_ptr<SimpleComputeShader> newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), namePath.c_str(), id);
+	// Serialize the filename if it's in the right folder
+	std::string assetPathStr = "Assets\\Shaders\\";
 
-		// Serialize the filename if it's in the right folder
-		std::string assetPathStr = "Assets\\Shaders\\";
-		
-		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
+	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-		newCS->SetFileNameKey(baseFilename);
+	newCS->SetFileNameKey(baseFilename);
 
-		computeShaders.push_back(newCS);
+	computeShaders.push_back(newCS);
 
-		// Prints the shader to a readable blob
-		/*Microsoft::WRL::ComPtr<ID3DBlob> assembly;
-		Microsoft::WRL::ComPtr<ID3DBlob> binary;
+	// Prints the shader to a readable blob
+	/*Microsoft::WRL::ComPtr<ID3DBlob> assembly;
+	Microsoft::WRL::ComPtr<ID3DBlob> binary;
 
-		binary = newCS->GetShaderBlob();
+	binary = newCS->GetShaderBlob();
 
-		HRESULT hr = D3DDisassemble(
-			binary->GetBufferPointer(),
-			binary->GetBufferSize(),
-			D3D_DISASM_ENABLE_INSTRUCTION_NUMBERING, nullptr,
-			&assembly);
+	HRESULT hr = D3DDisassemble(
+		binary->GetBufferPointer(),
+		binary->GetBufferSize(),
+		D3D_DISASM_ENABLE_INSTRUCTION_NUMBERING, nullptr,
+		&assembly);
 
-		D3DWriteBlobToFile(assembly.Get(), nameToLoad.c_str(), 1);*/
+	D3DWriteBlobToFile(assembly.Get(), nameToLoad.c_str(), 1);*/
 
-		return newCS;
-	}
-	catch (...) {
-		SetLoadedAndWait("Compute Shaders", id, std::current_exception());
-
-		return NULL;
-	}
+	return newCS;
 }
 
 std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameToLoad) {
-	try {
-		SetLoadingAndWait("Meshes", id);
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, nameToLoad);
+	std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(namePath.c_str(), device, id);
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, nameToLoad);
-		std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(namePath.c_str(), device, id);
+	globalMeshes.push_back(newMesh);
 
-		globalMeshes.push_back(newMesh);
-
-		return newMesh;
-	}
-	catch (...) {
-		SetLoadedAndWait("Mesh", id, std::current_exception());
-
-		return NULL;
-	}
+	return newMesh;
 }
 
 /// <summary>
@@ -1364,18 +233,18 @@ HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL:
 	AssetPathIndex assetPath;
 
 	switch (textureType) {
-		case PBRTextureTypes::ALBEDO:
-			assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
-			break;
-		case PBRTextureTypes::NORMAL:
-			assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
-			break;
-		case PBRTextureTypes::METAL:
-			assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
-			break;
-		case PBRTextureTypes::ROUGH:
-			assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
-			break;
+	case PBRTextureTypes::ALBEDO:
+		assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
+		break;
+	case PBRTextureTypes::NORMAL:
+		assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
+		break;
+	case PBRTextureTypes::METAL:
+		assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
+		break;
+	case PBRTextureTypes::ROUGH:
+		assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
+		break;
 	};
 
 	std::string namePath = GetFullPathToAssetFile(assetPath, nameToLoad);
@@ -1393,22 +262,22 @@ void AssetManager::SetMaterialTextureFileKey(std::string textureFilename, std::s
 	std::string directAssetPath;
 
 	switch (textureType) {
-		case PBRTextureTypes::ALBEDO:
-			assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
-			directAssetPath = "Assets\\PBR\\Albedo\\";
-			break;
-		case PBRTextureTypes::NORMAL:
-			assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
-			directAssetPath = "Assets\\PBR\\Normals\\";
-			break;
-		case PBRTextureTypes::METAL:
-			assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
-			directAssetPath = "Assets\\PBR\\Metalness\\";
-			break;
-		case PBRTextureTypes::ROUGH:
-			assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
-			directAssetPath = "Assets\\PBR\\Roughness\\";
-			break;
+	case PBRTextureTypes::ALBEDO:
+		assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
+		directAssetPath = "Assets\\PBR\\Albedo\\";
+		break;
+	case PBRTextureTypes::NORMAL:
+		assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
+		directAssetPath = "Assets\\PBR\\Normals\\";
+		break;
+	case PBRTextureTypes::METAL:
+		assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
+		directAssetPath = "Assets\\PBR\\Metalness\\";
+		break;
+	case PBRTextureTypes::ROUGH:
+		assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
+		directAssetPath = "Assets\\PBR\\Roughness\\";
+		break;
 	};
 
 	std::string namePath = GetFullPathToAssetFile(assetPath, textureFilename);
@@ -1417,52 +286,43 @@ void AssetManager::SetMaterialTextureFileKey(std::string textureFilename, std::s
 }
 
 std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
-														  std::string albedoNameToLoad,
-														  std::string normalNameToLoad,
-														  std::string metalnessNameToLoad,
-														  std::string roughnessNameToLoad,
-														  bool addToGlobalList) {
-	try {
-		SetLoadingAndWait("PBR Materials", id);
+	std::string albedoNameToLoad,
+	std::string normalNameToLoad,
+	std::string metalnessNameToLoad,
+	std::string roughnessNameToLoad,
+	bool addToGlobalList) {
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
 
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
+	std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
+	std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
 
-		std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
-		std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
+	LoadPBRTexture(albedoNameToLoad, &albedo, PBRTextureTypes::ALBEDO);
+	LoadPBRTexture(normalNameToLoad, &normals, PBRTextureTypes::NORMAL);
+	LoadPBRTexture(metalnessNameToLoad, &metalness, PBRTextureTypes::METAL);
+	LoadPBRTexture(roughnessNameToLoad, &roughness, PBRTextureTypes::ROUGH);
 
-		LoadPBRTexture(albedoNameToLoad, &albedo, PBRTextureTypes::ALBEDO);
-		LoadPBRTexture(normalNameToLoad, &normals, PBRTextureTypes::NORMAL);
-		LoadPBRTexture(metalnessNameToLoad, &metalness, PBRTextureTypes::METAL);
-		LoadPBRTexture(roughnessNameToLoad, &roughness, PBRTextureTypes::ROUGH);
+	std::shared_ptr<Material> newMat = std::make_shared<Material>(whiteTint,
+		PSNormal,
+		VSNormal,
+		albedo,
+		textureState,
+		clampState,
+		normals,
+		roughness,
+		metalness,
+		id);
 
-		std::shared_ptr<Material> newMat = std::make_shared<Material>(whiteTint,
-			PSNormal,
-			VSNormal,
-			albedo,
-			textureState,
-			clampState,
-			normals,
-			roughness,
-			metalness,
-			id);
+	SetMaterialTextureFileKey(albedoNameToLoad, newMat, PBRTextureTypes::ALBEDO);
+	SetMaterialTextureFileKey(normalNameToLoad, newMat, PBRTextureTypes::NORMAL);
+	SetMaterialTextureFileKey(metalnessNameToLoad, newMat, PBRTextureTypes::METAL);
+	SetMaterialTextureFileKey(roughnessNameToLoad, newMat, PBRTextureTypes::ROUGH);
 
-		SetMaterialTextureFileKey(albedoNameToLoad, newMat, PBRTextureTypes::ALBEDO);
-		SetMaterialTextureFileKey(normalNameToLoad, newMat, PBRTextureTypes::NORMAL);
-		SetMaterialTextureFileKey(metalnessNameToLoad, newMat, PBRTextureTypes::METAL);
-		SetMaterialTextureFileKey(roughnessNameToLoad, newMat, PBRTextureTypes::ROUGH);
+	if (addToGlobalList) globalMaterials.push_back(newMat);
 
-		if (addToGlobalList) globalMaterials.push_back(newMat);
-
-		return newMat;
-	}
-	catch (...) {
-		SetLoadedAndWait("PBR Material", id, std::current_exception());
-
-		return NULL;
-	}
+	return newMat;
 }
 
 /// <summary>
@@ -1472,22 +332,12 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 /// <returns>Pointer to the new GameEntity</returns>
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 {
-	try {
-		// Don't show loading if it's an empty entity
-		//SetLoadingAndWait("Game Entities", name);
+	std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(name);
+	newEnt->Initialize();
 
-		std::shared_ptr<GameEntity> newEnt = std::make_shared<GameEntity>(name);
-		newEnt->Initialize();
+	globalEntities.push_back(newEnt);
 
-		globalEntities.push_back(newEnt);
-
-		return newEnt;
-	}
-	catch (...) {
-		SetLoadedAndWait("Game Entities", name, std::current_exception());
-
-		return NULL;
-	}
+	return newEnt;
 }
 
 /// <summary>
@@ -1498,22 +348,13 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 /// <param name="name">Name of the GameEntity</param>
 /// <returns>Pointer to the new GameEntity</returns>
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name) {
-	try {
-		SetLoadingAndWait("Game Entities", name + " Components");
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
 
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	std::shared_ptr<MeshRenderer> renderer = newEnt->AddComponent<MeshRenderer>();
+	renderer->SetMesh(mesh);
+	renderer->SetMaterial(mat);
 
-		std::shared_ptr<MeshRenderer> renderer = newEnt->AddComponent<MeshRenderer>();
-		renderer->SetMesh(mesh);
-		renderer->SetMaterial(mat);
-
-		return newEnt;
-	}
-	catch (...) {
-		SetLoadedAndWait("Game Entities", name + " Components", std::current_exception());
-
-		return NULL;
-	}
+	return newEnt;
 }
 
 /// <summary>
@@ -1526,18 +367,9 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 /// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 color, float intensity)
 {
-	try {
-		SetLoadingAndWait("Lights", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Light> light = CreateDirectionalLightOnEntity(newEnt, color, intensity);
-		return light;
-	}
-	catch (...) {
-		SetLoadedAndWait("Lights", name, std::current_exception());
-
-		return NULL;
-	}
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	std::shared_ptr<Light> light = CreateDirectionalLightOnEntity(newEnt, color, intensity);
+	return light;
 }
 
 /// <summary>
@@ -1550,18 +382,9 @@ std::shared_ptr<Light> AssetManager::CreateDirectionalLight(std::string name, Di
 /// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color, float intensity)
 {
-	try {
-		SetLoadingAndWait("Lights", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Light> light = CreatePointLightOnEntity(newEnt, range, color, intensity);
-		return light;
-	}
-	catch (...) {
-		SetLoadedAndWait("Lights", name, std::current_exception());
-	
-		return NULL;
-	}
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	std::shared_ptr<Light> light = CreatePointLightOnEntity(newEnt, range, color, intensity);
+	return light;
 }
 
 /// <summary>
@@ -1575,18 +398,9 @@ std::shared_ptr<Light> AssetManager::CreatePointLight(std::string name, float ra
 /// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreateSpotLight(std::string name, float range, DirectX::XMFLOAT3 color, float intensity)
 {
-	try {
-		SetLoadingAndWait("Lights", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Light> light = CreateSpotLightOnEntity(newEnt, range, color, intensity);
-		return light;
-	}
-	catch (...) {
-		SetLoadedAndWait("Lights", name, std::current_exception());
-
-		return NULL;
-	}
+	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	std::shared_ptr<Light> light = CreateSpotLightOnEntity(newEnt, range, color, intensity);
+	return light;
 }
 
 /// <summary>
@@ -1595,18 +409,7 @@ std::shared_ptr<Light> AssetManager::CreateSpotLight(std::string name, float ran
 /// <param name="name">Name of the GameEntity</param>
 /// <returns>Pointer to the new Terrain</returns>
 std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::string name) {
-	try {
-		SetLoadingAndWait("Terrain Entities", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-
-		return newEnt->AddComponent<Terrain>();
-	}
-	catch (...) {
-		SetLoadedAndWait("Terrain Entities", name, std::current_exception());
-
-		return NULL;
-	}
+	return CreateGameEntity(name)->AddComponent<Terrain>();
 }
 
 /// <summary>
@@ -1621,25 +424,13 @@ std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::string name) {
 /// <param name="heightScale"></param>
 /// <returns></returns>
 std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(const char* heightmap,
-														   std::shared_ptr<TerrainMaterial> material,
-														   std::string name,
-														   unsigned int mapWidth,
-														   unsigned int mapHeight,
-														   float heightScale) 
+	std::shared_ptr<TerrainMaterial> material,
+	std::string name,
+	unsigned int mapWidth,
+	unsigned int mapHeight,
+	float heightScale)
 {
-	try {
-		SetLoadingAndWait("Terrain Entities", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Terrain> newTerrain = CreateTerrainOnEntity(newEnt, heightmap, material, mapWidth, mapHeight, heightScale);
-
-		return newTerrain;
-	}
-	catch (...) {
-		SetLoadedAndWait("Terrain Entities", name, std::current_exception());
-
-		return NULL;
-	}
+	return CreateTerrainOnEntity(CreateGameEntity(name), heightmap, material, mapWidth, mapHeight, heightScale);
 }
 
 /// <summary>
@@ -1650,28 +441,14 @@ std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(const char* heightmap
 /// <param name="material"></param>
 /// <param name="name"></param>
 /// <returns></returns>
-std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::shared_ptr<Mesh> terrainMesh, 
-														   std::shared_ptr<TerrainMaterial> material, 
-														   std::string name) 
+std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::shared_ptr<Mesh> terrainMesh,
+	std::shared_ptr<TerrainMaterial> material,
+	std::string name)
 {
-	try {
-		SetLoadingAndWait("Terrain Entities", name);
-
-		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-		std::shared_ptr<Terrain> newTerrain = CreateTerrainOnEntity(newEnt, terrainMesh, material);
-
-		return newTerrain;
-	}
-	catch (...) {
-		SetLoadedAndWait("Terrain Entities", name, std::current_exception());
-
-		return NULL;
-	}
+	return CreateTerrainOnEntity(CreateGameEntity(name), terrainMesh, material);
 }
 
 std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string name, std::vector<std::shared_ptr<Material>> materials, std::string blendMapPath) {
-	SetLoadingAndWait("Terrain Materials", name);
-
 	std::shared_ptr<TerrainMaterial> newTMat = std::make_shared<TerrainMaterial>(name);
 
 	for (auto m : materials) {
@@ -1701,13 +478,11 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 }
 
 std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string name,
-																	 std::vector<std::string> texturePaths,
-																	 std::vector<std::string> matNames,
-																	 bool isPBRMat,
-																	 std::string blendMapPath)
+	std::vector<std::string> texturePaths,
+	std::vector<std::string> matNames,
+	bool isPBRMat,
+	std::string blendMapPath)
 {
-	SetLoadingAndWait("Terrain Materials", name);
-
 	std::shared_ptr<TerrainMaterial> newTMat = std::make_shared<TerrainMaterial>(name);
 
 	for (int i = 0; i < matNames.size(); i++) {
@@ -1746,67 +521,56 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 }
 
 std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension) {
-	try {
-		SetLoadingAndWait("Skies", name);
+	std::vector<std::shared_ptr<SimplePixelShader>> importantSkyPixelShaders;
+	std::vector<std::shared_ptr<SimpleVertexShader>> importantSkyVertexShaders;
 
-		std::shared_ptr<Mesh> Cube = GetMeshByName("Cube");
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("SkyPS"));
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("IrradiancePS"));
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("SpecularConvolutionPS"));
+	importantSkyPixelShaders.push_back(GetPixelShaderByName("BRDFLookupTablePS"));
 
-		std::vector<std::shared_ptr<SimplePixelShader>> importantSkyPixelShaders;
-		std::vector<std::shared_ptr<SimpleVertexShader>> importantSkyVertexShaders;
+	importantSkyVertexShaders.push_back(GetVertexShaderByName("SkyVS"));
+	importantSkyVertexShaders.push_back(GetVertexShaderByName("FullscreenVS"));
 
-		importantSkyPixelShaders.push_back(GetPixelShaderByName("SkyPS"));
-		importantSkyPixelShaders.push_back(GetPixelShaderByName("IrradiancePS"));
-		importantSkyPixelShaders.push_back(GetPixelShaderByName("SpecularConvolutionPS"));
-		importantSkyPixelShaders.push_back(GetPixelShaderByName("BRDFLookupTablePS"));
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newSkyTexture;
 
-		importantSkyVertexShaders.push_back(GetVertexShaderByName("SkyVS"));
-		importantSkyVertexShaders.push_back(GetVertexShaderByName("FullscreenVS"));
+	std::string assetPath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
 
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newSkyTexture;
+	if (fileType) {
+		// Process as 6 textures in a directory
 
-		std::string assetPath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
+		std::wstring skyDirWide;
+		std::wstring fileExtensionW;
+		ISimpleShader::ConvertToWide(assetPath, skyDirWide);
+		ISimpleShader::ConvertToWide(fileExtension, fileExtensionW);
 
-		if (fileType) {
-			// Process as 6 textures in a directory
-
-			std::wstring skyDirWide;
-			std::wstring fileExtensionW;
-			ISimpleShader::ConvertToWide(assetPath, skyDirWide);
-			ISimpleShader::ConvertToWide(fileExtension, fileExtensionW);
-
-			newSkyTexture = CreateCubemap((skyDirWide + L"right" + fileExtensionW).c_str(),
-				(skyDirWide + L"left" + fileExtensionW).c_str(),
-				(skyDirWide + L"up" + fileExtensionW).c_str(),
-				(skyDirWide + L"down" + fileExtensionW).c_str(),
-				(skyDirWide + L"forward" + fileExtensionW).c_str(),
-				(skyDirWide + L"back" + fileExtensionW).c_str());
-		}
-		else {
-			// Process as a .dds
-
-			std::wstring skyDDSWide;
-			ISimpleShader::ConvertToWide(assetPath, skyDDSWide);
-
-			CreateDDSTextureFromFile(device.Get(), context.Get(), skyDDSWide.c_str(), nullptr, &newSkyTexture);
-		}
-
-		std::string filenameKey = SerializeFileName("Assets\\Textures\\Skies\\", assetPath);
-
-		std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, newSkyTexture, Cube, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
-
-		newSky->SetFilenameKeyType(fileType);
-		newSky->SetFilenameKey(filenameKey);
-		newSky->SetFileExtension(fileExtension);
-
-		skies.push_back(newSky);
-
-		return newSky;
+		newSkyTexture = CreateCubemap((skyDirWide + L"right" + fileExtensionW).c_str(),
+			(skyDirWide + L"left" + fileExtensionW).c_str(),
+			(skyDirWide + L"up" + fileExtensionW).c_str(),
+			(skyDirWide + L"down" + fileExtensionW).c_str(),
+			(skyDirWide + L"forward" + fileExtensionW).c_str(),
+			(skyDirWide + L"back" + fileExtensionW).c_str());
 	}
-	catch (...) {
-		SetLoadedAndWait("Skies", name, std::current_exception());
+	else {
+		// Process as a .dds
 
-		return NULL;
+		std::wstring skyDDSWide;
+		ISimpleShader::ConvertToWide(assetPath, skyDDSWide);
+
+		CreateDDSTextureFromFile(device.Get(), context.Get(), skyDDSWide.c_str(), nullptr, &newSkyTexture);
 	}
+
+	std::string filenameKey = SerializeFileName("Assets\\Textures\\Skies\\", assetPath);
+
+	std::shared_ptr<Sky> newSky = std::make_shared<Sky>(textureState, newSkyTexture, importantSkyPixelShaders, importantSkyVertexShaders, device, context, name);
+
+	newSky->SetFilenameKeyType(fileType);
+	newSky->SetFilenameKey(filenameKey);
+	newSky->SetFileExtension(fileExtension);
+
+	skies.push_back(newSky);
+
+	return newSky;
 }
 
 /// <summary>
@@ -1820,19 +584,7 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 	std::string textureNameToLoad,
 	bool isMultiParticle)
 {
-	try {
-		SetLoadingAndWait("Particle Emitter", name);
-
-		std::shared_ptr<GameEntity> emitterEntity = CreateGameEntity(name);
-		std::shared_ptr<ParticleSystem> newEmitter = CreateParticleEmitterOnEntity(emitterEntity, textureNameToLoad, isMultiParticle);
-
-		return newEmitter;
-	}
-	catch (...) {
-		SetLoadedAndWait("Particle Emitter", name, std::current_exception());
-
-		return NULL;
-	}
+	return CreateParticleEmitterOnEntity(CreateGameEntity(name), textureNameToLoad, isMultiParticle);
 }
 
 /// <summary>
@@ -1847,54 +599,29 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 /// <param name="additiveBlendState">Whether to use an additive blend state when rendering</param>
 /// <returns></returns>
 std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string name,
-															 std::string textureNameToLoad,
-															 int maxParticles,
-															 float particleLifeTime,
-															 float particlesPerSecond,
-															 bool isMultiParticle,
-															 bool additiveBlendState) {
-	try {
-		SetLoadingAndWait("Particle Emitter", name);
-
-		std::shared_ptr<GameEntity> emitterEntity = CreateGameEntity(name);
-		std::shared_ptr<ParticleSystem> newEmitter = CreateParticleEmitterOnEntity(emitterEntity, textureNameToLoad, maxParticles, particleLifeTime, particlesPerSecond, isMultiParticle, additiveBlendState);
-
-		return newEmitter;
-	}
-	catch (...) {
-		SetLoadedAndWait("Particle Emitter", name, std::current_exception());
-
-		return NULL;
-	}
+	std::string textureNameToLoad,
+	int maxParticles,
+	float particleLifeTime,
+	float particlesPerSecond,
+	bool isMultiParticle,
+	bool additiveBlendState) {
+	return CreateParticleEmitterOnEntity(CreateGameEntity(name), textureNameToLoad, maxParticles, particleLifeTime, particlesPerSecond, isMultiParticle, additiveBlendState);
 }
 
 std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::string filePath, bool preInitializing) {
-	try {
-		// If the loading screen fonts aren't loaded, don't trigger
-		// the loading screen.
-		if (!preInitializing) SetLoadingAndWait("Font", name);
+	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_FONT_PATH, filePath);
+	std::wstring wPathBuf;
 
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_FONT_PATH, filePath);
-		std::wstring wPathBuf;
+	ISimpleShader::ConvertToWide(namePath, wPathBuf);
 
-		std::string baseFilename = SerializeFileName("Assets\\Fonts\\", namePath);
+	std::shared_ptr<SHOEFont> newFont = std::make_shared<SHOEFont>();
+	newFont->fileNameKey = SerializeFileName("Assets\\Fonts\\", namePath);
+	newFont->name = name;
+	newFont->spritefont = std::make_shared<DirectX::SpriteFont>(device.Get(), wPathBuf.c_str());
 
-		ISimpleShader::ConvertToWide(namePath, wPathBuf);
+	globalFonts.push_back(newFont);
 
-		std::shared_ptr<SHOEFont> newFont = std::make_shared<SHOEFont>();
-		newFont->fileNameKey = baseFilename;
-		newFont->name = name;
-		newFont->spritefont = std::make_shared<DirectX::SpriteFont>(device.Get(), wPathBuf.c_str());
-
-		globalFonts.push_back(newFont);
-
-		return newFont;
-	}
-	catch (...) {
-		if (!preInitializing) SetLoadedAndWait("Font", name, std::current_exception());
-
-		return NULL;
-	}
+	return newFont;
 }
 #pragma endregion
 
@@ -2021,13 +748,20 @@ std::shared_ptr<Camera> AssetManager::CreateCameraOnEntity(std::shared_ptr<GameE
 	return cam;
 }
 
+std::shared_ptr<Collider> AssetManager::CreateColliderOnEntity(std::shared_ptr<GameEntity> entityToEdit) {
+	return entityToEdit->AddComponent<Collider>();
+}
+
+std::shared_ptr<Collider> AssetManager::CreateTriggerBoxOnEntity(std::shared_ptr<GameEntity> entityToEdit) {
+	std::shared_ptr<Collider> c = entityToEdit->AddComponent<Collider>();
+	c->SetIsTrigger(true);
+	return c;
+}
+
 #pragma endregion
 
 #pragma region initAssets
 void AssetManager::InitializeTextureSampleStates() {
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> basicSampler;
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSampler;
-
 	//Create sampler state
 	D3D11_SAMPLER_DESC textureDesc;
 	textureDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -2039,7 +773,7 @@ void AssetManager::InitializeTextureSampleStates() {
 	textureDesc.MipLODBias = 0;
 	textureDesc.MinLOD = 0;
 
-	device->CreateSamplerState(&textureDesc, &basicSampler);
+	device->CreateSamplerState(&textureDesc, &textureState);
 
 	//Create clamp sampler state
 	D3D11_SAMPLER_DESC clampDesc;
@@ -2052,20 +786,15 @@ void AssetManager::InitializeTextureSampleStates() {
 	clampDesc.MipLODBias = 0;
 	clampDesc.MinLOD = 0;
 
-	device->CreateSamplerState(&clampDesc, &clampSampler);
+	device->CreateSamplerState(&clampDesc, &clampState);
 
-	textureSampleStates.push_back(basicSampler);
-	textureSampleStates.push_back(clampSampler);
-
-	textureState = textureSampleStates[0];
-	clampState = textureSampleStates[1];
+	textureSampleStates.push_back(textureState);
+	textureSampleStates.push_back(clampState);
 }
 
 void AssetManager::InitializeGameEntities() {
 	//Initializes default values for components
 	MeshRenderer::SetDefaults(GetMeshByName("Cube"), GetMaterialByName("largeCobbleMat"));
-
-	globalEntities = std::vector<std::shared_ptr<GameEntity>>();
 
 	// Show example renders
 	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("bronzeMat"), "Bronze Cube");
@@ -2129,126 +858,126 @@ void AssetManager::InitializeGameEntities() {
 }
 
 void AssetManager::InitializeMaterials() {
-	globalMaterials = std::vector<std::shared_ptr<Material>>();
-
 	// Make reflective PBR materials
 	CreatePBRMaterial(std::string("reflectiveMetal"),
-					  "BlankAlbedo.png",
-					  "blank_normals.png",
-					  "bronze_metal.png",
-					  "GenericRoughness0.png");
+		"BlankAlbedo.png",
+		"blank_normals.png",
+		"bronze_metal.png",
+		"GenericRoughness0.png");
 
 	CreatePBRMaterial(std::string("reflective"),
-					  "BlankAlbedo.png",
-					  "blank_normals.png",
-					  "wood_metal.png",
-					  "GenericRoughness0.png");
+		"BlankAlbedo.png",
+		"blank_normals.png",
+		"wood_metal.png",
+		"GenericRoughness0.png");
 
 	CreatePBRMaterial(std::string("reflectiveRough"),
-					  "BlankAlbedo.png",
-					  "blank_normals.png",
-					  "wood_metal.png",
-					  "GenericRoughness100.png");
+		"BlankAlbedo.png",
+		"blank_normals.png",
+		"wood_metal.png",
+		"GenericRoughness100.png");
 
 	CreatePBRMaterial(std::string("reflectiveRoughMetal"),
-					  "BlankAlbedo.png",
-					  "blank_normals.png",
-					  "bronze_metal.png",
-					  "GenericRoughness100.png");
+		"BlankAlbedo.png",
+		"blank_normals.png",
+		"bronze_metal.png",
+		"GenericRoughness100.png");
 
 	//Make PBR materials
 	CreatePBRMaterial(std::string("bronzeMat"),
-					  "bronze_albedo.png",
-					  "bronze_normals.png",
-					  "bronze_metal.png",
-					  "bronze_roughness.png")->SetTiling(0.3f);
+		"bronze_albedo.png",
+		"bronze_normals.png",
+		"bronze_metal.png",
+		"bronze_roughness.png")->SetTiling(0.3f);
 
 	CreatePBRMaterial(std::string("cobbleMat"),
-					  "cobblestone_albedo.png",
-					  "cobblestone_normals.png",
-					  "cobblestone_metal.png",
-					  "cobblestone_roughness.png");
+		"cobblestone_albedo.png",
+		"cobblestone_normals.png",
+		"cobblestone_metal.png",
+		"cobblestone_roughness.png");
 
 	CreatePBRMaterial(std::string("largeCobbleMat"),
-					  "cobblestone_albedo.png",
-					  "cobblestone_normals.png",
-					  "cobblestone_metal.png",
-					  "cobblestone_roughness.png")->SetTiling(5.0f);
+		"cobblestone_albedo.png",
+		"cobblestone_normals.png",
+		"cobblestone_metal.png",
+		"cobblestone_roughness.png")->SetTiling(5.0f);
 
 	CreatePBRMaterial(std::string("floorMat"),
-					  "floor_albedo.png",
-					  "floor_normals.png",
-					  "floor_metal.png",
-					  "floor_roughness.png");
+		"floor_albedo.png",
+		"floor_normals.png",
+		"floor_metal.png",
+		"floor_roughness.png");
 
 	CreatePBRMaterial(std::string("terrainFloorMat"),
-					  "floor_albedo.png",
-					  "floor_normals.png",
-					  "floor_metal.png",
-					  "floor_roughness.png")->SetTiling(256.0f);
+		"floor_albedo.png",
+		"floor_normals.png",
+		"floor_metal.png",
+		"floor_roughness.png")->SetTiling(256.0f);
 
 	CreatePBRMaterial(std::string("paintMat"),
-					  "paint_albedo.png",
-					  "paint_normals.png",
-					  "paint_metal.png",
-					  "paint_roughness.png");
+		"paint_albedo.png",
+		"paint_normals.png",
+		"paint_metal.png",
+		"paint_roughness.png");
 
 	CreatePBRMaterial(std::string("largePaintMat"),
-					  "paint_albedo.png",
-					  "paint_normals.png",
-					  "paint_metal.png",
-					  "paint_roughness.png")->SetTiling(5.0f);
+		"paint_albedo.png",
+		"paint_normals.png",
+		"paint_metal.png",
+		"paint_roughness.png")->SetTiling(5.0f);
 
 	CreatePBRMaterial(std::string("roughMat"),
-					  "rough_albedo.png",
-					  "rough_normals.png",
-					  "rough_metal.png",
-					  "rough_roughness.png");
+		"rough_albedo.png",
+		"rough_normals.png",
+		"rough_metal.png",
+		"rough_roughness.png");
 
 	CreatePBRMaterial(std::string("scratchMat"),
-					  "scratched_albedo.png",
-					  "scratched_normals.png",
-					  "scratched_metal.png",
-					  "scratched_roughness.png");
+		"scratched_albedo.png",
+		"scratched_normals.png",
+		"scratched_metal.png",
+		"scratched_roughness.png");
 
 	CreatePBRMaterial(std::string("woodMat"),
-					  "wood_albedo.png",
-					  "wood_normals.png",
-					  "wood_metal.png",
-					  "wood_roughness.png");
+		"wood_albedo.png",
+		"wood_normals.png",
+		"wood_metal.png",
+		"wood_roughness.png");
 
-	CreatePBRMaterial(std::string("refractivePaintMat"),
-					  "paint_albedo.png",
-					  "paint_normals.png",
-					  "paint_metal.png",
-					  "paint_roughness.png")->SetRefractive(true);
-	GetMaterialByName("refractivePaintMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+	std::shared_ptr<Material> refractive = CreatePBRMaterial(std::string("refractivePaintMat"),
+		"paint_albedo.png",
+		"paint_normals.png",
+		"paint_metal.png",
+		"paint_roughness.png");
+	refractive->SetRefractive(true);
+	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-	CreatePBRMaterial(std::string("refractiveWoodMat"),
-					  "wood_albedo.png",
-					  "wood_normals.png",
-					  "wood_metal.png",
-					  "wood_roughness.png")->SetTransparent(true);
-	GetMaterialByName("refractiveWoodMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+	refractive = CreatePBRMaterial(std::string("refractiveWoodMat"),
+		"wood_albedo.png",
+		"wood_normals.png",
+		"wood_metal.png",
+		"wood_roughness.png");
+	refractive->SetTransparent(true);
+	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-	CreatePBRMaterial(std::string("refractiveRoughMat"),
-					  "rough_albedo.png",
-					  "rough_normals.png",
-					  "rough_metal.png",
-					  "rough_roughness.png")->SetRefractive(true);
-	GetMaterialByName("refractiveRoughMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+	refractive = CreatePBRMaterial(std::string("refractiveRoughMat"),
+		"rough_albedo.png",
+		"rough_normals.png",
+		"rough_metal.png",
+		"rough_roughness.png");
+	refractive->SetRefractive(true);
+	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-	CreatePBRMaterial(std::string("refractiveBronzeMat"),
-					  "bronze_albedo.png",
-					  "bronze_normals.png",
-					  "bronze_metal.png",
-					  "bronze_roughness.png")->SetRefractive(true);
-	GetMaterialByName("refractiveBronzeMat")->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+	refractive = CreatePBRMaterial(std::string("refractiveBronzeMat"),
+		"bronze_albedo.png",
+		"bronze_normals.png",
+		"bronze_metal.png",
+		"bronze_roughness.png");
+	refractive->SetRefractive(true);
+	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 }
 
 void AssetManager::InitializeMeshes() {
-	globalMeshes = std::vector<std::shared_ptr<Mesh>>();
-
 	// Test loading failure
 	//CreateMesh("ExceptionTest", "InvalidPath");
 
@@ -2261,8 +990,6 @@ void AssetManager::InitializeMeshes() {
 
 
 void AssetManager::InitializeSkies() {
-	skies = std::vector<std::shared_ptr<Sky>>();
-
 	// Temporarily, we only load 3 skies, as they take a while to load
 
 	//CreateSky(spaceTexture, "space");
@@ -2276,45 +1003,30 @@ void AssetManager::InitializeSkies() {
 }
 
 void AssetManager::InitializeLights() {
-	try {
-		//white light from the top left
-		std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 0.7f);
-		mainLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 20.0f, -200.0f));
-		mainLight->GetTransform()->Rotate(XM_PIDIV2, XM_PI, 0);
-		mainLight->SetCastsShadows(true);
+	//white light from the top left
+	std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 0.7f);
+	mainLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 20.0f, -200.0f));
+	mainLight->GetTransform()->Rotate(XM_PIDIV2, XM_PI, 0);
+	mainLight->SetCastsShadows(true);
 
-		//white light from the back
-		CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, -1));
+	//white light from the back
+	CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, -1));
 
-		SetLoadingAndWait("Lights", "backLight");
+	//red light on the bottom
+	std::shared_ptr<Light> bottomLight = CreateDirectionalLight("BottomLight", DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f));
+	bottomLight->GetTransform()->Rotate(-XM_PIDIV2, 0, 0);
 
-		//red light on the bottom
-		std::shared_ptr<Light> bottomLight = CreateDirectionalLight("BottomLight", DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f));
-		bottomLight->GetTransform()->Rotate(-XM_PIDIV2, 0, 0);
+	//red pointlight in the center
+	std::shared_ptr<Light> centerLight = CreatePointLight("CenterLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
+	centerLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
 
-		SetLoadingAndWait("Lights", "bottomLight");
-
-		//red pointlight in the center
-		std::shared_ptr<Light> centerLight = CreatePointLight("CenterLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
-		centerLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
-
-		SetLoadingAndWait("Lights", "centerLight");
-
-		//flashlight attached to camera +.5z and x
-		std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", 10.0f);
-		flashlight->GetGameEntity()->AddComponent<FlashlightController>();
-		flashlight->GetTransform()->SetParent(mainCamera->GetTransform());
-		flashlight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f));
-		flashlight->SetCastsShadows(true);
-		flashlight->GetGameEntity()->SetEnabled(false);
-
-		SetLoadingAndWait("Lights", "flashLight");
-	}
-	catch (...) {
-		SetLoadedAndWait("Lights", "Unknown Light", std::current_exception());
-
-		return;
-	}
+	//flashlight attached to camera +.5z and x
+	std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", 10.0f);
+	flashlight->GetGameEntity()->AddComponent<FlashlightController>();
+	flashlight->GetTransform()->SetParent(mainCamera->GetTransform());
+	flashlight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f));
+	flashlight->SetCastsShadows(true);
+	flashlight->GetGameEntity()->SetEnabled(false);
 }
 
 void AssetManager::InitializeTerrainEntities() {
@@ -2325,79 +1037,70 @@ void AssetManager::InitializeTerrainEntities() {
 }
 
 void AssetManager::InitializeTerrainMaterials() {
-	try {
-		globalTerrainMaterials = std::vector<std::shared_ptr<TerrainMaterial>>();
+	std::vector<std::shared_ptr<Material>> tMats = std::vector<std::shared_ptr<Material>>();
 
-		std::vector<std::shared_ptr<Material>> tMats = std::vector<std::shared_ptr<Material>>();
+	std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", "forest_floor_albedo.png", "forest_floor_Normal-ogl.png", "wood_metal.png", "forest_floor_Roughness.png");
+	std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", "bog_albedo.png", "bog_normal-ogl.png", "wood_metal.png", "bog_roughness.png");
+	std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", "rocky_dirt1-albedo.png", "rocky_dirt1-normal-ogl.png", "wood_metal.png", "rocky_dirt1_Roughness.png");
 
-		std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", "forest_floor_albedo.png", "forest_floor_Normal-ogl.png", "wood_metal.png", "forest_floor_Roughness.png");
-		std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", "bog_albedo.png", "bog_normal-ogl.png", "wood_metal.png", "bog_roughness.png");
-		std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", "rocky_dirt1-albedo.png", "rocky_dirt1-normal-ogl.png", "wood_metal.png", "rocky_dirt1_Roughness.png");
+	tMats.push_back(forestMat);
+	tMats.push_back(bogMat);
+	tMats.push_back(rockyMat);
 
-		tMats.push_back(forestMat);
-		tMats.push_back(bogMat);
-		tMats.push_back(rockyMat);
+	//Set appropriate tiling
+	forestMat->SetTiling(10.0f);
+	bogMat->SetTiling(10.0f);
 
-		//Set appropriate tiling
-		forestMat->SetTiling(10.0f);
-		bogMat->SetTiling(10.0f);
+	std::shared_ptr<TerrainMaterial> forestTerrainMaterial = CreateTerrainMaterial("Forest Terrain Material", tMats, "blendMap.png");
 
-		std::shared_ptr<TerrainMaterial> forestTerrainMaterial = CreateTerrainMaterial("Forest Terrain Material", tMats, "blendMap.png");
+	tMats.clear();
 
-		tMats.clear();
+	// Must be kept in PBR order!
+	// This sections is only for testing and should be commented on push.
+	// Since these materials already exist, it's quicker and more efficient
+	// to just grab them.
+	std::shared_ptr<TerrainMaterial> industrialTerrainMaterial;
 
-		std::vector<std::string> metalPaths;
-		std::vector<std::string> metalNames;
+	//std::vector<std::string> metalPaths;
+	//std::vector<std::string> metalNames;
 
-		// Must be kept in PBR order!
-		// This sections is only for testing and should be commented on push.
-		// Since these materials already exist, it's quicker and more efficient
-		// to just grab them.
-		std::shared_ptr<TerrainMaterial> industrialTerrainMaterial;
+	/*metalPaths.push_back("floor_albedo.png");
+	metalPaths.push_back("floor_normals.png");
+	metalPaths.push_back("floor_metal.png");
+	metalPaths.push_back("floor_roughness.png");
 
-		/*metalPaths.push_back("floor_albedo.png");
-		metalPaths.push_back("floor_normals.png");
-		metalPaths.push_back("floor_metal.png");
-		metalPaths.push_back("floor_roughness.png");
+	metalPaths.push_back("cobblestone_albedo.png");
+	metalPaths.push_back("cobblestone_normals.png");
+	metalPaths.push_back("cobblestone_metal.png");
+	metalPaths.push_back("cobblestone_roughness.png");
 
-		metalPaths.push_back("cobblestone_albedo.png");
-		metalPaths.push_back("cobblestone_normals.png");
-		metalPaths.push_back("cobblestone_metal.png");
-		metalPaths.push_back("cobblestone_roughness.png");
+	metalPaths.push_back("rough_albedo.png");
+	metalPaths.push_back("rough_normals.png");
+	metalPaths.push_back("rough_metal.png");
+	metalPaths.push_back("rough_roughness.png");
 
-		metalPaths.push_back("rough_albedo.png");
-		metalPaths.push_back("rough_normals.png");
-		metalPaths.push_back("rough_metal.png");
-		metalPaths.push_back("rough_roughness.png");
+	metalNames.push_back("Floor");
+	metalNames.push_back("Stone");
+	metalNames.push_back("Rough");
 
-		metalNames.push_back("Floor");
-		metalNames.push_back("Stone");
-		metalNames.push_back("Rough");
+	industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", metalPaths, metalNames, true, "blendMap.png");*/
 
-		industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", metalPaths, metalNames, true, "blendMap.png");*/
+	// This is the correct way to create a tMat when the materials are already loaded:
+	tMats.push_back(GetMaterialByName("floorMat"));
+	tMats.push_back(GetMaterialByName("cobbleMat"));
+	tMats.push_back(GetMaterialByName("roughMat"));
 
-		// This is the correct way to create a tMat when the materials are already loaded:
-		tMats.push_back(GetMaterialByName("floorMat"));
-		tMats.push_back(GetMaterialByName("cobbleMat"));
-		tMats.push_back(GetMaterialByName("roughMat"));
+	industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", tMats, "blendMap.png");
 
-		industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", tMats, "blendMap.png");
+	// This is the correct way to load a tMat that doesn't use blend mapping
+	// Note that even with one material, it must be pushed to the vector
+	std::shared_ptr<TerrainMaterial> floorTerrainMaterial;
 
-		// This is the correct way to load a tMat that doesn't use blend mapping
-		// Note that even with one material, it must be pushed to the vector
-		std::shared_ptr<TerrainMaterial> floorTerrainMaterial;
+	tMats.clear();
 
-		tMats.clear();
+	tMats.push_back(GetMaterialByName("terrainFloorMat"));
 
-		tMats.push_back(GetMaterialByName("terrainFloorMat"));
-
-		floorTerrainMaterial = CreateTerrainMaterial("Floor Terrain Material", tMats);
-	}
-	catch (...) {
-		SetLoadedAndWait("Terrain Materials", "Unknown Terrain Material", std::current_exception());
-
-		return;
-	}
+	floorTerrainMaterial = CreateTerrainMaterial("Floor Terrain Material", tMats);
 }
 
 void AssetManager::InitializeCameras() {
@@ -2415,10 +1118,6 @@ void AssetManager::InitializeCameras() {
 // - We'll have that byte code already loaded below
 // --------------------------------------------------------
 void AssetManager::InitializeShaders() {
-	vertexShaders = std::vector<std::shared_ptr<SimpleVertexShader>>();
-	pixelShaders = std::vector<std::shared_ptr<SimplePixelShader>>();
-	computeShaders = std::vector<std::shared_ptr<SimpleComputeShader>>();
-
 	// Make vertex shaders
 	CreateVertexShader("BasicVS", "VertexShader.cso");
 	CreateVertexShader("NormalsVS", "VSNormalMap.cso");
@@ -2496,8 +1195,6 @@ void AssetManager::InitializeEmitters() {
 void AssetManager::InitializeAudio() {
 	audioInstance.Initialize();
 
-	globalSounds = std::vector<FMOD::Sound*>();
-	
 	CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_DEFAULT, "piano-a");
 	CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_DEFAULT, "piano-b");
 	CreateSound("PianoNotes/pinkyfinger__piano-bb.wav", FMOD_DEFAULT, "piano-bb");
@@ -2510,8 +1207,6 @@ void AssetManager::InitializeAudio() {
 }
 
 void AssetManager::InitializeFonts() {
-	globalFonts = std::vector<std::shared_ptr<SHOEFont>>();
-
 	CreateSHOEFont("Roboto-Bold-72pt", "RobotoCondensed-Bold-72pt.spritefont", true);
 	CreateSHOEFont("SmoochSans-Bold", "SmoochSans-Bold.spritefont", true);
 	CreateSHOEFont("SmoochSans-Italic", "SmoochSans-Italic.spritefont", true);
@@ -2525,8 +1220,6 @@ void AssetManager::InitializeFonts() {
 }
 
 void AssetManager::InitializeIMGUI(HWND hwnd) {
-	SetLoadingAndWait("UI", "Window Initialization");
-
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 
@@ -2537,54 +1230,12 @@ void AssetManager::InitializeIMGUI(HWND hwnd) {
 }
 
 void AssetManager::InitializeColliders() {
-	std::shared_ptr<GameEntity> e = GetGameEntityByName("Bronze Cube");
-	std::shared_ptr<GameEntity> e2 = GetGameEntityByName("Scratched Sphere");
-	std::shared_ptr<GameEntity> e5 = GetGameEntityByName("Shiny Rough Sphere");
-	std::shared_ptr<GameEntity> e6 = GetGameEntityByName("Floor Cube");
-	std::shared_ptr<GameEntity> e7 = GetGameEntityByName("Scratched Cube");
-
-	std::shared_ptr<Collider> c1 = AddColliderToGameEntity(e);
-	std::shared_ptr<Collider> c2 = AddColliderToGameEntity(e2);
-	std::shared_ptr<Collider> c5 = AddColliderToGameEntity(e5);
-	std::shared_ptr<Collider> c6 = AddColliderToGameEntity(e6);
-	std::shared_ptr<Collider> c7 = AddTriggerBoxToGameEntity(e7);
+	CreateColliderOnEntity(GetGameEntityByName("Bronze Cube"));
+	CreateColliderOnEntity(GetGameEntityByName("Scratched Sphere"));
+	CreateColliderOnEntity(GetGameEntityByName("Shiny Rough Sphere"));
+	CreateColliderOnEntity(GetGameEntityByName("Floor Cube"));
+	CreateTriggerBoxOnEntity(GetGameEntityByName("Scratched Cube"));
 }
-#pragma endregion
-
-#pragma region addComponent
-
-std::shared_ptr<Collider> AssetManager::AddColliderToGameEntity(OUT std::shared_ptr<GameEntity> entity) {
-	try {
-		SetLoadingAndWait("Colliders", "Generic Collider");
-
-		std::shared_ptr<Collider> c = entity->AddComponent<Collider>();
-
-		return c;
-	}
-	catch (...) {
-		SetLoadedAndWait("Colliders", "Generic Collider", std::current_exception());
-
-		return nullptr;
-	}
-}
-
-std::shared_ptr<Collider> AssetManager::AddTriggerBoxToGameEntity(OUT std::shared_ptr<GameEntity> entity) {
-	try {
-		SetLoadingAndWait("Colliders", "Generic Trigger Box");
-
-		std::shared_ptr<Collider> c = entity->AddComponent<Collider>();
-
-		c->SetIsTrigger(true);
-
-		return c;
-	}
-	catch (...) {
-		SetLoadedAndWait("Colliders", "Generic Trigger Box", std::current_exception());
-
-		return nullptr;
-	}
-}
-
 #pragma endregion
 
 #pragma region getMethods
@@ -2685,7 +1336,7 @@ std::shared_ptr<TerrainMaterial> AssetManager::GetTerrainMaterialAtID(int id) {
 }
 
 std::shared_ptr<Camera> AssetManager::GetMainCamera() {
-	if(mainCamera != nullptr)
+	if (mainCamera != nullptr)
 		return mainCamera;
 	return editingCamera;
 }
@@ -3042,7 +1693,7 @@ void AssetManager::CreateComplexGeometry() {
 	if (hatModel != NULL) {
 		ProcessComplexModel(hatModel->mRootNode, hatModel, serializedKey, "Hat");
 	}
-	
+
 }
 
 void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey, std::string name) {
@@ -3054,7 +1705,7 @@ void AssetManager::ProcessComplexModel(aiNode* node, const aiScene* scene, std::
 		std::shared_ptr<GameEntity> newEntity = CreateGameEntity(newMesh, GetMaterialByName("cobbleMat"), mesh->mName.C_Str());;
 
 		globalMeshes.push_back(newMesh);
-		
+
 		newEntity->GetTransform()->SetPosition(0.0f, 3.0f * i, 1.0f);
 		newEntity->GetTransform()->SetScale(0.25f, 0.25f, 0.25f);
 
@@ -3134,10 +1785,16 @@ std::shared_ptr<Mesh> AssetManager::ProcessComplexMesh(aiMesh* mesh, const aiSce
 // Asset Removal methods
 //
 
-void AssetManager::CleanAllVectors() {
+void AssetManager::CleanAllEntities()
+{
 	for (auto ge : globalEntities) {
 		ge->Release();
 	}
+	globalEntities.clear();
+}
+
+void AssetManager::CleanAllVectors() {
+	CleanAllEntities();
 
 	for (int i = 0; i < globalSounds.size(); i++) {
 		FMODUserData* uData;
@@ -3153,7 +1810,6 @@ void AssetManager::CleanAllVectors() {
 	skies.clear();
 	globalMeshes.clear();
 	globalMaterials.clear();
-	globalEntities.clear();
 	globalTerrainMaterials.clear();
 	globalSounds.clear();
 	globalFonts.clear();
