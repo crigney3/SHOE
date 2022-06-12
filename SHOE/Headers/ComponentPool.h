@@ -4,6 +4,7 @@
 
 #include "GameEntity.fwd.h"
 #include "MeshRenderer.h"
+#include "Light.h"
 
 constexpr auto POOL_SIZE = 32;
 
@@ -16,13 +17,15 @@ public:
 	static int GetActiveCount();
 	static std::vector<std::shared_ptr<T>> GetAll();
 	static std::vector<std::shared_ptr<T>> GetAllEnabled();
+	static void Sort() {};
 
 private:
 	static std::vector<std::shared_ptr<T>> allocated;
 	static std::queue<std::shared_ptr<T>> unallocated;
 };
 
-template <> std::shared_ptr<MeshRenderer> ComponentPool<MeshRenderer>::Instantiate(std::shared_ptr<GameEntity> gameEntity);
+template <> void ComponentPool<MeshRenderer>::Sort();
+template <> void ComponentPool<Light>::Sort();
 
 template<typename T>
 std::vector<std::shared_ptr<T>> ComponentPool<T>::allocated = std::vector<std::shared_ptr<T>>();
@@ -50,6 +53,7 @@ std::shared_ptr<T> ComponentPool<T>::Instantiate(std::shared_ptr<GameEntity> gam
 	allocated.emplace_back(component);
 	unallocated.pop();
 	component->Bind(gameEntity);
+	Sort();
 	return component;
 }
 
@@ -99,4 +103,20 @@ std::vector<std::shared_ptr<T>> ComponentPool<T>::GetAllEnabled()
 		}
 	}
 	return enabled;
+}
+
+template <> void ComponentPool<MeshRenderer>::Sort()
+{
+	std::sort(allocated.begin(), allocated.end(), [](std::shared_ptr<MeshRenderer> a, std::shared_ptr<MeshRenderer> b) {
+		if (a->GetMaterial()->GetTransparent() != b->GetMaterial()->GetTransparent())
+			return b->GetMaterial()->GetTransparent();
+		return a->GetMaterial() < b->GetMaterial();
+		});
+}
+
+template <> void ComponentPool<Light>::Sort()
+{
+	std::sort(allocated.begin(), allocated.end(), [](std::shared_ptr<Light> a, std::shared_ptr<Light> b) {
+		return a->GetType() > b->GetType();
+		});
 }

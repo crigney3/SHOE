@@ -1,5 +1,6 @@
 #include "../Headers/Material.h"
 #include "..\Headers\AssetManager.h"
+#include "../Headers/ComponentManager.h"
 
 #pragma region Material
 
@@ -149,10 +150,10 @@ void Material::SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> c
 /// <param name="transparent">Texture has transparency</param>
 void Material::SetTransparent(bool transparent) {
 	if (this->transparent != transparent) {
-		AssetManager::materialSortDirty = true;
 		// If this is turning off transparency, disable refraction as well
 		if (!transparent) this->refractive = false;
 		this->transparent = transparent;
+		ComponentManager::Sort<MeshRenderer>();
 	}
 }
 
@@ -189,13 +190,13 @@ float Material::GetRefractionScale() {
 }
 
 void Material::SetPixelShader(std::shared_ptr<SimplePixelShader> pix) {
-	AssetManager::materialSortDirty = true;
 	this->pixShader = pix;
+	ComponentManager::Sort<MeshRenderer>();
 }
 
 void Material::SetVertexShader(std::shared_ptr<SimpleVertexShader> vert) {
-	AssetManager::materialSortDirty = true;
 	this->vertShader = vert;
+	ComponentManager::Sort<MeshRenderer>();
 }
 
 void Material::SetRefractivePixelShader(std::shared_ptr<SimplePixelShader> refractPix) {

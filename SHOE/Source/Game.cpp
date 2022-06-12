@@ -2,12 +2,12 @@
 #include "../Headers/Time.h"
 #include "..\Headers\ComponentManager.h"
 #include "..\Headers\ShadowProjector.h"
+#include "..\Headers\FlashlightController.h"
+#include "..\Headers\NoclipMovement.h"
+#include <d3dcompiler.h>
 
 // Needed for a helper function to read compiled shader files from the hard drive
 #pragma comment(lib, "d3dcompiler.lib")
-#include <d3dcompiler.h>
-#include "..\Headers\FlashlightController.h"
-#include "..\Headers\NoclipMovement.h"
 
 #pragma warning( disable : 26495)
 

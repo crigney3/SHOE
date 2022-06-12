@@ -113,6 +113,7 @@ void Light::SetType(float type)
 		if(shadowProjector != nullptr)
 			shadowProjector->UpdateFieldsByLightType();
 		lightArrayDirty = true;
+		ComponentManager::Sort<Light>();
 	}
 }
 

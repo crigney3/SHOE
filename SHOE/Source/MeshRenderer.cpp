@@ -75,8 +75,8 @@ void MeshRenderer::SetMesh(std::shared_ptr<Mesh> newMesh) {
 /// </summary>
 /// <param name="newMesh">New material to render</param>
 void MeshRenderer::SetMaterial(std::shared_ptr<Material> newMaterial) {
-	AssetManager::materialSortDirty = true;
 	this->mat = newMaterial;
+	ComponentManager::Sort<MeshRenderer>();
 }
 
 DirectX::BoundingOrientedBox MeshRenderer::GetBounds()
