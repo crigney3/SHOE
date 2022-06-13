@@ -86,8 +86,6 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 #pragma endregion
 
 #pragma region createAssets
-bool AssetManager::materialSortDirty = false;
-
 FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::string name) {
 	FMODUserData* uData = new FMODUserData;
 	FMOD::Sound* sound;

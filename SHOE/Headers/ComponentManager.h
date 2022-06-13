@@ -14,6 +14,8 @@ public:
 	static std::vector<std::shared_ptr<T>> GetAll();
 	template <typename T>
 	static std::vector<std::shared_ptr<T>> GetAllEnabled();
+	template <typename T>
+	static void Sort();
 };
 
 /**
@@ -71,4 +73,15 @@ template<typename T>
 std::vector<std::shared_ptr<T>> ComponentManager::GetAllEnabled()
 {
 	return ComponentPool<T>::GetAllEnabled();
+}
+
+/// <summary>
+/// Sorts the component pool, should a sort exist
+/// </summary>
+/// <typeparam name="T">Type of pool to sort</typeparam>
+/// <returns></returns>
+template<typename T>
+void ComponentManager::Sort()
+{
+	ComponentPool<T>::Sort();
 }
