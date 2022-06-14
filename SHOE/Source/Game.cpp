@@ -800,7 +800,7 @@ void Game::GenerateEditingUI() {
 	// Display a menu at the top
 	if (ImGui::BeginMainMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
-			ImGui::Text("This menu will eventually contain a saving and loading system, designed for swapping between feature test scenes.");
+			// ImGui::Text("This menu will eventually contain a saving and loading system, designed for swapping between feature test scenes.");
 			if (ImGui::MenuItem("Save Scene", "ctrl+s")) {
 				SaveScene();
 			}
@@ -828,6 +828,14 @@ void Game::GenerateEditingUI() {
 
 		if (ImGui::BeginMenu("View")) {
 			ImGui::MenuItem("Render Target Views", 0, &rtvWindowEnabled);
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Run")) {
+			if (ImGui::MenuItem("Enter Play State", "p")) {
+				EnterPlayState();
+			}
 
 			ImGui::EndMenu();
 		}
@@ -1043,12 +1051,7 @@ void Game::Update()
 			}
 
 			if (input.KeyPress('P')) {
-				ImGui::Render();
-				ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-				ImGui_ImplDX11_NewFrame();
-				ImGui_ImplWin32_NewFrame();
-				ImGui::NewFrame();
-				sceneManager.PrePlaySave();
+				EnterPlayState();
 			}
 
 			globalAssets.UpdateEditingCamera();
@@ -1057,7 +1060,7 @@ void Game::Update()
 		break;
 	case EngineState::PLAY:
 		if (input.TestKeyAction(KeyActions::QuitGame)) {
-			sceneManager.PostPlayLoad();
+			LeavePlayState();
 		}
 		else {
 			if (movingEnabled) {
@@ -1081,6 +1084,21 @@ void Game::Update()
 		}
 		break;
 	}
+}
+
+void Game::EnterPlayState() {
+	engineState = EngineState::PLAY;
+
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+	sceneManager.PrePlaySave();
+}
+
+void Game::LeavePlayState() {
+	sceneManager.PostPlayLoad();
 }
 
 void Game::DrawInitializingScreen(std::string category)

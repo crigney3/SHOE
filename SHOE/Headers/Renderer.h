@@ -146,6 +146,9 @@ private:
     // Refraction data
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> refractionSilhouetteDepthState;
 
+    // Default depth state
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> defaultDepthState;
+
     // Depth pre-pass data
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> prePassDepthState;
 

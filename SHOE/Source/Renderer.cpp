@@ -68,6 +68,10 @@ Renderer::Renderer(
 
 	device->CreateDepthStencilState(&depthDescription, &this->skyDepthState);
 
+	depthDescription.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+
+	device->CreateDepthStencilState(&depthDescription, &this->defaultDepthState);
+
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
 
@@ -101,7 +105,33 @@ void Renderer::InitRenderTargetViews() {
 		device->CreateShaderResourceView(ssaoTexture2D[i].Get(), 0, renderTargetSRVs[i].GetAddressOf());
 	}
 
-	// Initialize Depths as just a float texture
+	//// Initialize scene depths as an R8_UNORM
+	//renderTargetRTVs[RTVTypes::DEPTHS].Reset();
+	//renderTargetSRVs[RTVTypes::DEPTHS].Reset();
+	//D3D11_TEXTURE2D_DESC depthTexDesc = {};
+	//depthTexDesc.Width = windowWidth;
+	//depthTexDesc.Height = windowHeight;
+	//depthTexDesc.ArraySize = 1;
+	//depthTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	//depthTexDesc.Format = DXGI_FORMAT_R8_UNORM;
+	//depthTexDesc.MipLevels = 1;
+	//depthTexDesc.MiscFlags = 0;
+	//depthTexDesc.SampleDesc.Count = 1;
+
+	//ID3D11Texture2D* depthTexture = 0;
+	//device->CreateTexture2D(&depthTexDesc, 0, &depthTexture);
+
+	//D3D11_RENDER_TARGET_VIEW_DESC depthRTVDesc = {};
+	//depthRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	//depthRTVDesc.Texture2D.MipSlice = 0;
+	//depthRTVDesc.Format = depthTexDesc.Format;
+	//device->CreateRenderTargetView(depthTexture, &depthRTVDesc, renderTargetRTVs[RTVTypes::DEPTHS].GetAddressOf());
+
+	//device->CreateShaderResourceView(depthTexture, 0, renderTargetSRVs[RTVTypes::DEPTHS].GetAddressOf());
+
+	//depthTexture->Release();
+
+	// Initialize SSAO Depths as a float texture
 	for (int i = 3; i < 6; i++) {
 		ssaoTexture2D[i].Reset();
 		renderTargetRTVs[i].Reset();
@@ -248,8 +278,8 @@ void Renderer::InitRenderTargetViews() {
 
 	D3D11_DEPTH_STENCIL_DESC particleDepthDesc = {};
 	particleDepthDesc.DepthEnable = true;
-	particleDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	particleDepthDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	particleDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // No depth writing
+	particleDepthDesc.DepthFunc = D3D11_COMPARISON_LESS; // Get only the closest pixels
 	device->CreateDepthStencilState(&particleDepthDesc, particleDepthState.GetAddressOf());
 
 	D3D11_BLEND_DESC additiveBlendDesc = {};
@@ -267,17 +297,17 @@ void Renderer::InitRenderTargetViews() {
 	refractionSilhouetteDepthState.Reset();
 	prePassDepthState.Reset();
 
-	D3D11_DEPTH_STENCIL_DESC rsDepthDesc = {};
+	/*D3D11_DEPTH_STENCIL_DESC rsDepthDesc = {};
 	rsDepthDesc.DepthEnable = true;
-	rsDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // No depth writing
-	rsDepthDesc.DepthFunc = D3D11_COMPARISON_LESS; // Get only the closest pixels
-	device->CreateDepthStencilState(&rsDepthDesc, refractionSilhouetteDepthState.GetAddressOf());
+	rsDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; 
+	rsDepthDesc.DepthFunc = D3D11_COMPARISON_LESS; */
+	device->CreateDepthStencilState(&particleDepthDesc, refractionSilhouetteDepthState.GetAddressOf());
 
 	// Set up prepass depth buffer
 	D3D11_DEPTH_STENCIL_DESC prePassDepthDesc = {};
 	prePassDepthDesc.DepthEnable = true;
-	prePassDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // No depth writing - unsure whether to keep this here
-	prePassDepthDesc.DepthFunc = D3D11_COMPARISON_LESS; // Get only the closest pixels
+	prePassDepthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // No depth writing
+	prePassDepthDesc.DepthFunc = D3D11_COMPARISON_EQUAL; // Get only equal pixels
 	device->CreateDepthStencilState(&prePassDepthDesc, prePassDepthState.GetAddressOf());
 
 	//Set up outlining buffers
@@ -458,23 +488,23 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 
 	context->RSSetState(0); // Unclear if this should be a custom rasterizer state
 
-	D3D11_VIEWPORT vp = {};
-	vp.TopLeftX = 0;
-	vp.TopLeftY = 0;
-	vp.Width = (float)windowWidth;
-	vp.Height = (float)windowHeight;
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
-	context->RSSetViewports(1, &vp);
-
-	VSShadow->SetShader();
-
-	VSShadow->SetMatrix4x4("view", sourceCam->GetViewMatrix());
-	VSShadow->SetMatrix4x4("projection", sourceCam->GetProjectionMatrix());
-
 	switch (type) {
 	case MiscEffectSRVTypes::REFRACTION_SILHOUETTE_DEPTHS:
 	{
+		VSShadow->SetShader();
+
+		VSShadow->SetMatrix4x4("view", sourceCam->GetViewMatrix());
+		VSShadow->SetMatrix4x4("projection", sourceCam->GetProjectionMatrix());
+
+		D3D11_VIEWPORT vp = {};
+		vp.TopLeftX = 0;
+		vp.TopLeftY = 0;
+		vp.Width = (float)windowWidth;
+		vp.Height = (float)windowHeight;
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+		context->RSSetViewports(1, &vp);
+
 		context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].GetAddressOf(), depthBufferDSV.Get());
 
 		context->OMSetDepthStencilState(refractionSilhouetteDepthState.Get(), 0);
@@ -500,30 +530,121 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 				0);
 		}
 
+		context->OMSetDepthStencilState(0, 0);
+
+		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+
 		break;
 	}
 
 	case MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS:
 	{
-		context->OMSetRenderTargets(1, renderTargetRTVs[RTVTypes::DEPTHS].GetAddressOf(), depthBufferDSV.Get());
+		context->OMSetDepthStencilState(defaultDepthState.Get(), 0);	
 
-		for (std::shared_ptr<MeshRenderer> mesh : ComponentManager::GetAll<MeshRenderer>()) {
-			if (!mesh->IsEnabled() || !mesh->GetMaterial()->GetTransparent()) continue;
+		context->PSSetShader(0, 0, 0);
 
-			// Standard depth pre-pass
-			VSShadow->SetMatrix4x4("world", mesh->GetTransform()->GetWorldMatrix());
+		// Standard depth pre-pass
+		// Per Frame data can be set out here for optimization
 
-			solidColorPS->SetShader();
-			solidColorPS->SetFloat3("Color", DirectX::XMFLOAT3(1, 1, 1));
-			solidColorPS->CopyAllBufferData();
+		unsigned int lightCount = Light::GetLightArrayCount();
 
-			context->IASetVertexBuffers(0, 1, mesh->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
-			context->IASetIndexBuffer(mesh->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+		perFrameVS->SetMatrix4x4("view", sourceCam->GetViewMatrix());
+		perFrameVS->SetMatrix4x4("projection", sourceCam->GetProjectionMatrix());
+		if (shadowCount > 0) {
+			perFrameVS->SetData("shadowViews", shadowViewMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
+			perFrameVS->SetData("shadowProjections", shadowProjMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
+		}
+		perFrameVS->SetInt("shadowCount", shadowCount);
+
+		int meshIt = 0;
+
+		// Material-Sort Rendering:
+		// Same as in Draw.
+
+		SimpleVertexShader* currentVS = 0;
+		Material* currentMaterial = 0;
+		Mesh* currentMesh = 0;
+
+		std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAll<MeshRenderer>();
+
+		for (meshIt = 0; meshIt < activeMeshes.size() && !activeMeshes[meshIt]->GetMaterial()->GetTransparent(); meshIt++)
+		{
+			if (!activeMeshes[meshIt]->IsEnabled() || activeMeshes[meshIt]->GetMaterial()->GetTransparent()) continue;
+
+			//If the material needs to be swapped
+			if (activeMeshes[meshIt]->GetMaterial().get() != currentMaterial)
+			{
+				// Eventual improvement:
+				// Move all VS and PS "Set" calls into Material
+				// This would require storing a lot more data in material
+				// With shadows, it would also require passing in a lot of data
+				// And handling edge cases like main camera swaps
+
+				currentMaterial = activeMeshes[meshIt]->GetMaterial().get();
+
+				if (currentVS != currentMaterial->GetVertShader().get()) {
+					// Set new Shader and copy per-frame data
+					currentVS = currentMaterial->GetVertShader().get();
+					currentVS->SetShader();
+
+					perFrameVS->CopyBufferData("PerFrame");
+				}
+
+				// Per-Material VS Data
+				currentVS->SetFloat4("colorTint", currentMaterial->GetTint());
+
+				currentVS->CopyBufferData("PerMaterial");
+			}
+
+			if (currentMesh != activeMeshes[meshIt]->GetMesh().get()) {
+				currentMesh = activeMeshes[meshIt]->GetMesh().get();
+
+				context->IASetVertexBuffers(0, 1, currentMesh->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+				context->IASetIndexBuffer(currentMesh->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
+			}
+
+			if (currentVS != 0) {
+				// Per-Object data
+				currentVS->SetMatrix4x4("world", activeMeshes[meshIt]->GetTransform()->GetWorldMatrix());
+
+				currentVS->CopyBufferData("PerObject");
+			}
+
+			if (currentMesh != 0) {
+				context->DrawIndexed(currentMesh->GetIndexCount(), 0, 0);
+			}
+		}
+
+
+		//Now deal with rendering the terrain
+		std::vector<std::shared_ptr<Terrain>> terrains = ComponentManager::GetAll<Terrain>();
+		for (int i = 0; i < terrains.size(); i++) {
+			if (!terrains[i]->IsEnabled()) continue;
+
+			std::shared_ptr<TerrainMaterial> terrainMat = terrains[i]->GetMaterial();
+			std::shared_ptr<SimpleVertexShader> VSTerrain = terrains[i]->GetMaterial()->GetVertexShader();
+
+			VSTerrain->SetShader();
+
+			VSTerrain->SetFloat4("colorTint", DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+			VSTerrain->SetMatrix4x4("world", terrains[i]->GetTransform()->GetWorldMatrix());
+			VSTerrain->SetMatrix4x4("view", sourceCam->GetViewMatrix());
+			VSTerrain->SetMatrix4x4("projection", sourceCam->GetProjectionMatrix());
+			if (shadowCount > 0) {
+				VSTerrain->SetData("shadowViews", shadowViewMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
+				VSTerrain->SetData("shadowProjections", shadowProjMatArray.data(), sizeof(XMFLOAT4X4) * MAX_LIGHTS);
+			}
+			VSTerrain->SetInt("shadowCount", shadowCount);
+
+			VSTerrain->CopyAllBufferData();
+
+			context->IASetVertexBuffers(0, 1, terrains[i]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
+			context->IASetIndexBuffer(terrains[i]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
 
 			context->DrawIndexed(
-				mesh->GetMesh()->GetIndexCount(),
-				0,
-				0);
+				terrains[i]->GetMesh()->GetIndexCount(),     // The number of indices to use (we could draw a subset if we wanted)
+				0,     // Offset to the first index we want to use
+				0);    // Offset to add to each index when looking up vertices
 		}
 
 		break;
@@ -532,13 +653,9 @@ void Renderer::RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVType
 		break;
 	}
 
-	context->OMSetDepthStencilState(0, 0);
-
-	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
-
-	vp.Width = (float)windowWidth;
+	/*vp.Width = (float)windowWidth;
 	vp.Height = (float)windowHeight;
-	context->RSSetViewports(1, &vp);
+	context->RSSetViewports(1, &vp);*/
 
 	//context->RSSetState(0);
 }
@@ -858,10 +975,15 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 	for (int i = 0; i < RTVTypes::RTV_TYPE_COUNT; i++) {
 		context->ClearRenderTargetView(renderTargetRTVs[i].Get(), color);
 	}
-	const float depths[4] = { 1,0,0,0 };
+	const float depths[4] = { 0,0,0,0 };
 	context->ClearRenderTargetView(renderTargetRTVs[RTVTypes::DEPTHS].Get(), depths);
 
 	context->ClearRenderTargetView(outlineRTV.Get(), color);
+
+	// Change to write depths beforehand - for future
+	RenderDepths(cam, MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS);
+
+	context->OMSetDepthStencilState(prePassDepthState.Get(), 0);
 
 	// This fills in all renderTargets used before post-processing
 	// Includes Colors, Ambient, Normals, and Depths
@@ -871,11 +993,6 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 		renderTargets[i] = renderTargetRTVs[i].Get();
 	}
 	context->OMSetRenderTargets(4, renderTargets, depthBufferDSV.Get());
-
-	// Change to write depths beforehand - for future
-	//RenderDepths(cam, MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS);
-
-	 //context->OMSetDepthStencilState(prePassDepthState.Get(), 0);
 
 	// Per Frame data can be set out here for optimization
 	// This section could be improved, see Chris's Demos and

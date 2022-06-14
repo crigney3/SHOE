@@ -86,5 +86,8 @@ private:
 	std::shared_ptr<GameEntity> clickedEntityBuffer;
 
 	EngineState engineState;
+
+	void EnterPlayState();
+	void LeavePlayState();
 };
 
