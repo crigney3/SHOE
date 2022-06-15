@@ -12,6 +12,7 @@ class Mesh
 {
 private:
 	Microsoft::WRL::ComPtr<ID3D11Buffer> vBuffer;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> vPositionBuffer;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> inBuffer;
 	Vertex* vertexArray;
 	unsigned int* indices;
@@ -39,6 +40,7 @@ public:
 	void CalculateBounds(Vertex* verts, int numVerts);
 
 	Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexBuffer();
+	Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexPositionBuffer();
 	Microsoft::WRL::ComPtr<ID3D11Buffer> GetIndexBuffer();
 	Vertex* GetVertexArray();
 	unsigned int* GetIndexArray();

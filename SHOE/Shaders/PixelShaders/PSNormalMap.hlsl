@@ -86,34 +86,6 @@ PS_Output main(VertexToPixelNormal input)
 		}
 	}
 
-	/*
-	float envLightDepth = input.shadowPos2.z / input.shadowPos2.w;
-
-	float2 envShadowUV = input.shadowPos2.xy / input.shadowPos2.w * 0.5f + 0.5f;
-
-	envShadowUV.y = 1.0f - envShadowUV.y;
-
-	float envShadowAmount = envShadowMap.SampleCmpLevelZero(shadowState, envShadowUV, envLightDepth).r;
-
-	for (uint i = 0; i < lightCount; i++) {
-		if (lights[i].enabled) {
-			if (i == 4) {
-				float lightDepth = input.shadowPos1.z / input.shadowPos1.w;
-
-				float2 shadowUV = input.shadowPos1.xy / input.shadowPos1.w * 0.5f + 0.5f;
-
-				shadowUV.y = 1.0f - shadowUV.y;
-
-				float flashShadowAmount = shadowMap.SampleCmpLevelZero(shadowState, shadowUV, lightDepth).r;
-
-				totalLighting += calcLightExternal(input, lights[i], specularColor, roughness.r, metal.r) * flashShadowAmount;
-			}
-			else {
-				totalLighting += calcLightExternal(input, lights[i], specularColor, roughness.r, metal.r); // *envShadowAmount;
-			}			
-		}
-	}*/
-
 	float3 viewToCam = normalize(cameraPos - input.worldPos);
 	float3 viewRefl = normalize(reflect(-viewToCam, input.normal));
 	float NdotV = saturate(dot(input.normal, viewToCam));
@@ -131,8 +103,6 @@ PS_Output main(VertexToPixelNormal input)
 	float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse, indirectSpecular, metal.r) * albedoColor.rgb;
 
 	totalLighting *= albedoColor.rgb;
-
-	//totalLighting += fullIndirect;
 
 	PS_Output output;
 	output.colorNoAmbient = float4(totalLighting + indirectSpecular, 1);

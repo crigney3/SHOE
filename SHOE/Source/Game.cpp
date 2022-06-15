@@ -770,8 +770,6 @@ void Game::GenerateEditingUI() {
 		if (ImGui::CollapsingHeader("Depth Prepass Views")) {
 			ImGui::Text("Refraction Silhouette Depths");
 			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
-			ImGui::Text("Transparency Depth Prepass");
-			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
 			ImGui::Text("Render Depth Prepass (used for optimization)");
 			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
 		}

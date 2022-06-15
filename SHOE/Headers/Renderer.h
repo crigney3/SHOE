@@ -31,7 +31,6 @@ enum RTVTypes
 enum MiscEffectSRVTypes
 {
     REFRACTION_SILHOUETTE_DEPTHS,
-    TRANSPARENT_PREPASS_DEPTHS,
     RENDER_PREPASS_DEPTHS,
 
     MISC_EFFECT_SRV_COUNT
@@ -164,6 +163,7 @@ private:
     static bool drawColliders;
 
     UINT stride = sizeof(Vertex);
+    UINT posStride = sizeof(DirectX::XMFLOAT3);
     UINT offset = 0;
 
     void InitRenderTargetViews();
@@ -196,7 +196,8 @@ public:
 
     void InitShadows();
     void RenderShadows();
-    void RenderDepths(std::shared_ptr<Camera> sourceCam, MiscEffectSRVTypes type);
+    void RenderRefractionSilhouette(std::shared_ptr<Camera> sourceCam);
+    void RenderDepthPrepass(std::shared_ptr<Camera> sourceCam);
     void RenderColliders(std::shared_ptr<Camera> cam);
     void RenderMeshBounds(std::shared_ptr<Camera> cam);
     void RenderSelectedHighlight(std::shared_ptr<Camera> cam, EngineState engineState);

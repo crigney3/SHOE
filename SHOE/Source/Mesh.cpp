@@ -310,6 +310,21 @@ void Mesh::MakeBuffers(Vertex* vertexArray, int vertices, unsigned int* indices,
 	// - Once we do this, we'll NEVER CHANGE THE BUFFER AGAIN
 	device->CreateBuffer(&vbd, &initialVertexData, vBuffer.GetAddressOf());
 
+	// Do the same for the vertex position buffer,
+	// but with different ByteWidth and initial data
+	DirectX::XMFLOAT3* vPositionData = new DirectX::XMFLOAT3[vertices];
+	std::vector<DirectX::XMFLOAT3> vPositionVector;
+	for (int i = 0; i < vertices; i++) {
+		vPositionVector.push_back(vertexArray[i].Position);
+	}
+	std::copy(vPositionVector.begin(), vPositionVector.end(), vPositionData);
+
+	vbd.ByteWidth = sizeof(DirectX::XMFLOAT3) * vertices;
+	initialVertexData.pSysMem = vPositionData;
+
+	device->CreateBuffer(&vbd, &initialVertexData, vPositionBuffer.GetAddressOf());
+	delete vPositionData;
+
 	D3D11_BUFFER_DESC ibd;
 	ibd.Usage = D3D11_USAGE_IMMUTABLE;
 	ibd.ByteWidth = sizeof(unsigned int) * indexCount;	// 3 = number of indices in the buffer
@@ -425,6 +440,10 @@ void Mesh::CalculateBounds(Vertex* verts, int numVerts)
 
 Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetVertexBuffer() {
 	return vBuffer;
+}
+
+Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetVertexPositionBuffer() {
+	return vPositionBuffer;
 }
 
 Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetIndexBuffer() {
