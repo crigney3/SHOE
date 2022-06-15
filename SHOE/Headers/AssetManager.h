@@ -25,13 +25,9 @@
 #include "SpriteBatch.h"
 #include "Collider.h"
 #include "EngineState.h"
+#include "AudioComponent.h"
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
-
-struct FMODUserData {
-	std::shared_ptr<std::string> name;
-	std::shared_ptr<std::string> filenameKey;
-};
 
 enum ComponentTypes {
 	// While Transform is tracked here, it is often skipped or handled uniquely
@@ -45,6 +41,7 @@ enum ComponentTypes {
 	CAMERA,
 	NOCLIP_CHAR_CONTROLLER,
 	FLASHLIGHT_CONTROLLER,
+	AUDIO,
 	// Must always be the final enum
 	COMPONENT_TYPE_COUNT
 };
@@ -78,7 +75,7 @@ private:
 
 private:
 	DXCore* dxInstance;
-	AudioHandler& audioInstance = AudioHandler::GetInstance();
+	AudioHandler& audioHandler = AudioHandler::GetInstance();
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
@@ -129,7 +126,7 @@ private:
 	std::vector<std::shared_ptr<Material>> globalMaterials;
 	std::vector<std::shared_ptr<GameEntity>> globalEntities;
 	std::vector<std::shared_ptr<TerrainMaterial>> globalTerrainMaterials;
-	std::vector<FMOD::Sound*> globalSounds;
+	std::vector<StaticSoundData> staticSoundData;
 	std::vector<std::shared_ptr<SHOEFont>> globalFonts;
 
 	std::shared_ptr<Camera> editingCamera;

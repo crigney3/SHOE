@@ -643,6 +643,15 @@ void Game::GenerateEditingUI() {
 					flashlight->SetEnabled(flEnabled);
 			}
 
+			else if (std::shared_ptr<AudioComponent> audio = std::dynamic_pointer_cast<AudioComponent>(componentList[c]))
+			{
+				ImGui::Text("Audio");
+
+				if (ImGui::Button("Test Sound")) {
+
+				}
+			}
+
 			// Remove Component Button
 			ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
@@ -659,7 +668,7 @@ void Game::GenerateEditingUI() {
 		// Dropdown and Collapsible Header to add components
 		if (ImGui::CollapsingHeader("Add Component")) {
 			static ComponentTypes selectedComponent = ComponentTypes::MESH_RENDERER;
-			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light", "Camera", "Noclip Character Controller", "Flashlight Controller" };
+			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light", "Camera", "Noclip Character Controller", "Flashlight Controller", "Audio"};
 
 			if (ImGui::BeginListBox("Component Listbox")) {
 				for (int i = 0; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
@@ -700,6 +709,9 @@ void Game::GenerateEditingUI() {
 					break;
 				case ComponentTypes::FLASHLIGHT_CONTROLLER:
 					currentEntity->AddComponent<FlashlightController>();
+					break;
+				case ComponentTypes::AUDIO:
+					currentEntity->AddComponent<AudioComponent>();
 					break;
 				}
 			}

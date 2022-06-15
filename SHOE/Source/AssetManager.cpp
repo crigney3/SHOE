@@ -11,15 +11,14 @@ AssetManager::~AssetManager() {
 	// Everything should be smart-pointer managed
 	// Except sounds, which have to have UserData cleared
 	// manually (and can't use auto, iterator isn't built)
-	for (int i = 0; i < globalSounds.size(); i++) {
+	for (int i = 0; i < audioHandler.globalSounds.size(); i++) {
 		FMODUserData* uData;
-		globalSounds[i]->getUserData((void**)&uData);
-		uData->filenameKey.reset();
+		audioHandler.globalSounds[i]->getUserData((void**)&uData);
 		uData->name.reset();
 		delete uData;
 	}
 
-	globalSounds.clear();
+	audioHandler.globalSounds.clear();
 	globalMeshes.clear();
 
 	// And entities
@@ -88,24 +87,25 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 #pragma region createAssets
 FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::string name) {
 	FMODUserData* uData = new FMODUserData;
+	StaticSoundData staticData = {};
 	FMOD::Sound* sound;
 
 	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
 
-	sound = audioInstance.LoadSound(namePath, mode);
+	sound = audioHandler.LoadSound(namePath, mode);
 
 	// Serialize the filename if it's in the right folder
 	std::string assetPathStr = "Assets\\Sounds\\";
 
 	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-	uData->filenameKey = std::make_shared<std::string>(baseFilename);
+	staticData.filenameKey = std::make_shared<std::string>(baseFilename);
 	uData->name = std::make_shared<std::string>(name);
 
 	// On getUserData, we will receive the whole struct
 	sound->setUserData(uData);
 
-	globalSounds.push_back(sound);
+	staticSoundData.push_back(staticData);
 
 	return sound;
 }
@@ -1191,7 +1191,7 @@ void AssetManager::InitializeEmitters() {
 }
 
 void AssetManager::InitializeAudio() {
-	audioInstance.Initialize();
+	audioHandler.Initialize();
 
 	CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_DEFAULT, "piano-a");
 	CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_DEFAULT, "piano-b");
@@ -1282,11 +1282,11 @@ size_t AssetManager::GetTerrainMaterialArraySize() {
 }
 
 size_t AssetManager::GetSoundArraySize() {
-	return this->globalSounds.size();
+	return this->audioHandler.globalSounds.size();
 }
 
 FMOD::Sound* AssetManager::GetSoundAtID(int id) {
-	return this->globalSounds[id];
+	return this->audioHandler.globalSounds[id];
 }
 
 std::shared_ptr<Sky> AssetManager::GetSkyAtID(int id) {
@@ -1794,10 +1794,9 @@ void AssetManager::CleanAllEntities()
 void AssetManager::CleanAllVectors() {
 	CleanAllEntities();
 
-	for (int i = 0; i < globalSounds.size(); i++) {
+	for (int i = 0; i < audioHandler.globalSounds.size(); i++) {
 		FMODUserData* uData;
-		globalSounds[i]->getUserData((void**)&uData);
-		uData->filenameKey.reset();
+		audioHandler.globalSounds[i]->getUserData((void**)&uData);
 		uData->name.reset();
 		delete uData;
 	}
@@ -1809,7 +1808,7 @@ void AssetManager::CleanAllVectors() {
 	globalMeshes.clear();
 	globalMaterials.clear();
 	globalTerrainMaterials.clear();
-	globalSounds.clear();
+	staticSoundData.clear();
 	globalFonts.clear();
 	textureSampleStates.clear();
 	textureState = nullptr;

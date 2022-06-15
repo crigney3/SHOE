@@ -18,6 +18,8 @@ FMOD_RESULT AudioHandler::Initialize() {
 
 	result = soundSystem->init(512, FMOD_INIT_NORMAL, 0);
 
+	globalSounds = std::vector<FMOD::Sound*>();
+
 	return result;
 }
 
@@ -29,6 +31,8 @@ Sound* AudioHandler::LoadSound(std::string soundPath, FMOD_MODE mode) {
 									  mode,
 									  0,
 									  &newSound);
+
+	globalSounds.push_back(newSound);
 
 	if (result != FMOD_OK) return nullptr;
 

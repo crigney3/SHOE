@@ -916,8 +916,8 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 
 	context->ClearRenderTargetView(outlineRTV.Get(), color);
 
-	// Change to write depths beforehand - for future
-	RenderDepthPrepass(cam);
+	// Uncomment this for depth prepass
+	// RenderDepthPrepass(cam);
 
 	// This fills in all renderTargets used before post-processing
 	// Includes Colors, Ambient, Normals, and Depths
