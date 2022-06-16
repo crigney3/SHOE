@@ -100,12 +100,13 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
 	staticData.filenameKey = std::make_shared<std::string>(baseFilename);
+	staticSoundData.push_back(staticData);
+
+	uData->fileKeyIndex = staticSoundData.size() - 1;
 	uData->name = std::make_shared<std::string>(name);
 
 	// On getUserData, we will receive the whole struct
 	sound->setUserData(uData);
-
-	staticSoundData.push_back(staticData);
 
 	return sound;
 }
@@ -1287,6 +1288,10 @@ size_t AssetManager::GetSoundArraySize() {
 
 FMOD::Sound* AssetManager::GetSoundAtID(int id) {
 	return this->audioHandler.globalSounds[id];
+}
+
+std::string AssetManager::GetSoundFilenameKeyAtID(int id) {
+	return this->staticSoundData[id].filenameKey->c_str();
 }
 
 std::shared_ptr<Sky> AssetManager::GetSkyAtID(int id) {

@@ -646,9 +646,52 @@ void Game::GenerateEditingUI() {
 			else if (std::shared_ptr<AudioComponent> audio = std::dynamic_pointer_cast<AudioComponent>(componentList[c]))
 			{
 				ImGui::Text("Audio");
+				FMOD::Sound* sound = audio->GetSound();
 
-				if (ImGui::Button("Test Sound")) {
+				if (sound == nullptr) {
+					ImGui::Text("No Sound Loaded!");
+				}
+				else {
+					FMODUserData* soundData = audioHandler.GetSoundUserData(sound);
 
+					ImGui::Text(soundData->name->c_str());
+
+					if (ImGui::Button("Test Sound")) {
+						audioHandler.BasicPlaySound(sound);
+					}
+
+					float volume = audio->GetVolume();
+					ImGui::DragFloat("Volume", &volume, 0.1f, 0.0f, 1.0f);
+					audio->SetVolume(volume);
+
+					float playbackSpeed = audio->GetPlaybackSpeed();
+					ImGui::DragFloat("Playback Speed", &playbackSpeed, 0.2f, 0.01f, 4.0f);
+					audio->SetPlaybackSpeed(playbackSpeed);
+
+					if (ImGui::CollapsingHeader("Modify Sound")) {
+
+					}
+				}
+
+				if (ImGui::CollapsingHeader("Set Sound")) {
+					static int current = 0;
+					if (ImGui::BeginListBox("Loaded Sounds")) {
+						for (int i = 0; i < audioHandler.GetSoundArraySize(); i++) {
+							const bool selected = (current == i);
+							std::string name = audioHandler.GetSoundName(audioHandler.globalSounds[i]);
+
+							if (ImGui::Selectable(name.c_str(), selected)) {
+								current = i;
+							}
+
+							if (selected) ImGui::SetItemDefaultFocus();
+						}
+						ImGui::EndListBox();
+					}
+
+					if (ImGui::Button("Apply Sound")) {
+						audio->SetSound(audioHandler.globalSounds[current]);
+					}
 				}
 			}
 
@@ -671,10 +714,10 @@ void Game::GenerateEditingUI() {
 			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light", "Camera", "Noclip Character Controller", "Flashlight Controller", "Audio"};
 
 			if (ImGui::BeginListBox("Component Listbox")) {
-				for (int i = 0; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
+				for (int i = 0; i < ComponentTypes::COMPONENT_TYPE_COUNT - 1; i++) {
 					const bool is_selected = (selectedComponent == i);
 					if (ImGui::Selectable(typeArray[i].c_str(), is_selected))
-						selectedComponent = (ComponentTypes)(i + 1);
+						selectedComponent = (ComponentTypes)(i);
 				}
 
 				ImGui::EndListBox();
@@ -685,7 +728,7 @@ void Game::GenerateEditingUI() {
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0.3f, 1.0f, 0.87f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0.65f, 1.0f, 0.5f));
 			if (ImGui::Button("Add Selected Component")) {
-				switch (selectedComponent) {
+				switch (selectedComponent + 1) {
 				case ComponentTypes::MESH_RENDERER:
 					currentEntity->AddComponent<MeshRenderer>();
 					break;

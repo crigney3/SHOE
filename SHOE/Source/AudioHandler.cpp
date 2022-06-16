@@ -23,7 +23,7 @@ FMOD_RESULT AudioHandler::Initialize() {
 	return result;
 }
 
-Sound* AudioHandler::LoadSound(std::string soundPath, FMOD_MODE mode) {
+Sound* AudioHandler::LoadSound(std::string soundPath, FMOD_MODE mode, std::string name) {
 	FMOD::Sound* newSound;
 	FMOD_RESULT result;
 
@@ -31,6 +31,8 @@ Sound* AudioHandler::LoadSound(std::string soundPath, FMOD_MODE mode) {
 									  mode,
 									  0,
 									  &newSound);
+
+	//newSound->Set
 
 	globalSounds.push_back(newSound);
 
@@ -53,4 +55,27 @@ Channel* AudioHandler::BasicPlaySound(FMOD::Sound* sound) {
 
 FMOD::System* AudioHandler::GetSoundSystem() {
 	return this->soundSystem;
+}
+
+size_t AudioHandler::GetSoundArraySize() {
+	return this->globalSounds.size();
+}
+
+std::string AudioHandler::GetSoundName(FMOD::Sound* sound) {
+	FMODUserData* data = GetSoundUserData(sound);
+
+	return (data->name)->c_str();
+}
+
+FMODUserData* AudioHandler::GetSoundUserData(FMOD::Sound* sound) {
+	FMODUserData* soundData;
+	FMOD_RESULT result = sound->getUserData((void**)&soundData);
+
+#if defined(DEBUG) || defined(_DEBUG)
+	if (result != FMOD_OK) {
+		printf("Failed to get User Data from sound!");
+	}
+#endif
+
+	return soundData;
 }

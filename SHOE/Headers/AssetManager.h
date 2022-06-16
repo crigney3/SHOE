@@ -316,6 +316,7 @@ public:
 	size_t GetSoundArraySize();
 
 	FMOD::Sound* GetSoundAtID(int id);
+	std::string GetSoundFilenameKeyAtID(int id);
 	std::shared_ptr<Material> GetMaterialAtID(int id);
 	std::shared_ptr<Mesh> GetMeshAtID(int id);
 	std::shared_ptr<SimpleVertexShader> GetVertexShaderAtID(int id);

@@ -619,28 +619,14 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 	sceneDocToSave.AddMember(SKIES, skyBlock, allocator);
 
 	rapidjson::Value soundBlock(rapidjson::kArrayType);
-	for (int i = 0; i < assetManager.globalSounds.size(); i++) {
+	for (int i = 0; i < audioHandler.GetSoundArraySize(); i++) {
 		rapidjson::Value soundObject(rapidjson::kObjectType);
-		FMODUserData* uData;
+		FMODUserData* uData = audioHandler.GetSoundUserData(audioHandler.globalSounds[i]);
 		FMOD_MODE sMode;
 
-		FMOD_RESULT uDataResult = assetManager.globalSounds[i]->getUserData((void**)&uData);
+		audioHandler.globalSounds[i]->getMode(&sMode);
 
-#if defined(DEBUG) || defined(_DEBUG)
-		if (uDataResult != FMOD_OK) {
-			printf("Failed to save sound with user data error!");
-		}
-#endif
-
-		uDataResult = assetManager.globalSounds[i]->getMode(&sMode);
-
-#if defined(DEBUG) || defined(_DEBUG)
-		if (uDataResult != FMOD_OK) {
-			printf("Failed to save sound with mode error!");
-		}
-#endif
-
-		soundObject.AddMember(FILENAME_KEY, rapidjson::Value().SetString(uData->filenameKey->c_str(), allocator), allocator);
+		soundObject.AddMember(FILENAME_KEY, rapidjson::Value().SetString(assetManager.GetSoundFilenameKeyAtID(uData->fileKeyIndex).c_str(), allocator), allocator);
 		soundObject.AddMember(NAME, rapidjson::Value().SetString(uData->name->c_str(), allocator), allocator);
 		soundObject.AddMember(SOUND_FMOD_MODE, sMode, allocator);
 

@@ -10,6 +10,7 @@
 struct FMODUserData {
 	// More data soon
 	std::shared_ptr<std::string> name;
+	int fileKeyIndex;
 };
 
 struct StaticSoundData {
@@ -55,8 +56,13 @@ public:
 	// Stores effects such as reverb
 	std::vector<FMOD::DSP*> globalDSPs;
 
-	FMOD::Sound* LoadSound(std::string soundPath, FMOD_MODE mode);
+	FMOD::Sound* LoadSound(std::string soundPath, FMOD_MODE mode = FMOD_DEFAULT, std::string name = "");
 	FMOD::Channel* BasicPlaySound(FMOD::Sound* sound);
+
+	std::string GetSoundName(FMOD::Sound* sound);
+	FMODUserData* GetSoundUserData(FMOD::Sound* sound);
+
+	size_t GetSoundArraySize();
 
 	FMOD::System* GetSoundSystem();
 };

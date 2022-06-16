@@ -168,6 +168,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Headers\AssetManager.h" />
+    <ClInclude Include="Headers\AudioComponent.h" />
     <ClInclude Include="Headers\AudioHandler.h" />
     <ClInclude Include="Headers\Camera.h" />
     <ClInclude Include="Headers\CollisionManager.h" />
@@ -381,6 +382,7 @@
     <ClCompile Include="IMGUI\Source\imgui_tables.cpp" />
     <ClCompile Include="IMGUI\Source\imgui_widgets.cpp" />
     <ClCompile Include="Source\AssetManager.cpp" />
+    <ClCompile Include="Source\AudioComponent.cpp" />
     <ClCompile Include="Source\AudioHandler.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\ComponentPool.cpp" />

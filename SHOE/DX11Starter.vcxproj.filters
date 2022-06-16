@@ -168,6 +168,9 @@
     <ClInclude Include="Headers\EngineState.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\AudioComponent.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\PixelShaders\IBLBrdfLookUpTablePS.hlsl">
@@ -360,6 +363,9 @@
     </ClCompile>
     <ClCompile Include="Source\SceneManager.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\AudioComponent.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

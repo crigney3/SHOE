@@ -167,6 +167,7 @@ private:
 #pragma endregion
 private:
 	AssetManager& assetManager = AssetManager::GetInstance();
+	AudioHandler& audioHandler = AudioHandler::GetInstance();
 
 	EngineState* engineState;
 
