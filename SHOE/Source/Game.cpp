@@ -118,13 +118,26 @@ void Game::Init()
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	//With everything initialized, start the renderer
-	renderer = std::make_unique<Renderer>(height,
-		width,
-		device,
-		context,
-		swapChain,
-		backBufferRTV,
-		depthStencilView);
+
+	// What graphics library are we using?
+	if (dxVersion) {
+		renderer = std::make_unique<DX12Renderer>(height,
+			width,
+			device,
+			swapChain,
+			commandAllocator,
+			commandQueue,
+			commandList);
+	}
+	else {
+		renderer = std::make_unique<DX11Renderer>(height,
+			width,
+			device,
+			context,
+			swapChain,
+			backBufferRTV,
+			depthStencilView);
+	}
 
 #if defined(DEBUG) || defined(_DEBUG)
 	printf("Took %3.4f seconds for  post-initialization. \n", this->GetDeltaTime());

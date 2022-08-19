@@ -11,7 +11,8 @@
 #include <stdlib.h>
 #include <Windows.h>
 #include "Input.h"
-#include "Renderer.h"
+#include "DX11Renderer.h"
+#include "DX12Renderer.h"
 #include "AssetManager.h"
 #include <chrono>
 #include "SceneManager.h"
