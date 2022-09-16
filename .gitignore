@@ -10,8 +10,8 @@
 *.userosscache
 *.sln.docstates
 
-# Exclude Assets
-Assets/
+# Exclude Assets that shouldn't be tracked by git lfs
+Assets/Shaders/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
