@@ -13,6 +13,8 @@
 // We can include the correct library files here
 // instead of in Visual Studio settings if we want
 #pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "d3d12.lib")
+#pragma comment(lib, "dxgi.lib")
 
 // This is used both to build the buffer pool that stores all data needed for
 // the next X frames, as well as defining the point where the CPU must sync
@@ -134,19 +136,7 @@ protected:
 
 	Microsoft::WRL::ComPtr<ID3D12Device>		deviceDX12;
 
-	// Swap chain buffer tracking
 	static const unsigned int numBackBuffers = 2;
-	unsigned int currentSwapBuffer;
-
-	unsigned int rtvDescriptorSize;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvHeap;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvHeap;
-
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[numBackBuffers]; // Pointers into the RTV desc heap
-	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle;
-
-	Microsoft::WRL::ComPtr<ID3D12Resource> backBuffers[numBackBuffers];
-	Microsoft::WRL::ComPtr<ID3D12Resource> depthStencilBuffer;
 
 	D3D12_VIEWPORT			viewport;
 	D3D12_RECT				scissorRect;

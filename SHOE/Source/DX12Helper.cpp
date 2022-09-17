@@ -1,4 +1,4 @@
-#include "DX12Helper.h"
+#include "../Headers/DX12Helper.h"
 
 // Singleton requirement
 DX12Helper* DX12Helper::instance;

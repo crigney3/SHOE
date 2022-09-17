@@ -21,5 +21,25 @@ Renderer::Renderer(
 	InitRenderTargetViews();
 }
 
+Renderer::~Renderer() {
+
+}
+
+void Renderer::PreResize() {
+
+}
+
+void Renderer::InitRenderTargetViews() {
+
+}
+
+void Renderer::InitShadows() {
+
+}
+
+void Renderer::PostResize() {
+
+}
+
 bool Renderer::GetDrawColliderStatus() { return drawColliders; }
 void Renderer::SetDrawColliderStatus(bool _newState) { drawColliders = _newState; }

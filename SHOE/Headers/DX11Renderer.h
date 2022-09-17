@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../Headers/Renderer.h"
 
 class DX11Renderer : public Renderer {
@@ -117,10 +119,4 @@ public:
     void RenderColliders(std::shared_ptr<Camera> cam);
     void RenderMeshBounds(std::shared_ptr<Camera> cam);
     void RenderSelectedHighlight(std::shared_ptr<Camera> cam, EngineState engineState);
-
-    static bool GetDrawColliderStatus();
-    static void SetDrawColliderStatus(bool _newState);
-
-    int selectedEntity;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> outlineSRV;
 };

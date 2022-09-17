@@ -1,3 +1,5 @@
+#pragma once
+
 #include "AssetManager.h"
 #include "CollisionManager.h"
 
@@ -76,7 +78,7 @@ class Renderer
 protected:
     AssetManager& globalAssets = AssetManager::GetInstance();
 
-    virtual void InitRenderTargetViews() = 0;
+    virtual void InitRenderTargetViews();
 
     unsigned int windowHeight;
     unsigned int windowWidth;
@@ -91,14 +93,11 @@ public:
         unsigned int windowHeight,
         unsigned int windowWidth, 
         Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain);
-    virtual ~Renderer() = 0;
+    virtual ~Renderer();
 
-    virtual void PostResize() = 0;
-    virtual void PreResize() = 0;
-    virtual void InitShadows() = 0;
-
-    virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(RTVTypes type) = 0;
-    virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMiscEffectSRV(MiscEffectSRVTypes type) = 0;
+    virtual void PostResize();
+    virtual void PreResize();
+    virtual void InitShadows();
 
     virtual void DrawPointLights(std::shared_ptr<Camera> cam) = 0;
     virtual void Draw(std::shared_ptr<Camera> camera, EngineState engineState) = 0;

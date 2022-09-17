@@ -20,7 +20,7 @@
 class Game : public DXCore
 {
 public:
-	Game(HINSTANCE hInstance);
+	Game(HINSTANCE hInstance, DirectXVersion dxVersion);
 	~Game();
 
 	// Overridden setup and game loop methods, which
@@ -31,7 +31,7 @@ public:
 	void Draw();
 
 private:
-	// Asset Manager instance
+	// Manager instances
 	AssetManager& globalAssets = AssetManager::GetInstance();
 	SceneManager& sceneManager = SceneManager::GetInstance();
 	AudioHandler& audioHandler = AudioHandler::GetInstance();
@@ -48,7 +48,9 @@ private:
 	void DrawLoadingScreen();
 	void GenerateEditingUI();
 	void RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity);
-	std::unique_ptr<Renderer> renderer;
+
+	std::unique_ptr<DX11Renderer> dx11Renderer;
+	std::unique_ptr<DX12Renderer> dx12Renderer;
 
 	// GUI control tracking/UI toggles
 	Input& input = Input::GetInstance();

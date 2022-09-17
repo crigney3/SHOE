@@ -22,13 +22,14 @@ using namespace DirectX;
 //
 // hInstance - the application's OS-level handle (unique ID)
 // --------------------------------------------------------
-Game::Game(HINSTANCE hInstance)
+Game::Game(HINSTANCE hInstance, DirectXVersion dxVersion)
 	: DXCore(
 		hInstance,		   // The application's handle
 		"DirectX Game",	   // Text for the window's title bar
 		1280,			   // Width of the window's client area
 		720,			   // Height of the window's client area
-		true)			   // Show extra stats (fps) in title bar?
+		true,			   // Show extra stats (fps) in title bar?
+		dxVersion)
 {
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -94,7 +95,13 @@ void Game::Init()
 #endif
 
 	sceneManager.Initialize(&engineState);
-	globalAssets.Initialize(device, context, hWnd, &engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
+
+	if (dxVersion) {
+
+	}
+	else {
+		globalAssets.Initialize(device, context, hWnd, &engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
+	}
 
 #if defined(DEBUG) || defined(_DEBUG)
 	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
@@ -121,16 +128,16 @@ void Game::Init()
 
 	// What graphics library are we using?
 	if (dxVersion) {
-		renderer = std::make_unique<DX12Renderer>(height,
+		dx12Renderer = std::make_unique<DX12Renderer>(height,
 			width,
-			device,
+			deviceDX12,
 			swapChain,
 			commandAllocator,
 			commandQueue,
 			commandList);
 	}
 	else {
-		renderer = std::make_unique<DX11Renderer>(height,
+		dx11Renderer = std::make_unique<DX11Renderer>(height,
 			width,
 			device,
 			context,
@@ -162,18 +169,30 @@ void Game::LoadScene() {
 	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
 #endif
 
-	renderer.reset();
+	dx11Renderer.reset();
 
 	context->Flush();
 
 	//With everything initialized, start the renderer
-	renderer = std::make_unique<Renderer>(height,
-		width,
-		device,
-		context,
-		swapChain,
-		backBufferRTV,
-		depthStencilView);
+	// What graphics library are we using?
+	if (dxVersion) {
+		dx12Renderer = std::make_unique<DX12Renderer>(height,
+			width,
+			deviceDX12,
+			swapChain,
+			commandAllocator,
+			commandQueue,
+			commandList);
+	}
+	else {
+		dx11Renderer = std::make_unique<DX11Renderer>(height,
+			width,
+			device,
+			context,
+			swapChain,
+			backBufferRTV,
+			depthStencilView);
+	}
 }
 
 void Game::SaveScene() {
@@ -756,19 +775,19 @@ void Game::GenerateEditingUI() {
 
 		if (ImGui::CollapsingHeader("MRT Effects")) {
 			ImGui::Text("Color Without Ambient");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_NO_AMBIENT).Get(), ImVec2(500, 300));
+			ImGui::Image(dx11Renderer->GetRenderTargetSRV(RTVTypes::COLORS_NO_AMBIENT).Get(), ImVec2(500, 300));
 			ImGui::Text("Ambient Color");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_AMBIENT).Get(), ImVec2(500, 300));
+			ImGui::Image(dx11Renderer->GetRenderTargetSRV(RTVTypes::COLORS_AMBIENT).Get(), ImVec2(500, 300));
 			ImGui::Text("Normals");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::NORMALS).Get(), ImVec2(500, 300));
+			ImGui::Image(dx11Renderer->GetRenderTargetSRV(RTVTypes::NORMALS).Get(), ImVec2(500, 300));
 			ImGui::Text("Depths");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Image(dx11Renderer->GetRenderTargetSRV(RTVTypes::DEPTHS).Get(), ImVec2(500, 300));
 			ImGui::Text("SSAO");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
+			ImGui::Image(dx11Renderer->GetRenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
 			ImGui::Text("SSAO Post Blur");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
+			ImGui::Image(dx11Renderer->GetRenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
 			ImGui::Text("Composite");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
+			ImGui::Image(dx11Renderer->GetRenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
 		}
 
 		if (ImGui::CollapsingHeader("Shadow Depth Views")) {
@@ -782,16 +801,16 @@ void Game::GenerateEditingUI() {
 
 		if (ImGui::CollapsingHeader("Depth Prepass Views")) {
 			ImGui::Text("Refraction Silhouette Depths");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
+			ImGui::Image(dx11Renderer->GetRenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
 			ImGui::Text("Transparency Depth Prepass");
-			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Image(dx11Renderer->GetMiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
 			ImGui::Text("Render Depth Prepass (used for optimization)");
-			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Image(dx11Renderer->GetMiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
 		}
 
 		if (ImGui::CollapsingHeader("Selected Entity Filled View")) {
 			ImGui::Text("Selected Entity");
-			ImGui::Image(renderer->outlineSRV.Get(), ImVec2(500, 300));
+			ImGui::Image(dx11Renderer->outlineSRV.Get(), ImVec2(500, 300));
 		}
 
 		ImGui::End();
@@ -1001,12 +1020,23 @@ void Game::OnResize()
 		globalAssets.GetMainCamera()->SetAspectRatio((float)this->width / (float)this->height);
 	}
 
-	renderer->PreResize();
+	
 
-	// Handle base-level DX resize stuff
-	DXCore::OnResize();
+	if (dxVersion) {
+		dx12Renderer->PreResize();
 
-	renderer->PostResize(this->height, this->width, this->backBufferRTV, this->depthStencilView);
+		// Handle base-level DX resize stuff
+		DXCore::OnResize();
+
+		dx12Renderer->PostResize(this->height, this->width, currentBackBuffer);
+	}
+	else {
+		dx11Renderer->PreResize();
+
+		DXCore::OnResize();
+
+		dx11Renderer->PostResize(this->height, this->width, this->backBufferRTV, this->depthStencilView);
+	}
 }
 
 // --------------------------------------------------------
@@ -1052,7 +1082,7 @@ void Game::Update()
 					entityUIIndex = -1;
 				}
 				clickedEntityBuffer = nullptr;
-				renderer->selectedEntity = entityUIIndex;
+				dx11Renderer->selectedEntity = entityUIIndex;
 			}
 
 			if (input.KeyPress('P')) {
@@ -1185,10 +1215,22 @@ void Game::DrawLoadingScreen() {
 // --------------------------------------------------------
 void Game::Draw()
 {
-	if (engineState == EngineState::EDITING) {
-		renderer->Draw(globalAssets.GetEditingCamera(), engineState);
+	switch (dxVersion) {
+	case DIRECT_X_11:
+		if (engineState == EngineState::EDITING) {
+			dx11Renderer->Draw(globalAssets.GetEditingCamera(), engineState);
+		}
+		else if (engineState == EngineState::PLAY) {
+			dx11Renderer->Draw(globalAssets.GetMainCamera(), engineState);
+		}
+		break;
+	case DIRECT_X_12:
+		if (engineState == EngineState::EDITING) {
+			dx12Renderer->Draw(globalAssets.GetEditingCamera(), engineState);
+		}
+		else if (engineState == EngineState::PLAY) {
+			dx12Renderer->Draw(globalAssets.GetMainCamera(), engineState);
+		}
 	}
-	else if (engineState == EngineState::PLAY) {
-		renderer->Draw(globalAssets.GetMainCamera(), engineState);
-	}
+	
 }

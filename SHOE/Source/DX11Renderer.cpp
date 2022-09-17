@@ -12,6 +12,9 @@ DX11Renderer::DX11Renderer(
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
 ) : Renderer(windowHeight, windowWidth, swapChain) {
 	
+	this->windowHeight = windowHeight;
+	this->windowWidth = windowWidth;
+	this->swapChain = swapChain;
 	this->device = device;
 	this->context = context;
 	this->backBufferRTV = backBufferRTV;
