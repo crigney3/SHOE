@@ -60,19 +60,21 @@ Renderer::Renderer(
 	rDescription.FillMode = D3D11_FILL_SOLID;
 	rDescription.CullMode = D3D11_CULL_FRONT;
 
-	device->CreateRasterizerState(&rDescription, &this->skyRasterizer);
+	device->CreateRasterizerState(&rDescription, &skyRasterizer);
 
 	D3D11_DEPTH_STENCIL_DESC depthDescription = {};
 	depthDescription.DepthEnable = true;
 	depthDescription.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 
-	device->CreateDepthStencilState(&depthDescription, &this->skyDepthState);
+	device->CreateDepthStencilState(&depthDescription, &skyDepthState);
 
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
 
 Renderer::~Renderer() {
-
+	shadowDSVArray.clear();
+	shadowProjMatArray.clear();
+	shadowViewMatArray.clear();
 }
 
 void Renderer::InitRenderTargetViews() {
