@@ -79,7 +79,7 @@
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(IncludePath);$(SolutionDir)packages\FMOD\core\inc\;$(SolutionDir)packages\FMOD\studio\inc</IncludePath>
+    <IncludePath>$(SolutionDir)packages\directxtk_desktop_2017.2022.3.1.1\include\;$(SolutionDir)packages\directxtk_desktop_2017.2021.10.19.1\include\;$(IncludePath);$(SolutionDir)packages\FMOD\core\inc\;$(SolutionDir)packages\FMOD\studio\inc</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
