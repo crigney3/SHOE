@@ -1128,9 +1128,9 @@ void AssetManager::InitializeSkies() {
 	//CreateSky(spaceTexture, "space");
 	CreateSky("SunnyCubeMap.dds", 0, "sunny");
 	//CreateSky(mountainTexture, "mountain");
-	CreateSky("Niagara/", 1, "niagara", ".jpg");
+	//CreateSky("Niagara/", 1, "niagara", ".jpg");
 	// Default is .png, which this is
-	CreateSky("Stars/", 1, "stars");
+	//CreateSky("Stars/", 1, "stars");
 
 	currentSky = skies[0];
 }
