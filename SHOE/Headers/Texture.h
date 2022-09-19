@@ -11,13 +11,15 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> coreTexture;
 	std::string name;
 	std::string fileKey;
+	AssetPathIndex assetPathIndex;
 
 public:
 
 	Texture();
 	Texture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> coreTexture,
 			std::string fileKey,
-			std::string name = "newTexture");
+			std::string name = "newTexture",
+			AssetPathIndex assetPathIndex = ASSET_TEXTURE_PATH_BASIC);
 	~Texture();
 
 	void SetTexture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture);
@@ -28,4 +30,8 @@ public:
 
 	std::string GetTextureFilenameKey();
 	void SetTextureFilenameKey(std::string newFileKey);
+
+	AssetPathIndex GetAssetPathIndex();
+	void SetAssetPathIndex(AssetPathIndex pathIndex);
+
 };
