@@ -395,7 +395,7 @@ void Game::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap Material")) {
 						meshRenderer->SetMaterial(globalAssets.GetMaterialAtID(materialIndex));
 					}
 
@@ -427,7 +427,7 @@ void Game::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap Mesh")) {
 						meshRenderer->SetMesh(globalAssets.GetMeshAtID(meshIndex));
 					}
 				}
@@ -520,7 +520,7 @@ void Game::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap Terrain Material")) {
 						terrain->SetMaterial(globalAssets.GetTerrainMaterialAtID(materialIndex));
 					}
 				}
@@ -548,7 +548,7 @@ void Game::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap Terrain Mesh")) {
 						terrain->SetMesh(globalAssets.GetMeshAtID(meshIndex));
 					}
 				}
@@ -693,13 +693,13 @@ void Game::GenerateEditingUI() {
 		// Dropdown and Collapsible Header to add components
 		if (ImGui::CollapsingHeader("Add Component")) {
 			static ComponentTypes selectedComponent = ComponentTypes::MESH_RENDERER;
-			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light", "Camera", "Noclip Character Controller", "Flashlight Controller" };
+			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Blank", "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light", "Camera", "Noclip Character Controller", "Flashlight Controller" };
 
 			if (ImGui::BeginListBox("Component Listbox")) {
-				for (int i = 0; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
+				for (int i = 1; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
 					const bool is_selected = (selectedComponent == i);
 					if (ImGui::Selectable(typeArray[i].c_str(), is_selected))
-						selectedComponent = (ComponentTypes)(i + 1);
+						selectedComponent = (ComponentTypes)(i);
 				}
 
 				ImGui::EndListBox();
