@@ -235,7 +235,12 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	for (rapidjson::SizeType i = 0; i < textureBlock.Size(); i++) {
 		currentLoadName = textureBlock[i].FindMember(NAME)->value.GetString();
 		if (progressListener) progressListener();
-		assetManager.CreateTexture(LoadDeserializedFileName(textureBlock[i], FILENAME_KEY), currentLoadName, ASSET_TEXTURE_PATH_BASIC);
+
+		// Textures require a check to determine which valid texture folder
+		// they're in.
+		AssetPathIndex assetPath;
+		assetPath = (AssetPathIndex)(textureBlock[i].FindMember(TEXTURE_ASSET_PATH_INDEX)->value.GetInt());
+		assetManager.CreateTexture(LoadDeserializedFileName(textureBlock[i], FILENAME_KEY), currentLoadName, assetPath);
 	}
 
 	currentLoadCategory = "Materials";
@@ -491,6 +496,7 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 
 		textureValue.AddMember(NAME, rapidjson::Value().SetString(tex->GetName().c_str(), allocator), allocator);
 		textureValue.AddMember(FILENAME_KEY, rapidjson::Value().SetString(tex->GetTextureFilenameKey().c_str(), allocator), allocator);
+		textureValue.AddMember(TEXTURE_ASSET_PATH_INDEX, tex->GetAssetPathIndex(), allocator);
 
 		textureBlock.PushBack(textureValue, allocator);
 	}
