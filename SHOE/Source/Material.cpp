@@ -4,18 +4,19 @@
 
 #pragma region Material
 
-Material::Material(DirectX::XMFLOAT4 tint, 
-				   std::shared_ptr<SimplePixelShader> pix, 
-				   std::shared_ptr<SimpleVertexShader> vert, 
-				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
-				   Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState, 
-				   Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState, 
-				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap, 
-				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap, 
-				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
-				   std::string name,
-				   bool transparent,
-				   bool refractive) {
+Material::Material(DirectX::XMFLOAT4 tint,
+	std::shared_ptr<SimplePixelShader> pix,
+	std::shared_ptr<SimpleVertexShader> vert,
+	std::shared_ptr<Texture> texture,
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
+	std::shared_ptr<Texture> normalMap,
+	std::shared_ptr<Texture> roughMap,
+	std::shared_ptr<Texture> metalMap,
+	std::string name,
+	bool transparent,
+	bool refractive)
+{
 	this->colorTint = tint;
 	this->pixShader = pix;
 	this->vertShader = vert;
@@ -65,20 +66,36 @@ std::shared_ptr<SimpleVertexShader> Material::GetVertShader() {
 	return this->vertShader;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetNormalMap() {
+std::shared_ptr<Texture> Material::GetNormalMap() {
 	return this->normalMap;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetMetalMap() {
+std::shared_ptr<Texture> Material::GetMetalMap() {
 	return this->metalMap;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetRoughMap() {
+std::shared_ptr<Texture> Material::GetRoughMap() {
 	return this->roughMap;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetTexture() {
+std::shared_ptr<Texture> Material::GetTexture() {
 	return this->texture;
+}
+
+void Material::SetTexture(std::shared_ptr<Texture> texture) {
+	this->texture = texture;
+}
+
+void Material::SetNormalMap(std::shared_ptr<Texture> normals) {
+	this->normalMap = normals;
+}
+
+void Material::SetRoughMap(std::shared_ptr<Texture> roughMap) {
+	this->roughMap = roughMap;
+}
+
+void Material::SetMetalMap(std::shared_ptr<Texture> metalMap) {
+	this->metalMap = metalMap;
 }
 
 Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetSamplerState() {
