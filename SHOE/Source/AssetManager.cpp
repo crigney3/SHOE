@@ -48,6 +48,8 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 	// The rest signal the loading screen each time an object loads
 	if(progressListener) progressListener("Shaders");
 	InitializeShaders();
+	if (progressListener) progressListener("Textures");
+	InitializeTextures();
 	if(progressListener) progressListener("Materials");
 	InitializeMaterials();
 	if(progressListener) progressListener("Terrain Materials");
@@ -86,11 +88,18 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 #pragma endregion
 
 #pragma region createAssets
-FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::string name) {
+FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::string name, bool isNameFullPath) {
 	FMODUserData* uData = new FMODUserData;
 	FMOD::Sound* sound;
 
 	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
+
+	if (isNameFullPath) {
+		namePath = path;
+	}
+	else {
+		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
+	}
 
 	sound = audioInstance.LoadSound(namePath, mode);
 
@@ -183,8 +192,16 @@ std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::stri
 	return newCS;
 }
 
-std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameToLoad) {
-	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, nameToLoad);
+std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameToLoad, bool isNameFullPath) {
+	std::string namePath;
+
+	if (isNameFullPath) {
+		namePath = nameToLoad;
+	}
+	else {
+		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, nameToLoad);
+	}
+
 	std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(namePath.c_str(), device, id);
 
 	globalMeshes.push_back(newMesh);
@@ -227,60 +244,114 @@ std::string AssetManager::DeSerializeFileName(std::string assetPath) {
 	}
 }
 
-HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType) {
+//// deprecated
+//HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType) {
+//	AssetPathIndex assetPath;
+//
+//	switch (textureType) {
+//	case PBRTextureTypes::ALBEDO:
+//		assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
+//		break;
+//	case PBRTextureTypes::NORMAL:
+//		assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
+//		break;
+//	case PBRTextureTypes::METAL:
+//		assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
+//		break;
+//	case PBRTextureTypes::ROUGH:
+//		assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
+//		break;
+//	};
+//
+//	std::string namePath = GetFullPathToAssetFile(assetPath, nameToLoad);
+//	std::wstring widePath;
+//
+//	HRESULT hr = ISimpleShader::ConvertToWide(namePath, widePath);
+//
+//	CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, texture->GetAddressOf());
+//
+//	std::shared_ptr<Texture> newTexture = std::make_shared<Texture>(texture, GetTextureFileKey(nameToLoad));
+//
+//	globalTextures.push_back(newTexture);
+//
+//	return hr;
+//}
+//
+//// deprecated, for now
+//HRESULT AssetManager::LoadPBRTexture(std::string nameToLoad, OUT Texture* texture, PBRTextureTypes textureType) {
+//	AssetPathIndex assetPath;
+//
+//	switch (textureType) {
+//	case PBRTextureTypes::ALBEDO:
+//		assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
+//		break;
+//	case PBRTextureTypes::NORMAL:
+//		assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
+//		break;
+//	case PBRTextureTypes::METAL:
+//		assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
+//		break;
+//	case PBRTextureTypes::ROUGH:
+//		assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
+//		break;
+//	};
+//
+//	std::string namePath = GetFullPathToAssetFile(assetPath, nameToLoad);
+//	std::wstring widePath;
+//
+//	HRESULT hr = ISimpleShader::ConvertToWide(namePath, widePath);
+//
+//	CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, texture->GetTexture().GetAddressOf());
+//
+//	std::shared_ptr<Texture> newTexture = std::make_shared<Texture>(texture, GetTextureFileKey(nameToLoad));
+//
+//	globalTextures.push_back(newTexture);
+//
+//	return hr;
+//}
+
+std::string AssetManager::GetTextureFileKey(std::string textureFilename) {
 	AssetPathIndex assetPath;
+	std::string directAssetPath;
 
-	switch (textureType) {
-	case PBRTextureTypes::ALBEDO:
-		assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
-		break;
-	case PBRTextureTypes::NORMAL:
-		assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
-		break;
-	case PBRTextureTypes::METAL:
-		assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
-		break;
-	case PBRTextureTypes::ROUGH:
-		assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
-		break;
-	};
+	assetPath = ASSET_TEXTURE_PATH_BASIC;
+	directAssetPath = "Assets\\Textures\\";
 
-	std::string namePath = GetFullPathToAssetFile(assetPath, nameToLoad);
+	std::string namePath = GetFullPathToAssetFile(assetPath, textureFilename);
+	std::string fileKey = SerializeFileName(directAssetPath, namePath);
+
+	return fileKey;
+}
+
+std::shared_ptr<Texture> AssetManager::CreateTexture(std::string nameToLoad, std::string textureName, AssetPathIndex assetPath, bool isNameFullPath)
+{
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> coreTexture;
+
+	std::string namePath;
+	if (isNameFullPath) {
+		namePath = nameToLoad;
+	}
+	else {
+		namePath = GetFullPathToAssetFile(assetPath, nameToLoad);
+	}
 	std::wstring widePath;
 
 	HRESULT hr = ISimpleShader::ConvertToWide(namePath, widePath);
 
-	CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, texture->GetAddressOf());
+	CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, coreTexture.GetAddressOf());
 
-	return hr;
-}
+	std::shared_ptr<Texture> newTexture = std::make_shared<Texture>(coreTexture, GetTextureFileKey(nameToLoad), textureName);
 
-void AssetManager::SetMaterialTextureFileKey(std::string textureFilename, std::shared_ptr<Material> mat, PBRTextureTypes textureType) {
-	AssetPathIndex assetPath;
-	std::string directAssetPath;
+	if (isNameFullPath) {
+		newTexture->SetTextureFilenameKey(nameToLoad);
+	}
+	else {
+		newTexture->SetAssetPathIndex(assetPath);
+	}
 
-	switch (textureType) {
-	case PBRTextureTypes::ALBEDO:
-		assetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
-		directAssetPath = "Assets\\PBR\\Albedo\\";
-		break;
-	case PBRTextureTypes::NORMAL:
-		assetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
-		directAssetPath = "Assets\\PBR\\Normals\\";
-		break;
-	case PBRTextureTypes::METAL:
-		assetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
-		directAssetPath = "Assets\\PBR\\Metalness\\";
-		break;
-	case PBRTextureTypes::ROUGH:
-		assetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
-		directAssetPath = "Assets\\PBR\\Roughness\\";
-		break;
-	};
+	globalTextures.push_back(newTexture);
 
-	std::string namePath = GetFullPathToAssetFile(assetPath, textureFilename);
-
-	mat->SetTextureFilenameKey(textureType, SerializeFileName(directAssetPath, namePath));
+	return newTexture;
 }
 
 std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
@@ -288,19 +359,20 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 	std::string normalNameToLoad,
 	std::string metalnessNameToLoad,
 	std::string roughnessNameToLoad,
-	bool addToGlobalList) {
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
+	bool addToGlobalList) 
+{
+	std::shared_ptr<Texture> albedo;
+	std::shared_ptr<Texture> normals;
+	std::shared_ptr<Texture> metalness;
+	std::shared_ptr<Texture> roughness;
 
 	std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
 	std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
 
-	LoadPBRTexture(albedoNameToLoad, &albedo, PBRTextureTypes::ALBEDO);
-	LoadPBRTexture(normalNameToLoad, &normals, PBRTextureTypes::NORMAL);
-	LoadPBRTexture(metalnessNameToLoad, &metalness, PBRTextureTypes::METAL);
-	LoadPBRTexture(roughnessNameToLoad, &roughness, PBRTextureTypes::ROUGH);
+	albedo = CreateTexture(albedoNameToLoad);
+	normals = CreateTexture(normalNameToLoad);
+	metalness = CreateTexture(metalnessNameToLoad);
+	roughness = CreateTexture(roughnessNameToLoad);
 
 	std::shared_ptr<Material> newMat = std::make_shared<Material>(whiteTint,
 		PSNormal,
@@ -313,14 +385,36 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 		metalness,
 		id);
 
-	SetMaterialTextureFileKey(albedoNameToLoad, newMat, PBRTextureTypes::ALBEDO);
-	SetMaterialTextureFileKey(normalNameToLoad, newMat, PBRTextureTypes::NORMAL);
-	SetMaterialTextureFileKey(metalnessNameToLoad, newMat, PBRTextureTypes::METAL);
-	SetMaterialTextureFileKey(roughnessNameToLoad, newMat, PBRTextureTypes::ROUGH);
+	if (addToGlobalList) globalMaterials.push_back(newMat);
+
+	return newMat;
+}
+
+std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
+	std::shared_ptr<Texture> albedoTexture,
+	std::shared_ptr<Texture> normalTexture,
+	std::shared_ptr<Texture> metalnessTexture,
+	std::shared_ptr<Texture> roughnessTexture,
+	bool addToGlobalList)
+{
+	std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
+	std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
+
+	std::shared_ptr<Material> newMat = std::make_shared<Material>(whiteTint,
+		PSNormal,
+		VSNormal,
+		albedoTexture,
+		textureState,
+		clampState,
+		normalTexture,
+		roughnessTexture,
+		metalnessTexture,
+		id);
 
 	if (addToGlobalList) globalMaterials.push_back(newMat);
 
 	return newMat;
+
 }
 
 /// <summary>
@@ -606,8 +700,14 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 	return CreateParticleEmitterOnEntity(CreateGameEntity(name), textureNameToLoad, maxParticles, particleLifeTime, particlesPerSecond, isMultiParticle, additiveBlendState);
 }
 
-std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::string filePath, bool preInitializing) {
-	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_FONT_PATH, filePath);
+std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::string filePath, bool preInitializing, bool isNameFullPath) {
+	std::string namePath;
+	if (isNameFullPath) {
+		namePath = filePath;
+	}
+	else {
+		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_FONT_PATH, filePath);
+	}
 	std::wstring wPathBuf;
 
 	ISimpleShader::ConvertToWide(namePath, wPathBuf);
@@ -794,183 +894,227 @@ void AssetManager::InitializeGameEntities() {
 	//Initializes default values for components
 	MeshRenderer::SetDefaults(GetMeshByName("Cube"), GetMaterialByName("largeCobbleMat"));
 
-	// Show example renders
+	// Show example render
 	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("bronzeMat"), "Bronze Cube");
-	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("floorMat"), "Floor Cube");
-	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("scratchMat"), "Scratched Cube");
 
-	CreateGameEntity(GetMeshByName("Cylinder"), GetMaterialByName("floorMat"), "Stone Cylinder");
-	CreateGameEntity(GetMeshByName("Helix"), GetMaterialByName("floorMat"), "Floor Helix");
-	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("paintMat"), "Paint Sphere");
-	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("roughMat"), "Rough Torus");
-	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("scratchMat"), "Scratched Sphere");
-	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("woodMat"), "Wood Sphere");
-	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("largePaintMat"), "Large Paint Rect");
-	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("largeCobbleMat"), "Large Cobble Rect");
+	// OUTDATED: Initializes lots of objects for demo.
+	// These can still be viewed by loading the demo scene.
+	//CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("floorMat"), "Floor Cube");
+	//CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("scratchMat"), "Scratched Cube");
 
-	// Reflective objects
-	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveMetal"), "Shiny Metal Sphere");
-	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveRoughMetal"), "Rough Metal Sphere");
-	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveRough"), "Shiny Rough Sphere");
-	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflective"), "Shiny Sphere");
+	//CreateGameEntity(GetMeshByName("Cylinder"), GetMaterialByName("floorMat"), "Stone Cylinder");
+	//CreateGameEntity(GetMeshByName("Helix"), GetMaterialByName("floorMat"), "Floor Helix");
+	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("paintMat"), "Paint Sphere");
+	//CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("roughMat"), "Rough Torus");
+	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("scratchMat"), "Scratched Sphere");
+	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("woodMat"), "Wood Sphere");
+	//CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("largePaintMat"), "Large Paint Rect");
+	//CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("largeCobbleMat"), "Large Cobble Rect");
 
-	// Refractive Objects
-	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractivePaintMat"), "Refractive Sphere");
-	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractiveWoodMat"), "Refractive Sphere 2");
-	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveRoughMat"), "Refractive Cube");
-	CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("refractiveBronzeMat"), "Refractive Torus");
+	//// Reflective objects
+	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveMetal"), "Shiny Metal Sphere");
+	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveRoughMetal"), "Rough Metal Sphere");
+	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflectiveRough"), "Shiny Rough Sphere");
+	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("reflective"), "Shiny Sphere");
 
-	GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.0f, +0.0f, +0.0f);
-	GetGameEntityByName("Floor Cube")->GetTransform()->SetPosition(+2.0f, +0.0f, +0.0f);
-	GetGameEntityByName("Scratched Cube")->GetTransform()->SetPosition(+0.5f, +2.0f, +0.0f);
-	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-0.7f, +0.0f, +0.0f);
-	GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition(+0.0f, +0.7f, +0.0f);
-	GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(+0.0f, -0.7f, +0.0f);
-	GetGameEntityByName("Scratched Sphere")->GetTransform()->SetPosition(+3.0f, +0.0f, +0.0f);
-	GetGameEntityByName("Wood Sphere")->GetTransform()->SetPosition(-3.0f, +0.0f, +0.0f);
-	GetGameEntityByName("Large Paint Rect")->GetTransform()->SetScale(10.0f, 10.0f, 0.2f);
-	GetGameEntityByName("Large Paint Rect")->GetTransform()->SetPosition(+0.0f, +0.0f, +4.0f);
-	GetGameEntityByName("Large Cobble Rect")->GetTransform()->SetScale(+10.0f, +10.0f, +0.2f);
-	GetGameEntityByName("Large Cobble Rect")->GetTransform()->SetPosition(+0.0f, -5.0f, +0.0f);
-	GetGameEntityByName("Large Cobble Rect")->GetTransform()->Rotate(45.0f, 0.0f, 0.0f);
+	//// Refractive Objects
+	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractivePaintMat"), "Refractive Sphere");
+	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("refractiveWoodMat"), "Refractive Sphere 2");
+	//CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveRoughMat"), "Refractive Cube");
+	//CreateGameEntity(GetMeshByName("Torus"), GetMaterialByName("refractiveBronzeMat"), "Refractive Torus");
 
-	GetGameEntityByName("Shiny Metal Sphere")->GetTransform()->SetPosition(+4.0f, +1.0f, 0.0f);
-	GetGameEntityByName("Rough Metal Sphere")->GetTransform()->SetPosition(+5.0f, +1.0f, 0.0f);
-	GetGameEntityByName("Shiny Sphere")->GetTransform()->SetPosition(+4.0f, 0.0f, 0.0f);
-	GetGameEntityByName("Shiny Rough Sphere")->GetTransform()->SetPosition(+5.0f, 0.0f, 0.0f);
+	//GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+0.0f, +0.0f, +0.0f);
+	//GetGameEntityByName("Floor Cube")->GetTransform()->SetPosition(+2.0f, +0.0f, +0.0f);
+	//GetGameEntityByName("Scratched Cube")->GetTransform()->SetPosition(+0.5f, +2.0f, +0.0f);
+	//GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-0.7f, +0.0f, +0.0f);
+	//GetGameEntityByName("Floor Helix")->GetTransform()->SetPosition(+0.0f, +0.7f, +0.0f);
+	//GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(+0.0f, -0.7f, +0.0f);
+	//GetGameEntityByName("Scratched Sphere")->GetTransform()->SetPosition(+3.0f, +0.0f, +0.0f);
+	//GetGameEntityByName("Wood Sphere")->GetTransform()->SetPosition(-3.0f, +0.0f, +0.0f);
+	//GetGameEntityByName("Large Paint Rect")->GetTransform()->SetScale(10.0f, 10.0f, 0.2f);
+	//GetGameEntityByName("Large Paint Rect")->GetTransform()->SetPosition(+0.0f, +0.0f, +4.0f);
+	//GetGameEntityByName("Large Cobble Rect")->GetTransform()->SetScale(+10.0f, +10.0f, +0.2f);
+	//GetGameEntityByName("Large Cobble Rect")->GetTransform()->SetPosition(+0.0f, -5.0f, +0.0f);
+	//GetGameEntityByName("Large Cobble Rect")->GetTransform()->Rotate(45.0f, 0.0f, 0.0f);
 
-	GetGameEntityByName("Refractive Sphere")->GetTransform()->SetPosition(+4.0f, +1.0f, -1.0f);
-	GetGameEntityByName("Refractive Sphere 2")->GetTransform()->SetPosition(+5.0f, +1.0f, -1.0f);
-	GetGameEntityByName("Refractive Cube")->GetTransform()->SetPosition(+4.0f, +0.0f, -1.0f);
-	GetGameEntityByName("Refractive Torus")->GetTransform()->SetPosition(+5.0f, +0.0f, -1.0f);
+	//GetGameEntityByName("Shiny Metal Sphere")->GetTransform()->SetPosition(+4.0f, +1.0f, 0.0f);
+	//GetGameEntityByName("Rough Metal Sphere")->GetTransform()->SetPosition(+5.0f, +1.0f, 0.0f);
+	//GetGameEntityByName("Shiny Sphere")->GetTransform()->SetPosition(+4.0f, 0.0f, 0.0f);
+	//GetGameEntityByName("Shiny Rough Sphere")->GetTransform()->SetPosition(+5.0f, 0.0f, 0.0f);
 
-	//Set up some parenting examples
-	GetGameEntityByName("Floor Cube")->GetTransform()->SetParent(GetGameEntityByName("Bronze Cube")->GetTransform());
-	GetGameEntityByName("Scratched Cube")->GetTransform()->SetParent(GetGameEntityByName("Floor Cube")->GetTransform());
-	GetGameEntityByName("Rough Torus")->GetTransform()->SetParent(GetGameEntityByName("Paint Sphere")->GetTransform());
-	GetGameEntityByName("Floor Helix")->GetTransform()->SetParent(GetGameEntityByName("Rough Torus")->GetTransform());
-	GetGameEntityByName("Stone Cylinder")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
-	GetGameEntityByName("Wood Sphere")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
+	//GetGameEntityByName("Refractive Sphere")->GetTransform()->SetPosition(+4.0f, +1.0f, -1.0f);
+	//GetGameEntityByName("Refractive Sphere 2")->GetTransform()->SetPosition(+5.0f, +1.0f, -1.0f);
+	//GetGameEntityByName("Refractive Cube")->GetTransform()->SetPosition(+4.0f, +0.0f, -1.0f);
+	//GetGameEntityByName("Refractive Torus")->GetTransform()->SetPosition(+5.0f, +0.0f, -1.0f);
 
-	CreateComplexGeometry();
+	////Set up some parenting examples
+	// This data is NOT stored in scene at the moment
+	//GetGameEntityByName("Floor Cube")->GetTransform()->SetParent(GetGameEntityByName("Bronze Cube")->GetTransform());
+	//GetGameEntityByName("Scratched Cube")->GetTransform()->SetParent(GetGameEntityByName("Floor Cube")->GetTransform());
+	//GetGameEntityByName("Rough Torus")->GetTransform()->SetParent(GetGameEntityByName("Paint Sphere")->GetTransform());
+	//GetGameEntityByName("Floor Helix")->GetTransform()->SetParent(GetGameEntityByName("Rough Torus")->GetTransform());
+	//GetGameEntityByName("Stone Cylinder")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
+	//GetGameEntityByName("Wood Sphere")->GetTransform()->SetParent(GetGameEntityByName("Floor Helix")->GetTransform());
+
+	//CreateComplexGeometry();
+}
+
+void AssetManager::InitializeTextures() {
+	CreateTexture("BlankAlbedo.png", "BlankTexture", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	CreateTexture("GenericRoughness100.png", "HighRoughness", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+
+	CreateTexture("bronze_albedo.png", "BronzeAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	CreateTexture("bronze_normals.png", "BronzeNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	CreateTexture("bronze_metal.png", "BronzeMetal", ASSET_TEXTURE_PATH_PBR_METALNESS);
+	CreateTexture("bronze_roughness.png", "BronzeRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+
+	CreateTexture("cobblestone_albedo.png", "CobbleAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	CreateTexture("cobblestone_normals.png", "CobbleNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	CreateTexture("cobblestone_metal.png", "CobbleMetal", ASSET_TEXTURE_PATH_PBR_METALNESS);
+	CreateTexture("cobblestone_roughness.png", "CobbleRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+
+	CreateTexture("floor_albedo.png", "FloorAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	CreateTexture("floor_normals.png", "FloorNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	CreateTexture("floor_metal.png", "FloorMetal", ASSET_TEXTURE_PATH_PBR_METALNESS);
+	CreateTexture("floor_roughness.png", "FloorRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+
+	CreateTexture("paint_albedo.png", "PaintAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	CreateTexture("paint_normals.png", "PaintNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	CreateTexture("paint_metal.png", "PaintMetal", ASSET_TEXTURE_PATH_PBR_METALNESS);
+	CreateTexture("paint_roughness.png", "PaintRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+
+	CreateTexture("wood_albedo.png", "WoodAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	CreateTexture("wood_normals.png", "WoodNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	CreateTexture("wood_metal.png", "WoodMetal", ASSET_TEXTURE_PATH_PBR_METALNESS);
+	CreateTexture("wood_roughness.png", "WoodRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+
+	CreateTexture("scratched_albedo.png", "ScratchAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	CreateTexture("scratched_normals.png", "ScratchNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	CreateTexture("scratched_metal.png", "ScratchMetal", ASSET_TEXTURE_PATH_PBR_METALNESS);
+	CreateTexture("scratched_roughness.png", "ScratchRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+
+	CreateTexture("rough_albedo.png", "RoughAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	CreateTexture("rough_normals.png", "RoughNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	CreateTexture("rough_metal.png", "RoughMetal", ASSET_TEXTURE_PATH_PBR_METALNESS);
+	CreateTexture("rough_roughness.png", "RoughRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
 }
 
 void AssetManager::InitializeMaterials() {
 	// Make reflective PBR materials
 	CreatePBRMaterial(std::string("reflectiveMetal"),
-		"BlankAlbedo.png",
-		"blank_normals.png",
-		"bronze_metal.png",
-		"GenericRoughness0.png");
+		GetTextureByName("BlankTexture"),
+		GetTextureByName("BlankTexture"),
+		GetTextureByName("BronzeMetal"),
+		GetTextureByName("BlankTexture"));
 
 	CreatePBRMaterial(std::string("reflective"),
-		"BlankAlbedo.png",
-		"blank_normals.png",
-		"wood_metal.png",
-		"GenericRoughness0.png");
+		GetTextureByName("BlankTexture"),
+		GetTextureByName("BlankTexture"),
+		GetTextureByName("WoodMetal"),
+		GetTextureByName("BlankTexture"));
 
 	CreatePBRMaterial(std::string("reflectiveRough"),
-		"BlankAlbedo.png",
-		"blank_normals.png",
-		"wood_metal.png",
-		"GenericRoughness100.png");
+		GetTextureByName("BlankTexture"),
+		GetTextureByName("BlankTexture"),
+		GetTextureByName("WoodMetal"),
+		GetTextureByName("HighRoughness"));
 
 	CreatePBRMaterial(std::string("reflectiveRoughMetal"),
-		"BlankAlbedo.png",
-		"blank_normals.png",
-		"bronze_metal.png",
-		"GenericRoughness100.png");
+		GetTextureByName("BlankTexture"),
+		GetTextureByName("BlankTexture"),
+		GetTextureByName("BronzeMetal"),
+		GetTextureByName("HighRoughness"));
 
 	//Make PBR materials
 	CreatePBRMaterial(std::string("bronzeMat"),
-		"bronze_albedo.png",
-		"bronze_normals.png",
-		"bronze_metal.png",
-		"bronze_roughness.png")->SetTiling(0.3f);
+		GetTextureByName("BronzeAlbedo"),
+		GetTextureByName("BronzeNormals"),
+		GetTextureByName("BronzeMetal"),
+		GetTextureByName("BronzeRough"))->SetTiling(0.3f);
 
 	CreatePBRMaterial(std::string("cobbleMat"),
-		"cobblestone_albedo.png",
-		"cobblestone_normals.png",
-		"cobblestone_metal.png",
-		"cobblestone_roughness.png");
+		GetTextureByName("CobbleAlbedo"),
+		GetTextureByName("CobbleNormals"),
+		GetTextureByName("CobbleMetal"),
+		GetTextureByName("CobbleRough"));
 
 	CreatePBRMaterial(std::string("largeCobbleMat"),
-		"cobblestone_albedo.png",
-		"cobblestone_normals.png",
-		"cobblestone_metal.png",
-		"cobblestone_roughness.png")->SetTiling(5.0f);
+		GetTextureByName("CobbleAlbedo"),
+		GetTextureByName("CobbleNormals"),
+		GetTextureByName("CobbleMetal"),
+		GetTextureByName("CobbleRough"))->SetTiling(5.0f);
 
 	CreatePBRMaterial(std::string("floorMat"),
-		"floor_albedo.png",
-		"floor_normals.png",
-		"floor_metal.png",
-		"floor_roughness.png");
+		GetTextureByName("FloorAlbedo"),
+		GetTextureByName("FloorNormals"),
+		GetTextureByName("FloorMetal"),
+		GetTextureByName("FloorRough"));
 
 	CreatePBRMaterial(std::string("terrainFloorMat"),
-		"floor_albedo.png",
-		"floor_normals.png",
-		"floor_metal.png",
-		"floor_roughness.png")->SetTiling(256.0f);
+		GetTextureByName("FloorAlbedo"),
+		GetTextureByName("FloorNormals"),
+		GetTextureByName("FloorMetal"),
+		GetTextureByName("FloorRough"))->SetTiling(256.0f);
 
 	CreatePBRMaterial(std::string("paintMat"),
-		"paint_albedo.png",
-		"paint_normals.png",
-		"paint_metal.png",
-		"paint_roughness.png");
+		GetTextureByName("PaintAlbedo"),
+		GetTextureByName("PaintNormals"),
+		GetTextureByName("PaintMetal"),
+		GetTextureByName("PaintRough"));
 
 	CreatePBRMaterial(std::string("largePaintMat"),
-		"paint_albedo.png",
-		"paint_normals.png",
-		"paint_metal.png",
-		"paint_roughness.png")->SetTiling(5.0f);
+		GetTextureByName("PaintAlbedo"),
+		GetTextureByName("PaintNormals"),
+		GetTextureByName("PaintMetal"),
+		GetTextureByName("PaintRough"))->SetTiling(5.0f);
 
 	CreatePBRMaterial(std::string("roughMat"),
-		"rough_albedo.png",
-		"rough_normals.png",
-		"rough_metal.png",
-		"rough_roughness.png");
+		GetTextureByName("RoughAlbedo"),
+		GetTextureByName("RoughNormals"),
+		GetTextureByName("RoughMetal"),
+		GetTextureByName("RoughRough"));
 
 	CreatePBRMaterial(std::string("scratchMat"),
-		"scratched_albedo.png",
-		"scratched_normals.png",
-		"scratched_metal.png",
-		"scratched_roughness.png");
+		GetTextureByName("ScratchAlbedo"),
+		GetTextureByName("ScratchNormals"),
+		GetTextureByName("ScratchMetal"),
+		GetTextureByName("ScratchRough"));
 
 	CreatePBRMaterial(std::string("woodMat"),
-		"wood_albedo.png",
-		"wood_normals.png",
-		"wood_metal.png",
-		"wood_roughness.png");
+		GetTextureByName("WoodAlbedo"),
+		GetTextureByName("WoodNormals"),
+		GetTextureByName("WoodMetal"),
+		GetTextureByName("WoodRough"));
 
 	std::shared_ptr<Material> refractive = CreatePBRMaterial(std::string("refractivePaintMat"),
-		"paint_albedo.png",
-		"paint_normals.png",
-		"paint_metal.png",
-		"paint_roughness.png");
+		GetTextureByName("PaintAlbedo"),
+		GetTextureByName("PaintNormals"),
+		GetTextureByName("PaintMetal"),
+		GetTextureByName("PaintRough"));
 	refractive->SetRefractive(true);
 	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 	refractive = CreatePBRMaterial(std::string("refractiveWoodMat"),
-		"wood_albedo.png",
-		"wood_normals.png",
-		"wood_metal.png",
-		"wood_roughness.png");
+		GetTextureByName("WoodAlbedo"),
+		GetTextureByName("WoodNormals"),
+		GetTextureByName("WoodMetal"),
+		GetTextureByName("WoodRough"));
 	refractive->SetTransparent(true);
 	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 	refractive = CreatePBRMaterial(std::string("refractiveRoughMat"),
-		"rough_albedo.png",
-		"rough_normals.png",
-		"rough_metal.png",
-		"rough_roughness.png");
+		GetTextureByName("RoughAlbedo"),
+		GetTextureByName("RoughNormals"),
+		GetTextureByName("RoughMetal"),
+		GetTextureByName("RoughRough"));
 	refractive->SetRefractive(true);
 	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 	refractive = CreatePBRMaterial(std::string("refractiveBronzeMat"),
-		"bronze_albedo.png",
-		"bronze_normals.png",
-		"bronze_metal.png",
-		"bronze_roughness.png");
+		GetTextureByName("BronzeAlbedo"),
+		GetTextureByName("BronzeNormals"),
+		GetTextureByName("BronzeMetal"),
+		GetTextureByName("BronzeRough"));
 	refractive->SetRefractive(true);
 	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 }
@@ -980,10 +1124,10 @@ void AssetManager::InitializeMeshes() {
 	//CreateMesh("ExceptionTest", "InvalidPath");
 
 	CreateMesh("Cube", "cube.obj");
-	CreateMesh("Cylinder", "cylinder.obj");
-	CreateMesh("Helix", "helix.obj");
 	CreateMesh("Sphere", "sphere.obj");
-	CreateMesh("Torus", "torus.obj");
+	CreateMesh("Cylinder", "cylinder.obj");
+	//CreateMesh("Helix", "helix.obj");
+	//CreateMesh("Torus", "torus.obj");
 }
 
 
@@ -993,9 +1137,9 @@ void AssetManager::InitializeSkies() {
 	//CreateSky(spaceTexture, "space");
 	CreateSky("SunnyCubeMap.dds", 0, "sunny");
 	//CreateSky(mountainTexture, "mountain");
-	CreateSky("Niagara/", 1, "niagara", ".jpg");
+	//CreateSky("Niagara/", 1, "niagara", ".jpg");
 	// Default is .png, which this is
-	CreateSky("Stars/", 1, "stars");
+	//CreateSky("Stars/", 1, "stars");
 
 	currentSky = skies[0];
 }
@@ -1010,13 +1154,15 @@ void AssetManager::InitializeLights() {
 	//white light from the back
 	CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, -1));
 
-	//red light on the bottom
-	std::shared_ptr<Light> bottomLight = CreateDirectionalLight("BottomLight", DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f));
-	bottomLight->GetTransform()->Rotate(-XM_PIDIV2, 0, 0);
+	// OUTDATED: Initializes lots of objects for demo.
+	// These can still be viewed by loading the demo scene.
+	////red light on the bottom
+	//std::shared_ptr<Light> bottomLight = CreateDirectionalLight("BottomLight", DirectX::XMFLOAT3(1.0f, 0.2f, 0.2f));
+	//bottomLight->GetTransform()->Rotate(-XM_PIDIV2, 0, 0);
 
-	//red pointlight in the center
-	std::shared_ptr<Light> centerLight = CreatePointLight("CenterLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
-	centerLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
+	////red pointlight in the center
+	//std::shared_ptr<Light> centerLight = CreatePointLight("CenterLight", 2.0f, DirectX::XMFLOAT3(0.1f, 1.0f, 0.2f));
+	//centerLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
 
 	//flashlight attached to camera +.5z and x
 	std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", 10.0f);
@@ -1030,75 +1176,98 @@ void AssetManager::InitializeLights() {
 void AssetManager::InitializeTerrainEntities() {
 	Terrain::SetDefaults(GetMeshByName("Cube"), GetTerrainMaterialByName("Forest Terrain Material"));
 
-	std::shared_ptr<Terrain> mainTerrain = CreateTerrainEntity("valley.raw16", GetTerrainMaterialByName("Forest Terrain Material"), "Basic Terrain");
-	mainTerrain->GetTransform()->SetPosition(-256.0f, -14.0f, -256.0f);
+	// OUTDATED: Initializes lots of objects for demo.
+	// These can still be viewed by loading the demo scene.
+	/*std::shared_ptr<Terrain> mainTerrain = CreateTerrainEntity("valley.raw16", GetTerrainMaterialByName("Forest Terrain Material"), "Basic Terrain");
+	mainTerrain->GetTransform()->SetPosition(-256.0f, -14.0f, -256.0f);*/
 }
 
 void AssetManager::InitializeTerrainMaterials() {
 	std::vector<std::shared_ptr<Material>> tMats = std::vector<std::shared_ptr<Material>>();
 
-	std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", "forest_floor_albedo.png", "forest_floor_Normal-ogl.png", "wood_metal.png", "forest_floor_Roughness.png");
-	std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", "bog_albedo.png", "bog_normal-ogl.png", "wood_metal.png", "bog_roughness.png");
-	std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", "rocky_dirt1-albedo.png", "rocky_dirt1-normal-ogl.png", "wood_metal.png", "rocky_dirt1_Roughness.png");
+	// OUTDATED: Initializes lots of objects for demo.
+	// These can still be viewed by loading the demo scene.
 
-	tMats.push_back(forestMat);
-	tMats.push_back(bogMat);
-	tMats.push_back(rockyMat);
+	//std::shared_ptr<Texture> albedoTexture;
+	//std::shared_ptr<Texture> normalTexture;
+	//std::shared_ptr<Texture> roughTexture;
 
-	//Set appropriate tiling
-	forestMat->SetTiling(10.0f);
-	bogMat->SetTiling(10.0f);
+	//albedoTexture = CreateTexture("forest_floor_albedo.png", "ForestAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	//normalTexture = CreateTexture("forest_floor_Normal-ogl.png", "ForestNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	//roughTexture = CreateTexture("forest_floor_Roughness.png", "ForestRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
 
-	std::shared_ptr<TerrainMaterial> forestTerrainMaterial = CreateTerrainMaterial("Forest Terrain Material", tMats, "blendMap.png");
+	//std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
 
-	tMats.clear();
+	//albedoTexture = CreateTexture("bog_albedo.png", "BogAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	//normalTexture = CreateTexture("bog_normal-ogl.png", "BogNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	//roughTexture = CreateTexture("bog_roughness.png", "BogRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
 
-	// Must be kept in PBR order!
-	// This sections is only for testing and should be commented on push.
-	// Since these materials already exist, it's quicker and more efficient
-	// to just grab them.
-	std::shared_ptr<TerrainMaterial> industrialTerrainMaterial;
+	//std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
 
-	//std::vector<std::string> metalPaths;
-	//std::vector<std::string> metalNames;
+	//albedoTexture = CreateTexture("rocky_dirt1-albedo.png", "RockyAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	//normalTexture = CreateTexture("rocky_dirt1-normal-ogl.png", "RockyNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	//roughTexture = CreateTexture("rocky_dirt1_Roughness.png", "RockyRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
 
-	/*metalPaths.push_back("floor_albedo.png");
-	metalPaths.push_back("floor_normals.png");
-	metalPaths.push_back("floor_metal.png");
-	metalPaths.push_back("floor_roughness.png");
+	//std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
 
-	metalPaths.push_back("cobblestone_albedo.png");
-	metalPaths.push_back("cobblestone_normals.png");
-	metalPaths.push_back("cobblestone_metal.png");
-	metalPaths.push_back("cobblestone_roughness.png");
+	//tMats.push_back(forestMat);
+	//tMats.push_back(bogMat);
+	//tMats.push_back(rockyMat);
 
-	metalPaths.push_back("rough_albedo.png");
-	metalPaths.push_back("rough_normals.png");
-	metalPaths.push_back("rough_metal.png");
-	metalPaths.push_back("rough_roughness.png");
+	////Set appropriate tiling
+	//forestMat->SetTiling(10.0f);
+	//bogMat->SetTiling(10.0f);
 
-	metalNames.push_back("Floor");
-	metalNames.push_back("Stone");
-	metalNames.push_back("Rough");
+	//std::shared_ptr<TerrainMaterial> forestTerrainMaterial = CreateTerrainMaterial("Forest Terrain Material", tMats, "blendMap.png");
 
-	industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", metalPaths, metalNames, true, "blendMap.png");*/
+	//tMats.clear();
 
-	// This is the correct way to create a tMat when the materials are already loaded:
-	tMats.push_back(GetMaterialByName("floorMat"));
-	tMats.push_back(GetMaterialByName("cobbleMat"));
-	tMats.push_back(GetMaterialByName("roughMat"));
+	//// Must be kept in PBR order!
+	//// This sections is only for testing and should be commented on push.
+	//// Since these materials already exist, it's quicker and more efficient
+	//// to just grab them.
+	//std::shared_ptr<TerrainMaterial> industrialTerrainMaterial;
 
-	industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", tMats, "blendMap.png");
+	////std::vector<std::string> metalPaths;
+	////std::vector<std::string> metalNames;
 
-	// This is the correct way to load a tMat that doesn't use blend mapping
-	// Note that even with one material, it must be pushed to the vector
-	std::shared_ptr<TerrainMaterial> floorTerrainMaterial;
+	///*metalPaths.push_back("floor_albedo.png");
+	//metalPaths.push_back("floor_normals.png");
+	//metalPaths.push_back("floor_metal.png");
+	//metalPaths.push_back("floor_roughness.png");
 
-	tMats.clear();
+	//metalPaths.push_back("cobblestone_albedo.png");
+	//metalPaths.push_back("cobblestone_normals.png");
+	//metalPaths.push_back("cobblestone_metal.png");
+	//metalPaths.push_back("cobblestone_roughness.png");
 
-	tMats.push_back(GetMaterialByName("terrainFloorMat"));
+	//metalPaths.push_back("rough_albedo.png");
+	//metalPaths.push_back("rough_normals.png");
+	//metalPaths.push_back("rough_metal.png");
+	//metalPaths.push_back("rough_roughness.png");
 
-	floorTerrainMaterial = CreateTerrainMaterial("Floor Terrain Material", tMats);
+	//metalNames.push_back("Floor");
+	//metalNames.push_back("Stone");
+	//metalNames.push_back("Rough");
+
+	//industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", metalPaths, metalNames, true, "blendMap.png");*/
+
+	//// This is the correct way to create a tMat when the materials are already loaded:
+	//tMats.push_back(GetMaterialByName("floorMat"));
+	//tMats.push_back(GetMaterialByName("cobbleMat"));
+	//tMats.push_back(GetMaterialByName("roughMat"));
+
+	//industrialTerrainMaterial = CreateTerrainMaterial("Industrial Terrain Material", tMats, "blendMap.png");
+
+	//// This is the correct way to load a tMat that doesn't use blend mapping
+	//// Note that even with one material, it must be pushed to the vector
+	//std::shared_ptr<TerrainMaterial> floorTerrainMaterial;
+
+	//tMats.clear();
+
+	//tMats.push_back(GetMaterialByName("terrainFloorMat"));
+
+	//floorTerrainMaterial = CreateTerrainMaterial("Floor Terrain Material", tMats);
 }
 
 void AssetManager::InitializeCameras() {
@@ -1165,7 +1334,9 @@ void AssetManager::InitializeEmitters() {
 	basicEmitter->GetTransform()->SetPosition(XMFLOAT3(1.0f, 0.0f, 0.0f));
 	basicEmitter->SetEnabled(false);
 
-	std::shared_ptr<ParticleSystem> basicMultiEmitter = CreateParticleEmitter("basicParticles", "Smoke/", true);
+	// OUTDATED: Initializes lots of objects for demo.
+	// These can still be viewed by loading the demo scene.
+	/*std::shared_ptr<ParticleSystem> basicMultiEmitter = CreateParticleEmitter("basicParticles", "Smoke/", true);
 	basicMultiEmitter->SetScale(1.0f);
 	basicMultiEmitter->SetEnabled(false);
 
@@ -1183,7 +1354,7 @@ void AssetManager::InitializeEmitters() {
 	starEmitter->GetTransform()->SetPosition(XMFLOAT3(-3.0f, 0.0f, 0.0f));
 	starEmitter->SetColorTint(XMFLOAT4(0.96f, 0.89f, 0.1f, 1.0f));
 	starEmitter->SetScale(0.75f);
-	starEmitter->SetEnabled(false);
+	starEmitter->SetEnabled(false);*/
 
 	// This was terrifying. Take graphics ideas from Jimmy Digrazia at your own peril.
 	/*CreateParticleEmitter(10, 4.0f, 2.0f, DirectX::XMFLOAT3(-4.0f, 0.0f, 0.0f), L"Emoji/", "emojiParticles", true, false);
@@ -1229,11 +1400,120 @@ void AssetManager::InitializeIMGUI(HWND hwnd) {
 
 void AssetManager::InitializeColliders() {
 	CreateColliderOnEntity(GetGameEntityByName("Bronze Cube"));
-	CreateColliderOnEntity(GetGameEntityByName("Scratched Sphere"));
-	CreateColliderOnEntity(GetGameEntityByName("Shiny Rough Sphere"));
-	CreateColliderOnEntity(GetGameEntityByName("Floor Cube"));
-	CreateTriggerBoxOnEntity(GetGameEntityByName("Scratched Cube"));
+
+	// OUTDATED: Initializes lots of objects for demo.
+	// These can still be viewed by loading the demo scene.
+	//CreateColliderOnEntity(GetGameEntityByName("Scratched Sphere"));
+	//CreateColliderOnEntity(GetGameEntityByName("Shiny Rough Sphere"));
+	//CreateColliderOnEntity(GetGameEntityByName("Floor Cube"));
+	//CreateTriggerBoxOnEntity(GetGameEntityByName("Scratched Cube"));
 }
+#pragma endregion
+
+#pragma region importMethods
+
+void AssetManager::ImportTexture() {
+	char filename[MAX_PATH];
+	OPENFILENAME ofn;
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	ZeroMemory(&filename, sizeof(filename));
+	ofn.lpstrFilter = _T("Image Files\0*.png;*.jpg;*.jpeg;\0Any File\0*.*\0");
+	ofn.lpstrTitle = _T("Select a texture file:");
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = dxInstance->hWnd;
+	ofn.lpstrFile = filename;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
+
+	if (GetOpenFileName(&ofn)) {
+		CreateTexture(ofn.lpstrFile, "newTexture", ASSET_TEXTURE_PATH_BASIC, true);
+	}
+}
+
+void AssetManager::ImportSkyTexture() {
+	// unimplemented, requires some regex and stuff to deal with dds vs path
+	/*OPENFILENAME ofn;
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lpstrFilter = _T("Image Files\0*.png;*.jpg;*.jpeg;\0Any File\0*.*\0");
+	ofn.lpstrTitle = _T("Select a texture file:");
+
+	CreateSky(GetImportedFileString(&ofn), "newTexture", ASSET_TEXTURE_PATH_BASIC, true);*/
+}
+
+void AssetManager::ImportHeightMap() {
+	// unimplemented, heightmap is tied to terrain for now
+	/*OPENFILENAME ofn;
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lpstrFilter = _T("Heightmap Files\0*.raw;*.raw16;\0Any File\0*.*\0");
+	ofn.lpstrTitle = _T("Select a heightmap file:");
+
+	CreateTexture(GetImportedFileString(&ofn), "newTexture", ASSET_TEXTURE_PATH_BASIC, true);*/
+}
+
+void AssetManager::ImportSound() {
+	char filename[MAX_PATH];
+	OPENFILENAME ofn;
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	ZeroMemory(&filename, sizeof(filename));
+	ofn.lpstrFilter = _T("Sound Files\0*.wav;*.mp3;*.ogg;\0Any File\0*.*\0");
+	ofn.lpstrTitle = _T("Select a Sound file:");
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = dxInstance->hWnd;
+	ofn.lpstrFile = filename;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
+
+	if (GetOpenFileName(&ofn)) {
+		CreateSound(ofn.lpstrFile, FMOD_DEFAULT, "newSound", true);
+	}
+}
+
+void AssetManager::ImportFont() {
+	char filename[MAX_PATH];
+	OPENFILENAME ofn;
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	ZeroMemory(&filename, sizeof(filename));
+	ofn.lpstrFilter = _T("Spritefont Files\0*.spritefont;\0Any File\0*.*\0");
+	ofn.lpstrTitle = _T("Select a font file:");
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = dxInstance->hWnd;
+	ofn.lpstrFile = filename;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
+
+	if (GetOpenFileName(&ofn)) {
+		CreateSHOEFont("newFont", ofn.lpstrFile, false, true);
+	}
+}
+
+void AssetManager::ImportMesh() {
+	char filename[MAX_PATH];
+	OPENFILENAME ofn;
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	ZeroMemory(&filename, sizeof(filename));
+	ofn.lpstrFilter = _T("Mesh or Model Files\0*.obj;\0Any File\0*.*\0");
+	ofn.lpstrTitle = _T("Select a mesh file:");
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = dxInstance->hWnd;
+	ofn.lpstrFile = filename;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
+
+	if (GetOpenFileName(&ofn)) {
+		CreateMesh("NewMesh", ofn.lpstrFile, true);
+	}
+}
+
+std::string AssetManager::GetImportedFileString(OPENFILENAME* file) {
+	
+
+	return "0";
+}
+
 #pragma endregion
 
 #pragma region getMethods
@@ -1267,6 +1547,10 @@ size_t AssetManager::GetSkyArraySize() {
 
 size_t AssetManager::GetMeshArraySize() {
 	return this->globalMeshes.size();
+}
+
+size_t AssetManager::GetTextureArraySize() {
+	return this->globalTextures.size();
 }
 
 size_t AssetManager::GetMaterialArraySize() {
@@ -1303,6 +1587,10 @@ void AssetManager::BroadcastGlobalEntityEvent(EntityEventType event, std::shared
 	for (std::shared_ptr<GameEntity> entity : globalEntities) {
 		entity->PropagateEvent(event);
 	}
+}
+
+std::shared_ptr<Texture> AssetManager::GetTextureAtID(int id) {
+	return this->globalTextures[id];
 }
 
 std::shared_ptr<Material> AssetManager::GetMaterialAtID(int id) {
@@ -1807,6 +2095,7 @@ void AssetManager::CleanAllVectors() {
 	computeShaders.clear();
 	skies.clear();
 	globalMeshes.clear();
+	globalTextures.clear();
 	globalMaterials.clear();
 	globalTerrainMaterials.clear();
 	globalSounds.clear();
@@ -1932,6 +2221,15 @@ std::shared_ptr<Mesh> AssetManager::GetMeshByName(std::string name) {
 	for (int i = 0; i < globalMeshes.size(); i++) {
 		if (globalMeshes[i]->GetName() == name) {
 			return globalMeshes[i];
+		}
+	}
+	return nullptr;
+}
+
+std::shared_ptr<Texture> AssetManager::GetTextureByName(std::string name) {
+	for (int i = 0; i < globalTextures.size(); i++) {
+		if (globalTextures[i]->GetName() == name) {
+			return globalTextures[i];
 		}
 	}
 	return nullptr;

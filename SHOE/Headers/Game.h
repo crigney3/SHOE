@@ -55,6 +55,8 @@ private:
 	bool objWindowEnabled;
 	bool objHierarchyEnabled;
 	bool skyWindowEnabled;
+	bool textureWindowEnabled;
+	bool materialWindowEnabled;
 	bool movingEnabled;
 	bool rtvWindowEnabled;
 	bool soundWindowEnabled;

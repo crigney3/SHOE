@@ -149,6 +149,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	// Fonts
 	// Texture Sample States
 	// Shaders
+	// Textures
 	// Materials
 	// Meshes
 	// Terrain Materials
@@ -228,6 +229,20 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 		assetManager.CreateComputeShader(currentLoadName, LoadDeserializedFileName(computeShaderBlock[i], SHADER_FILE_PATH));
 	}
 
+	currentLoadCategory = "Textures";
+	const rapidjson::Value& textureBlock = sceneDoc[TEXTURES];
+	assert(textureBlock.IsArray());
+	for (rapidjson::SizeType i = 0; i < textureBlock.Size(); i++) {
+		currentLoadName = textureBlock[i].FindMember(NAME)->value.GetString();
+		if (progressListener) progressListener();
+
+		// Textures require a check to determine which valid texture folder
+		// they're in.
+		AssetPathIndex assetPath;
+		assetPath = (AssetPathIndex)(textureBlock[i].FindMember(TEXTURE_ASSET_PATH_INDEX)->value.GetInt());
+		assetManager.CreateTexture(LoadDeserializedFileName(textureBlock[i], FILENAME_KEY), currentLoadName, assetPath);
+	}
+
 	currentLoadCategory = "Materials";
 	const rapidjson::Value& materialBlock = sceneDoc[MATERIALS];
 	assert(materialBlock.IsArray());
@@ -237,10 +252,10 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 
 		std::shared_ptr<Material> newMaterial = assetManager.CreatePBRMaterial(
 			currentLoadName,
-			LoadDeserializedFileName(materialBlock[i], MAT_TEXTURE_OR_ALBEDO_MAP),
-			LoadDeserializedFileName(materialBlock[i], MAT_NORMAL_MAP),
-			LoadDeserializedFileName(materialBlock[i], MAT_METAL_MAP),
-			LoadDeserializedFileName(materialBlock[i], MAT_ROUGHNESS_MAP));
+			assetManager.globalTextures[materialBlock[i].FindMember(MAT_TEXTURE_OR_ALBEDO_MAP)->value.GetInt()],
+			assetManager.globalTextures[materialBlock[i].FindMember(MAT_NORMAL_MAP)->value.GetInt()], 
+			assetManager.globalTextures[materialBlock[i].FindMember(MAT_METAL_MAP)->value.GetInt()],
+			assetManager.globalTextures[materialBlock[i].FindMember(MAT_ROUGHNESS_MAP)->value.GetInt()]);
 
 		newMaterial->SetTransparent(materialBlock[i].FindMember(MAT_IS_TRANSPARENT)->value.GetBool());
 
@@ -474,6 +489,20 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 
 	sceneDocToSave.AddMember(MESHES, meshBlock, allocator);
 
+	rapidjson::Value textureBlock(rapidjson::kArrayType);
+	for (auto tex : assetManager.globalTextures) {
+		// Textures
+		rapidjson::Value textureValue(rapidjson::kObjectType);
+
+		textureValue.AddMember(NAME, rapidjson::Value().SetString(tex->GetName().c_str(), allocator), allocator);
+		textureValue.AddMember(FILENAME_KEY, rapidjson::Value().SetString(tex->GetTextureFilenameKey().c_str(), allocator), allocator);
+		textureValue.AddMember(TEXTURE_ASSET_PATH_INDEX, tex->GetAssetPathIndex(), allocator);
+
+		textureBlock.PushBack(textureValue, allocator);
+	}
+
+	sceneDocToSave.AddMember(TEXTURES, textureBlock, allocator);
+
 	rapidjson::Value materialBlock(rapidjson::kArrayType);
 	for (auto mat : assetManager.globalMaterials) {
 		// Material
@@ -489,10 +518,6 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 		matValue.AddMember(MAT_VERTEX_SHADER, assetManager.GetVertexShaderIDByPointer(mat->GetVertShader()), allocator);
 
 		matValue.AddMember(NAME, rapidjson::Value().SetString(mat->GetName().c_str(), allocator), allocator);
-		matValue.AddMember(MAT_TEXTURE_OR_ALBEDO_MAP, rapidjson::Value().SetString(mat->GetTextureFilenameKey(PBRTextureTypes::ALBEDO).c_str(), allocator), allocator);
-		matValue.AddMember(MAT_NORMAL_MAP, rapidjson::Value().SetString(mat->GetTextureFilenameKey(PBRTextureTypes::NORMAL).c_str(), allocator), allocator);
-		matValue.AddMember(MAT_METAL_MAP, rapidjson::Value().SetString(mat->GetTextureFilenameKey(PBRTextureTypes::METAL).c_str(), allocator), allocator);
-		matValue.AddMember(MAT_ROUGHNESS_MAP, rapidjson::Value().SetString(mat->GetTextureFilenameKey(PBRTextureTypes::ROUGH).c_str(), allocator), allocator);
 
 		// Currently, refractivePixShader also covers transparency
 		if (mat->GetRefractive() || mat->GetTransparent()) {
@@ -515,6 +540,39 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 		for (int i = 0; i < assetManager.textureSampleStates.size(); i++) {
 			if (mat->GetClampSamplerState() == assetManager.textureSampleStates[i]) {
 				matValue.AddMember(MAT_CLAMP_SAMPLER_STATE, i, allocator);
+				break;
+			}
+		}
+
+		// Complex types - Textures
+		// Store the index of the Texture being used.
+		// Textures are stored in the scene file.
+		// Index is determined by a pointer-match search
+
+		for (int i = 0; i < assetManager.globalTextures.size(); i++) {
+			if (mat->GetTexture() == assetManager.globalTextures[i]) {
+				matValue.AddMember(MAT_TEXTURE_OR_ALBEDO_MAP, i, allocator);
+				break;
+			}
+		}
+
+		for (int i = 0; i < assetManager.globalTextures.size(); i++) {
+			if (mat->GetNormalMap() == assetManager.globalTextures[i]) {
+				matValue.AddMember(MAT_NORMAL_MAP, i, allocator);
+				break;
+			}
+		}
+
+		for (int i = 0; i < assetManager.globalTextures.size(); i++) {
+			if (mat->GetRoughMap() == assetManager.globalTextures[i]) {
+				matValue.AddMember(MAT_ROUGHNESS_MAP, i, allocator);
+				break;
+			}
+		}
+
+		for (int i = 0; i < assetManager.globalTextures.size(); i++) {
+			if (mat->GetMetalMap() == assetManager.globalTextures[i]) {
+				matValue.AddMember(MAT_METAL_MAP, i, allocator);
 				break;
 			}
 		}
