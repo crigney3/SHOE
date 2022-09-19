@@ -40,7 +40,7 @@
 #define MESH_NEEDS_DEPTH_PREPASS "nDP" // bool
 
 // Texture Data:
-#define TEXTURE_PBR_FOLDER "tPF"
+#define TEXTURE_ASSET_PATH_INDEX "tAP" // int
 
 // Material Data:
 #define MAT_UV_TILING "uT" // float

@@ -6,11 +6,13 @@ Texture::Texture() {
 
 Texture::Texture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
 				 std::string fileKey,
-				 std::string name)
+				 std::string name,
+				 AssetPathIndex assetPathIndex)
 {
 	this->coreTexture = texture;
 	this->fileKey = fileKey;
 	this->name = name;
+	this->assetPathIndex = assetPathIndex;
 }
 
 Texture::~Texture() {
@@ -39,4 +41,12 @@ std::string Texture::GetTextureFilenameKey(){
 
 void Texture::SetTextureFilenameKey(std::string newFileKey){
 	this->fileKey = newFileKey;
+}
+
+AssetPathIndex Texture::GetAssetPathIndex() {
+	return this->assetPathIndex;
+}
+
+void Texture::SetAssetPathIndex(AssetPathIndex pathIndex) {
+	this->assetPathIndex = pathIndex;
 }
