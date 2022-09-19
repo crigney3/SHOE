@@ -273,6 +273,40 @@ void Game::GenerateEditingUI() {
 		ImGui::End();
 	}
 
+	if (textureWindowEnabled) {
+		static int textureUIIndex = 0;
+		std::shared_ptr<Texture> currentTexture = globalAssets.GetTextureAtID(textureUIIndex);
+		std::string indexStr = std::to_string(textureUIIndex) + " - " + currentTexture->GetName();
+		std::string node = "Viewing texture " + indexStr;
+		ImGui::Begin("Texture Editor");
+		ImGui::Text(node.c_str());
+
+		if (ImGui::ArrowButton("Previous Texture", ImGuiDir_Left)) {
+			textureUIIndex--;
+			if (textureUIIndex < 0) textureUIIndex = globalAssets.GetTextureArraySize() - 1;
+		};
+		ImGui::SameLine();
+
+		if (ImGui::ArrowButton("Next Texture", ImGuiDir_Right)) {
+			textureUIIndex++;
+			if (textureUIIndex > globalAssets.GetTextureArraySize() - 1) textureUIIndex = 0;
+		};
+
+		std::string nameBuffer;
+		static char nameBuf[64] = "";
+		nameBuffer = currentTexture->GetName();
+		strcpy_s(nameBuf, nameBuffer.c_str());
+		ImGui::InputText("Rename Texture", nameBuf, sizeof(nameBuffer));
+
+		currentTexture->SetName(nameBuf);
+
+		ImGui::Separator();
+
+		ImGui::Image((ImTextureID*)currentTexture->GetTexture().Get(), ImVec2(256, 256));
+
+		ImGui::End();
+	}
+
 	if (objWindowEnabled) {
 		// Display the debug UI for objects
 		std::shared_ptr<GameEntity> currentEntity = globalAssets.GetGameEntityAtID(entityUIIndex);
@@ -813,6 +847,36 @@ void Game::GenerateEditingUI() {
 				LoadScene();
 			}
 
+			ImGui::Separator();
+
+			if (ImGui::BeginMenu("Import New Asset")) {
+				if (ImGui::MenuItem("Texture")) {
+					globalAssets.ImportTexture();
+				}
+
+				if (ImGui::MenuItem("Sky")) {
+					globalAssets.ImportSkyTexture();
+				}
+
+				if (ImGui::MenuItem("Model/Mesh")) {
+					globalAssets.ImportMesh();
+				}
+
+				if (ImGui::MenuItem("Audio")) {
+					globalAssets.ImportSound();
+				}
+
+				if (ImGui::MenuItem("HeightMap")) {
+					globalAssets.ImportHeightMap();
+				}
+
+				if (ImGui::MenuItem("Font")) {
+					globalAssets.ImportFont();
+				}
+
+				ImGui::EndMenu();
+			}
+
 			ImGui::EndMenu();
 		}
 
@@ -821,6 +885,8 @@ void Game::GenerateEditingUI() {
 			ImGui::MenuItem("Object Hierarchy", "h", &objHierarchyEnabled);
 			ImGui::MenuItem("Skies", "", &skyWindowEnabled);
 			ImGui::MenuItem("Sound", "", &soundWindowEnabled);
+			ImGui::MenuItem("Texture", "", &textureWindowEnabled);
+			ImGui::MenuItem("Material", "", &materialWindowEnabled);
 			ImGui::MenuItem("Colliders", "", &collidersWindowEnabled);
 
 			ImGui::EndMenu();
