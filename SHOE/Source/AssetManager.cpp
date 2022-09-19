@@ -1180,6 +1180,7 @@ void AssetManager::InitializeTerrainEntities() {
 	// These can still be viewed by loading the demo scene.
 	std::shared_ptr<Terrain> mainTerrain = CreateTerrainEntity("valley.raw16", GetTerrainMaterialByName("Forest Terrain Material"), "Basic Terrain");
 	mainTerrain->GetTransform()->SetPosition(-256.0f, -14.0f, -256.0f);
+	mainTerrain->SetEnabled(false);
 }
 
 void AssetManager::InitializeTerrainMaterials() {
