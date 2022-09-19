@@ -1,10 +1,7 @@
 #pragma once
 
-#include <DirectXMath.h>
-#include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
-#include "DXCore.h"
 #include "SimpleShader.h"
-#include <memory>
+#include "Texture.h"
 #include <vector>
 
 enum PBRTextureTypes {
@@ -23,12 +20,12 @@ private:
 	std::shared_ptr<SimplePixelShader> refractivePixShader;
 	std::shared_ptr<SimpleVertexShader> vertShader;
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture;
+	std::shared_ptr<Texture> texture;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap;
+	std::shared_ptr<Texture> normalMap;
+	std::shared_ptr<Texture> metalMap;
+	std::shared_ptr<Texture> roughMap;
 
 	bool enabled;
 	std::string name;
@@ -46,28 +43,33 @@ private:
 
 public:
 	Material(DirectX::XMFLOAT4 tint,
-			 std::shared_ptr<SimplePixelShader> pix,
-			 std::shared_ptr<SimpleVertexShader> vert,
-			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
-			 Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
-			 Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
-			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
-			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
-			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
-			 std::string name = "material",
-			 bool transparent = false,
-			 bool refractive = false);
+		std::shared_ptr<SimplePixelShader> pix,
+		std::shared_ptr<SimpleVertexShader> vert,
+		std::shared_ptr<Texture> texture,
+		Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
+		Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
+		std::shared_ptr<Texture> normalMap,
+		std::shared_ptr<Texture> roughMap,
+		std::shared_ptr<Texture> metalMap,
+		std::string name = "material",
+		bool transparent = false,
+		bool refractive = false);
 	~Material();
 
 	DirectX::XMFLOAT4 GetTint();
 	void SetTint(DirectX::XMFLOAT4 tint);
 	std::shared_ptr<SimplePixelShader> GetPixShader();
 	std::shared_ptr<SimpleVertexShader> GetVertShader();
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetNormalMap();
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMetalMap();
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRoughMap();
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture();
+	std::shared_ptr<Texture> GetNormalMap();
+	std::shared_ptr<Texture> GetMetalMap();
+	std::shared_ptr<Texture> GetRoughMap();
+	std::shared_ptr<Texture> GetTexture();
+
+	void SetTexture(std::shared_ptr<Texture> texture);
+	void SetNormalMap(std::shared_ptr<Texture> normals);
+	void SetRoughMap(std::shared_ptr<Texture> roughMap);
+	void SetMetalMap(std::shared_ptr<Texture> metalMap);
 
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
 	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState);

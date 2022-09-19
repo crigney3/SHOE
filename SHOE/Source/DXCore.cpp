@@ -73,6 +73,9 @@ DXCore::~DXCore()
 	// we don't need to explicitly clean up those DirectX objects
 	// - If we weren't using smart pointers, we'd need
 	//   to call Release() on each DirectX object created in DXCore
+
+	context->ClearState();
+	context->Flush();
 }
 
 // --------------------------------------------------------
@@ -164,6 +167,7 @@ HRESULT DXCore::InitDirectX()
 	unsigned int deviceFlags = 0;
 
 #if defined(DEBUG) || defined(_DEBUG)
+
 	// If we're in debug mode in visual studio, we also
 	// want to make a "Debug DirectX Device" to see some
 	// errors and warnings in Visual Studio's output window

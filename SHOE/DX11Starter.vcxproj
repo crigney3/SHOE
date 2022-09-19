@@ -79,7 +79,7 @@
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(IncludePath);$(SolutionDir)packages\FMOD\core\inc\;$(SolutionDir)packages\FMOD\studio\inc</IncludePath>
+    <IncludePath>$(SolutionDir)packages\directxtk_desktop_2017.2022.3.1.1\include\;$(SolutionDir)packages\directxtk_desktop_2017.2021.10.19.1\include\;$(IncludePath);$(SolutionDir)packages\FMOD\core\inc\;$(SolutionDir)packages\FMOD\studio\inc</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -195,6 +195,7 @@
     <ClInclude Include="Headers\SimpleShader.h" />
     <ClInclude Include="Headers\Sky.h" />
     <ClInclude Include="Headers\Terrain.h" />
+    <ClInclude Include="Headers\Texture.h" />
     <ClInclude Include="Headers\Time.h" />
     <ClInclude Include="Headers\Transform.h" />
     <ClInclude Include="Headers\Collider.h" />
@@ -406,6 +407,7 @@
     <ClCompile Include="Source\SimpleShader.cpp" />
     <ClCompile Include="Source\Sky.cpp" />
     <ClCompile Include="Source\Terrain.cpp" />
+    <ClCompile Include="Source\Texture.cpp" />
     <ClCompile Include="Source\Time.cpp" />
     <ClCompile Include="Source\Transform.cpp" />
     <ClCompile Include="Source\Collider.cpp" />

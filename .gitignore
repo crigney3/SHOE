@@ -392,3 +392,7 @@ FodyWeavers.xsd
 
 # imgui state
 SHOE/imgui.ini
+*imgui.ini
+
+# Shaders
+Assets/Shaders/*

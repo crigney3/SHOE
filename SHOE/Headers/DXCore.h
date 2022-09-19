@@ -78,9 +78,10 @@ public:
 
 	std::string GetAssetPathString(AssetPathIndex index);
 
+	HWND		hWnd;			// The handle to the window itself
+
 protected:
 	HINSTANCE	hInstance;		// The handle to the application
-	HWND		hWnd;			// The handle to the window itself
 	std::string titleBarText;	// Custom text in window's title bar
 	bool		titleBarStats;	// Show extra stats in title bar?
 

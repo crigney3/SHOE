@@ -60,19 +60,21 @@ Renderer::Renderer(
 	rDescription.FillMode = D3D11_FILL_SOLID;
 	rDescription.CullMode = D3D11_CULL_FRONT;
 
-	device->CreateRasterizerState(&rDescription, &this->skyRasterizer);
+	device->CreateRasterizerState(&rDescription, &skyRasterizer);
 
 	D3D11_DEPTH_STENCIL_DESC depthDescription = {};
 	depthDescription.DepthEnable = true;
 	depthDescription.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 
-	device->CreateDepthStencilState(&depthDescription, &this->skyDepthState);
+	device->CreateDepthStencilState(&depthDescription, &skyDepthState);
 
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
 
 Renderer::~Renderer() {
-
+	shadowDSVArray.clear();
+	shadowProjMatArray.clear();
+	shadowViewMatArray.clear();
 }
 
 void Renderer::InitRenderTargetViews() {
@@ -959,11 +961,11 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 			// Set textures and samplers
 			currentPS->SetSamplerState("sampleState", currentMaterial->GetSamplerState().Get());
 			currentPS->SetSamplerState("clampSampler", currentMaterial->GetClampSamplerState().Get());
-			currentPS->SetShaderResourceView("textureAlbedo", currentMaterial->GetTexture().Get());
-			currentPS->SetShaderResourceView("textureRough", currentMaterial->GetRoughMap().Get());
-			currentPS->SetShaderResourceView("textureMetal", currentMaterial->GetMetalMap().Get());
+			currentPS->SetShaderResourceView("textureAlbedo", currentMaterial->GetTexture()->GetTexture().Get());
+			currentPS->SetShaderResourceView("textureRough", currentMaterial->GetRoughMap()->GetTexture().Get());
+			currentPS->SetShaderResourceView("textureMetal", currentMaterial->GetMetalMap()->GetTexture().Get());
 			if (currentMaterial->GetNormalMap() != nullptr) {
-				currentPS->SetShaderResourceView("textureNormal", currentMaterial->GetNormalMap().Get());
+				currentPS->SetShaderResourceView("textureNormal", currentMaterial->GetNormalMap()->GetTexture().Get());
 			}
 
 			if (shadowCount > 0) {
@@ -1025,10 +1027,10 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 			std::string n = "texture" + std::to_string(i + 1) + "Normal";
 			std::string r = "texture" + std::to_string(i + 1) + "Rough";
 			std::string m = "texture" + std::to_string(i + 1) + "Metal";
-			PSTerrain->SetShaderResourceView(a, terrainMat->GetMaterialAtID(i)->GetTexture().Get());
-			PSTerrain->SetShaderResourceView(n, terrainMat->GetMaterialAtID(i)->GetNormalMap().Get());
-			PSTerrain->SetShaderResourceView(r, terrainMat->GetMaterialAtID(i)->GetRoughMap().Get());
-			PSTerrain->SetShaderResourceView(m, terrainMat->GetMaterialAtID(i)->GetMetalMap().Get());
+			PSTerrain->SetShaderResourceView(a, terrainMat->GetMaterialAtID(i)->GetTexture()->GetTexture().Get());
+			PSTerrain->SetShaderResourceView(n, terrainMat->GetMaterialAtID(i)->GetNormalMap()->GetTexture().Get());
+			PSTerrain->SetShaderResourceView(r, terrainMat->GetMaterialAtID(i)->GetRoughMap()->GetTexture().Get());
+			PSTerrain->SetShaderResourceView(m, terrainMat->GetMaterialAtID(i)->GetMetalMap()->GetTexture().Get());
 		}
 
 		if (globalAssets.currentSky->IsEnabled()) {
@@ -1242,9 +1244,9 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 
 			refractivePS->CopyBufferData("PerMaterial");
 
-			refractivePS->SetShaderResourceView("textureNormal", activeMeshes[meshIt]->GetMaterial()->GetNormalMap());
-			refractivePS->SetShaderResourceView("textureRoughness", activeMeshes[meshIt]->GetMaterial()->GetRoughMap());
-			refractivePS->SetShaderResourceView("textureMetal", activeMeshes[meshIt]->GetMaterial()->GetMetalMap());
+			refractivePS->SetShaderResourceView("textureNormal", activeMeshes[meshIt]->GetMaterial()->GetNormalMap()->GetTexture().Get());
+			refractivePS->SetShaderResourceView("textureRoughness", activeMeshes[meshIt]->GetMaterial()->GetRoughMap()->GetTexture().Get());
+			refractivePS->SetShaderResourceView("textureMetal", activeMeshes[meshIt]->GetMaterial()->GetMetalMap()->GetTexture().Get());
 
 			context->IASetVertexBuffers(0, 1, activeMeshes[meshIt]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
 			context->IASetIndexBuffer(activeMeshes[meshIt]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
