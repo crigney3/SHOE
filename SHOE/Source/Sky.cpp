@@ -100,7 +100,7 @@ void Sky::IBLCreateIrradianceMap() {
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
 		device->CreateRenderTargetView(finalIrrMapTexture.Get(), &rtvDesc, rtv.GetAddressOf());
 
-		context->Flush();
+		//context->Flush();
 
 		float black[4] = {};
 		context->ClearRenderTargetView(rtv.Get(), black);
