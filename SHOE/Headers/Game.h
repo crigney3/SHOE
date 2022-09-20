@@ -29,28 +29,57 @@ public:
 	void Update();
 	void Draw();
 
-private:
-	// Asset Manager instance
-	AssetManager& globalAssets = AssetManager::GetInstance();
-	SceneManager& sceneManager = SceneManager::GetInstance();
-	AudioHandler& audioHandler = AudioHandler::GetInstance();
-
 	// Loading methods for initializing threads.
 	// Mainly does pre- and post- loading, and creates
 	// the threads that do the actual loading
 	void LoadScene();
 	void SaveScene();
 	void SaveSceneAs();
+	
+	// Asset Manager instance
+	AssetManager& globalAssets = AssetManager::GetInstance();
+	SceneManager& sceneManager = SceneManager::GetInstance();
+	AudioHandler& audioHandler = AudioHandler::GetInstance();
 
+	// GUI control tracking/UI toggles
+	Input& input = Input::GetInstance();
+
+	// Getters
+	bool* GetObjWindowEnabled();
+	bool* GetObjHierarchyEnabled();
+	bool* GetSkyWindowEnabled();
+	bool* GetSoundWindowEnabled();
+	bool* GetTextureWindowEnabled();
+	bool* GetMaterialWindowEnabled();
+	bool* GetCollidersWindowEnabled();
+	bool* GetRtvWindowEnabled();
+
+	bool* GetStatsEnabled();
+	bool* GetMovingEnabled();
+
+	int GetEntityUIIndex();
+	int GetSkyUIIndex();
+
+	std::unique_ptr<Renderer> Game::GetRenderer();
+
+	// Setters
+	void SetEntityUIIndex(int NewEntityUIIndex);
+	void SetSkyUIIndex(int NewSkyUIIndex);
+	void SetObjWindowEnabled(bool enabled);
+
+	// Public Rendering Helper Method
+	std::unique_ptr<Renderer> renderer;
+	void RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity);
+
+
+private:
 	// Rendering helper methods
 	void DrawInitializingScreen(std::string category);
 	void DrawLoadingScreen();
 	void GenerateEditingUI();
-	void RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity);
-	std::unique_ptr<Renderer> renderer;
 
 	// GUI control tracking/UI toggles
-	Input& input = Input::GetInstance();
+	//Input& input = Input::GetInstance();
 	bool statsEnabled;
 	bool objWindowEnabled;
 	bool objHierarchyEnabled;
@@ -70,15 +99,15 @@ private:
 	// Then add helper functions for setting them?
 	int entityUIIndex;
 	int skyUIIndex;
-	DirectX::XMFLOAT3 UIPositionEdit;
-	DirectX::XMFLOAT3 UIRotationEdit;
-	DirectX::XMFLOAT3 UIScaleEdit;
+	//DirectX::XMFLOAT3 UIPositionEdit;
+	//DirectX::XMFLOAT3 UIRotationEdit;
+	//DirectX::XMFLOAT3 UIScaleEdit;
 
-	float UILightType;
-	DirectX::XMFLOAT3 UILightDirectionEdit;
-	DirectX::XMFLOAT3 UILightColorEdit;
-	float UILightRange;
-	float UILightIntensity;
+	//float UILightType;
+	//DirectX::XMFLOAT3 UILightDirectionEdit;
+	//DirectX::XMFLOAT3 UILightColorEdit;
+	//float UILightRange;
+	//float UILightIntensity;
 
 	//Assimp material pointers
 	std::vector<std::shared_ptr<Material>> specialMaterials;
