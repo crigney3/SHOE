@@ -41,6 +41,8 @@ public:
 
 	DXCore* dxCore = DXCore::DXCoreInstance;
 
+	void ReInitializeEditingUI(std::shared_ptr<Renderer> renderer);
+
 	void GenerateEditingUI();
 	void ResetUI();
 	void DisplayMenu();
