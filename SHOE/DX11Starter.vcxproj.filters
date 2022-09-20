@@ -174,6 +174,12 @@
     <ClInclude Include="Headers\EditingUI.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\AudioEventPacket.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Timeframe.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\PixelShaders\IBLBrdfLookUpTablePS.hlsl">
@@ -371,6 +377,12 @@
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\EditingUI.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\AudioEventPacket.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Timeframe.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
   </ItemGroup>

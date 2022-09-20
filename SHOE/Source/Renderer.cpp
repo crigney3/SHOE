@@ -845,7 +845,7 @@ void Renderer::SetDrawColliderStatus(bool _newState) { drawColliders = _newState
 void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 	RenderShadows();
 
-	// Background color (Cornflower Blue in this case) for clearing
+	// Background color (Black) for clearing
 	const float color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 	// Clear the render target and depth buffer (erases what's on the screen)
@@ -1086,8 +1086,8 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 
 		context->DrawIndexed(cubeMesh->GetIndexCount(), 0, 0);
 
-		context->RSSetState(nullptr);
-		context->OMSetDepthStencilState(nullptr, 0);
+		context->RSSetState(0);
+		context->OMSetDepthStencilState(0, 0);
 	}
 
 	fullscreenVS->SetShader();

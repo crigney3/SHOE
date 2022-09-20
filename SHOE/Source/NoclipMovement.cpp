@@ -27,13 +27,17 @@ void NoclipMovement::Update()
 		float xDiff = this->lookSpeed * Time::deltaTime * input.GetMouseXDelta();
 		float yDiff = this->lookSpeed * Time::deltaTime * input.GetMouseYDelta();
 
-		//TODO: Fix gimbal lock
 		GetTransform()->Rotate(yDiff, xDiff, 0);
-		/*if (GetTransform()->GetLocalPitchYawRoll().y >= XM_PIDIV2) {
-			GetTransform()->SetRotation(GetTransform()->GetLocalPitchYawRoll().x, XM_PIDIV2 - 0.007f, GetTransform()->GetLocalPitchYawRoll().z);
+
+		// Prevent gimbal lock by stopping the camera from looking too far up or down
+		float pitchLimit = DirectX::XM_PIDIV2 - 0.2f;
+		float pitchLimitUpperDiff = GetTransform()->GetLocalPitchYawRoll().x - pitchLimit;
+		float pitchLimitLowerDiff = GetTransform()->GetLocalPitchYawRoll().x + pitchLimit;
+		if (pitchLimitUpperDiff >= 0) {
+			GetTransform()->SetRotation(pitchLimit, GetTransform()->GetLocalPitchYawRoll().y, GetTransform()->GetLocalPitchYawRoll().z);
 		}
-		else if (GetTransform()->GetLocalPitchYawRoll().y <= -XM_PIDIV2) {
-			GetTransform()->SetRotation(GetTransform()->GetLocalPitchYawRoll().x, -XM_PIDIV2 + 0.007f, GetTransform()->GetLocalPitchYawRoll().z);
-		}*/
+		else if (pitchLimitLowerDiff <= 0) {
+			GetTransform()->SetRotation(-pitchLimit, GetTransform()->GetLocalPitchYawRoll().y, GetTransform()->GetLocalPitchYawRoll().z);
+		}
 	}
 }
