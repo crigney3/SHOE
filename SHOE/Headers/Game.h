@@ -2,19 +2,13 @@
 
 #include <DirectXMath.h> 
 #include <vector>
-#include "GameEntity.h"
-#include "Light.h"
-#include "Sky.h"
 #include <string>
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
 #include <Windows.h>
-#include "Input.h"
-#include "Renderer.h"
-#include "AssetManager.h"
 #include <chrono>
-#include "SceneManager.h"
+#include "EditingUI.h"
 
 class Game : public DXCore
 {
@@ -44,61 +38,19 @@ public:
 	// GUI control tracking/UI toggles
 	Input& input = Input::GetInstance();
 
-	// Getters
-	bool* GetObjWindowEnabled();
-	bool* GetObjHierarchyEnabled();
-	bool* GetSkyWindowEnabled();
-	bool* GetSoundWindowEnabled();
-	bool* GetTextureWindowEnabled();
-	bool* GetMaterialWindowEnabled();
-	bool* GetCollidersWindowEnabled();
-	bool* GetRtvWindowEnabled();
-
-	bool* GetStatsEnabled();
-	bool* GetMovingEnabled();
-
-	int GetEntityUIIndex();
-	int GetSkyUIIndex();
-
-	std::unique_ptr<Renderer> Game::GetRenderer();
-
-	// Setters
-	void SetEntityUIIndex(int NewEntityUIIndex);
-	void SetSkyUIIndex(int NewSkyUIIndex);
-	void SetObjWindowEnabled(bool enabled);
-
-	// Public Rendering Helper Method
-	std::unique_ptr<Renderer> renderer;
-	void RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity);
-
+	//std::unique_ptr<Renderer> Game::GetRenderer();
+	std::shared_ptr<Renderer> renderer;
+	std::unique_ptr<EditingUI> editUI;
 
 private:
 	// Rendering helper methods
 	void DrawInitializingScreen(std::string category);
 	void DrawLoadingScreen();
-	void GenerateEditingUI();
-
-	// GUI control tracking/UI toggles
-	//Input& input = Input::GetInstance();
-	bool statsEnabled;
-	bool objWindowEnabled;
-	bool objHierarchyEnabled;
-	bool skyWindowEnabled;
-	bool textureWindowEnabled;
-	bool materialWindowEnabled;
-	bool movingEnabled;
-	bool rtvWindowEnabled;
-	bool soundWindowEnabled;
-	bool collidersWindowEnabled;
 
 	// Loading screen info
 	DirectX::SpriteBatch* loadingSpriteBatch;
 	DirectX::SpriteFont* loadingFont;
 
-	// Transfer these to static locals
-	// Then add helper functions for setting them?
-	int entityUIIndex;
-	int skyUIIndex;
 	//DirectX::XMFLOAT3 UIPositionEdit;
 	//DirectX::XMFLOAT3 UIRotationEdit;
 	//DirectX::XMFLOAT3 UIScaleEdit;
@@ -111,10 +63,6 @@ private:
 
 	//Assimp material pointers
 	std::vector<std::shared_ptr<Material>> specialMaterials;
-
-	//For selecting objects with a click
-	std::shared_ptr<GameEntity> GetClickedEntity();
-	std::shared_ptr<GameEntity> clickedEntityBuffer;
 
 	EngineState engineState;
 };

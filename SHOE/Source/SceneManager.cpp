@@ -1018,6 +1018,14 @@ void SceneManager::SaveScene(std::string filepath, std::string sceneName) {
 }
 
 /// <summary>
+/// UNIMPLEMENTED - this function allows the user to choose a filpath and scene name
+/// to save a scene as.
+/// </summary>
+void SceneManager::SaveSceneAs() {
+
+}
+
+/// <summary>
 /// Saves the state of the entities in the scene before moving to play state
 /// </summary>
 void SceneManager::PrePlaySave()
