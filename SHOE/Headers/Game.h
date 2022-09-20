@@ -22,13 +22,6 @@ public:
 	void OnResize();
 	void Update();
 	void Draw();
-
-	// Loading methods for initializing threads.
-	// Mainly does pre- and post- loading, and creates
-	// the threads that do the actual loading
-	void LoadScene();
-	void SaveScene();
-	void SaveSceneAs();
 	
 	// Asset Manager instance
 	AssetManager& globalAssets = AssetManager::GetInstance();

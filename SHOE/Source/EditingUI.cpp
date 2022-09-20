@@ -37,6 +37,24 @@ EditingUI::~EditingUI() {
 
 }
 
+void EditingUI::ReInitializeEditingUI(std::shared_ptr<Renderer> renderer) {
+	statsEnabled = true;
+	movingEnabled = true;
+	objWindowEnabled = false;
+	skyWindowEnabled = false;
+	objHierarchyEnabled = true;
+	rtvWindowEnabled = false;
+
+	entityUIIndex = -1;
+	skyUIIndex = 0;
+
+	objWindowEnabled = false;
+	skyWindowEnabled = false;
+	entityUIIndex = -1;
+
+	this->renderer = renderer;
+}
+
 void EditingUI::ResetUI() {
 	// Reset the gui state to prevent tainted input
 	input.SetGuiKeyboardCapture(false);
@@ -78,7 +96,7 @@ void EditingUI::DisplayMenu() {
 			}
 
 			if (ImGui::MenuItem("Load Scene", "ctrl+s")) {
-				sceneManager.LoadScene("FIX");
+				sceneManager.LoadScene("structureTest.json");
 			}
 
 			ImGui::Separator();

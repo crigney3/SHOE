@@ -89,11 +89,7 @@ void Game::Init()
 
 	loadingSpriteBatch = new SpriteBatch(context.Get());
 
-#if defined(DEBUG) || defined(_DEBUG)
-	printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
-#endif
-
-	sceneManager.Initialize(&engineState);
+	sceneManager.Initialize(&engineState, std::bind(&Game::DrawLoadingScreen, this));
 	globalAssets.Initialize(device, context, hWnd, &engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -124,48 +120,6 @@ void Game::Init()
 	printf("Took %3.4f seconds for  post-initialization. \n", this->GetDeltaTime());
 	printf("Total Initialization time was %3.4f seconds. \n", this->GetTotalTime());
 #endif
-}
-
-void Game::LoadScene() {
-	engineState = EngineState::LOAD_SCENE;
-
-#if defined(DEBUG) || defined(_DEBUG)
-	//printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
-#endif
-
-	sceneManager.LoadScene("structureTest.json", std::bind(&Game::DrawLoadingScreen, this));
-
-#if defined(DEBUG) || defined(_DEBUG)
-	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
-#endif
-
-	renderer.reset();
-
-	context->Flush();
-
-	// With everything initialized, start the renderer
-	renderer = std::make_shared<Renderer>(height,
-		width,
-		device,
-		context,
-		swapChain,
-		backBufferRTV,
-		depthStencilView);
-
-	// Start the UI now that IMGUI has initialized
-	editUI = std::make_unique<EditingUI>(renderer);
-}
-
-void Game::SaveScene() {
-	sceneManager.SaveScene("structureTest.json", "Default Scene");
-}
-
-void Game::SaveSceneAs() {
-	// Handle file browser popup before anything else
-
-
-
-	sceneManager.SaveScene("structureTest.json");
 }
 
 // --------------------------------------------------------
@@ -253,6 +207,28 @@ void Game::DrawInitializingScreen(std::string category)
 }
 
 void Game::DrawLoadingScreen() {
+	if (engineState == EngineState::EDITING) {
+		// If loading is done, reinitialize the important references.
+
+		renderer.reset();
+
+		context->Flush();
+
+		// With everything initialized, start the renderer
+		renderer = std::make_shared<Renderer>(height,
+			width,
+			device,
+			context,
+			swapChain,
+			backBufferRTV,
+			depthStencilView);
+
+		// Start the UI now that IMGUI has initialized
+		editUI->ReInitializeEditingUI(renderer);
+
+		return;
+	}
+
 	// Screen clear color
 	const float color[4] = { 0.0f, 0.0f, 0.1f, 0.0f };
 
