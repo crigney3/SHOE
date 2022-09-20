@@ -116,6 +116,8 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 
 	globalSounds.push_back(sound);
 
+	BroadcastGlobalEntityEvent(EntityEventType::OnAudioLoad, std::make_shared<AudioEventPacket>(baseFilename, nullptr));
+
 	return sound;
 }
 
@@ -895,7 +897,7 @@ void AssetManager::InitializeGameEntities() {
 	MeshRenderer::SetDefaults(GetMeshByName("Cube"), GetMaterialByName("largeCobbleMat"));
 
 	// Show example render
-	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("bronzeMat"), "Bronze Cube");
+	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("paintMat"), "Paint Cube");
 
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
@@ -1152,7 +1154,7 @@ void AssetManager::InitializeLights() {
 	mainLight->SetCastsShadows(true);
 
 	//white light from the back
-	CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, -1));
+	CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, -1))->SetEnabled(false);
 
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
@@ -1178,8 +1180,9 @@ void AssetManager::InitializeTerrainEntities() {
 
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
-	/*std::shared_ptr<Terrain> mainTerrain = CreateTerrainEntity("valley.raw16", GetTerrainMaterialByName("Forest Terrain Material"), "Basic Terrain");
-	mainTerrain->GetTransform()->SetPosition(-256.0f, -14.0f, -256.0f);*/
+	std::shared_ptr<Terrain> mainTerrain = CreateTerrainEntity("valley.raw16", GetTerrainMaterialByName("Forest Terrain Material"), "Basic Terrain");
+	mainTerrain->GetTransform()->SetPosition(-256.0f, -14.0f, -256.0f);
+	mainTerrain->SetEnabled(false);
 }
 
 void AssetManager::InitializeTerrainMaterials() {
@@ -1188,40 +1191,42 @@ void AssetManager::InitializeTerrainMaterials() {
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
 
-	//std::shared_ptr<Texture> albedoTexture;
-	//std::shared_ptr<Texture> normalTexture;
-	//std::shared_ptr<Texture> roughTexture;
+	std::shared_ptr<Texture> albedoTexture;
+	std::shared_ptr<Texture> normalTexture;
+	std::shared_ptr<Texture> roughTexture;
 
-	//albedoTexture = CreateTexture("forest_floor_albedo.png", "ForestAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
-	//normalTexture = CreateTexture("forest_floor_Normal-ogl.png", "ForestNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
-	//roughTexture = CreateTexture("forest_floor_Roughness.png", "ForestRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+	albedoTexture = CreateTexture("forest_floor_albedo.png", "ForestAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	normalTexture = CreateTexture("forest_floor_Normal-ogl.png", "ForestNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	roughTexture = CreateTexture("forest_floor_Roughness.png", "ForestRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
 
-	//std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
+	std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
 
-	//albedoTexture = CreateTexture("bog_albedo.png", "BogAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
-	//normalTexture = CreateTexture("bog_normal-ogl.png", "BogNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
-	//roughTexture = CreateTexture("bog_roughness.png", "BogRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+	albedoTexture = CreateTexture("bog_albedo.png", "BogAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	normalTexture = CreateTexture("bog_normal-ogl.png", "BogNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	roughTexture = CreateTexture("bog_roughness.png", "BogRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
 
-	//std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
+	std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
 
-	//albedoTexture = CreateTexture("rocky_dirt1-albedo.png", "RockyAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
-	//normalTexture = CreateTexture("rocky_dirt1-normal-ogl.png", "RockyNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
-	//roughTexture = CreateTexture("rocky_dirt1_Roughness.png", "RockyRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+	albedoTexture = CreateTexture("rocky_dirt1-albedo.png", "RockyAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	normalTexture = CreateTexture("rocky_dirt1-normal-ogl.png", "RockyNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	roughTexture = CreateTexture("rocky_dirt1_Roughness.png", "RockyRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
 
-	//std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
+	std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
 
-	//tMats.push_back(forestMat);
-	//tMats.push_back(bogMat);
-	//tMats.push_back(rockyMat);
+	tMats.push_back(forestMat);
+	tMats.push_back(bogMat);
+	tMats.push_back(rockyMat);
 
-	////Set appropriate tiling
-	//forestMat->SetTiling(10.0f);
-	//bogMat->SetTiling(10.0f);
+	//Set appropriate tiling
+	forestMat->SetTiling(10.0f);
+	bogMat->SetTiling(10.0f);
 
-	//std::shared_ptr<TerrainMaterial> forestTerrainMaterial = CreateTerrainMaterial("Forest Terrain Material", tMats, "blendMap.png");
+	std::shared_ptr<TerrainMaterial> forestTerrainMaterial = CreateTerrainMaterial("Forest Terrain Material", tMats, "blendMap.png");
 
-	//tMats.clear();
+	tMats.clear();
 
+	// OUTDATED: Initializes lots of objects for demo.
+	// These can still be viewed by loading the demo scene.
 	//// Must be kept in PBR order!
 	//// This sections is only for testing and should be commented on push.
 	//// Since these materials already exist, it's quicker and more efficient
@@ -1399,10 +1404,9 @@ void AssetManager::InitializeIMGUI(HWND hwnd) {
 }
 
 void AssetManager::InitializeColliders() {
-	CreateColliderOnEntity(GetGameEntityByName("Bronze Cube"));
-
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
+	//CreateColliderOnEntity(GetGameEntityByName("Bronze Cube"));
 	//CreateColliderOnEntity(GetGameEntityByName("Scratched Sphere"));
 	//CreateColliderOnEntity(GetGameEntityByName("Shiny Rough Sphere"));
 	//CreateColliderOnEntity(GetGameEntityByName("Floor Cube"));
