@@ -1,4 +1,5 @@
 #include "../Headers/AudioHandler.h"
+#include "../Headers/AssetManager.h"
 
 using namespace FMOD;
 
@@ -43,6 +44,10 @@ Channel* AudioHandler::BasicPlaySound(FMOD::Sound* sound) {
 										  0,
 										  false,
 										  &channel);
+
+	FMODUserData* uData;
+	FMOD_RESULT uDataResult = sound->getUserData((void**)&uData);
+	AssetManager::GetInstance().BroadcastGlobalEntityEvent(EntityEventType::OnAudioPlay, std::make_shared<AudioEventPacket>(*uData->name, nullptr));
 
 	return channel;
 }
