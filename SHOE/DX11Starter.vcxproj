@@ -92,7 +92,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;</PreprocessorDefinitions>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -106,7 +106,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;_DIR=$(strip$(lastword$(subst/,,$(dir$($(SolutionDir)$&lt;))))</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;_DIR=$(strip$(lastword$(subst/,,$(dir$($(SolutionDir)$&lt;))))</PreprocessorDefinitions>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -130,7 +130,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;</PreprocessorDefinitions>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -148,7 +148,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;_DIR=$(strip$(lastword$(subst/,,$(dir$($(SolutionDir)$&lt;))))</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;_DIR=$(strip$(lastword$(subst/,,$(dir$($(SolutionDir)$&lt;))))</PreprocessorDefinitions>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -168,6 +168,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Headers\AssetManager.h" />
+    <ClInclude Include="Headers\AudioEventPacket.h" />
     <ClInclude Include="Headers\AudioHandler.h" />
     <ClInclude Include="Headers\Camera.h" />
     <ClInclude Include="Headers\CollisionManager.h" />
@@ -383,6 +384,7 @@
     <ClCompile Include="IMGUI\Source\imgui_tables.cpp" />
     <ClCompile Include="IMGUI\Source\imgui_widgets.cpp" />
     <ClCompile Include="Source\AssetManager.cpp" />
+    <ClCompile Include="Source\AudioEventPacket.cpp" />
     <ClCompile Include="Source\AudioHandler.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\ComponentPool.cpp" />

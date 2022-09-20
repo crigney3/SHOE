@@ -171,8 +171,11 @@
     <ClInclude Include="Headers\Texture.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\AudioEventPacket.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
     <ClInclude Include="Headers\Timeframe.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -370,8 +373,11 @@
     <ClCompile Include="Source\Texture.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\AudioEventPacket.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Timeframe.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

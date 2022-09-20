@@ -2,6 +2,7 @@
 #include <memory>
 #include <DirectXMath.h>
 #include "GameEntity.fwd.h"
+#include "AudioEventPacket.h"
 
 class Transform;
 
@@ -25,10 +26,12 @@ enum EntityEventType {
 	InTrigger,
 	OnCollisionExit,
 	OnTriggerExit,
-	AudioPlay,
-	AudioStop,
+	OnAudioLoad,
+	OnAudioPlay,
+	OnAudioPause,
+	OnAudioEnd,
 	EventCount,
-	REQUIRES_MESSAGE = 0b111111111111111100000
+	REQUIRES_MESSAGE = 0b11111111111111111100000
 };
 
 class IComponent
@@ -65,6 +68,10 @@ protected:
 	virtual void OnParentScale(std::shared_ptr<GameEntity> parent);
 	virtual void OnEnable();
 	virtual void OnDisable();
+	virtual void OnAudioLoad(AudioEventPacket audio);
+	virtual void OnAudioPlay(AudioEventPacket audio);
+	virtual void OnAudioPause(AudioEventPacket audio);
+	virtual void OnAudioEnd(AudioEventPacket audio);
 private:
 	std::shared_ptr<GameEntity> gameEntity;
 

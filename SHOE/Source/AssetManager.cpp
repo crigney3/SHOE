@@ -116,6 +116,8 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 
 	globalSounds.push_back(sound);
 
+	BroadcastGlobalEntityEvent(EntityEventType::OnAudioLoad, std::make_shared<AudioEventPacket>(baseFilename, nullptr));
+
 	return sound;
 }
 
