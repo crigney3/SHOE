@@ -1,5 +1,8 @@
 #pragma once
+
 #include "IComponent.h"
+#include <DirectXMath.h>
+
 class NoclipMovement : public IComponent
 {
 public:
