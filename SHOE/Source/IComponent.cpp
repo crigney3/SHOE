@@ -80,6 +80,18 @@ void IComponent::ReceiveEvent(EntityEventType event, std::shared_ptr<void> messa
 	case EntityEventType::OnTriggerExit:
 		OnTriggerExit(std::static_pointer_cast<GameEntity>(message));
 		break;
+	case EntityEventType::OnAudioLoad:
+		OnAudioLoad(*std::static_pointer_cast<AudioEventPacket>(message));
+		break;
+	case EntityEventType::OnAudioPlay:
+		OnAudioPlay(*std::static_pointer_cast<AudioEventPacket>(message));
+		break;
+	case EntityEventType::OnAudioPause:
+		OnAudioPause(*std::static_pointer_cast<AudioEventPacket>(message));
+		break;
+	case EntityEventType::OnAudioEnd:
+		OnAudioEnd(*std::static_pointer_cast<AudioEventPacket>(message));
+		break;
 	}
 }
 
@@ -212,6 +224,38 @@ void IComponent::OnEnable()
  * \brief Called when this entity is changed from enabled to disabled
  */
 void IComponent::OnDisable()
+{
+}
+
+/**
+ * \brief Called when an audio file is loaded
+ * \param parent std::shared_ptr<GameEntity> The parent who scaled
+ */
+void IComponent::OnAudioLoad(AudioEventPacket audio)
+{
+}
+
+/**
+ * \brief Called when an audio file is played
+ * \param audio AudioEventPacket Information about the audio file and broadcast originator
+ */
+void IComponent::OnAudioPlay(AudioEventPacket audio)
+{
+}
+
+/**
+ * \brief Called when an audio file is paused
+ * \param audio AudioEventPacket Information about the audio file and broadcast originator
+ */
+void IComponent::OnAudioPause(AudioEventPacket audio)
+{
+}
+
+/**
+ * \brief Called when an audio file reaches the end of play
+ * \param audio AudioEventPacket Information about the audio file and broadcast originator
+ */
+void IComponent::OnAudioEnd(AudioEventPacket audio)
 {
 }
 
