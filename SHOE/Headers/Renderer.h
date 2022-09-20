@@ -1,3 +1,5 @@
+#pragma once
+
 #include "AssetManager.h"
 #include "CollisionManager.h"
 

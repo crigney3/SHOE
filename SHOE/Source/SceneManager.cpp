@@ -892,9 +892,10 @@ void SceneManager::SaveEntities(rapidjson::Document& sceneDocToSave)
 /// Allows for tracking of the engine state
 /// </summary>
 /// <param name="engineState">Pointer to the engine state's storage</param>
-void SceneManager::Initialize(EngineState* engineState)
+void SceneManager::Initialize(EngineState* engineState, std::function<void()> progressListener)
 {
 	this->engineState = engineState;
+	this->progressListener = progressListener;
 }
 
 /// <summary>
@@ -916,7 +917,7 @@ std::string SceneManager::GetCurrentSceneName() {
 /// </summary>
 /// <param name="filepath">Path to the file</param>
 /// <param name="progressListener">Function to call when progressing to each new object load</param>
-void SceneManager::LoadScene(std::string filepath, std::function<void()> progressListener) {
+void SceneManager::LoadScene(std::string filepath) {
 	HRESULT hr = CoInitialize(NULL);
 
 	*engineState = EngineState::LOAD_SCENE;
@@ -947,6 +948,10 @@ void SceneManager::LoadScene(std::string filepath, std::function<void()> progres
 		// Remove the current scene from memory
 		assetManager.CleanAllVectors();
 
+//#if defined(DEBUG) || defined(_DEBUG)
+//		printf("Took %3.4f seconds for pre-initialization. \n", DXCore::GetTotalTime());
+//#endif
+
 		LoadAssets(sceneDoc, progressListener);
 		LoadEntities(sceneDoc, progressListener);
 
@@ -956,9 +961,14 @@ void SceneManager::LoadScene(std::string filepath, std::function<void()> progres
 
 		fclose(file);
 
+//#if defined(DEBUG) || defined(_DEBUG)
+//		printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
+//#endif
+
 		currentSceneName = loadingSceneName;
 		loadingSceneName = "";
 		*engineState = EngineState::EDITING;
+		if (progressListener) progressListener();
 	}
 	catch (...) {
 
@@ -1015,6 +1025,14 @@ void SceneManager::SaveScene(std::string filepath, std::string sceneName) {
 		printf("Failed to save scene with error:\n %s \n", std::current_exception());
 #endif
 	}
+}
+
+/// <summary>
+/// UNIMPLEMENTED - this function allows the user to choose a filpath and scene name
+/// to save a scene as.
+/// </summary>
+void SceneManager::SaveSceneAs() {
+
 }
 
 /// <summary>

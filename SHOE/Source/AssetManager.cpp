@@ -1188,6 +1188,9 @@ void AssetManager::InitializeTerrainEntities() {
 void AssetManager::InitializeTerrainMaterials() {
 	std::vector<std::shared_ptr<Material>> tMats = std::vector<std::shared_ptr<Material>>();
 
+	// OUTDATED: Initializes lots of objects for demo.
+	// These can still be viewed by loading the demo scene.
+
 	std::shared_ptr<Texture> albedoTexture;
 	std::shared_ptr<Texture> normalTexture;
 	std::shared_ptr<Texture> roughTexture;

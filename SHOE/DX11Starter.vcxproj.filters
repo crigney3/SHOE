@@ -171,6 +171,9 @@
     <ClInclude Include="Headers\Texture.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\EditingUI.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
     <ClInclude Include="Headers\AudioEventPacket.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
@@ -371,6 +374,9 @@
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\Texture.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\EditingUI.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\AudioEventPacket.cpp">

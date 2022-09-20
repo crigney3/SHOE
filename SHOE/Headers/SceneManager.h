@@ -173,6 +173,7 @@ private:
 	AssetManager& assetManager = AssetManager::GetInstance();
 
 	EngineState* engineState;
+	std::function<void()> progressListener;
 
 	std::string currentSceneName;
 	std::string loadingSceneName;
@@ -196,10 +197,11 @@ private:
 	void SaveAssets(rapidjson::Document& sceneDocToSave);
 	void SaveEntities(rapidjson::Document& sceneDocToSave);
 public:
-	void Initialize(EngineState* engineState);
+	void Initialize(EngineState* engineState, std::function<void()> progressListener);
 
-	void LoadScene(std::string filepath, std::function<void()> progressListener = {});
+	void LoadScene(std::string filepath);
 	void SaveScene(std::string filepath, std::string sceneName = "");
+	void SaveSceneAs();
 
 	void PrePlaySave();
 	void PostPlayLoad();
