@@ -200,6 +200,7 @@ public:
 
 	void LoadScene(std::string filepath, std::function<void()> progressListener = {});
 	void SaveScene(std::string filepath, std::string sceneName = "");
+	void SaveSceneAs();
 
 	void PrePlaySave();
 	void PostPlayLoad();
