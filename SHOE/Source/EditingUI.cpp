@@ -1,4 +1,4 @@
-#include "../Headers/EdditingUI.h"
+#include "../Headers/EditingUI.h"
 #include "../Headers/Game.h"
 #include "../Headers/Time.h"
 #include "..\Headers\ComponentManager.h"
@@ -15,19 +15,37 @@
 // For the DirectX Math library
 using namespace DirectX;
 
-ImGuiIO& io = ImGui::GetIO();
+EditingUI::EditingUI(std::shared_ptr<Renderer> renderer) {
+	statsEnabled = true;
+	movingEnabled = true;
+	objWindowEnabled = false;
+	skyWindowEnabled = false;
+	objHierarchyEnabled = true;
+	rtvWindowEnabled = false;
 
-void ResetUI(Game* game) {
-	Input& input = game->input;
+	entityUIIndex = -1;
+	skyUIIndex = 0;
 
+	objWindowEnabled = false;
+	skyWindowEnabled = false;
+	entityUIIndex = -1;
+
+	this->renderer = renderer;
+}
+
+EditingUI::~EditingUI() {
+
+}
+
+void EditingUI::ResetUI() {
 	// Reset the gui state to prevent tainted input
 	input.SetGuiKeyboardCapture(false);
 	input.SetGuiMouseCapture(false);
 
-	//ImGuiIO& io = ImGui::GetIO();
+	ImGuiIO& io = ImGui::GetIO();
 	io.DeltaTime = Time::deltaTime;
-	io.DisplaySize.x = (float)game->width;
-	io.DisplaySize.y = (float)game->height;
+	io.DisplaySize.x = (float)dxCore->width;
+	io.DisplaySize.y = (float)dxCore->height;
 	io.KeyCtrl = input.KeyDown(VK_CONTROL);
 	io.KeyAlt = input.KeyDown(VK_SHIFT);
 	io.MousePos.x = (float)input.GetMouseX();
@@ -39,122 +57,286 @@ void ResetUI(Game* game) {
 	input.GetKeyArray(io.KeysDown, 256);
 }
 
-void ResetFrame() {
+void EditingUI::ResetFrame() {
 	// Reset the frame
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 }
 
-void DisplayMenu(Game* game) {
+void EditingUI::DisplayMenu() {
 	// Display a menu at the top
 	if (ImGui::BeginMainMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
 			ImGui::Text("This menu will eventually contain a saving and loading system, designed for swapping between feature test scenes.");
 			if (ImGui::MenuItem("Save Scene", "ctrl+s")) {
-				game->SaveScene();
+				sceneManager.SaveScene("FIX");
 			}
 
-			if (ImGui::MenuItem("Save Scene As", "ctrl+s")) {
-				game->SaveSceneAs();
+			if (ImGui::MenuItem("Save Scene As", "ctrl++shift+s")) {
+				sceneManager.SaveSceneAs();
 			}
 
 			if (ImGui::MenuItem("Load Scene", "ctrl+s")) {
-				game->LoadScene();
+				sceneManager.LoadScene("FIX");
 			}
 
 			ImGui::Separator();
 
 			if (ImGui::BeginMenu("Import New Asset")) {
 				if (ImGui::MenuItem("Texture")) {
-					game->globalAssets.ImportTexture();
+					globalAssets.ImportTexture();
 				}
 
 				if (ImGui::MenuItem("Sky")) {
-					game->globalAssets.ImportSkyTexture();
+					globalAssets.ImportSkyTexture();
 				}
 
 				if (ImGui::MenuItem("Model/Mesh")) {
-					game->globalAssets.ImportMesh();
+					globalAssets.ImportMesh();
 				}
 
 				if (ImGui::MenuItem("Audio")) {
-					game->globalAssets.ImportSound();
+					globalAssets.ImportSound();
 				}
 
 				if (ImGui::MenuItem("HeightMap")) {
-					game->globalAssets.ImportHeightMap();
+					globalAssets.ImportHeightMap();
 				}
 
 				if (ImGui::MenuItem("Font")) {
-					game->globalAssets.ImportFont();
-
-					ImGui::EndMenu();
+					globalAssets.ImportFont();
 				}
 
 				ImGui::EndMenu();
 			}
 
-			if (ImGui::BeginMenu("Edit")) {
-				ImGui::MenuItem("GameObjects", "g", game->GetObjWindowEnabled());
-				ImGui::MenuItem("Object Hierarchy", "h", game->GetObjHierarchyEnabled());
-				ImGui::MenuItem("Skies", "", game->GetSkyWindowEnabled());
-				ImGui::MenuItem("Sound", "", game->GetSoundWindowEnabled());
-				ImGui::MenuItem("Texture", "", game->GetTextureWindowEnabled());
-				ImGui::MenuItem("Material", "", game->GetMaterialWindowEnabled());
-				ImGui::MenuItem("Colliders", "", game->GetCollidersWindowEnabled());
-
-				ImGui::EndMenu();
-			}
-
-			if (ImGui::BeginMenu("View")) {
-				ImGui::MenuItem("Render Target Views", 0, game->GetRtvWindowEnabled());
-
-				ImGui::EndMenu();
-			}
-
-			if (ImGui::BeginMenu("Add")) {
-				ImGui::Text("Add a new GameEntity, which can have components attached.");
-
-				if (ImGui::Button("Add GameEntity")) {
-					game->globalAssets.CreateGameEntity("GameEntity" + std::to_string(game->globalAssets.GetGameEntityArraySize()));
-
-					game->SetEntityUIIndex(game->globalAssets.GetGameEntityArraySize() - 1);
-					game->SetObjWindowEnabled(true);
-				}
-
-				ImGui::EndMenu();
-			}
-
-			if (ImGui::BeginMenu("Extra")) {
-				ImGui::Text("Spare dropdown");
-
-				ImGui::EndMenu();
-			}
-
-			if (ImGui::BeginMenu("Toggleables")) {
-				//ImGui::MenuItem("Toggle Flashlight Flickering", "v", &flickeringEnabled);
-				ImGui::MenuItem("Toggle Stats Menu", ".", game->GetStatsEnabled());
-				ImGui::MenuItem("Toggle movement", "m", game->GetMovingEnabled());
-
-				ImGui::EndMenu();
-			}
-
-			ImGui::EndMainMenuBar();
+			ImGui::EndMenu();
 		}
+
+		if (ImGui::BeginMenu("Edit")) {
+			ImGui::MenuItem("GameObjects", "g", GetObjWindowEnabled());
+			ImGui::MenuItem("Object Hierarchy", "h", GetObjHierarchyEnabled());
+			ImGui::MenuItem("Skies", "", GetSkyWindowEnabled());
+			ImGui::MenuItem("Sound", "", GetSoundWindowEnabled());
+			ImGui::MenuItem("Texture", "", GetTextureWindowEnabled());
+			ImGui::MenuItem("Material", "", GetMaterialWindowEnabled());
+			ImGui::MenuItem("Colliders", "", GetCollidersWindowEnabled());
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("View")) {
+			ImGui::MenuItem("Render Target Views", 0, GetRtvWindowEnabled());
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Add")) {
+			ImGui::Text("Add a new GameEntity, which can have components attached.");
+
+			if (ImGui::Button("Add GameEntity")) {
+				globalAssets.CreateGameEntity("GameEntity" + std::to_string(globalAssets.GetGameEntityArraySize()));
+
+				SetEntityUIIndex(globalAssets.GetGameEntityArraySize() - 1);
+				SetObjWindowEnabled(true);
+			}
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Extra")) {
+			ImGui::Text("Spare dropdown");
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Toggleables")) {
+			//ImGui::MenuItem("Toggle Flashlight Flickering", "v", &flickeringEnabled);
+			ImGui::MenuItem("Toggle Stats Menu", ".", GetStatsEnabled());
+			ImGui::MenuItem("Toggle movement", "m", GetMovingEnabled());
+
+			ImGui::EndMenu();
+		}
+
+		ImGui::EndMainMenuBar();
 	}
 }
 
-void EdditingUI::GenerateEditingUI(Game* game) {
-	Input& input = game->input;
-	ResetUI(game);
+void EditingUI::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
+	std::string nodeName = entity->GetName();
+	if (ImGui::TreeNodeEx(nodeName.c_str(),
+		ImGuiTreeNodeFlags_DefaultOpen |
+		ImGuiTreeNodeFlags_FramePadding)) {
+		int childCount = entity->GetTransform()->GetChildCount();
+		if (childCount > 0) {
+			std::vector<std::shared_ptr<GameEntity>> children = entity->GetTransform()->GetChildrenEntities();
+			for (int i = 0; i < childCount; i++) {
+				RenderChildObjectsInUI(children[i]);
+			}
+		}
+
+		if (ImGui::IsItemClicked()) {
+			entityUIIndex = globalAssets.GetGameEntityIDByName(entity->GetName());
+			objWindowEnabled = true;
+		}
+
+		if (ImGui::BeginDragDropTarget()) {
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PARENTING_CELL"))
+			{
+				IM_ASSERT(payload->DataSize == sizeof(int));
+				int payload_n = *(const int*)payload->Data;
+
+				// Logic to parent objects and reorder list
+				std::shared_ptr<GameEntity> sourceEntity = globalAssets.GetGameEntityAtID(payload_n);
+
+				sourceEntity->GetTransform()->SetParent(entity->GetTransform());
+
+				// Re-render children list
+				for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
+					if (globalAssets.GetGameEntityAtID(i)->GetTransform()->GetParent() == NULL) {
+						RenderChildObjectsInUI(globalAssets.GetGameEntityAtID(i));
+					}
+				}
+			}
+
+			ImGui::EndDragDropTarget();
+		}
+
+		if (ImGui::BeginDragDropSource()) {
+			ImGui::SetDragDropPayload("PARENTING_CELL", &entityUIIndex, sizeof(int));
+
+			ImGui::EndDragDropSource();
+		}
+
+		ImGui::TreePop();
+	}
+}
+
+/// <summary>
+/// Determine if any action should be taken based on specific keypresses.
+/// </summary>
+void EditingUI::TrackHotkeys() {
+	if (input.KeyPress(VK_RIGHT)) {
+		skyUIIndex++;
+		if (skyUIIndex > globalAssets.GetSkyArraySize() - 1) {
+			skyUIIndex = 0;
+		}
+		globalAssets.GetSkyAtID(skyUIIndex);
+	}
+	else if (input.KeyPress(VK_LEFT)) {
+		skyUIIndex--;
+		if (skyUIIndex < 0) {
+			skyUIIndex = globalAssets.GetSkyArraySize() - 1;
+		}
+		globalAssets.GetSkyAtID(skyUIIndex);
+	}
+
+	if (input.KeyPress('P')) {
+		ImGui::Render();
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+		ImGui_ImplDX11_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+		sceneManager.PrePlaySave();
+	}
+
+	//Click to select an object
+	if (input.MouseRightPress()) {
+		clickedEntityBuffer = GetClickedEntity();
+	}
+	if (input.MouseRightRelease()) {
+		if (clickedEntityBuffer != nullptr && clickedEntityBuffer == GetClickedEntity()) {
+			objWindowEnabled = true;
+			entityUIIndex = globalAssets.GetGameEntityIDByName(clickedEntityBuffer->GetName());
+		}
+		else {
+			objWindowEnabled = false;
+			entityUIIndex = -1;
+		}
+		clickedEntityBuffer = nullptr;
+		renderer->selectedEntity = entityUIIndex;
+	}
+}
+
+std::shared_ptr<GameEntity> EditingUI::GetClickedEntity()
+{
+	//Load necessary vectors and matrices
+	XMMATRIX projectionMatrix = XMLoadFloat4x4(&globalAssets.GetEditingCamera()->GetProjectionMatrix());
+	XMMATRIX viewMatrix = XMLoadFloat4x4(&globalAssets.GetEditingCamera()->GetViewMatrix());
+
+	//Convert screen position to ray
+	//Based on https://stackoverflow.com/questions/39376687/mouse-picking-with-ray-casting-in-directx
+	XMVECTOR origin = XMVector3Unproject(
+		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 0)),
+		0,
+		0,
+		dxCore->width,
+		dxCore->height,
+		0,
+		1,
+		projectionMatrix,
+		viewMatrix,
+		XMMatrixIdentity());
+
+	XMVECTOR destination = XMVector3Unproject(
+		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 1)),
+		0,
+		0,
+		dxCore->width,
+		dxCore->height,
+		0,
+		1,
+		projectionMatrix,
+		viewMatrix,
+		XMMatrixIdentity());
+
+	XMVECTOR direction = XMVector3Normalize(destination - origin);
+
+	//Raycast against MeshRenderer bounds
+	std::shared_ptr<GameEntity> closestHitEntity = nullptr;
+	float distToHit = globalAssets.GetEditingCamera()->GetFarDist();
+	float rayLength = globalAssets.GetEditingCamera()->GetFarDist();
+
+	for (std::shared_ptr<MeshRenderer> meshRenderer : ComponentManager::GetAllEnabled<MeshRenderer>())
+	{
+		if (meshRenderer->GetBounds().Intersects(origin, direction, rayLength)) {
+			std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
+			XMMATRIX worldMatrix = XMLoadFloat4x4(&meshRenderer->GetTransform()->GetWorldMatrix());
+			Vertex* vertices = mesh->GetVertexArray();
+			unsigned int* indices = mesh->GetIndexArray();
+			float distToTri;
+
+			for (int i = 0; i < mesh->GetIndexCount(); i += 3) {
+				XMVECTOR vertex0 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i]].Position), worldMatrix);
+				XMVECTOR vertex1 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 1]].Position), worldMatrix);
+				XMVECTOR vertex2 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 2]].Position), worldMatrix);
+				if (DirectX::TriangleTests::Intersects(origin, direction, vertex0, vertex1, vertex2, distToTri) && distToTri < distToHit)
+				{
+					distToHit = distToTri;
+					closestHitEntity = meshRenderer->GetGameEntity();
+				}
+			}
+		}
+	}
+
+	return closestHitEntity;
+}
+
+void EditingUI::GenerateEditingUI() {	
+	ResetUI();
 	ResetFrame();
 
 	// Determine new input capture
+	ImGuiIO& io = ImGui::GetIO();
+
 	input.SetGuiKeyboardCapture(io.WantCaptureKeyboard);
 	input.SetGuiMouseCapture(io.WantCaptureMouse);
 
-	if (*(game->GetStatsEnabled())) {
+	DisplayMenu();
+	TrackHotkeys();
+
+	if (*(GetStatsEnabled())) {
 		// Display a UI element for stat tracking
 		ImGui::Begin("Stats - Debug Mode");
 
@@ -163,8 +345,8 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 
 		ImGui::Text(node.c_str());
 
-		infoStr = std::to_string(game->width);
-		std::string infoStrTwo = std::to_string(game->height);
+		infoStr = std::to_string(dxCore->width);
+		std::string infoStrTwo = std::to_string(dxCore->height);
 		node = "Window Width: " + infoStr + ", Window Height: " + infoStrTwo;
 
 		ImGui::Text(node.c_str());
@@ -174,7 +356,7 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 
 		ImGui::Text(node.c_str());
 
-		infoStr = std::to_string(game->globalAssets.GetGameEntityArraySize());
+		infoStr = std::to_string(globalAssets.GetGameEntityArraySize());
 		node = "Game Entity count: " + infoStr;
 
 		ImGui::Text(node.c_str());
@@ -182,27 +364,27 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 		ImGui::End();
 	}
 
-	if (*(game->GetSkyWindowEnabled())) {
+	if (*(GetSkyWindowEnabled())) {
 		ImGui::Begin("Sky Editor");
 
-		int skyUIIndex = game->GetSkyUIIndex();
-		std::shared_ptr<Sky> currentSky = game->globalAssets.GetSkyAtID(skyUIIndex);
+		int skyUIIndex = GetSkyUIIndex();
+		std::shared_ptr<Sky> currentSky = globalAssets.GetSkyAtID(skyUIIndex);
 
 		if (ImGui::ArrowButton("Previous Sky", ImGuiDir_Left)) {
 			skyUIIndex--;
 			if (skyUIIndex < 0) {
-				skyUIIndex = game->globalAssets.GetSkyArraySize() - 1;
+				skyUIIndex = globalAssets.GetSkyArraySize() - 1;
 			}
-			game->globalAssets.currentSky = game->globalAssets.GetSkyAtID(skyUIIndex);
+			globalAssets.currentSky = globalAssets.GetSkyAtID(skyUIIndex);
 		};
 		ImGui::SameLine();
 
 		if (ImGui::ArrowButton("Next Sky", ImGuiDir_Right)) {
 			skyUIIndex++;
-			if (skyUIIndex > game->globalAssets.GetSkyArraySize() - 1) {
+			if (skyUIIndex > globalAssets.GetSkyArraySize() - 1) {
 				skyUIIndex = 0;
 			}
-			game->globalAssets.currentSky = game->globalAssets.GetSkyAtID(skyUIIndex);
+			globalAssets.currentSky = globalAssets.GetSkyAtID(skyUIIndex);
 		};
 
 		std::string nameBuffer;
@@ -221,14 +403,14 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 			ImGui::Image((ImTextureID*)currentSky->GetBRDFLookupTexture().Get(), ImVec2(256, 256));
 		}
 
-		game->SetSkyUIIndex(skyUIIndex);
+		SetSkyUIIndex(skyUIIndex);
 		//ImGui::Image(globalAssets.GetEmitterAtID(0)->particleDataSRV.Get(), ImVec2(256, 256));
 		ImGui::End();
 	}
 
-	if (*(game->GetTextureWindowEnabled())) {
+	if (*(GetTextureWindowEnabled())) {
 		static int textureUIIndex = 0;
-			std::shared_ptr<Texture> currentTexture = game->globalAssets.GetTextureAtID(textureUIIndex);
+			std::shared_ptr<Texture> currentTexture = globalAssets.GetTextureAtID(textureUIIndex);
 			std::string indexStr = std::to_string(textureUIIndex) + " - " + currentTexture->GetName();
 			std::string node = "Viewing texture " + indexStr;
 			ImGui::Begin("Texture Editor");
@@ -236,13 +418,13 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 
 			if (ImGui::ArrowButton("Previous Texture", ImGuiDir_Left)) {
 				textureUIIndex--;
-					if (textureUIIndex < 0) textureUIIndex = game->globalAssets.GetTextureArraySize() - 1;
+					if (textureUIIndex < 0) textureUIIndex = globalAssets.GetTextureArraySize() - 1;
 			};
 		ImGui::SameLine();
 
 		if (ImGui::ArrowButton("Next Texture", ImGuiDir_Right)) {
 			textureUIIndex++;
-			if (textureUIIndex > game->globalAssets.GetTextureArraySize() - 1) textureUIIndex = 0;
+			if (textureUIIndex > globalAssets.GetTextureArraySize() - 1) textureUIIndex = 0;
 		};
 
 		std::string nameBuffer;
@@ -260,10 +442,10 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 		ImGui::End();
 	}
 
-	if (*(game->GetObjWindowEnabled())) {
+	if (*(GetObjWindowEnabled())) {
 		// Display the debug UI for objects
-		int entityUIIndex = game->GetEntityUIIndex();
-		std::shared_ptr<GameEntity> currentEntity = game->globalAssets.GetGameEntityAtID(entityUIIndex);
+		int entityUIIndex = GetEntityUIIndex();
+		std::shared_ptr<GameEntity> currentEntity = globalAssets.GetGameEntityAtID(entityUIIndex);
 		std::string indexStr = std::to_string(entityUIIndex) + " - " + currentEntity->GetName();
 		std::string node = "Editing object " + indexStr;
 		ImGui::Begin("Object Editor");
@@ -271,13 +453,13 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 
 		if (ImGui::ArrowButton("Previous Object", ImGuiDir_Left)) {
 			entityUIIndex--;
-			if (entityUIIndex < 0) entityUIIndex = game->globalAssets.GetGameEntityArraySize() - 1;
+			if (entityUIIndex < 0) entityUIIndex = globalAssets.GetGameEntityArraySize() - 1;
 		};
 		ImGui::SameLine();
 
 		if (ImGui::ArrowButton("Next Object", ImGuiDir_Right)) {
 			entityUIIndex++;
-			if (entityUIIndex > game->globalAssets.GetGameEntityArraySize() - 1) entityUIIndex = 0;
+			if (entityUIIndex > globalAssets.GetGameEntityArraySize() - 1) entityUIIndex = 0;
 		};
 
 		std::string nameBuffer;
@@ -337,9 +519,9 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 
 					ImGui::Text(nameBuf);
 					if (ImGui::BeginListBox("MaterialList")) {
-						for (int i = 0; i < game->globalAssets.GetMaterialArraySize(); i++) {
+						for (int i = 0; i < globalAssets.GetMaterialArraySize(); i++) {
 							const bool is_selected = (materialIndex == i);
-							if (ImGui::Selectable(game->globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
+							if (ImGui::Selectable(globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
 								materialIndex = i;
 							}
 
@@ -350,7 +532,7 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 					}
 
 					if (ImGui::Button("Swap")) {
-						meshRenderer->SetMaterial(game->globalAssets.GetMaterialAtID(materialIndex));
+						meshRenderer->SetMaterial(globalAssets.GetMaterialAtID(materialIndex));
 					}
 
 					float currentTiling = meshRenderer->GetMaterial()->GetTiling();
@@ -369,9 +551,9 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 
 					ImGui::Text(nameBuf);
 					if (ImGui::BeginListBox("MeshList")) {
-						for (int i = 0; i < game->globalAssets.GetMeshArraySize(); i++) {
+						for (int i = 0; i < globalAssets.GetMeshArraySize(); i++) {
 							const bool is_selected = (meshIndex == i);
-							if (ImGui::Selectable(game->globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
+							if (ImGui::Selectable(globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
 								meshIndex = i;
 							}
 
@@ -382,7 +564,7 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 					}
 
 					if (ImGui::Button("Swap")) {
-						meshRenderer->SetMesh(game->globalAssets.GetMeshAtID(meshIndex));
+						meshRenderer->SetMesh(globalAssets.GetMeshAtID(meshIndex));
 					}
 				}
 			}
@@ -462,9 +644,9 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 
 					ImGui::Text(nameBuf);
 					if (ImGui::BeginListBox("TMaterialList")) {
-						for (int i = 0; i < game->globalAssets.GetTerrainMaterialArraySize(); i++) {
+						for (int i = 0; i < globalAssets.GetTerrainMaterialArraySize(); i++) {
 							const bool is_selected = (materialIndex == i);
-							if (ImGui::Selectable(game->globalAssets.GetTerrainMaterialAtID(i)->GetName().c_str(), is_selected)) {
+							if (ImGui::Selectable(globalAssets.GetTerrainMaterialAtID(i)->GetName().c_str(), is_selected)) {
 								materialIndex = i;
 							}
 
@@ -475,7 +657,7 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 					}
 
 					if (ImGui::Button("Swap")) {
-						terrain->SetMaterial(game->globalAssets.GetTerrainMaterialAtID(materialIndex));
+						terrain->SetMaterial(globalAssets.GetTerrainMaterialAtID(materialIndex));
 					}
 				}
 
@@ -490,9 +672,9 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 
 					ImGui::Text(nameBuf);
 					if (ImGui::BeginListBox("MeshList")) {
-						for (int i = 0; i < game->globalAssets.GetMeshArraySize(); i++) {
+						for (int i = 0; i < globalAssets.GetMeshArraySize(); i++) {
 							const bool is_selected = (meshIndex == i);
-							if (ImGui::Selectable(game->globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
+							if (ImGui::Selectable(globalAssets.GetMeshAtID(i)->GetName().c_str(), is_selected)) {
 								meshIndex = i;
 							}
 
@@ -503,7 +685,7 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 					}
 
 					if (ImGui::Button("Swap")) {
-						terrain->SetMesh(game->globalAssets.GetMeshAtID(meshIndex));
+						terrain->SetMesh(globalAssets.GetMeshAtID(meshIndex));
 					}
 				}
 			}
@@ -571,7 +753,7 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 				light->SetIntensity(UILightIntensity);
 
 				if (ImGui::Button("Mark as main")) {
-					game->globalAssets.SetMainCamera(light->GetShadowProjector());
+					globalAssets.SetMainCamera(light->GetShadowProjector());
 				}
 			}
 
@@ -603,7 +785,7 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 				camera->SetFarDist(farDist);
 
 				if (ImGui::Button("Mark as main")) {
-					game->globalAssets.SetMainCamera(camera);
+					globalAssets.SetMainCamera(camera);
 				}
 			}
 
@@ -694,31 +876,31 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 			ImGui::PopStyleColor(3);
 			ImGui::PopID();
 		}
-		game->SetEntityUIIndex(entityUIIndex);
+		SetEntityUIIndex(entityUIIndex);
 		ImGui::End();
 	}
 
-	if (*(game->GetSoundWindowEnabled())) {
+	if (*(GetSoundWindowEnabled())) {
 		ImGui::Begin("Sound Menu");
 
-		for (int i = 0; i < game->globalAssets.GetSoundArraySize(); i++) {
+		for (int i = 0; i < globalAssets.GetSoundArraySize(); i++) {
 			std::string buttonName = "Play Piano Sound ##" + std::to_string(i);
 			if (ImGui::Button(buttonName.c_str())) {
-				game->audioHandler.BasicPlaySound(game->globalAssets.GetSoundAtID(i));
+				audioHandler.BasicPlaySound(globalAssets.GetSoundAtID(i));
 			}
 		}
 
 		ImGui::End();
 	}
 
-	if (*(game->GetObjHierarchyEnabled())) {
+	if (*(GetObjHierarchyEnabled())) {
 		// Display the UI for setting parents
 		if (ImGui::TreeNodeEx("GameObjects",
 			ImGuiTreeNodeFlags_DefaultOpen |
 			ImGuiTreeNodeFlags_FramePadding)) {
-			for (int i = 0; i < game->globalAssets.GetGameEntityArraySize(); i++) {
-				if (game->globalAssets.GetGameEntityAtID(i)->GetTransform()->GetParent() == nullptr) {
-					game->RenderChildObjectsInUI(game->globalAssets.GetGameEntityAtID(i));
+			for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
+				if (globalAssets.GetGameEntityAtID(i)->GetTransform()->GetParent() == nullptr) {
+					RenderChildObjectsInUI(globalAssets.GetGameEntityAtID(i));
 				}
 			}
 
@@ -726,24 +908,24 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 		}
 	}
 
-	if (*(game->GetRtvWindowEnabled())) {
+	if (*(GetRtvWindowEnabled())) {
 		ImGui::Begin("Multiple Render Target Viewer");
 
 		if (ImGui::CollapsingHeader("MRT Effects")) {
 			ImGui::Text("Color Without Ambient");
-			ImGui::Image(game->renderer->GetRenderTargetSRV(RTVTypes::COLORS_NO_AMBIENT).Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_NO_AMBIENT).Get(), ImVec2(500, 300));
 			ImGui::Text("Ambient Color");
-			ImGui::Image(game->renderer->GetRenderTargetSRV(RTVTypes::COLORS_AMBIENT).Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_AMBIENT).Get(), ImVec2(500, 300));
 			ImGui::Text("Normals");
-			ImGui::Image(game->renderer->GetRenderTargetSRV(RTVTypes::NORMALS).Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::NORMALS).Get(), ImVec2(500, 300));
 			ImGui::Text("Depths");
-			ImGui::Image(game->renderer->GetRenderTargetSRV(RTVTypes::DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::DEPTHS).Get(), ImVec2(500, 300));
 			ImGui::Text("SSAO");
-			ImGui::Image(game->renderer->GetRenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
 			ImGui::Text("SSAO Post Blur");
-			ImGui::Image(game->renderer->GetRenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
 			ImGui::Text("Composite");
-			ImGui::Image(game->renderer->GetRenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
 		}
 
 		if (ImGui::CollapsingHeader("Shadow Depth Views")) {
@@ -757,22 +939,22 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 
 		if (ImGui::CollapsingHeader("Depth Prepass Views")) {
 			ImGui::Text("Refraction Silhouette Depths");
-			ImGui::Image(game->renderer->GetRenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
 			ImGui::Text("Transparency Depth Prepass");
-			ImGui::Image(game->renderer->GetMiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
 			ImGui::Text("Render Depth Prepass (used for optimization)");
-			ImGui::Image(game->renderer->GetMiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
 		}
 
 		if (ImGui::CollapsingHeader("Selected Entity Filled View")) {
 			ImGui::Text("Selected Entity");
-			ImGui::Image(game->renderer->outlineSRV.Get(), ImVec2(500, 300));
+			ImGui::Image(renderer->outlineSRV.Get(), ImVec2(500, 300));
 		}
 
 		ImGui::End();
 	}
 
-	if (*(game->GetCollidersWindowEnabled()))
+	if (*(GetCollidersWindowEnabled()))
 	{
 		ImGui::Begin("Collider Bulk Operations");
 
@@ -784,4 +966,65 @@ void EdditingUI::GenerateEditingUI(Game* game) {
 	}
 
 	// TODO: Add Material Edit menu
+}
+
+// Getters
+bool* EditingUI::GetObjWindowEnabled() {
+	return &objWindowEnabled;
+}
+
+bool* EditingUI::GetObjHierarchyEnabled() {
+	return &objHierarchyEnabled;
+}
+
+bool* EditingUI::GetSkyWindowEnabled() {
+	return &skyWindowEnabled;
+}
+
+bool* EditingUI::GetSoundWindowEnabled() {
+	return &soundWindowEnabled;
+}
+
+bool* EditingUI::GetTextureWindowEnabled() {
+	return &textureWindowEnabled;
+}
+
+bool* EditingUI::GetMaterialWindowEnabled() {
+	return &materialWindowEnabled;
+}
+
+bool* EditingUI::GetCollidersWindowEnabled() {
+	return &collidersWindowEnabled;
+}
+
+bool* EditingUI::GetRtvWindowEnabled() {
+	return &rtvWindowEnabled;
+}
+
+bool* EditingUI::GetStatsEnabled() {
+	return &statsEnabled;
+}
+
+bool* EditingUI::GetMovingEnabled() {
+	return &movingEnabled;
+}
+
+int EditingUI::GetEntityUIIndex() {
+	return entityUIIndex;
+};
+int EditingUI::GetSkyUIIndex() {
+	return skyUIIndex;
+};
+
+
+// Setters
+void EditingUI::SetEntityUIIndex(int NewEntityUIIndex) {
+	entityUIIndex = NewEntityUIIndex;
+};
+void EditingUI::SetSkyUIIndex(int NewSkyUIIndex) {
+	skyUIIndex = NewSkyUIIndex;
+};
+
+void EditingUI::SetObjWindowEnabled(bool enabled) {
+	objWindowEnabled = enabled;
 }

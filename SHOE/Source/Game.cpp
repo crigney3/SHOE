@@ -6,8 +6,6 @@
 #include "..\Headers\NoclipMovement.h"
 #include <d3dcompiler.h>
 
-#include "../Headers/EdditingUI.h"
-
 // Needed for a helper function to read compiled shader files from the hard drive
 #pragma comment(lib, "d3dcompiler.lib")
 
@@ -104,15 +102,6 @@ void Game::Init()
 
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(this->hWnd);
-	statsEnabled = true;
-	movingEnabled = true;
-	objWindowEnabled = false;
-	skyWindowEnabled = false;
-	objHierarchyEnabled = true;
-	rtvWindowEnabled = false;
-
-	entityUIIndex = -1;
-	skyUIIndex = 0;
 
 	// Tell the input assembler stage of the pipeline what kind of
 	// geometric primitives (points, lines or triangles) we want to draw.  
@@ -128,6 +117,9 @@ void Game::Init()
 		backBufferRTV,
 		depthStencilView);
 
+	// Start the UI now that IMGUI has initialized
+	editUI = std::make_unique<EditingUI>(renderer);
+
 #if defined(DEBUG) || defined(_DEBUG)
 	printf("Took %3.4f seconds for  post-initialization. \n", this->GetDeltaTime());
 	printf("Total Initialization time was %3.4f seconds. \n", this->GetTotalTime());
@@ -141,10 +133,6 @@ void Game::LoadScene() {
 	//printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
 #endif
 
-	objWindowEnabled = false;
-	skyWindowEnabled = false;
-	entityUIIndex = -1;
-
 	sceneManager.LoadScene("structureTest.json", std::bind(&Game::DrawLoadingScreen, this));
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -155,14 +143,17 @@ void Game::LoadScene() {
 
 	context->Flush();
 
-	//With everything initialized, start the renderer
-	renderer = std::make_unique<Renderer>(height,
+	// With everything initialized, start the renderer
+	renderer = std::make_shared<Renderer>(height,
 		width,
 		device,
 		context,
 		swapChain,
 		backBufferRTV,
 		depthStencilView);
+
+	// Start the UI now that IMGUI has initialized
+	editUI = std::make_unique<EditingUI>(renderer);
 }
 
 void Game::SaveScene() {
@@ -175,124 +166,6 @@ void Game::SaveSceneAs() {
 
 
 	sceneManager.SaveScene("structureTest.json");
-}
-
-void Game::GenerateEditingUI() {
-	EdditingUI::GenerateEditingUI(this);
-}
-
-void Game::RenderChildObjectsInUI(std::shared_ptr<GameEntity> entity) {
-	std::string nodeName = entity->GetName();
-	if (ImGui::TreeNodeEx(nodeName.c_str(),
-		ImGuiTreeNodeFlags_DefaultOpen |
-		ImGuiTreeNodeFlags_FramePadding)) {
-		int childCount = entity->GetTransform()->GetChildCount();
-		if (childCount > 0) {
-			std::vector<std::shared_ptr<GameEntity>> children = entity->GetTransform()->GetChildrenEntities();
-			for (int i = 0; i < childCount; i++) {
-				RenderChildObjectsInUI(children[i]);
-			}
-		}
-
-		if (ImGui::IsItemClicked()) {
-			entityUIIndex = globalAssets.GetGameEntityIDByName(entity->GetName());
-			objWindowEnabled = true;
-		}
-
-		if (ImGui::BeginDragDropTarget()) {
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PARENTING_CELL"))
-			{
-				IM_ASSERT(payload->DataSize == sizeof(int));
-				int payload_n = *(const int*)payload->Data;
-
-				// Logic to parent objects and reorder list
-				std::shared_ptr<GameEntity> sourceEntity = globalAssets.GetGameEntityAtID(payload_n);
-
-				sourceEntity->GetTransform()->SetParent(entity->GetTransform());
-
-				// Re-render children list
-				for (int i = 0; i < globalAssets.GetGameEntityArraySize(); i++) {
-					if (globalAssets.GetGameEntityAtID(i)->GetTransform()->GetParent() == NULL) {
-						RenderChildObjectsInUI(globalAssets.GetGameEntityAtID(i));
-					}
-				}
-			}
-
-			ImGui::EndDragDropTarget();
-		}
-
-		if (ImGui::BeginDragDropSource()) {
-			ImGui::SetDragDropPayload("PARENTING_CELL", &entityUIIndex, sizeof(int));
-
-			ImGui::EndDragDropSource();
-		}
-
-		ImGui::TreePop();
-	}
-}
-
-std::shared_ptr<GameEntity> Game::GetClickedEntity()
-{
-	//Load necessary vectors and matrices
-	XMMATRIX projectionMatrix = XMLoadFloat4x4(&globalAssets.GetEditingCamera()->GetProjectionMatrix());
-	XMMATRIX viewMatrix = XMLoadFloat4x4(&globalAssets.GetEditingCamera()->GetViewMatrix());
-
-	//Convert screen position to ray
-	//Based on https://stackoverflow.com/questions/39376687/mouse-picking-with-ray-casting-in-directx
-	XMVECTOR origin = XMVector3Unproject(
-		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 0)),
-		0,
-		0,
-		width,
-		height,
-		0,
-		1,
-		projectionMatrix,
-		viewMatrix,
-		XMMatrixIdentity());
-
-	XMVECTOR destination = XMVector3Unproject(
-		XMLoadFloat3(&XMFLOAT3(input.GetMouseX(), input.GetMouseY(), 1)),
-		0,
-		0,
-		width,
-		height,
-		0,
-		1,
-		projectionMatrix,
-		viewMatrix,
-		XMMatrixIdentity());
-
-	XMVECTOR direction = XMVector3Normalize(destination - origin);
-
-	//Raycast against MeshRenderer bounds
-	std::shared_ptr<GameEntity> closestHitEntity = nullptr;
-	float distToHit = globalAssets.GetEditingCamera()->GetFarDist();
-	float rayLength = globalAssets.GetEditingCamera()->GetFarDist();
-
-	for (std::shared_ptr<MeshRenderer> meshRenderer : ComponentManager::GetAllEnabled<MeshRenderer>())
-	{
-		if (meshRenderer->GetBounds().Intersects(origin, direction, rayLength)) {
-			std::shared_ptr<Mesh> mesh = meshRenderer->GetMesh();
-			XMMATRIX worldMatrix = XMLoadFloat4x4(&meshRenderer->GetTransform()->GetWorldMatrix());
-			Vertex* vertices = mesh->GetVertexArray();
-			unsigned int* indices = mesh->GetIndexArray();
-			float distToTri;
-
-			for (int i = 0; i < mesh->GetIndexCount(); i += 3) {
-				XMVECTOR vertex0 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i]].Position), worldMatrix);
-				XMVECTOR vertex1 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 1]].Position), worldMatrix);
-				XMVECTOR vertex2 = XMVector3Transform(XMLoadFloat3(&vertices[indices[i + 2]].Position), worldMatrix);
-				if (DirectX::TriangleTests::Intersects(origin, direction, vertex0, vertex1, vertex2, distToTri) && distToTri < distToHit)
-				{
-					distToHit = distToTri;
-					closestHitEntity = meshRenderer->GetGameEntity();
-				}
-			}
-		}
-	}
-
-	return closestHitEntity;
 }
 
 // --------------------------------------------------------
@@ -321,53 +194,12 @@ void Game::Update()
 {
 	audioHandler.GetSoundSystem()->update();
 
-	if (input.KeyPress(VK_RIGHT)) {
-		skyUIIndex++;
-		if (skyUIIndex > globalAssets.GetSkyArraySize() - 1) {
-			skyUIIndex = 0;
-		}
-		globalAssets.GetSkyAtID(skyUIIndex);
-	}
-	else if (input.KeyPress(VK_LEFT)) {
-		skyUIIndex--;
-		if (skyUIIndex < 0) {
-			skyUIIndex = globalAssets.GetSkyArraySize() - 1;
-		}
-		globalAssets.GetSkyAtID(skyUIIndex);
-	}
-
 	switch (engineState) {
 	case EngineState::EDITING:
 		// Quit if the escape key is pressed
 		if (input.TestKeyAction(KeyActions::QuitGame)) Quit();
 		else {
-			GenerateEditingUI();
-
-			//Click to select an object
-			if (input.MouseRightPress()) {
-				clickedEntityBuffer = GetClickedEntity();
-			}
-			if (input.MouseRightRelease()) {
-				if (clickedEntityBuffer != nullptr && clickedEntityBuffer == GetClickedEntity()) {
-					objWindowEnabled = true;
-					entityUIIndex = globalAssets.GetGameEntityIDByName(clickedEntityBuffer->GetName());
-				}
-				else {
-					objWindowEnabled = false;
-					entityUIIndex = -1;
-				}
-				clickedEntityBuffer = nullptr;
-				renderer->selectedEntity = entityUIIndex;
-			}
-
-			if (input.KeyPress('P')) {
-				ImGui::Render();
-				ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-				ImGui_ImplDX11_NewFrame();
-				ImGui_ImplWin32_NewFrame();
-				ImGui::NewFrame();
-				sceneManager.PrePlaySave();
-			}
+			editUI->GenerateEditingUI();
 
 			globalAssets.UpdateEditingCamera();
 			globalAssets.BroadcastGlobalEntityEvent(EntityEventType::EditingUpdate);
@@ -378,15 +210,6 @@ void Game::Update()
 			sceneManager.PostPlayLoad();
 		}
 		else {
-			if (movingEnabled) {
-				globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->SetPosition(+1.5f, (float)sin(Time::totalTime) + 2.5f, +0.0f);
-				globalAssets.GetGameEntityByName("Bronze Cube")->GetTransform()->Rotate(0.0f, (float)sin(Time::deltaTime), -(float)sin(Time::deltaTime));
-				globalAssets.GetGameEntityByName("Scratched Cube")->GetTransform()->Rotate(-(float)sin(Time::deltaTime), 0.0f, 0.0f);
-				globalAssets.GetGameEntityByName("Stone Cylinder")->GetTransform()->SetPosition(-2.0f, (float)sin(Time::totalTime), +0.0f);
-				globalAssets.GetGameEntityByName("Paint Sphere")->GetTransform()->SetPosition(-(float)sin(Time::totalTime), -2.0f, +0.0f);
-				globalAssets.GetGameEntityByName("Rough Torus")->GetTransform()->Rotate(+0.0f, +0.0f, +1.0f * Time::deltaTime);
-			}
-
 			if (input.TestKeyAction(KeyActions::ToggleFlashlight)) {
 				for (std::shared_ptr<FlashlightController> flashlight : ComponentManager::GetAll<FlashlightController>()) {
 					flashlight->GetGameEntity()->SetEnabled(!flashlight->GetGameEntity()->GetLocallyEnabled());
@@ -496,65 +319,4 @@ void Game::Draw()
 	else if (engineState == EngineState::PLAY) {
 		renderer->Draw(globalAssets.GetMainCamera(), engineState);
 	}
-}
-
-// Getters
-bool* Game::GetObjWindowEnabled() {
-	return &objWindowEnabled;
-}
-
-bool* Game::GetObjHierarchyEnabled() {
-	return &objHierarchyEnabled;
-}
-
-bool* Game::GetSkyWindowEnabled() {
-	return &skyWindowEnabled;
-}
-
-bool* Game::GetSoundWindowEnabled() {
-	return &soundWindowEnabled;
-}
-
-bool* Game::GetTextureWindowEnabled() {
-	return &textureWindowEnabled;
-}
-
-bool* Game::GetMaterialWindowEnabled() {
-	return &materialWindowEnabled;
-}
-
-bool* Game::GetCollidersWindowEnabled() {
-	return &collidersWindowEnabled;
-}
-
-bool* Game::GetRtvWindowEnabled() {
-	return &rtvWindowEnabled;
-}
-
-bool* Game::GetStatsEnabled() {
-	return &statsEnabled;
-}
-
-bool* Game::GetMovingEnabled() {
-	return &movingEnabled;
-}
-
-int Game::GetEntityUIIndex() {
-	return entityUIIndex;
-};
-int Game::GetSkyUIIndex() {
-	return skyUIIndex;
-};
-
-
-// Setters
-void Game::SetEntityUIIndex(int NewEntityUIIndex) {
-	entityUIIndex = NewEntityUIIndex;
-};
-void Game::SetSkyUIIndex(int NewSkyUIIndex) {
-	skyUIIndex = NewSkyUIIndex;
-};
-
-void Game::SetObjWindowEnabled(bool enabled) {
-	objWindowEnabled = enabled;
 }
