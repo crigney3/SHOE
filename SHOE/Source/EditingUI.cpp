@@ -129,6 +129,10 @@ void EditingUI::DisplayMenu() {
 				ImGui::EndMenu();
 			}
 
+			ImGui::Separator();
+
+			ImGui::MenuItem("Render", "", GetRenderWindowEnabled());
+
 			ImGui::EndMenu();
 		}
 
@@ -983,6 +987,16 @@ void EditingUI::GenerateEditingUI() {
 		ImGui::End();
 	}
 
+	if (*(GetRenderWindowEnabled())) {
+		ImGui::Begin("Render to Video File");
+
+		if (ImGui::Button("Render")) {
+			renderer->RenderToVideoFile();
+		}
+
+		ImGui::End();
+	}
+
 	// TODO: Add Material Edit menu
 }
 
@@ -1025,6 +1039,10 @@ bool* EditingUI::GetStatsEnabled() {
 
 bool* EditingUI::GetMovingEnabled() {
 	return &movingEnabled;
+}
+
+bool* EditingUI::GetRenderWindowEnabled() {
+	return &renderWindowEnabled;
 }
 
 int EditingUI::GetEntityUIIndex() {

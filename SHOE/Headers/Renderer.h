@@ -2,6 +2,11 @@
 
 #include "AssetManager.h"
 #include "CollisionManager.h"
+#include <windows.media.mediaproperties.h>
+#include <mfreadwrite.h>
+#include <mfapi.h>
+
+#define RETURN_HRESULT_IF_FAILED(x) do { HRESULT status = (x); if (FAILED(status)) return status; } while(0)
 
 // Effects that require multiple render target views
 // are stored in the following order:
@@ -71,6 +76,27 @@ struct PSPerMaterialData
 {
     DirectX::XMFLOAT3 AmbientColor;
     float UvMult;
+};
+
+/// <summary>
+/// Preset data that needs to be fully initialized before
+/// passing it to Renderer::RenderToFile.
+/// </summary>
+struct FileRenderData
+{
+    unsigned int VideoWidth;
+    unsigned int VideoHeight;
+    unsigned int VideoFPS;
+
+    // Should usually be Width * Height
+    unsigned int VideoPels;
+    unsigned int VideoBitRate;
+    unsigned int VideoFrameCount;
+    unsigned long VideoFrameDuration; 
+
+    // Formats from MFVideoFormat
+    GUID VideoEncodingFormat;
+    GUID VideoInputFormat;
 };
 
 class Renderer
@@ -202,6 +228,10 @@ public:
 
     static bool GetDrawColliderStatus();
     static void SetDrawColliderStatus(bool _newState);
+
+    HRESULT RenderToVideoFile();
+    HRESULT WriteFrame(IMFSinkWriter *pWriter, DWORD streamIndex, const long long int& timeStamp);
+    HRESULT InitializeFileSinkWriter(IMFSinkWriter** ppWriter, DWORD* pStreamIndex, FileRenderData* RenderParameters);
 
     int selectedEntity;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> outlineSRV;

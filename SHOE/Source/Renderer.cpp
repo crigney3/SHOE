@@ -1284,3 +1284,83 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetRenderTargetSRV(RT
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetMiscEffectSRV(MiscEffectSRVTypes type) {
 	return miscEffectSRVs[type];
 }
+
+HRESULT Renderer::RenderToVideoFile() {
+	// Process of this:
+	// Call draw to get final composite frame. (possibly prevent it presenting to the screen?)
+	// Have CPU accessible buffer of same type as final composite.
+	// Copy final composite into this buffer.
+	// Access buffer's data to get array of pixel colors.
+	// Have media sink initialized (or maybe initialize in here? Could be laggy on first boot/scene load otherwise)
+	// Use media sink tutorial on writing to video files
+	// Make sure data is locked and released correctly, seems potentially unstable
+	// May need to convert final composite data to YUV encoding, since RGBA is super uncompressed (high quality tho)
+	// This method will needs either lots of parameters or lots of global data. Some stuff like width/height can be pulled from engine data.
+
+
+}
+
+HRESULT Renderer::InitializeFileSinkWriter(IMFSinkWriter** ppWriter, DWORD* pStreamIndex, FileRenderData* RenderParameters) {
+	*ppWriter = NULL;
+	*pStreamIndex = NULL;
+
+	Microsoft::WRL::ComPtr<IMFSinkWriter> pSinkWriter = NULL;
+	Microsoft::WRL::ComPtr <IMFMediaType> pMediaTypeOut = NULL;
+	Microsoft::WRL::ComPtr <IMFMediaType> pMediaTypeIn = NULL;
+	DWORD streamIndex;
+
+	HRESULT hr = MFCreateSinkWriterFromURL(L"output.wmv", NULL, NULL, &pSinkWriter);
+
+	// Set the output media type.
+	RETURN_HRESULT_IF_FAILED(MFCreateMediaType(&pMediaTypeOut));
+	
+	RETURN_HRESULT_IF_FAILED(pMediaTypeOut->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video));
+	
+	RETURN_HRESULT_IF_FAILED(pMediaTypeOut->SetGUID(MF_MT_SUBTYPE, RenderParameters->VideoEncodingFormat));
+	
+	RETURN_HRESULT_IF_FAILED(pMediaTypeOut->SetUINT32(MF_MT_AVG_BITRATE, RenderParameters->VideoBitRate));
+	
+	RETURN_HRESULT_IF_FAILED(pMediaTypeOut->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive));
+
+	RETURN_HRESULT_IF_FAILED(MFSetAttributeSize(pMediaTypeOut.Get(), MF_MT_FRAME_SIZE, RenderParameters->VideoWidth, RenderParameters->VideoHeight));
+	
+	RETURN_HRESULT_IF_FAILED(MFSetAttributeRatio(pMediaTypeOut.Get(), MF_MT_FRAME_RATE, RenderParameters->VideoFPS, 1));
+	
+	RETURN_HRESULT_IF_FAILED(MFSetAttributeRatio(pMediaTypeOut.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1));
+	
+	RETURN_HRESULT_IF_FAILED(pSinkWriter->AddStream(pMediaTypeOut.Get(), &streamIndex));
+	
+	// Set the input media type.
+	RETURN_HRESULT_IF_FAILED(MFCreateMediaType(&pMediaTypeIn));
+	
+	RETURN_HRESULT_IF_FAILED(pMediaTypeIn->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video));
+	
+	RETURN_HRESULT_IF_FAILED(pMediaTypeIn->SetGUID(MF_MT_SUBTYPE, RenderParameters->VideoInputFormat));
+	
+	RETURN_HRESULT_IF_FAILED(pMediaTypeIn->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive));
+	
+	RETURN_HRESULT_IF_FAILED(MFSetAttributeSize(pMediaTypeIn.Get(), MF_MT_FRAME_SIZE, RenderParameters->VideoWidth, RenderParameters->VideoHeight));
+	
+	RETURN_HRESULT_IF_FAILED(MFSetAttributeRatio(pMediaTypeIn.Get(), MF_MT_FRAME_RATE, RenderParameters->VideoFPS, 1));
+	
+	RETURN_HRESULT_IF_FAILED(MFSetAttributeRatio(pMediaTypeIn.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1));
+	
+	RETURN_HRESULT_IF_FAILED(pSinkWriter->SetInputMediaType(streamIndex, pMediaTypeIn.Get(), NULL));
+	
+	// Tell the sink writer to start accepting data.
+	RETURN_HRESULT_IF_FAILED(pSinkWriter->BeginWriting());
+	
+	// Return the pointer to the caller.
+	*ppWriter = pSinkWriter.Get();
+	(*ppWriter)->AddRef();
+	*pStreamIndex = streamIndex;
+
+	pSinkWriter->Release();
+	pMediaTypeOut->Release();
+	pMediaTypeIn->Release();
+	return hr;
+}
+
+HRESULT Renderer::WriteFrame(IMFSinkWriter* pWriter, DWORD streamIndex, const long long int& timeStamp) {
+
+}
