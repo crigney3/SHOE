@@ -68,6 +68,8 @@ Renderer::Renderer(
 
 	device->CreateDepthStencilState(&depthDescription, &skyDepthState);
 
+	MFStartup(MF_VERSION);
+
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
 
@@ -75,6 +77,8 @@ Renderer::~Renderer() {
 	shadowDSVArray.clear();
 	shadowProjMatArray.clear();
 	shadowViewMatArray.clear();
+
+	MFShutdown();
 }
 
 void Renderer::InitRenderTargetViews() {
@@ -159,6 +163,14 @@ void Renderer::InitRenderTargetViews() {
 	device->CreateRenderTargetView(finalCompositeTexture.Get(), &compositeRTVDesc, renderTargetRTVs[RTVTypes::FINAL_COMPOSITE].GetAddressOf());
 
 	device->CreateShaderResourceView(finalCompositeTexture.Get(), 0, renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].GetAddressOf());
+
+	D3D11_BUFFER_DESC fileRenderBufferDesc = {};
+	fileRenderBufferDesc.ByteWidth = windowWidth * windowHeight * sizeof(DirectX::XMFLOAT4);
+	fileRenderBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	fileRenderBufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	fileRenderBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	device->CreateBuffer(&fileRenderBufferDesc, 0, readableRenderComposite.GetAddressOf());
+
 
 	silhouetteTexture.Reset();
 	renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].Reset();
@@ -1285,7 +1297,7 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetMiscEffectSRV(Misc
 	return miscEffectSRVs[type];
 }
 
-HRESULT Renderer::RenderToVideoFile() {
+HRESULT Renderer::RenderToVideoFile(std::shared_ptr<Camera> renderCam, FileRenderData RenderParameters) {
 	// Process of this:
 	// Call draw to get final composite frame. (possibly prevent it presenting to the screen?)
 	// Have CPU accessible buffer of same type as final composite.
@@ -1297,19 +1309,39 @@ HRESULT Renderer::RenderToVideoFile() {
 	// May need to convert final composite data to YUV encoding, since RGBA is super uncompressed (high quality tho)
 	// This method will needs either lots of parameters or lots of global data. Some stuff like width/height can be pulled from engine data.
 
+	Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter = NULL;
+	DWORD streamIndex;
+	long long int timeStamp = 0;
 
+	RETURN_HRESULT_IF_FAILED(InitializeFileSinkWriter(&sinkWriter, &streamIndex, &RenderParameters));
+
+	for (DWORD i = 0; i < RenderParameters.VideoFrameCount; ++i)
+	{
+		// Call draw in to generate the desired frame. Instead of presenting to the screen,
+		// Draw will copy the final composite to a buffer (given the FILE_RENDER State.)
+		Draw(renderCam, EngineState::FILE_RENDER);
+
+		RETURN_HRESULT_IF_FAILED(WriteFrame(sinkWriter, streamIndex, timeStamp, &RenderParameters));
+
+		timeStamp += RenderParameters.VideoFrameDuration;
+	}
+
+	sinkWriter->Finalize();
+
+	sinkWriter->Release();
+
+	return 0;
 }
 
-HRESULT Renderer::InitializeFileSinkWriter(IMFSinkWriter** ppWriter, DWORD* pStreamIndex, FileRenderData* RenderParameters) {
-	*ppWriter = NULL;
+HRESULT Renderer::InitializeFileSinkWriter(Microsoft::WRL::ComPtr<IMFSinkWriter>* sinkWriterOut, DWORD* pStreamIndex, FileRenderData* RenderParameters) {
 	*pStreamIndex = NULL;
 
-	Microsoft::WRL::ComPtr<IMFSinkWriter> pSinkWriter = NULL;
-	Microsoft::WRL::ComPtr <IMFMediaType> pMediaTypeOut = NULL;
-	Microsoft::WRL::ComPtr <IMFMediaType> pMediaTypeIn = NULL;
+	Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter = NULL;
+	Microsoft::WRL::ComPtr<IMFMediaType> pMediaTypeOut = NULL;
+	Microsoft::WRL::ComPtr<IMFMediaType> pMediaTypeIn = NULL;
 	DWORD streamIndex;
 
-	HRESULT hr = MFCreateSinkWriterFromURL(L"output.wmv", NULL, NULL, &pSinkWriter);
+	HRESULT hr = MFCreateSinkWriterFromURL(RenderParameters->filePath.c_str(), NULL, NULL, &sinkWriter);
 
 	// Set the output media type.
 	RETURN_HRESULT_IF_FAILED(MFCreateMediaType(&pMediaTypeOut));
@@ -1328,9 +1360,9 @@ HRESULT Renderer::InitializeFileSinkWriter(IMFSinkWriter** ppWriter, DWORD* pStr
 	
 	RETURN_HRESULT_IF_FAILED(MFSetAttributeRatio(pMediaTypeOut.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1));
 	
-	RETURN_HRESULT_IF_FAILED(pSinkWriter->AddStream(pMediaTypeOut.Get(), &streamIndex));
+	RETURN_HRESULT_IF_FAILED(sinkWriter->AddStream(pMediaTypeOut.Get(), &streamIndex));
 	
-	// Set the input media type.
+	// Set the input media type. May need to change to accept graphics buffer?
 	RETURN_HRESULT_IF_FAILED(MFCreateMediaType(&pMediaTypeIn));
 	
 	RETURN_HRESULT_IF_FAILED(pMediaTypeIn->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video));
@@ -1345,22 +1377,68 @@ HRESULT Renderer::InitializeFileSinkWriter(IMFSinkWriter** ppWriter, DWORD* pStr
 	
 	RETURN_HRESULT_IF_FAILED(MFSetAttributeRatio(pMediaTypeIn.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1));
 	
-	RETURN_HRESULT_IF_FAILED(pSinkWriter->SetInputMediaType(streamIndex, pMediaTypeIn.Get(), NULL));
+	RETURN_HRESULT_IF_FAILED(sinkWriter->SetInputMediaType(streamIndex, pMediaTypeIn.Get(), NULL));
 	
 	// Tell the sink writer to start accepting data.
-	RETURN_HRESULT_IF_FAILED(pSinkWriter->BeginWriting());
+	RETURN_HRESULT_IF_FAILED(sinkWriter->BeginWriting());
 	
 	// Return the pointer to the caller.
-	*ppWriter = pSinkWriter.Get();
-	(*ppWriter)->AddRef();
+	*sinkWriterOut = sinkWriter;
+	(*sinkWriterOut)->AddRef();
 	*pStreamIndex = streamIndex;
 
-	pSinkWriter->Release();
+	sinkWriter->Release();
 	pMediaTypeOut->Release();
 	pMediaTypeIn->Release();
 	return hr;
 }
 
-HRESULT Renderer::WriteFrame(IMFSinkWriter* pWriter, DWORD streamIndex, const long long int& timeStamp) {
+HRESULT Renderer::WriteFrame(Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter, DWORD streamIndex, const long long int& timeStamp, FileRenderData* RenderParameters) {
+	Microsoft::WRL::ComPtr<IMFSample> pSample = NULL;
+	Microsoft::WRL::ComPtr<IMFMediaBuffer> pBuffer = NULL;
 
+	const LONG cbWidth = 4 * RenderParameters->VideoWidth;
+	const DWORD cbBuffer = cbWidth * RenderParameters->VideoHeight;
+
+	BYTE* pData = NULL;
+
+	// Create a new memory buffer.
+	HRESULT hr = MFCreateMemoryBuffer(cbBuffer, &pBuffer);
+
+	// Lock the buffer and copy the video frame to the buffer.
+	RETURN_HRESULT_IF_FAILED(pBuffer->Lock(&pData, NULL, NULL));
+
+	RETURN_HRESULT_IF_FAILED(MFCopyImage(
+			pData,							// Destination buffer.
+			cbWidth,						// Destination stride.
+			(BYTE*)readableRenderComposite.Get(),		// First row in rendered buffer.
+			cbWidth,						// Source stride.
+			cbWidth,						// Image width in bytes.
+			RenderParameters->VideoHeight   // Image height in pixels.
+		));
+
+	if (pBuffer)
+	{
+		pBuffer->Unlock();
+	}
+
+	// Set the data length of the buffer.
+	RETURN_HRESULT_IF_FAILED(pBuffer->SetCurrentLength(cbBuffer));
+
+	// Create a media sample and add the buffer to the sample.
+	RETURN_HRESULT_IF_FAILED(MFCreateSample(&pSample));
+
+	RETURN_HRESULT_IF_FAILED(pSample->AddBuffer(pBuffer.Get()));
+
+	// Set the time stamp and the duration.
+	RETURN_HRESULT_IF_FAILED(pSample->SetSampleTime(timeStamp));
+	
+	RETURN_HRESULT_IF_FAILED(pSample->SetSampleDuration(RenderParameters->VideoFrameDuration));
+
+	// Send the sample to the Sink Writer.
+	RETURN_HRESULT_IF_FAILED(sinkWriter->WriteSample(streamIndex, pSample.Get()));
+
+	pSample->Release();
+	pBuffer->Release();
+	return hr;
 }

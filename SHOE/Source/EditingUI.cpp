@@ -990,8 +990,10 @@ void EditingUI::GenerateEditingUI() {
 	if (*(GetRenderWindowEnabled())) {
 		ImGui::Begin("Render to Video File");
 
+		FileRenderData renderData;
+
 		if (ImGui::Button("Render")) {
-			renderer->RenderToVideoFile();
+			renderer->RenderToVideoFile(globalAssets.GetMainCamera(), renderData);
 		}
 
 		ImGui::End();

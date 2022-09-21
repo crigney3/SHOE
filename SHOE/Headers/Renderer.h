@@ -97,6 +97,8 @@ struct FileRenderData
     // Formats from MFVideoFormat
     GUID VideoEncodingFormat;
     GUID VideoInputFormat;
+
+    std::wstring filePath;
 };
 
 class Renderer
@@ -150,6 +152,10 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView>      renderTargetRTVs[RTVTypes::RTV_TYPE_COUNT];
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>    renderTargetSRVs[RTVTypes::RTV_TYPE_COUNT];
+
+    // CPU-Accessible SRV with composite frame data
+    // Used for writing to a video file
+    Microsoft::WRL::ComPtr<ID3D11Buffer> readableRenderComposite;
 
     // Ambient Occlusion data
     std::shared_ptr<SimplePixelShader> ssaoPS;
@@ -229,9 +235,9 @@ public:
     static bool GetDrawColliderStatus();
     static void SetDrawColliderStatus(bool _newState);
 
-    HRESULT RenderToVideoFile();
-    HRESULT WriteFrame(IMFSinkWriter *pWriter, DWORD streamIndex, const long long int& timeStamp);
-    HRESULT InitializeFileSinkWriter(IMFSinkWriter** ppWriter, DWORD* pStreamIndex, FileRenderData* RenderParameters);
+    HRESULT RenderToVideoFile(std::shared_ptr<Camera> renderCam, FileRenderData RenderParameters);
+    HRESULT WriteFrame(Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter, DWORD streamIndex, const long long int& timeStamp, FileRenderData* RenderParameters);
+    HRESULT InitializeFileSinkWriter(OUT Microsoft::WRL::ComPtr<IMFSinkWriter>* sinkWriterOut, DWORD* pStreamIndex, FileRenderData* RenderParameters);
 
     int selectedEntity;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> outlineSRV;
