@@ -25,6 +25,7 @@ EditingUI::EditingUI(std::shared_ptr<Renderer> renderer) {
 
 	entityUIIndex = -1;
 	skyUIIndex = 0;
+	materialUIIndex = 0;
 
 	objWindowEnabled = false;
 	skyWindowEnabled = false;
@@ -47,6 +48,7 @@ void EditingUI::ReInitializeEditingUI(std::shared_ptr<Renderer> renderer) {
 
 	entityUIIndex = -1;
 	skyUIIndex = 0;
+	materialUIIndex = 0;
 
 	objWindowEnabled = false;
 	skyWindowEnabled = false;
@@ -151,13 +153,26 @@ void EditingUI::DisplayMenu() {
 		}
 
 		if (ImGui::BeginMenu("Add")) {
-			ImGui::Text("Add a new GameEntity, which can have components attached.");
+			//ImGui::Text("Add a new GameEntity, which can have components attached.");
 
-			if (ImGui::Button("Add GameEntity")) {
+
+			if (ImGui::MenuItem("Add GameEntity", 0, GetObjWindowEnabled())) {
 				globalAssets.CreateGameEntity("GameEntity" + std::to_string(globalAssets.GetGameEntityArraySize()));
 
 				SetEntityUIIndex(globalAssets.GetGameEntityArraySize() - 1);
 				SetObjWindowEnabled(true);
+			}
+
+			if (ImGui::MenuItem("Add Material", 0, GetMaterialWindowEnabled())) {
+				std::shared_ptr<Material> new_material = globalAssets.GetMaterialAtID(0);
+				globalAssets.CreatePBRMaterial("new material",
+												new_material->GetTexture(),
+												new_material->GetNormalMap(),
+												new_material->GetMetalMap(),
+												new_material->GetRoughMap());
+
+				SetMaterialUIIndex(globalAssets.GetMaterialArraySize() - 1);
+				SetMaterialWindowEnabled(true);
 			}
 
 			ImGui::EndMenu();
@@ -972,6 +987,225 @@ void EditingUI::GenerateEditingUI() {
 		ImGui::End();
 	}
 
+	if (*(GetMaterialWindowEnabled()))
+	{
+		ImGui::Begin("Material Editor");
+
+		int materialUIIndex = GetMaterialUIIndex();
+		std::shared_ptr<Material> currentMaterial = globalAssets.GetMaterialAtID(materialUIIndex);
+
+		std::string infoStr = currentMaterial->GetName();
+		std::string node = "Edting Material: " + infoStr;
+
+		ImGui::Text(node.c_str());
+
+		if (ImGui::ArrowButton("Previous Material", ImGuiDir_Left)) {
+			materialUIIndex--;
+			if (materialUIIndex < 0) {
+				materialUIIndex = globalAssets.GetMaterialArraySize() - 1;
+			}
+			this->materialUIIndex = materialUIIndex;
+		};
+		ImGui::SameLine();
+
+		if (ImGui::ArrowButton("Next Paterial", ImGuiDir_Right)) {
+			materialUIIndex++;
+			if (materialUIIndex > globalAssets.GetMaterialArraySize() - 1) {
+				materialUIIndex = 0;
+			}
+			this->materialUIIndex = materialUIIndex;
+		};
+
+		std::string nameBuffer;
+		static char nameBuf[64] = "";
+		nameBuffer = currentMaterial->GetName();
+		strcpy_s(nameBuf, nameBuffer.c_str());
+		ImGui::InputText("Rename Material ", nameBuf, sizeof(nameBuffer));
+
+		currentMaterial->SetName(nameBuf);
+
+		float currTiling = currentMaterial->GetTiling();
+		ImGui::InputFloat("Tiling ", &currTiling);
+		currentMaterial->SetTiling(currTiling);
+
+		XMFLOAT4 currColorTint = currentMaterial->GetTint();
+		ImGui::DragFloat3("Color Tint ", &currColorTint.x);
+		currentMaterial->SetTint(currColorTint);
+
+		bool currentTransparencyEnabled = currentMaterial->GetTransparent();
+		ImGui::Checkbox("Transparancy", &currentTransparencyEnabled);
+		currentMaterial->SetTransparent(currentTransparencyEnabled);
+
+		bool currentRefractionEnabled = currentMaterial->GetRefractive();
+		ImGui::Checkbox("Refraction (Enabling this will also enable transparency)", &currentRefractionEnabled);
+		currentMaterial->SetRefractive(currentRefractionEnabled);
+
+		float currIndexOfRefraction = currentMaterial->GetIndexOfRefraction();
+		ImGui::DragFloat("Index of Refraction ", &currIndexOfRefraction);
+		currentMaterial->SetIndexOfRefraction(currIndexOfRefraction);
+
+		float currRefractionScale = currentMaterial->GetRefractionScale();
+		ImGui::DragFloat("Refraction Scale ", &currRefractionScale);
+		currentMaterial->SetRefractionScale(currRefractionScale);
+
+		ImGui::Separator();
+		std::shared_ptr<Texture> currentTexture = currentMaterial->GetTexture();
+		std::shared_ptr<Texture> currentNormalMap = currentMaterial->GetNormalMap();
+		std::shared_ptr<Texture> currentMetalMap = currentMaterial->GetMetalMap();
+		std::shared_ptr<Texture> currentRoughMap = currentMaterial->GetRoughMap();
+
+		infoStr = currentMaterial->GetName();
+		node = "Current Material View: " + infoStr;
+		ImGui::Text(node.c_str());
+
+		infoStr = "\t\t\t\t\t\t";
+		node = "Texture: \t" + infoStr;
+		ImGui::Text(node.c_str());
+		ImGui::SameLine();
+
+		node = "Normal Map: " + infoStr;
+		ImGui::Text(node.c_str());
+		ImGui::SameLine();
+
+		node = "Metal Map: " + infoStr;
+		ImGui::Text(node.c_str());
+		ImGui::SameLine();
+
+		node = "  Rough Map: ";
+		ImGui::Text(node.c_str());
+
+		ImGui::Image((ImTextureID*)currentTexture->GetTexture().Get(), ImVec2(256, 256));
+		ImGui::SameLine();
+		ImGui::Image((ImTextureID*)currentNormalMap->GetTexture().Get(), ImVec2(256, 256));
+		ImGui::SameLine();
+		ImGui::Image((ImTextureID*)currentMetalMap->GetTexture().Get(), ImVec2(256, 256));
+		ImGui::SameLine();
+		ImGui::Image((ImTextureID*)currentRoughMap->GetTexture().Get(), ImVec2(256, 256));
+
+		// Texture Swapping
+		if (ImGui::CollapsingHeader("Texture Swapping")) {
+			static int textureIndex = 0;
+
+			std::string nameBuffer;
+			static char nameBuf[64] = "";
+			nameBuffer = currentTexture->GetName();
+			strcpy_s(nameBuf, nameBuffer.c_str());
+
+			ImGui::Text(nameBuf);
+			if (ImGui::BeginListBox("TextureList")) {
+				for (int i = 0; i < globalAssets.GetTextureArraySize(); i++) {
+					const bool is_selected = (textureIndex == i);
+					if (ImGui::Selectable(globalAssets.GetTextureAtID(i)->GetName().c_str(), is_selected)) {
+						textureIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+				ImGui::SameLine();
+				ImGui::Image((ImTextureID*)globalAssets.GetTextureAtID(textureIndex)->GetTexture().Get(), ImVec2(256, 256));
+
+			}
+
+			if (ImGui::Button("Swap Texture")) {
+				currentMaterial->SetTexture(globalAssets.GetTextureAtID(textureIndex));
+			}
+		}
+
+		// Normal Map Swapping
+		if (ImGui::CollapsingHeader("Normal Map Swapping")) {
+			static int normalIndex = 0;
+
+			std::string nameBuffer;
+			static char nameBuf[64] = "";
+			nameBuffer = currentNormalMap->GetName();
+			strcpy_s(nameBuf, nameBuffer.c_str());
+
+			ImGui::Text(nameBuf);
+			if (ImGui::BeginListBox("NormalList")) {
+				for (int i = 0; i < globalAssets.GetTextureArraySize(); i++) {
+					const bool is_selected = (normalIndex == i);
+					if (ImGui::Selectable(globalAssets.GetTextureAtID(i)->GetName().c_str(), is_selected)) {
+						normalIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+				ImGui::SameLine();
+				ImGui::Image((ImTextureID*)globalAssets.GetTextureAtID(normalIndex)->GetTexture().Get(), ImVec2(256, 256));
+			}
+
+			if (ImGui::Button("Swap Normal Map")) {
+				currentMaterial->SetNormalMap(globalAssets.GetTextureAtID(normalIndex));
+			}
+		}
+
+		// Metal Map Swapping
+		if (ImGui::CollapsingHeader("Metal Map Swapping")) {
+			static int metalIndex = 0;
+
+			std::string nameBuffer;
+			static char nameBuf[64] = "";
+			nameBuffer = currentMetalMap->GetName();
+			strcpy_s(nameBuf, nameBuffer.c_str());
+
+			ImGui::Text(nameBuf);
+			if (ImGui::BeginListBox("MetalList")) {
+				for (int i = 0; i < globalAssets.GetTextureArraySize(); i++) {
+					const bool is_selected = (metalIndex == i);
+					if (ImGui::Selectable(globalAssets.GetTextureAtID(i)->GetName().c_str(), is_selected)) {
+						metalIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+				ImGui::SameLine();
+				ImGui::Image((ImTextureID*)globalAssets.GetTextureAtID(metalIndex)->GetTexture().Get(), ImVec2(256, 256));
+			}
+
+			if (ImGui::Button("Swap Metal Map")) {
+				currentMaterial->SetMetalMap(globalAssets.GetTextureAtID(metalIndex));
+			}
+		}
+
+		// Rough Map Swapping
+		if (ImGui::CollapsingHeader("Rough Map Swapping")) {
+			static int roughIndex = 0;
+
+			std::string nameBuffer;
+			static char nameBuf[64] = "";
+			nameBuffer = currentRoughMap->GetName();
+			strcpy_s(nameBuf, nameBuffer.c_str());
+
+			ImGui::Text(nameBuf);
+			if (ImGui::BeginListBox("RoughList")) {
+				for (int i = 0; i < globalAssets.GetTextureArraySize(); i++) {
+					const bool is_selected = (roughIndex == i);
+					if (ImGui::Selectable(globalAssets.GetTextureAtID(i)->GetName().c_str(), is_selected)) {
+						roughIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+				ImGui::SameLine();
+				ImGui::Image((ImTextureID*)globalAssets.GetTextureAtID(roughIndex)->GetTexture().Get(), ImVec2(256, 256));
+			}
+
+			if (ImGui::Button("Swap Rough Map")) {
+				currentMaterial->SetRoughMap(globalAssets.GetTextureAtID(roughIndex));
+			}
+		}
+
+		ImGui::End();
+	}
+
 	if (*(GetCollidersWindowEnabled()))
 	{
 		ImGui::Begin("Collider Bulk Operations");
@@ -1033,6 +1267,9 @@ int EditingUI::GetEntityUIIndex() {
 int EditingUI::GetSkyUIIndex() {
 	return skyUIIndex;
 };
+int EditingUI::GetMaterialUIIndex() {
+	return materialUIIndex;
+};
 
 
 // Setters
@@ -1045,4 +1282,12 @@ void EditingUI::SetSkyUIIndex(int NewSkyUIIndex) {
 
 void EditingUI::SetObjWindowEnabled(bool enabled) {
 	objWindowEnabled = enabled;
+}
+
+void EditingUI::SetMaterialUIIndex(int newIndex) {
+	materialUIIndex = newIndex;
+};
+
+void EditingUI::SetMaterialWindowEnabled(bool enabled) {
+	materialWindowEnabled = enabled;
 }
