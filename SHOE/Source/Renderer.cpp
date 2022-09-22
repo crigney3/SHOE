@@ -1272,17 +1272,28 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 	context->OMSetBlendState(0, 0, 0xFFFFFFFF);
 	context->OMSetDepthStencilState(0, 0);
 
-	ImGui::Render();
-	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	if (engineState == EngineState::FILE_RENDER) {
+		// Don't present the screen to the user, and copy the final composite
+		// to the CPU-Accessible fileRender buffer.
 
-	// Present the back buffer to the user
-	//  - Puts the final frame we're drawing into the window so the user can see it
-	//  - Do this exactly ONCE PER FRAME (always at the very end of the frame)
-	swapChain->Present(0, 0);
+		ID3D11Resource* finalCompositeResource;
+		renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].Get()->GetResource(&finalCompositeResource);
 
-	// Due to the usage of a more sophisticated swap chain,
-	// the render target must be re-bound after every call to Present()
-	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+		context->CopyResource(readableRenderComposite.Get(), finalCompositeResource);
+	}
+	else {
+		ImGui::Render();
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+		// Present the back buffer to the user
+		//  - Puts the final frame we're drawing into the window so the user can see it
+		//  - Do this exactly ONCE PER FRAME (always at the very end of the frame)
+		swapChain->Present(0, 0);
+
+		// Due to the usage of a more sophisticated swap chain,
+		// the render target must be re-bound after every call to Present()
+		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+	}
 
 	// Unbind all in-use shader resources
 	ID3D11ShaderResourceView* nullSRVs[32] = {};

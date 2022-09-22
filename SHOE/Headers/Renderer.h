@@ -3,8 +3,11 @@
 #include "AssetManager.h"
 #include "CollisionManager.h"
 #include <windows.media.mediaproperties.h>
+#include <mfidl.h>
 #include <mfreadwrite.h>
 #include <mfapi.h>
+
+#pragma comment(lib, "Mfreadwrite.lib")
 
 #define RETURN_HRESULT_IF_FAILED(x) do { HRESULT status = (x); if (FAILED(status)) return status; } while(0)
 

@@ -992,6 +992,17 @@ void EditingUI::GenerateEditingUI() {
 
 		FileRenderData renderData;
 
+		renderData.filePath = L"C:\\Users\\coreyrigney\\Videos\\Captures\\test.wmv";
+		renderData.VideoBitRate = 800000;
+		renderData.VideoEncodingFormat = MFVideoFormat_WMV3;
+		renderData.VideoFPS = 30;
+		renderData.VideoFrameCount = 20 * renderData.VideoFPS;
+		renderData.VideoFrameDuration = 10 * 1000 * 1000 / renderData.VideoFPS;
+		renderData.VideoHeight = dxCore->height;
+		renderData.VideoWidth = dxCore->width;
+		renderData.VideoInputFormat = MFVideoFormat_RGB32;
+		renderData.VideoPels = renderData.VideoWidth * renderData.VideoHeight;
+
 		if (ImGui::Button("Render")) {
 			renderer->RenderToVideoFile(globalAssets.GetMainCamera(), renderData);
 		}
