@@ -7,6 +7,7 @@
 #include "Mesh.h"
 #include "Material.h"
 #include "Camera.h"
+#include "AudioResponse.h"
 #include "ComponentManager.h"
 
 class GameEntity : public std::enable_shared_from_this<GameEntity>

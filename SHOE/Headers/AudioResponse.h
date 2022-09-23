@@ -5,7 +5,8 @@ enum class AudioEventTrigger {
 	FrequencyAbove,
 	FrequencyBelow,
 	PitchAbove,
-	PitchBelow
+	PitchBelow,
+	AudioEventTriggerCount
 };
 
 enum class AudioEventResponse {
@@ -14,6 +15,7 @@ enum class AudioEventResponse {
 	Scale,
 	ChangeLightIntensity,
 	ChangeLightColor,
+	AudioEventResponseCount
 };
 
 class AudioResponse : public IComponent
