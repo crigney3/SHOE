@@ -180,6 +180,9 @@
     <ClInclude Include="Headers\Timeframe.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\AudioResponse.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\PixelShaders\IBLBrdfLookUpTablePS.hlsl">
@@ -387,6 +390,9 @@
     </ClCompile>
     <ClCompile Include="Source\Timeframe.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\AudioResponse.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
