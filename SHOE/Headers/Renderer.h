@@ -115,8 +115,10 @@ private:
     Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain;
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV;
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV;
+    Microsoft::WRL::ComPtr<IMFDXGIDeviceManager> deviceManager;
 
     DirectX::XMFLOAT3 ambientColor;
+    UINT deviceManagerResetToken = 0;
 
     //General shaders
     std::shared_ptr<SimpleVertexShader> basicVS;

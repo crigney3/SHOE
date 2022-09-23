@@ -172,12 +172,18 @@ void Renderer::InitRenderTargetViews() {
 	fileTexDesc.Height = windowHeight;
 	fileTexDesc.ArraySize = 1;
 	fileTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	fileTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	fileTexDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 	fileTexDesc.MipLevels = 1;
 	fileTexDesc.MiscFlags = 0;
 	fileTexDesc.SampleDesc.Count = 1;
 	device->CreateTexture2D(&fileTexDesc, 0, fileWriteTexture.GetAddressOf());
-	device->CreateRenderTargetView(fileWriteTexture.Get(), &compositeRTVDesc, renderTargetRTVs[RTVTypes::FILE_WRITE_COMPOSITE].GetAddressOf());
+
+	D3D11_RENDER_TARGET_VIEW_DESC fileWriteRTVDesc = {};
+	fileWriteRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	fileWriteRTVDesc.Texture2D.MipSlice = 0;
+	fileWriteRTVDesc.Format = fileTexDesc.Format;
+
+	device->CreateRenderTargetView(fileWriteTexture.Get(), &fileWriteRTVDesc, renderTargetRTVs[RTVTypes::FILE_WRITE_COMPOSITE].GetAddressOf());
 
 	device->CreateShaderResourceView(fileWriteTexture.Get(), 0, renderTargetSRVs[RTVTypes::FILE_WRITE_COMPOSITE].GetAddressOf());
 
@@ -186,7 +192,7 @@ void Renderer::InitRenderTargetViews() {
 	fileReadTexDesc.Width = windowWidth;
 	fileReadTexDesc.Height = windowHeight;
 	fileReadTexDesc.ArraySize = 1;
-	fileReadTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	fileReadTexDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 	fileReadTexDesc.MipLevels = 1;
 	fileReadTexDesc.MiscFlags = 0;
 	fileReadTexDesc.SampleDesc.Count = 1;
@@ -1416,7 +1422,10 @@ HRESULT Renderer::InitializeFileSinkWriter(Microsoft::WRL::ComPtr<IMFSinkWriter>
 	Microsoft::WRL::ComPtr<IMFMediaType> pMediaTypeIn = NULL;
 	DWORD streamIndex;
 
-	HRESULT hr = MFCreateSinkWriterFromURL(RenderParameters->filePath.c_str(), NULL, NULL, &sinkWriter);
+	RETURN_HRESULT_IF_FAILED(MFCreateDXGIDeviceManager(&deviceManagerResetToken, &deviceManager));
+	RETURN_HRESULT_IF_FAILED(deviceManager->ResetDevice(device.Get(), deviceManagerResetToken));
+
+	RETURN_HRESULT_IF_FAILED(MFCreateSinkWriterFromURL(RenderParameters->filePath.c_str(), NULL, NULL, &sinkWriter));
 
 	// Set the output media type.
 	RETURN_HRESULT_IF_FAILED(MFCreateMediaType(&pMediaTypeOut));
@@ -1465,7 +1474,7 @@ HRESULT Renderer::InitializeFileSinkWriter(Microsoft::WRL::ComPtr<IMFSinkWriter>
 	/*sinkWriter->Release();
 	pMediaTypeOut->Release();
 	pMediaTypeIn->Release();*/
-	return hr;
+	return 0;
 }
 
 HRESULT Renderer::WriteFrame(Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter, DWORD streamIndex, const long long int& timeStamp, FileRenderData* RenderParameters) {

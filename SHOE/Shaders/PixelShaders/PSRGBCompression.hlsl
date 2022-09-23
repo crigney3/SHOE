@@ -12,5 +12,5 @@ SamplerState BasicSampler	: register(s0);
 float4 main(VertexToPixelTextureSample input) : SV_TARGET
 {
 	float4 sampleOut = RGBFrame.Sample(BasicSampler, input.uv);
-	return float4(sampleOut.r, sampleOut.g, sampleOut.g, sampleOut.g);
+	return float4(sampleOut.b, sampleOut.g, sampleOut.r, sampleOut.a);
 }
