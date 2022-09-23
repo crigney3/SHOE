@@ -46,6 +46,7 @@ enum ComponentTypes {
 	CAMERA,
 	NOCLIP_CHAR_CONTROLLER,
 	FLASHLIGHT_CONTROLLER,
+	AUDIO_RESPONSE_DEVICE,
 	// Must always be the final enum
 	COMPONENT_TYPE_COUNT
 };

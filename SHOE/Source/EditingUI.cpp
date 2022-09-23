@@ -850,6 +850,78 @@ void EditingUI::GenerateEditingUI() {
 					flashlight->SetEnabled(flEnabled);
 			}
 
+			else if (std::shared_ptr<AudioResponse> audioResponder = std::dynamic_pointer_cast<AudioResponse>(componentList[c]))
+			{
+				ImGui::Text("Audio Response Device");
+				ImGui::Text("Use this to link an audio trigger to a graphical effect.");
+
+				std::string nameBuffer;
+				static char nameBuf[64] = "";
+				nameBuffer = audioResponder->audioName;
+				strcpy_s(nameBuf, nameBuffer.c_str());
+				ImGui::Text("Name of linked audio");
+				ImGui::SameLine();
+				ImGui::InputText("testSound1", nameBuf, sizeof(nameBuffer));
+
+				currentEntity->SetName(nameBuf);
+
+				bool arEnabled = audioResponder->IsLocallyEnabled();
+				ImGui::Checkbox("Enabled ", &arEnabled);
+				if (arEnabled != audioResponder->IsLocallyEnabled())
+					flashlight->SetEnabled(arEnabled);
+
+				ImGui::Separator();
+
+				static AudioEventTrigger selectedTrigger = AudioEventTrigger::FrequencyAbove;
+				static std::string triggerTypeArray[(int)AudioEventTrigger::AudioEventTriggerCount] = { "Frequency Above", "Frequency Below", "Pitch Above", "Pitch Below" };
+
+				if (ImGui::BeginListBox("Audio Event Trigger Listbox")) {
+					for (int i = 0; i < (int)AudioEventTrigger::AudioEventTriggerCount; i++) {
+						const bool is_selected = ((int)selectedTrigger == i);
+						if (ImGui::Selectable(triggerTypeArray[i].c_str(), is_selected)) {
+							selectedTrigger = (AudioEventTrigger)(i);
+							audioResponder->trigger = selectedTrigger;
+						}	
+					}
+
+					ImGui::EndListBox();
+				}
+
+				ImGui::Separator();
+
+				static AudioEventResponse selectedResponse = AudioEventResponse::Move;
+				static std::string responseTypeArray[(int)AudioEventResponse::AudioEventResponseCount] = { "Move", "Rotate", "Scale", "Modify Light Intensity", "Change Light Color" };
+
+				if (ImGui::BeginListBox("Audio Event Response Listbox")) {
+					for (int i = 0; i < (int)AudioEventResponse::AudioEventResponseCount; i++) {
+						const bool is_selected = ((int)selectedResponse == i);
+						if (ImGui::Selectable(responseTypeArray[i].c_str(), is_selected)) {
+							selectedResponse = (AudioEventResponse)(i);
+							audioResponder->response = selectedResponse;
+						}	
+					}
+
+					ImGui::EndListBox();
+				}
+
+				ImGui::Separator();
+
+				ImGui::Text("Set the data for the linked graphical response.");
+				
+				if (selectedResponse == AudioEventResponse::Move ||
+					selectedResponse == AudioEventResponse::Rotate ||
+					selectedResponse == AudioEventResponse::Scale)
+				{
+					ImGui::InputFloat3("Input XYZ Data", &audioResponder->data.x);
+				}
+				else if (selectedResponse == AudioEventResponse::ChangeLightIntensity) {
+					ImGui::InputFloat("Input Intensity Data", &audioResponder->data.x);
+				}
+				else if (selectedResponse == AudioEventResponse::ChangeLightColor) {
+					ImGui::InputFloat3("Input RGB Color Data", &audioResponder->data.x);
+				}
+			}
+
 			// Remove Component Button
 			ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(1.0f, 1.0f, 0.7f));
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(1.0f, 1.0f, 1.0f));
@@ -866,13 +938,13 @@ void EditingUI::GenerateEditingUI() {
 		// Dropdown and Collapsible Header to add components
 		if (ImGui::CollapsingHeader("Add Component")) {
 			static ComponentTypes selectedComponent = ComponentTypes::MESH_RENDERER;
-			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light", "Camera", "Noclip Character Controller", "Flashlight Controller" };
+			static std::string typeArray[ComponentTypes::COMPONENT_TYPE_COUNT] = { "Mesh Renderer", "Particle System", "Collider", "Terrain", "Light", "Camera", "Noclip Character Controller", "Flashlight Controller", "Audio Response Device"};
 
 			if (ImGui::BeginListBox("Component Listbox")) {
-				for (int i = 0; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
+				for (int i = 1; i < ComponentTypes::COMPONENT_TYPE_COUNT; i++) {
 					const bool is_selected = (selectedComponent == i);
-					if (ImGui::Selectable(typeArray[i].c_str(), is_selected))
-						selectedComponent = (ComponentTypes)(i + 1);
+					if (ImGui::Selectable(typeArray[i - 1].c_str(), is_selected))
+						selectedComponent = (ComponentTypes)(i);
 				}
 
 				ImGui::EndListBox();
@@ -907,6 +979,9 @@ void EditingUI::GenerateEditingUI() {
 					break;
 				case ComponentTypes::FLASHLIGHT_CONTROLLER:
 					currentEntity->AddComponent<FlashlightController>();
+					break;
+				case ComponentTypes::AUDIO_RESPONSE_DEVICE:
+					currentEntity->AddComponent<AudioResponse>();
 					break;
 				}
 			}
