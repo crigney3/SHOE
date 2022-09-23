@@ -65,6 +65,7 @@ public:
 	bool* GetMaterialWindowEnabled();
 	bool* GetCollidersWindowEnabled();
 	bool* GetRtvWindowEnabled();
+	bool* GetRenderWindowEnabled();
 
 	bool* GetStatsEnabled();
 	bool* GetMovingEnabled();
@@ -87,6 +88,7 @@ private:
 	bool rtvWindowEnabled;
 	bool soundWindowEnabled;
 	bool collidersWindowEnabled;
+	bool renderWindowEnabled;
 
 	// Transfer these to static locals
 	// Then add helper functions for setting them?

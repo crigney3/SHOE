@@ -131,6 +131,10 @@ void EditingUI::DisplayMenu() {
 				ImGui::EndMenu();
 			}
 
+			ImGui::Separator();
+
+			ImGui::MenuItem("Render", "", GetRenderWindowEnabled());
+
 			ImGui::EndMenu();
 		}
 
@@ -1217,6 +1221,37 @@ void EditingUI::GenerateEditingUI() {
 		ImGui::End();
 	}
 
+	if (*(GetRenderWindowEnabled())) {
+		ImGui::Begin("Render to Video File");
+
+		static int videoDuration = 20;
+		FileRenderData* renderData = renderer->GetFileRenderData();
+
+		static char nameBuf[64] = "C:\\output.mp4";
+		if (ImGui::InputText("Output file: ", nameBuf, sizeof(nameBuf))) {
+			std::wstring renderDataString;
+			ISimpleShader::ConvertToWide(nameBuf, renderDataString);
+			renderData->filePath = renderDataString;
+		}
+
+		if (ImGui::InputScalar("FPS", ImGuiDataType_U32, &renderData->VideoFPS)) {
+			renderData->VideoFrameCount = videoDuration * renderData->VideoFPS;
+			renderData->VideoFrameDuration = 10 * 1000 * 1000 / renderData->VideoFPS;
+		}
+
+		ImGui::InputScalar("Bitrate", ImGuiDataType_U32, &renderData->VideoBitRate);
+
+		if (ImGui::InputScalar("Duration (s)", ImGuiDataType_U32, &videoDuration)) {
+			renderData->VideoFrameCount = videoDuration * renderData->VideoFPS;
+		}
+
+		if (ImGui::Button("Render")) {
+			renderer->RenderToVideoFile(globalAssets.GetEditingCamera(), *renderData);
+		}
+
+		ImGui::End();
+	}
+
 	// TODO: Add Material Edit menu
 }
 
@@ -1259,6 +1294,10 @@ bool* EditingUI::GetStatsEnabled() {
 
 bool* EditingUI::GetMovingEnabled() {
 	return &movingEnabled;
+}
+
+bool* EditingUI::GetRenderWindowEnabled() {
+	return &renderWindowEnabled;
 }
 
 int EditingUI::GetEntityUIIndex() {

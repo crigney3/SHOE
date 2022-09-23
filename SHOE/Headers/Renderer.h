@@ -2,6 +2,14 @@
 
 #include "AssetManager.h"
 #include "CollisionManager.h"
+#include <windows.media.mediaproperties.h>
+#include <mfidl.h>
+#include <mfreadwrite.h>
+#include <mfapi.h>
+
+#pragma comment(lib, "Mfreadwrite.lib")
+
+#define RETURN_HRESULT_IF_FAILED(x) do { HRESULT status = (x); if (FAILED(status)) return status; } while(0)
 
 // Effects that require multiple render target views
 // are stored in the following order:
@@ -26,6 +34,7 @@ enum RTVTypes
     REFRACTION_SILHOUETTE,
     COMPOSITE,
     FINAL_COMPOSITE,
+    FILE_WRITE_COMPOSITE,
 
     RTV_TYPE_COUNT
 };
@@ -73,6 +82,29 @@ struct PSPerMaterialData
     float UvMult;
 };
 
+/// <summary>
+/// Preset data that needs to be fully initialized before
+/// passing it to Renderer::RenderToFile.
+/// </summary>
+struct FileRenderData
+{
+    unsigned int VideoWidth;
+    unsigned int VideoHeight;
+    unsigned int VideoFPS;
+
+    // Should usually be Width * Height
+    unsigned int VideoPels;
+    unsigned int VideoBitRate;
+    unsigned int VideoFrameCount;
+    unsigned long VideoFrameDuration; 
+
+    // Formats from MFVideoFormat
+    GUID VideoEncodingFormat;
+    GUID VideoInputFormat;
+
+    std::wstring filePath;
+};
+
 class Renderer
 {
 private:
@@ -83,8 +115,10 @@ private:
     Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain;
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV;
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV;
+    Microsoft::WRL::ComPtr<IMFDXGIDeviceManager> deviceManager;
 
     DirectX::XMFLOAT3 ambientColor;
+    UINT deviceManagerResetToken = 0;
 
     //General shaders
     std::shared_ptr<SimpleVertexShader> basicVS;
@@ -141,6 +175,10 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> compositeTexture;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> silhouetteTexture;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> finalCompositeTexture;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> fileWriteTexture;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> fileReadTexture;
+
+    FileRenderData fileRenderData;
 
     unsigned int windowHeight;
     unsigned int windowWidth;
@@ -202,6 +240,12 @@ public:
 
     static bool GetDrawColliderStatus();
     static void SetDrawColliderStatus(bool _newState);
+
+    HRESULT RenderToVideoFile(std::shared_ptr<Camera> renderCam, FileRenderData RenderParameters);
+    HRESULT WriteFrame(Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter, DWORD streamIndex, const long long int& timeStamp, FileRenderData* RenderParameters);
+    HRESULT InitializeFileSinkWriter(OUT Microsoft::WRL::ComPtr<IMFSinkWriter>* sinkWriterOut, DWORD* pStreamIndex, FileRenderData* RenderParameters);
+
+    FileRenderData* GetFileRenderData();
 
     int selectedEntity;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> outlineSRV;
