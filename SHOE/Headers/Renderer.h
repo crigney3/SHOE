@@ -178,6 +178,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> fileWriteTexture;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> fileReadTexture;
 
+    FileRenderData fileRenderData;
+
     unsigned int windowHeight;
     unsigned int windowWidth;
 
@@ -242,6 +244,8 @@ public:
     HRESULT RenderToVideoFile(std::shared_ptr<Camera> renderCam, FileRenderData RenderParameters);
     HRESULT WriteFrame(Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter, DWORD streamIndex, const long long int& timeStamp, FileRenderData* RenderParameters);
     HRESULT InitializeFileSinkWriter(OUT Microsoft::WRL::ComPtr<IMFSinkWriter>* sinkWriterOut, DWORD* pStreamIndex, FileRenderData* RenderParameters);
+
+    FileRenderData* GetFileRenderData();
 
     int selectedEntity;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> outlineSRV;

@@ -70,6 +70,17 @@ Renderer::Renderer(
 
 	MFStartup(MF_VERSION);
 
+	fileRenderData.filePath = L"C:\\Users\\Corey Rigney\\Videos\\Captures\\test103.mp4";
+	fileRenderData.VideoBitRate = 800000;
+	fileRenderData.VideoEncodingFormat = MFVideoFormat_H264;
+	fileRenderData.VideoFPS = 30;
+	fileRenderData.VideoFrameCount = 20 * fileRenderData.VideoFPS;
+	fileRenderData.VideoFrameDuration = 10 * 1000 * 1000 / fileRenderData.VideoFPS;
+	fileRenderData.VideoHeight = windowHeight;
+	fileRenderData.VideoWidth = windowWidth;
+	fileRenderData.VideoInputFormat = MFVideoFormat_RGB32;
+	fileRenderData.VideoPels = fileRenderData.VideoWidth * fileRenderData.VideoHeight;
+
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
 }
 
@@ -1546,4 +1557,8 @@ HRESULT Renderer::WriteFrame(Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter, D
 	/*pSample->Release();
 	pBuffer->Release();*/
 	return hr;
+}
+
+FileRenderData* Renderer::GetFileRenderData() {
+	return &fileRenderData;
 }

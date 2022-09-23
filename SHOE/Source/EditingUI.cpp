@@ -990,23 +990,24 @@ void EditingUI::GenerateEditingUI() {
 	if (*(GetRenderWindowEnabled())) {
 		ImGui::Begin("Render to Video File");
 
-		FileRenderData renderData;
+		FileRenderData* renderData = renderer->GetFileRenderData();
 
-		renderData.filePath = L"C:\\Users\\Corey Rigney\\Videos\\Captures\\test103.mp4";
-		renderData.VideoBitRate = 800000;
-		renderData.VideoEncodingFormat = MFVideoFormat_H264;
-		renderData.VideoFPS = 30;
-		renderData.VideoFrameCount = 20 * renderData.VideoFPS;
-		renderData.VideoFrameDuration = 10 * 1000 * 1000 / renderData.VideoFPS;
-		renderData.VideoHeight = dxCore->height;
-		renderData.VideoWidth = dxCore->width;
-		renderData.VideoInputFormat = MFVideoFormat_RGB32;
-		renderData.VideoPels = renderData.VideoWidth * renderData.VideoHeight;
+		static char nameBuf[64] = "C:\\output.mp4";
+		if (ImGui::InputText("Output file: ", nameBuf, sizeof(nameBuf))) {
+			std::wstring renderDataString;
+			ISimpleShader::ConvertToWide(nameBuf, renderDataString);
+			renderData->filePath = renderDataString;
+		}
 
-		ImGui::Image((ImTextureID*)renderer->GetRenderTargetSRV(RTVTypes::FILE_WRITE_COMPOSITE).Get(), ImVec2(256, 256));
+		if (ImGui::InputScalar("FPS", ImGuiDataType_U32, &renderData->VideoFPS)) {
+			renderData->VideoFrameCount = 20 * renderData->VideoFPS;
+			renderData->VideoFrameDuration = 10 * 1000 * 1000 / renderData->VideoFPS;
+		}
+
+		ImGui::InputScalar("Bitrate", ImGuiDataType_U32, &renderData->VideoBitRate);
 
 		if (ImGui::Button("Render")) {
-			renderer->RenderToVideoFile(globalAssets.GetEditingCamera(), renderData);
+			renderer->RenderToVideoFile(globalAssets.GetEditingCamera(), *renderData);
 		}
 
 		ImGui::End();
