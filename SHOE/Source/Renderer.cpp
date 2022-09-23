@@ -1346,23 +1346,6 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 		//context->CopyResource(readableRenderComposite.Get(), finalCompositeResource);
 	}
 	else {
-		renderTargets[0] = renderTargetRTVs[RTVTypes::FILE_WRITE_COMPOSITE].Get();
-		context->OMSetRenderTargets(1, renderTargets, 0);
-
-		std::shared_ptr<SimplePixelShader> rgbConvertPS = globalAssets.GetPixelShaderByName("CompressRGBPS");
-
-		fullscreenVS->SetShader();
-
-		rgbConvertPS->SetShader();
-		rgbConvertPS->SetShaderResourceView("RGBFrame", renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].Get());
-		rgbConvertPS->SetSamplerState("BasicSampler", globalAssets.GetMaterialAtID(0)->GetSamplerState());
-		rgbConvertPS->CopyAllBufferData();
-		context->Draw(3, 0);
-
-		context->CopyResource(fileReadTexture.Get(), fileWriteTexture.Get());
-
-		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
-
 		ImGui::Render();
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
@@ -1494,20 +1477,6 @@ HRESULT Renderer::WriteFrame(Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter, D
 
 	D3D11_MAPPED_SUBRESOURCE msr;
 	ZeroMemory(&msr, sizeof(D3D11_MAPPED_SUBRESOURCE));
-	/*int pixelDataSize = 4 * RenderParameters->VideoWidth * RenderParameters->VideoHeight;
-	std::vector<BYTE> pixelData = ;
-	ZeroMemory(&pixelData, sizeof(4 * RenderParameters->VideoWidth * RenderParameters->VideoHeight));*/
-	/*D3D11_BOX srcBox;
-	srcBox.left = 0;
-	srcBox.right = RenderParameters->VideoWidth;
-	srcBox.top = 0;
-	srcBox.bottom = RenderParameters->VideoHeight;
-	srcBox.front = 0;
-	srcBox.back = 1;*/
-
-	//
-	//memcpy(pixelData, msr.pData, RenderParameters->VideoWidth * RenderParameters->VideoHeight * 4);
-	//
 
 	const LONG cbWidth = 4 * RenderParameters->VideoWidth;
 	const DWORD cbBuffer = cbWidth * RenderParameters->VideoHeight;
