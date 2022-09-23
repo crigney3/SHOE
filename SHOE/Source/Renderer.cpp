@@ -164,13 +164,35 @@ void Renderer::InitRenderTargetViews() {
 
 	device->CreateShaderResourceView(finalCompositeTexture.Get(), 0, renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].GetAddressOf());
 
-	D3D11_BUFFER_DESC fileRenderBufferDesc = {};
-	fileRenderBufferDesc.ByteWidth = windowWidth * windowHeight * sizeof(DirectX::XMFLOAT4);
-	fileRenderBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	fileRenderBufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	fileRenderBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	device->CreateBuffer(&fileRenderBufferDesc, 0, readableRenderComposite.GetAddressOf());
+	fileWriteTexture.Reset();
+	renderTargetSRVs[RTVTypes::FILE_WRITE_COMPOSITE].Reset();
+	renderTargetRTVs[RTVTypes::FILE_WRITE_COMPOSITE].Reset();
+	D3D11_TEXTURE2D_DESC fileTexDesc = {};
+	fileTexDesc.Width = windowWidth;
+	fileTexDesc.Height = windowHeight;
+	fileTexDesc.ArraySize = 1;
+	fileTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	fileTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	fileTexDesc.MipLevels = 1;
+	fileTexDesc.MiscFlags = 0;
+	fileTexDesc.SampleDesc.Count = 1;
+	device->CreateTexture2D(&fileTexDesc, 0, fileWriteTexture.GetAddressOf());
+	device->CreateRenderTargetView(fileWriteTexture.Get(), &compositeRTVDesc, renderTargetRTVs[RTVTypes::FILE_WRITE_COMPOSITE].GetAddressOf());
 
+	device->CreateShaderResourceView(fileWriteTexture.Get(), 0, renderTargetSRVs[RTVTypes::FILE_WRITE_COMPOSITE].GetAddressOf());
+
+	fileReadTexture.Reset();
+	D3D11_TEXTURE2D_DESC fileReadTexDesc = {};
+	fileReadTexDesc.Width = windowWidth;
+	fileReadTexDesc.Height = windowHeight;
+	fileReadTexDesc.ArraySize = 1;
+	fileReadTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	fileReadTexDesc.MipLevels = 1;
+	fileReadTexDesc.MiscFlags = 0;
+	fileReadTexDesc.SampleDesc.Count = 1;
+	fileReadTexDesc.Usage = D3D11_USAGE_STAGING;
+	fileReadTexDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	device->CreateTexture2D(&fileReadTexDesc, 0, fileReadTexture.GetAddressOf());
 
 	silhouetteTexture.Reset();
 	renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].Reset();
@@ -1274,14 +1296,56 @@ void Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 
 	if (engineState == EngineState::FILE_RENDER) {
 		// Don't present the screen to the user, and copy the final composite
-		// to the CPU-Accessible fileRender buffer.
+		// to the CPU-Accessible fileRender buffer. Also convert it to an ARGB
+		// format instead of RGBA
 
-		ID3D11Resource* finalCompositeResource;
-		renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].Get()->GetResource(&finalCompositeResource);
+		renderTargets[0] = renderTargetRTVs[RTVTypes::FILE_WRITE_COMPOSITE].Get();
+		context->OMSetRenderTargets(1, renderTargets, 0);
 
-		context->CopyResource(readableRenderComposite.Get(), finalCompositeResource);
+		std::shared_ptr<SimplePixelShader> rgbConvertPS = globalAssets.GetPixelShaderByName("CompressRGBPS");
+
+		fullscreenVS->SetShader();
+
+		rgbConvertPS->SetShader();
+		rgbConvertPS->SetShaderResourceView("RGBFrame", renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].Get());
+		rgbConvertPS->SetSamplerState("BasicSampler", globalAssets.GetMaterialAtID(0)->GetSamplerState());
+		rgbConvertPS->CopyAllBufferData();
+		context->Draw(3, 0);
+
+		context->CopyResource(fileReadTexture.Get(), fileWriteTexture.Get());
+
+		// Present the back buffer to the user
+		//  - Puts the final frame we're drawing into the window so the user can see it
+		//  - Do this exactly ONCE PER FRAME (always at the very end of the frame)
+		swapChain->Present(0, 0);
+
+		// Due to the usage of a more sophisticated swap chain,
+		// the render target must be re-bound after every call to Present()
+		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+
+		//ID3D11Resource* finalCompositeResource;
+		//context->CopyResource(fileWriteTexture.Get(), finalCompositeTexture.Get());
+
+		//context->CopyResource(readableRenderComposite.Get(), finalCompositeResource);
 	}
 	else {
+		renderTargets[0] = renderTargetRTVs[RTVTypes::FILE_WRITE_COMPOSITE].Get();
+		context->OMSetRenderTargets(1, renderTargets, 0);
+
+		std::shared_ptr<SimplePixelShader> rgbConvertPS = globalAssets.GetPixelShaderByName("CompressRGBPS");
+
+		fullscreenVS->SetShader();
+
+		rgbConvertPS->SetShader();
+		rgbConvertPS->SetShaderResourceView("RGBFrame", renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].Get());
+		rgbConvertPS->SetSamplerState("BasicSampler", globalAssets.GetMaterialAtID(0)->GetSamplerState());
+		rgbConvertPS->CopyAllBufferData();
+		context->Draw(3, 0);
+
+		context->CopyResource(fileReadTexture.Get(), fileWriteTexture.Get());
+
+		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+
 		ImGui::Render();
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
@@ -1398,15 +1462,32 @@ HRESULT Renderer::InitializeFileSinkWriter(Microsoft::WRL::ComPtr<IMFSinkWriter>
 	(*sinkWriterOut)->AddRef();
 	*pStreamIndex = streamIndex;
 
-	sinkWriter->Release();
+	/*sinkWriter->Release();
 	pMediaTypeOut->Release();
-	pMediaTypeIn->Release();
+	pMediaTypeIn->Release();*/
 	return hr;
 }
 
 HRESULT Renderer::WriteFrame(Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter, DWORD streamIndex, const long long int& timeStamp, FileRenderData* RenderParameters) {
 	Microsoft::WRL::ComPtr<IMFSample> pSample = NULL;
 	Microsoft::WRL::ComPtr<IMFMediaBuffer> pBuffer = NULL;
+
+	D3D11_MAPPED_SUBRESOURCE msr;
+	ZeroMemory(&msr, sizeof(D3D11_MAPPED_SUBRESOURCE));
+	/*int pixelDataSize = 4 * RenderParameters->VideoWidth * RenderParameters->VideoHeight;
+	std::vector<BYTE> pixelData = ;
+	ZeroMemory(&pixelData, sizeof(4 * RenderParameters->VideoWidth * RenderParameters->VideoHeight));*/
+	/*D3D11_BOX srcBox;
+	srcBox.left = 0;
+	srcBox.right = RenderParameters->VideoWidth;
+	srcBox.top = 0;
+	srcBox.bottom = RenderParameters->VideoHeight;
+	srcBox.front = 0;
+	srcBox.back = 1;*/
+
+	//
+	//memcpy(pixelData, msr.pData, RenderParameters->VideoWidth * RenderParameters->VideoHeight * 4);
+	//
 
 	const LONG cbWidth = 4 * RenderParameters->VideoWidth;
 	const DWORD cbBuffer = cbWidth * RenderParameters->VideoHeight;
@@ -1419,14 +1500,18 @@ HRESULT Renderer::WriteFrame(Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter, D
 	// Lock the buffer and copy the video frame to the buffer.
 	RETURN_HRESULT_IF_FAILED(pBuffer->Lock(&pData, NULL, NULL));
 
+	context->Map(fileReadTexture.Get(), 0, D3D11_MAP_READ, 0, &msr);
+
 	RETURN_HRESULT_IF_FAILED(MFCopyImage(
 			pData,							// Destination buffer.
 			cbWidth,						// Destination stride.
-			(BYTE*)readableRenderComposite.Get(),		// First row in rendered buffer.
-			cbWidth,						// Source stride.
+			(BYTE*)(msr.pData) + ((RenderParameters->VideoHeight - 1) * cbWidth),		// First row in rendered buffer. maybe use the resource with CPU access and a CopyResource??
+			-cbWidth,						// Source stride
 			cbWidth,						// Image width in bytes.
 			RenderParameters->VideoHeight   // Image height in pixels.
 		));
+
+	context->Unmap(fileReadTexture.Get(), 0);
 
 	if (pBuffer)
 	{
@@ -1449,7 +1534,7 @@ HRESULT Renderer::WriteFrame(Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter, D
 	// Send the sample to the Sink Writer.
 	RETURN_HRESULT_IF_FAILED(sinkWriter->WriteSample(streamIndex, pSample.Get()));
 
-	pSample->Release();
-	pBuffer->Release();
+	/*pSample->Release();
+	pBuffer->Release();*/
 	return hr;
 }

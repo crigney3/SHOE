@@ -34,6 +34,7 @@ enum RTVTypes
     REFRACTION_SILHOUETTE,
     COMPOSITE,
     FINAL_COMPOSITE,
+    FILE_WRITE_COMPOSITE,
 
     RTV_TYPE_COUNT
 };
@@ -156,10 +157,6 @@ private:
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView>      renderTargetRTVs[RTVTypes::RTV_TYPE_COUNT];
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>    renderTargetSRVs[RTVTypes::RTV_TYPE_COUNT];
 
-    // CPU-Accessible SRV with composite frame data
-    // Used for writing to a video file
-    Microsoft::WRL::ComPtr<ID3D11Buffer> readableRenderComposite;
-
     // Ambient Occlusion data
     std::shared_ptr<SimplePixelShader> ssaoPS;
     std::shared_ptr<SimplePixelShader> ssaoBlurPS;
@@ -176,6 +173,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> compositeTexture;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> silhouetteTexture;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> finalCompositeTexture;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> fileWriteTexture;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> fileReadTexture;
 
     unsigned int windowHeight;
     unsigned int windowWidth;

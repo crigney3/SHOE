@@ -992,9 +992,9 @@ void EditingUI::GenerateEditingUI() {
 
 		FileRenderData renderData;
 
-		renderData.filePath = L"C:\\Users\\coreyrigney\\Videos\\Captures\\test.wmv";
+		renderData.filePath = L"C:\\Users\\Corey Rigney\\Videos\\Captures\\test103.mp4";
 		renderData.VideoBitRate = 800000;
-		renderData.VideoEncodingFormat = MFVideoFormat_WMV3;
+		renderData.VideoEncodingFormat = MFVideoFormat_H264;
 		renderData.VideoFPS = 30;
 		renderData.VideoFrameCount = 20 * renderData.VideoFPS;
 		renderData.VideoFrameDuration = 10 * 1000 * 1000 / renderData.VideoFPS;
@@ -1003,8 +1003,10 @@ void EditingUI::GenerateEditingUI() {
 		renderData.VideoInputFormat = MFVideoFormat_RGB32;
 		renderData.VideoPels = renderData.VideoWidth * renderData.VideoHeight;
 
+		ImGui::Image((ImTextureID*)renderer->GetRenderTargetSRV(RTVTypes::FILE_WRITE_COMPOSITE).Get(), ImVec2(256, 256));
+
 		if (ImGui::Button("Render")) {
-			renderer->RenderToVideoFile(globalAssets.GetMainCamera(), renderData);
+			renderer->RenderToVideoFile(globalAssets.GetEditingCamera(), renderData);
 		}
 
 		ImGui::End();

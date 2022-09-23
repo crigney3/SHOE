@@ -1315,6 +1315,7 @@ void AssetManager::InitializeShaders() {
 	CreatePixelShader("TextureSamplePS", "PSTextureSample.cso");
 	CreatePixelShader("RefractivePS", "PSRefractive.cso");
 	CreatePixelShader("OutlinePS", "PSSilhouette.cso");
+	CreatePixelShader("CompressRGBPS", "PSRGBCompress.cso");
 
 	// Make compute shaders
 	CreateComputeShader("ParticleMoveCS", "CSParticleFlow.cso");
