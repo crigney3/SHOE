@@ -23,10 +23,16 @@ class AudioResponse : public IComponent
 public:
 	std::string audioName;
 	AudioEventTrigger trigger;
+	float triggerComparison;
 	AudioEventResponse response;
 	DirectX::XMFLOAT3 data;
 
+	void SetLinkedSound(FMOD::Sound* sound);
+	void SetLinkedSound(FMOD::Channel* channel);
+
 private:
+	AudioHandler& audioInstance;
+
 	bool canTrigger;
 
 	void Start() override;
@@ -36,5 +42,8 @@ private:
 
 	bool IsTriggered();
 	void TriggerResponse();
+
+	FMOD::Sound* linkedSound;
+	FMOD::Channel* linkedChannel;
 };
 

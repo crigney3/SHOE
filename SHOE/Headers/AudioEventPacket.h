@@ -2,6 +2,9 @@
 #include <string>
 #include <memory>
 #include "GameEntity.fwd.h"
+#include "AudioHandler.fwd.h"
+#include <fmod.hpp>
+#include <fmod_common.h>
 
 class AudioEventPacket
 {

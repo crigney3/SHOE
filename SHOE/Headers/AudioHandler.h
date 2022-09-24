@@ -3,6 +3,7 @@
 #include <fmod.hpp>
 #include <fmod_common.h>
 #include <string>
+#include <vector>
 #include "DXCore.h"
 
 class AudioHandler
@@ -35,13 +36,26 @@ private:
 private:
 
 	FMOD::System* soundSystem;
+
+	FMOD::ChannelGroup* activeChannels;
+	std::vector<FMOD::Channel*> allChannels;
+
+	friend class AudioResponse;
+
 public:
 	~AudioHandler();
 
 	FMOD_RESULT Initialize();
 
 	FMOD::Sound* LoadSound(std::string soundPath, FMOD_MODE mode);
-	FMOD::Channel* BasicPlaySound(FMOD::Sound* sound);
+	FMOD::Channel* BasicPlaySound(FMOD::Sound* sound, bool isPaused = false);
 
 	FMOD::System* GetSoundSystem();
+
+	FMOD::ChannelGroup* GetActiveChannels();
+	FMOD::Channel* GetChannelByIndex(int index);
+	FMOD::Channel* GetChannelBySound(FMOD::Sound* sound);
+	FMOD::Channel* GetChannelBySoundName(std::string soundName);
+
+	size_t GetChannelVectorLength();
 };

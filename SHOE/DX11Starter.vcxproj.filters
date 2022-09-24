@@ -183,6 +183,9 @@
     <ClInclude Include="Headers\AudioResponse.h">
       <Filter>Header Files\SHOE-Headers\Components</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\AudioHandler.fwd.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\PixelShaders\IBLBrdfLookUpTablePS.hlsl">

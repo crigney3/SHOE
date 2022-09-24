@@ -1,5 +1,6 @@
 #include "../Headers/AudioResponse.h"
 #include "../Headers/GameEntity.h"
+#include "../Headers/AudioHandler.h"
 
 void AudioResponse::Start()
 {
@@ -7,6 +8,7 @@ void AudioResponse::Start()
 	trigger = AudioEventTrigger::FrequencyAbove;
 	response = AudioEventResponse::Move;
 	data = DirectX::XMFLOAT3(0, 0, 0);
+	audioInstance = AudioHandler::GetInstance();
 }
 
 void AudioResponse::Update()
@@ -39,18 +41,28 @@ void AudioResponse::OnAudioPause(AudioEventPacket audio)
 /// </summary>
 bool AudioResponse::IsTriggered()
 {
+	bool triggerResponse;
+	float freq;
+	float pitch;
 	switch (trigger) {
-	case AudioEventTrigger::FrequencyAbove:
-		//return AudioHandler::GetFrequency(audioName) >= testValue;
+	case AudioEventTrigger::FrequencyAbove:		
+		linkedChannel->getFrequency(&freq);
+		triggerResponse = freq >= triggerComparison;
 		break;
 	case AudioEventTrigger::FrequencyBelow:
+		linkedChannel->getFrequency(&freq);
+		triggerResponse = freq <= triggerComparison;
 		break;
 	case AudioEventTrigger::PitchAbove:
+		linkedChannel->getPitch(&pitch);
+		triggerResponse = pitch >= triggerComparison;
 		break;
 	case AudioEventTrigger::PitchBelow:
+		linkedChannel->getPitch(&pitch);
+		triggerResponse = pitch <= triggerComparison;
 		break;
 	}
-	return false;
+	return triggerResponse;
 }
 
 /// <summary>
@@ -75,4 +87,22 @@ void AudioResponse::TriggerResponse()
 		GetGameEntity()->GetComponent<Light>()->SetColor(data);
 		break;
 	}
+}
+
+/// <summary>
+/// Set the linked sound for this component/object using a sound.
+/// </summary>
+void AudioResponse::SetLinkedSound(FMOD::Sound* sound) {
+	this->linkedSound = sound;
+	this->linkedChannel = audioInstance.GetChannelBySound(sound);
+}
+
+/// <summary>
+/// Set the linked sound for this component/object using a channel.
+/// </summary>
+void AudioResponse::SetLinkedSound(FMOD::Channel* channel) {
+	FMOD::Sound* sound;
+	channel->getCurrentSound(&sound);
+	this->linkedSound = sound;
+	this->linkedChannel = channel;
 }

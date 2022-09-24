@@ -855,20 +855,30 @@ void EditingUI::GenerateEditingUI() {
 				ImGui::Text("Audio Response Device");
 				ImGui::Text("Use this to link an audio trigger to a graphical effect.");
 
-				std::string nameBuffer;
-				static char nameBuf[64] = "";
-				nameBuffer = audioResponder->audioName;
-				strcpy_s(nameBuf, nameBuffer.c_str());
-				ImGui::Text("Name of linked audio");
-				ImGui::SameLine();
-				ImGui::InputText("testSound1", nameBuf, sizeof(nameBuffer));
-
-				currentEntity->SetName(nameBuf);
-
 				bool arEnabled = audioResponder->IsLocallyEnabled();
 				ImGui::Checkbox("Enabled ", &arEnabled);
 				if (arEnabled != audioResponder->IsLocallyEnabled())
-					flashlight->SetEnabled(arEnabled);
+					audioResponder->SetEnabled(arEnabled);
+
+				static int selectedChannel = 0;
+				// Still need to initialize sounds correctly through the channel system
+				if (ImGui::BeginListBox("Sound to link")) {
+					for (int i = 0; i < audioHandler.GetChannelVectorLength(); i++) {
+						const bool is_selected = ((int)selectedChannel == i);
+						FMOD::Sound* listSound;
+						FMOD::Channel* listChannel;
+						FMODUserData* uData;
+
+						listChannel = audioHandler.GetChannelByIndex(i);
+						listChannel->getCurrentSound(&listSound);
+						listSound->getUserData((void**)& uData);
+
+						if (ImGui::Selectable(uData->name->c_str(), is_selected)) {
+							selectedChannel = i;
+							audioResponder->SetLinkedSound(listChannel);
+						}
+					}
+				}
 
 				ImGui::Separator();
 
@@ -887,6 +897,8 @@ void EditingUI::GenerateEditingUI() {
 					ImGui::EndListBox();
 				}
 
+				ImGui::InputFloat("Trigger Data: ", &audioResponder->triggerComparison);
+
 				ImGui::Separator();
 
 				static AudioEventResponse selectedResponse = AudioEventResponse::Move;
@@ -903,8 +915,6 @@ void EditingUI::GenerateEditingUI() {
 
 					ImGui::EndListBox();
 				}
-
-				ImGui::Separator();
 
 				ImGui::Text("Set the data for the linked graphical response.");
 				
