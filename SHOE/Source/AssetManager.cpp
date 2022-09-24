@@ -1592,7 +1592,7 @@ std::shared_ptr<Sky> AssetManager::GetSkyAtID(int id) {
 void AssetManager::BroadcastGlobalEntityEvent(EntityEventType event, std::shared_ptr<void> message)
 {
 	for (std::shared_ptr<GameEntity> entity : globalEntities) {
-		entity->PropagateEvent(event);
+		entity->PropagateEvent(event, message);
 	}
 }
 

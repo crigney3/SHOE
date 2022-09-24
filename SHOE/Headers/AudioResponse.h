@@ -18,6 +18,15 @@ enum class AudioEventResponse {
 	AudioEventResponseCount
 };
 
+enum class AudioResponseContinuityMode {
+	Once,
+	LoopXTimes,
+	UntilIntervalStop,
+	UntilAudioStop,
+	Inifinite,
+	AudioResponseContinuityModeCount
+};
+
 class AudioResponse : public IComponent
 {
 public:
@@ -35,6 +44,7 @@ private:
 
 	void Start() override;
 	void Update() override;
+	void EditingUpdate() override;
 	void OnAudioPlay(AudioEventPacket audio) override;
 	void OnAudioPause(AudioEventPacket audio) override;
 

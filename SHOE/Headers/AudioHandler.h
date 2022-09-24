@@ -6,6 +6,12 @@
 #include <vector>
 #include "DXCore.h"
 
+FMOD_RESULT F_CALLBACK ComponentSignalCallback(FMOD_CHANNELCONTROL* channelControl,
+	FMOD_CHANNELCONTROL_TYPE controlType,
+	FMOD_CHANNELCONTROL_CALLBACK_TYPE callbackType,
+	void* commandData1,
+	void* commandData2);
+
 class AudioHandler
 {
 #pragma region Singleton

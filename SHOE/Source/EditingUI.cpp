@@ -1030,6 +1030,19 @@ void EditingUI::GenerateEditingUI() {
 				audioHandler.BasicPlaySound(channel, true);
 			}
 
+			char timeBuf[50];
+			unsigned int currentPosition;
+			unsigned int audioLength;
+			float posFloat;
+			float lenFloat;
+			channel->getPosition(&currentPosition, FMOD_TIMEUNIT_MS);
+			sound->getLength(&audioLength, FMOD_TIMEUNIT_MS);
+
+			posFloat = currentPosition / 1000.0f;
+			lenFloat = audioLength / 1000.0f;
+
+			sprintf_s(timeBuf, "%4.2f / %4.2f", posFloat, lenFloat);
+			ImGui::Text(timeBuf);
 			ImGui::Separator();
 		}
 

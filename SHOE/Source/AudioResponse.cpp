@@ -17,6 +17,13 @@ void AudioResponse::Update()
 	}
 }
 
+void AudioResponse::EditingUpdate()
+{
+	if (canTrigger && IsTriggered()) {
+		TriggerResponse();
+	}
+}
+
 /// <summary>
 /// Allows the trigger controller to be polled
 /// </summary>
