@@ -91,6 +91,7 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::string name, bool isNameFullPath) {
 	FMODUserData* uData = new FMODUserData;
 	FMOD::Sound* sound;
+	FMOD::Channel* channel;
 
 	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
 
@@ -101,7 +102,8 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
 	}
 
-	sound = audioInstance.LoadSound(namePath, mode);
+	channel = audioInstance.LoadSoundAndInitChannel(namePath, mode);
+	channel->getCurrentSound(&sound);
 
 	// Serialize the filename if it's in the right folder
 	std::string assetPathStr = "Assets\\Sounds\\";

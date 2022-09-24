@@ -27,12 +27,10 @@ public:
 	AudioEventResponse response;
 	DirectX::XMFLOAT3 data;
 
-	void SetLinkedSound(FMOD::Sound* sound);
+	//void SetLinkedSound(FMOD::Sound* sound);
 	void SetLinkedSound(FMOD::Channel* channel);
 
 private:
-	AudioHandler& audioInstance;
-
 	bool canTrigger;
 
 	void Start() override;

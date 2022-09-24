@@ -878,6 +878,8 @@ void EditingUI::GenerateEditingUI() {
 							audioResponder->SetLinkedSound(listChannel);
 						}
 					}
+
+					ImGui::EndListBox();
 				}
 
 				ImGui::Separator();
@@ -1006,10 +1008,29 @@ void EditingUI::GenerateEditingUI() {
 		ImGui::Begin("Sound Menu");
 
 		for (int i = 0; i < globalAssets.GetSoundArraySize(); i++) {
-			std::string buttonName = "Play Piano Sound ##" + std::to_string(i);
-			if (ImGui::Button(buttonName.c_str())) {
-				audioHandler.BasicPlaySound(globalAssets.GetSoundAtID(i));
+			FMOD::Channel* channel;
+			FMOD::Sound* sound;
+			FMODUserData* uData;
+
+			sound = globalAssets.GetSoundAtID(i);
+			channel = audioHandler.GetChannelBySound(sound);
+			sound->getUserData((void**)&uData);
+			std::string infoStr = uData->name.get()->c_str();
+			std::string node = "Viewing Sound: " + infoStr;
+
+			ImGui::Text(node.c_str());
+
+			std::string playButtonName = "Play Sound ##" + std::to_string(i);
+			std::string pauseButtonName = "Pause Sound ##" + std::to_string(i);
+			if (ImGui::Button(playButtonName.c_str())) {
+				audioHandler.BasicPlaySound(channel, false);
 			}
+			ImGui::SameLine();
+			if (ImGui::Button(pauseButtonName.c_str())) {
+				audioHandler.BasicPlaySound(channel, true);
+			}
+
+			ImGui::Separator();
 		}
 
 		ImGui::End();

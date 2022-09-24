@@ -43,6 +43,37 @@ Sound* AudioHandler::LoadSound(std::string soundPath, FMOD_MODE mode) {
 	return newSound;
 }
 
+Channel* AudioHandler::LoadSoundAndInitChannel(std::string soundPath, FMOD_MODE mode) {
+	FMOD_RESULT result;
+	Channel* channel;
+	FMOD::Sound* newSound;
+
+	result = soundSystem->createSound(soundPath.c_str(),
+		mode,
+		0,
+		&newSound);
+
+	if (result != FMOD_OK) return nullptr;
+
+	result = this->soundSystem->playSound(newSound,
+		0,
+		true,
+		&channel);
+
+	if (result == FMOD_OK) {
+		channel->setChannelGroup(activeChannels);
+	}
+
+	allChannels.push_back(channel);
+
+	if (result != FMOD_OK) return nullptr;
+
+	return channel;
+}
+
+/// <summary>
+/// Deprecated - avoid use
+/// </summary>
 Channel* AudioHandler::BasicPlaySound(FMOD::Sound* sound, bool isPaused) {
 	FMOD_RESULT result;
 	Channel* channel;
@@ -58,7 +89,29 @@ Channel* AudioHandler::BasicPlaySound(FMOD::Sound* sound, bool isPaused) {
 
 	FMODUserData* uData;
 	FMOD_RESULT uDataResult = sound->getUserData((void**)&uData);
-	AssetManager::GetInstance().BroadcastGlobalEntityEvent(EntityEventType::OnAudioPlay, std::make_shared<AudioEventPacket>(*uData->name, nullptr));
+	AssetManager::GetInstance().BroadcastGlobalEntityEvent(EntityEventType::OnAudioPlay, std::make_shared<AudioEventPacket>(*uData->name, channel, nullptr));
+
+	return channel;
+}
+
+Channel* AudioHandler::BasicPlaySound(FMOD::Channel* channel, bool isPaused) {
+	FMOD_RESULT result;
+	EntityEventType eType;
+	FMOD::Sound* currentSound;
+
+	result = channel->getCurrentSound(&currentSound);
+
+	if (result != FMOD_OK) return nullptr;
+
+	result = channel->setPaused(isPaused);
+
+	if (result != FMOD_OK) return nullptr;
+
+	eType = isPaused ? EntityEventType::OnAudioPause : EntityEventType::OnAudioPlay;
+
+	FMODUserData* uData;
+	FMOD_RESULT uDataResult = currentSound->getUserData((void**)&uData);
+	AssetManager::GetInstance().BroadcastGlobalEntityEvent(eType, std::make_shared<AudioEventPacket>(*uData->name, channel, nullptr));
 
 	return channel;
 }

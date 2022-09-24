@@ -11,12 +11,14 @@ class AudioEventPacket
 private:
 	std::string fileName;
 	std::shared_ptr<GameEntity> broadcastingEntity;
+	FMOD::Channel* audioChannel;
 
 public:
-	AudioEventPacket(std::string fileName, std::shared_ptr<GameEntity> broadcastingEntity = nullptr);
+	AudioEventPacket(std::string fileName, FMOD::Channel* channel, std::shared_ptr<GameEntity> broadcastingEntity = nullptr);
 
 	std::string GetFileName();
 	std::shared_ptr<GameEntity> GetBroadcastingEntity();
 	bool IsGlobalAudio();
+	FMOD::Channel* GetAudioChannel();
 };
 

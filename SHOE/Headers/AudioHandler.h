@@ -48,7 +48,9 @@ public:
 	FMOD_RESULT Initialize();
 
 	FMOD::Sound* LoadSound(std::string soundPath, FMOD_MODE mode);
+	FMOD::Channel* LoadSoundAndInitChannel(std::string soundPath, FMOD_MODE mode);
 	FMOD::Channel* BasicPlaySound(FMOD::Sound* sound, bool isPaused = false);
+	FMOD::Channel* BasicPlaySound(FMOD::Channel* channel, bool isPaused = false);
 
 	FMOD::System* GetSoundSystem();
 

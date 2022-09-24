@@ -8,7 +8,6 @@ void AudioResponse::Start()
 	trigger = AudioEventTrigger::FrequencyAbove;
 	response = AudioEventResponse::Move;
 	data = DirectX::XMFLOAT3(0, 0, 0);
-	audioInstance = AudioHandler::GetInstance();
 }
 
 void AudioResponse::Update()
@@ -23,7 +22,8 @@ void AudioResponse::Update()
 /// </summary>
 void AudioResponse::OnAudioPlay(AudioEventPacket audio)
 {
-	if(audio.GetFileName() == audioName)
+	if(audio.GetFileName() == audioName &&
+	   audio.GetAudioChannel() == this->linkedChannel)
 		canTrigger = true;
 }
 
@@ -91,18 +91,23 @@ void AudioResponse::TriggerResponse()
 
 /// <summary>
 /// Set the linked sound for this component/object using a sound.
+/// Currently broken/unimplemented.
 /// </summary>
-void AudioResponse::SetLinkedSound(FMOD::Sound* sound) {
-	this->linkedSound = sound;
-	this->linkedChannel = audioInstance.GetChannelBySound(sound);
-}
+//void AudioResponse::SetLinkedSound(FMOD::Sound* sound) {
+//	this->linkedSound = sound;
+//}
 
 /// <summary>
 /// Set the linked sound for this component/object using a channel.
 /// </summary>
 void AudioResponse::SetLinkedSound(FMOD::Channel* channel) {
 	FMOD::Sound* sound;
+	FMODUserData* uData;
+
 	channel->getCurrentSound(&sound);
 	this->linkedSound = sound;
 	this->linkedChannel = channel;
+
+	sound->getUserData((void**)&uData);
+	this->audioName = *(uData->name.get());
 }
