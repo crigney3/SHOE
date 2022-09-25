@@ -855,20 +855,32 @@ void EditingUI::GenerateEditingUI() {
 				ImGui::Text("Audio Response Device");
 				ImGui::Text("Use this to link an audio trigger to a graphical effect.");
 
-				std::string nameBuffer;
-				static char nameBuf[64] = "";
-				nameBuffer = audioResponder->audioName;
-				strcpy_s(nameBuf, nameBuffer.c_str());
-				ImGui::Text("Name of linked audio");
-				ImGui::SameLine();
-				ImGui::InputText("testSound1", nameBuf, sizeof(nameBuffer));
-
-				currentEntity->SetName(nameBuf);
-
 				bool arEnabled = audioResponder->IsLocallyEnabled();
 				ImGui::Checkbox("Enabled ", &arEnabled);
 				if (arEnabled != audioResponder->IsLocallyEnabled())
-					flashlight->SetEnabled(arEnabled);
+					audioResponder->SetEnabled(arEnabled);
+
+				static int selectedChannel = 0;
+				// Still need to initialize sounds correctly through the channel system
+				if (ImGui::BeginListBox("Sound to link")) {
+					for (int i = 0; i < audioHandler.GetChannelVectorLength(); i++) {
+						const bool is_selected = ((int)selectedChannel == i);
+						FMOD::Sound* listSound;
+						FMOD::Channel* listChannel;
+						FMODUserData* uData;
+
+						listChannel = audioHandler.GetChannelByIndex(i);
+						listChannel->getCurrentSound(&listSound);
+						listSound->getUserData((void**)& uData);
+
+						if (ImGui::Selectable(uData->name->c_str(), is_selected)) {
+							selectedChannel = i;
+							audioResponder->SetLinkedSound(listChannel);
+						}
+					}
+
+					ImGui::EndListBox();
+				}
 
 				ImGui::Separator();
 
@@ -887,6 +899,8 @@ void EditingUI::GenerateEditingUI() {
 					ImGui::EndListBox();
 				}
 
+				ImGui::InputFloat("Trigger Data: ", &audioResponder->triggerComparison);
+
 				ImGui::Separator();
 
 				static AudioEventResponse selectedResponse = AudioEventResponse::Move;
@@ -904,8 +918,6 @@ void EditingUI::GenerateEditingUI() {
 					ImGui::EndListBox();
 				}
 
-				ImGui::Separator();
-
 				ImGui::Text("Set the data for the linked graphical response.");
 				
 				if (selectedResponse == AudioEventResponse::Move ||
@@ -919,6 +931,40 @@ void EditingUI::GenerateEditingUI() {
 				}
 				else if (selectedResponse == AudioEventResponse::ChangeLightColor) {
 					ImGui::InputFloat3("Input RGB Color Data", &audioResponder->data.x);
+				}
+
+				ImGui::Separator();
+
+				static AudioResponseContinuityMode selectedContinuity = AudioResponseContinuityMode::Once;
+				static std::string continuityTypeArray[(int)AudioResponseContinuityMode::AudioResponseContinuityModeCount] = { "Once", "Loop X Times", "Until Interval Stop", "Until Audio Stop", "Infinite" };
+
+				if (ImGui::BeginListBox("Choose Repetition Level")) {
+					for (int i = 0; i < (int)AudioResponseContinuityMode::AudioResponseContinuityModeCount; i++) {
+						const bool is_selected = ((int)selectedContinuity == i);
+						if (ImGui::Selectable(continuityTypeArray[i].c_str(), is_selected)) {
+							selectedContinuity = (AudioResponseContinuityMode)(i);
+							audioResponder->continuityType = selectedContinuity;
+						}
+					}
+
+					ImGui::EndListBox();
+				}
+
+				ImGui::Separator();
+
+				static AudioResponseMathModifier selectedOperator = AudioResponseMathModifier::Additive;
+				static std::string operatorTypeArray[(int)AudioResponseMathModifier::AudioResponseMathModifierCount] = { "Add", "Subtract", "Multiply", "Divide" };
+
+				if (ImGui::BeginListBox("Choose Operator For Response Data")) {
+					for (int i = 0; i < (int)AudioResponseMathModifier::AudioResponseMathModifierCount; i++) {
+						const bool is_selected = ((int)selectedOperator == i);
+						if (ImGui::Selectable(operatorTypeArray[i].c_str(), is_selected)) {
+							selectedOperator = (AudioResponseMathModifier)(i);
+							audioResponder->operatorType = selectedOperator;
+						}
+					}
+
+					ImGui::EndListBox();
 				}
 			}
 
@@ -996,10 +1042,42 @@ void EditingUI::GenerateEditingUI() {
 		ImGui::Begin("Sound Menu");
 
 		for (int i = 0; i < globalAssets.GetSoundArraySize(); i++) {
-			std::string buttonName = "Play Piano Sound ##" + std::to_string(i);
-			if (ImGui::Button(buttonName.c_str())) {
-				audioHandler.BasicPlaySound(globalAssets.GetSoundAtID(i));
+			FMOD::Channel* channel;
+			FMOD::Sound* sound;
+			FMODUserData* uData;
+
+			sound = globalAssets.GetSoundAtID(i);
+			channel = audioHandler.GetChannelBySound(sound);
+			sound->getUserData((void**)&uData);
+			std::string infoStr = uData->name.get()->c_str();
+			std::string node = "Viewing Sound: " + infoStr;
+
+			ImGui::Text(node.c_str());
+
+			std::string playButtonName = "Play Sound ##" + std::to_string(i);
+			std::string pauseButtonName = "Pause Sound ##" + std::to_string(i);
+			if (ImGui::Button(playButtonName.c_str())) {
+				audioHandler.BasicPlaySound(channel, false);
 			}
+			ImGui::SameLine();
+			if (ImGui::Button(pauseButtonName.c_str())) {
+				audioHandler.BasicPlaySound(channel, true);
+			}
+
+			char timeBuf[50];
+			unsigned int currentPosition;
+			unsigned int audioLength;
+			float posFloat;
+			float lenFloat;
+			channel->getPosition(&currentPosition, FMOD_TIMEUNIT_MS);
+			sound->getLength(&audioLength, FMOD_TIMEUNIT_MS);
+
+			posFloat = currentPosition / 1000.0f;
+			lenFloat = audioLength / 1000.0f;
+
+			sprintf_s(timeBuf, "%4.2f / %4.2f", posFloat, lenFloat);
+			ImGui::Text(timeBuf);
+			ImGui::Separator();
 		}
 
 		ImGui::End();

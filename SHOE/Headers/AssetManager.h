@@ -29,11 +29,6 @@
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 
-struct FMODUserData {
-	std::shared_ptr<std::string> name;
-	std::shared_ptr<std::string> filenameKey;
-};
-
 enum ComponentTypes {
 	// While Transform is tracked here, it is often skipped or handled uniquely
 	// when assessing all components, as it cannot be removed or doubled

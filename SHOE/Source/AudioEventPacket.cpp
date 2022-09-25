@@ -1,9 +1,10 @@
 #include "../Headers/AudioEventPacket.h"
 
-AudioEventPacket::AudioEventPacket(std::string fileName, std::shared_ptr<GameEntity> broadcastingEntity) 
+AudioEventPacket::AudioEventPacket(std::string fileName, FMOD::Channel* channel, std::shared_ptr<GameEntity> broadcastingEntity)
 {
 	this->fileName = fileName;
 	this->broadcastingEntity = broadcastingEntity;
+	this->audioChannel = channel;
 }
 
 /// <summary>
@@ -28,4 +29,12 @@ std::shared_ptr<GameEntity> AudioEventPacket::GetBroadcastingEntity()
 bool AudioEventPacket::IsGlobalAudio()
 {
 	return broadcastingEntity == nullptr;
+}
+
+/// <summary>
+/// Get what channel the sound is playing/paused on
+/// </summary>
+FMOD::Channel* AudioEventPacket::GetAudioChannel()
+{
+	return this->audioChannel;
 }

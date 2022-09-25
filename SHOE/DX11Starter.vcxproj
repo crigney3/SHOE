@@ -169,6 +169,7 @@
   <ItemGroup>
     <ClInclude Include="Headers\AssetManager.h" />
     <ClInclude Include="Headers\AudioEventPacket.h" />
+    <ClInclude Include="Headers\AudioHandler.fwd.h" />
     <ClInclude Include="Headers\AudioHandler.h" />
     <ClInclude Include="Headers\AudioResponse.h" />
     <ClInclude Include="Headers\Camera.h" />
