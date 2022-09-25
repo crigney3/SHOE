@@ -932,6 +932,40 @@ void EditingUI::GenerateEditingUI() {
 				else if (selectedResponse == AudioEventResponse::ChangeLightColor) {
 					ImGui::InputFloat3("Input RGB Color Data", &audioResponder->data.x);
 				}
+
+				ImGui::Separator();
+
+				static AudioResponseContinuityMode selectedContinuity = AudioResponseContinuityMode::Once;
+				static std::string continuityTypeArray[(int)AudioResponseContinuityMode::AudioResponseContinuityModeCount] = { "Once", "Loop X Times", "Until Interval Stop", "Until Audio Stop", "Infinite" };
+
+				if (ImGui::BeginListBox("Choose Repetition Level")) {
+					for (int i = 0; i < (int)AudioResponseContinuityMode::AudioResponseContinuityModeCount; i++) {
+						const bool is_selected = ((int)selectedContinuity == i);
+						if (ImGui::Selectable(continuityTypeArray[i].c_str(), is_selected)) {
+							selectedContinuity = (AudioResponseContinuityMode)(i);
+							audioResponder->continuityType = selectedContinuity;
+						}
+					}
+
+					ImGui::EndListBox();
+				}
+
+				ImGui::Separator();
+
+				static AudioResponseMathModifier selectedOperator = AudioResponseMathModifier::Additive;
+				static std::string operatorTypeArray[(int)AudioResponseMathModifier::AudioResponseMathModifierCount] = { "Add", "Subtract", "Multiply", "Divide" };
+
+				if (ImGui::BeginListBox("Choose Operator For Response Data")) {
+					for (int i = 0; i < (int)AudioResponseMathModifier::AudioResponseMathModifierCount; i++) {
+						const bool is_selected = ((int)selectedOperator == i);
+						if (ImGui::Selectable(operatorTypeArray[i].c_str(), is_selected)) {
+							selectedOperator = (AudioResponseMathModifier)(i);
+							audioResponder->operatorType = selectedOperator;
+						}
+					}
+
+					ImGui::EndListBox();
+				}
 			}
 
 			// Remove Component Button

@@ -27,6 +27,14 @@ enum class AudioResponseContinuityMode {
 	AudioResponseContinuityModeCount
 };
 
+enum class AudioResponseMathModifier {
+	Additive,
+	Multiplicative,
+	Subtractive,
+	Divisive,
+	AudioResponseMathModifierCount
+};
+
 class AudioResponse : public IComponent
 {
 public:
@@ -35,6 +43,8 @@ public:
 	float triggerComparison;
 	AudioEventResponse response;
 	DirectX::XMFLOAT3 data;
+	AudioResponseContinuityMode continuityType;
+	AudioResponseMathModifier operatorType;
 
 	//void SetLinkedSound(FMOD::Sound* sound);
 	void SetLinkedSound(FMOD::Channel* channel);
