@@ -98,9 +98,7 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 	if (isNameFullPath) {
 		namePath = path;
 	}
-	else {
-		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
-	}
+	
 
 	channel = audioInstance.LoadSoundAndInitChannel(namePath, mode);
 	channel->getCurrentSound(&sound);
@@ -1372,15 +1370,15 @@ void AssetManager::InitializeEmitters() {
 void AssetManager::InitializeAudio() {
 	audioInstance.Initialize();
 
-	CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_DEFAULT, "piano-a");
-	CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_DEFAULT, "piano-b");
-	CreateSound("PianoNotes/pinkyfinger__piano-bb.wav", FMOD_DEFAULT, "piano-bb");
-	CreateSound("PianoNotes/pinkyfinger__piano-c.wav", FMOD_DEFAULT, "piano-c");
-	CreateSound("PianoNotes/pinkyfinger__piano-e.wav", FMOD_DEFAULT, "piano-e");
-	CreateSound("PianoNotes/pinkyfinger__piano-eb.wav", FMOD_DEFAULT, "piano-eb");
-	CreateSound("PianoNotes/pinkyfinger__piano-d.wav", FMOD_DEFAULT, "piano-d");
-	CreateSound("PianoNotes/pinkyfinger__piano-f.wav", FMOD_DEFAULT, "piano-f");
-	CreateSound("PianoNotes/pinkyfinger__piano-g.wav", FMOD_DEFAULT, "piano-g");
+	CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_LOOP_NORMAL, "piano-a");
+	CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_LOOP_NORMAL, "piano-b");
+	CreateSound("PianoNotes/pinkyfinger__piano-bb.wav", FMOD_LOOP_NORMAL, "piano-bb");
+	CreateSound("PianoNotes/pinkyfinger__piano-c.wav", FMOD_LOOP_NORMAL, "piano-c");
+	CreateSound("PianoNotes/pinkyfinger__piano-e.wav", FMOD_LOOP_NORMAL, "piano-e");
+	CreateSound("PianoNotes/pinkyfinger__piano-eb.wav", FMOD_LOOP_NORMAL, "piano-eb");
+	CreateSound("PianoNotes/pinkyfinger__piano-d.wav", FMOD_LOOP_NORMAL, "piano-d");
+	CreateSound("PianoNotes/pinkyfinger__piano-f.wav", FMOD_LOOP_NORMAL, "piano-f");
+	CreateSound("PianoNotes/pinkyfinger__piano-g.wav", FMOD_LOOP_NORMAL, "piano-g");
 }
 
 void AssetManager::InitializeFonts() {
