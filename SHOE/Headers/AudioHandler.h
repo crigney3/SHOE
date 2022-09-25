@@ -64,6 +64,6 @@ public:
 	FMOD::Channel* GetChannelByIndex(int index);
 	FMOD::Channel* GetChannelBySound(FMOD::Sound* sound);
 	FMOD::Channel* GetChannelBySoundName(std::string soundName);
-
+	float* AudioHandler::getTrackBPM(FMOD::Sound* sound)
 	size_t GetChannelVectorLength();
 };

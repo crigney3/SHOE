@@ -191,3 +191,11 @@ FMOD_RESULT F_CALLBACK ComponentSignalCallback(FMOD_CHANNELCONTROL* channelContr
 	FMOD_RESULT uDataResult = currentSound->getUserData((void**)&uData);
 	AssetManager::GetInstance().BroadcastGlobalEntityEvent(eType, std::make_shared<AudioEventPacket>(*uData->name, channel, nullptr));
 }
+
+float* AudioHandler::getTrackBPM(FMOD::Sound* sound){
+    float *speed;
+    FMOD_RESULT result;
+    result = sound->getMusicSpeed(speed);
+    if (result != FMOD_OK) return nullptr;
+    return speed;
+}
