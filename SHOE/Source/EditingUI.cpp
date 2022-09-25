@@ -884,7 +884,7 @@ void EditingUI::GenerateEditingUI() {
 
 				ImGui::Separator();
 
-				static AudioEventTrigger selectedTrigger = AudioEventTrigger::FrequencyAbove;
+				static AudioEventTrigger selectedTrigger = audioResponder->trigger;
 				static std::string triggerTypeArray[(int)AudioEventTrigger::AudioEventTriggerCount] = { "Frequency Above", "Frequency Below", "Pitch Above", "Pitch Below" };
 
 				if (ImGui::BeginListBox("Audio Event Trigger Listbox")) {
@@ -903,7 +903,7 @@ void EditingUI::GenerateEditingUI() {
 
 				ImGui::Separator();
 
-				static AudioEventResponse selectedResponse = AudioEventResponse::Move;
+				static AudioEventResponse selectedResponse = audioResponder->response;
 				static std::string responseTypeArray[(int)AudioEventResponse::AudioEventResponseCount] = { "Move", "Rotate", "Scale", "Modify Light Intensity", "Change Light Color" };
 
 				if (ImGui::BeginListBox("Audio Event Response Listbox")) {
@@ -935,7 +935,7 @@ void EditingUI::GenerateEditingUI() {
 
 				ImGui::Separator();
 
-				static AudioResponseContinuityMode selectedContinuity = AudioResponseContinuityMode::Once;
+				static AudioResponseContinuityMode selectedContinuity = audioResponder->continuityType;
 				static std::string continuityTypeArray[(int)AudioResponseContinuityMode::AudioResponseContinuityModeCount] = { "Once", "Loop X Times", "Until Interval Stop", "Until Audio Stop", "Infinite" };
 
 				if (ImGui::BeginListBox("Choose Repetition Level")) {
@@ -952,7 +952,7 @@ void EditingUI::GenerateEditingUI() {
 
 				ImGui::Separator();
 
-				static AudioResponseMathModifier selectedOperator = AudioResponseMathModifier::Additive;
+				static AudioResponseMathModifier selectedOperator = audioResponder->operatorType;
 				static std::string operatorTypeArray[(int)AudioResponseMathModifier::AudioResponseMathModifierCount] = { "Add", "Subtract", "Multiply", "Divide" };
 
 				if (ImGui::BeginListBox("Choose Operator For Response Data")) {

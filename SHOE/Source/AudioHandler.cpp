@@ -118,6 +118,14 @@ Channel* AudioHandler::BasicPlaySound(FMOD::Channel* channel, bool isPaused) {
 
 	if (result != FMOD_OK) return nullptr;
 
+	if (HasSoundEnded(channel)) {
+		int deadChannelIndex = GetChannelIndexBySound(currentSound);
+		allChannels[deadChannelIndex] = nullptr;
+		soundSystem->playSound(currentSound, 0, true, &channel);
+		allChannels.push_back(channel);
+		channel->setPosition(0, FMOD_TIMEUNIT_MS);
+	}
+
 	result = channel->setPaused(isPaused);
 
 	if (result != FMOD_OK) return nullptr;
@@ -154,8 +162,43 @@ FMOD::Channel* AudioHandler::GetChannelBySound(FMOD::Sound* sound) {
 	}
 }
 
+int AudioHandler::GetChannelIndexBySoundName(std::string soundName) {
+	FMOD::Sound* matchSound;
+	FMODUserData* uData;
+	for (int i = 0; i < allChannels.size(); i++) {
+		allChannels[i]->getCurrentSound(&matchSound);
+		matchSound->getUserData((void**)&uData);
+		if (uData->name.get()->c_str() == soundName) {
+			return i;
+		}
+	}
+}
+
+int AudioHandler::GetChannelIndexBySound(FMOD::Sound* sound) {
+	// Match the incoming pointer.
+	FMOD::Sound* matchSound;
+	for (int i = 0; i < allChannels.size(); i++) {
+		allChannels[i]->getCurrentSound(&matchSound);
+		if (matchSound == sound) {
+			return i;
+		}
+	}
+}
+
 size_t AudioHandler::GetChannelVectorLength() {
 	return this->allChannels.size();
+}
+
+bool AudioHandler::HasSoundEnded(FMOD::Channel* channel) {
+	unsigned int length;
+	unsigned int currentPosition;
+	FMOD::Sound* sound;
+
+	channel->getCurrentSound(&sound);
+	sound->getLength(&length, FMOD_TIMEUNIT_MS);
+	channel->getPosition(&currentPosition, FMOD_TIMEUNIT_MS);
+
+	return currentPosition >= length;
 }
 
 FMOD_RESULT F_CALLBACK ComponentSignalCallback(FMOD_CHANNELCONTROL* channelControl,
@@ -192,10 +235,10 @@ FMOD_RESULT F_CALLBACK ComponentSignalCallback(FMOD_CHANNELCONTROL* channelContr
 	AssetManager::GetInstance().BroadcastGlobalEntityEvent(eType, std::make_shared<AudioEventPacket>(*uData->name, channel, nullptr));
 }
 
-float* AudioHandler::getTrackBPM(FMOD::Sound* sound){
-    float *speed;
+float* AudioHandler::getTrackBPM(FMOD::Sound* sound) {
+    float speed = 0;
     FMOD_RESULT result;
-    result = sound->getMusicSpeed(speed);
+    result = sound->getMusicSpeed(&speed);
     if (result != FMOD_OK) return nullptr;
-    return speed;
+    return &speed;
 }
