@@ -6,6 +6,8 @@
 #include <vector>
 #include "DXCore.h"
 
+#define FMOD_RESULT_CHECK(x) do { FMOD_RESULT status = (x); if (status != FMOD_RESULT::FMOD_OK) return status; } while(0)
+
 FMOD_RESULT F_CALLBACK ComponentSignalCallback(FMOD_CHANNELCONTROL* channelControl,
 	FMOD_CHANNELCONTROL_TYPE controlType,
 	FMOD_CHANNELCONTROL_CALLBACK_TYPE callbackType,
@@ -45,6 +47,7 @@ private:
 
 	FMOD::ChannelGroup* activeChannels;
 	std::vector<FMOD::Channel*> allChannels;
+	std::vector<FMOD::DSP*> allDSPs;
 
 	friend class AudioResponse;
 
@@ -64,9 +67,20 @@ public:
 	FMOD::Channel* GetChannelByIndex(int index);
 	FMOD::Channel* GetChannelBySound(FMOD::Sound* sound);
 	FMOD::Channel* GetChannelBySoundName(std::string soundName);
+
 	int GetChannelIndexBySoundName(std::string soundName);
 	int GetChannelIndexBySound(FMOD::Sound* sound);
-	float* getTrackBPM(FMOD::Sound* sound);
+
+	float* GetTrackBPM(FMOD::Sound* sound);
+
 	bool HasSoundEnded(FMOD::Channel* channel);
+
 	size_t GetChannelVectorLength();
+	size_t GetDSPVectorLength();
+
+	FMOD::DSP* GetSpectrumReaderDSP();
+	float* GetFrequencyArrayFromChannel(FMOD::Channel* channel, int sampleLength);
+	std::vector<float> GetFrequencyVectorFromChannel(FMOD::Channel* channel, int sampleLength);
+
+	float GetFrequencyAtCurrentFrame(FMOD::Channel* channel);
 };

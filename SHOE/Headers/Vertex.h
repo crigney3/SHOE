@@ -44,4 +44,6 @@ enum ParticleComputeShaderType
 struct FMODUserData {
 	std::shared_ptr<std::string> name;
 	std::shared_ptr<std::string> filenameKey;
+	float* waveform;
+	unsigned int waveformSampleLength;
 };

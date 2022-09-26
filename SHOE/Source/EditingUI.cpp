@@ -1078,6 +1078,22 @@ void EditingUI::GenerateEditingUI() {
 			sprintf_s(timeBuf, "%4.2f / %4.2f", posFloat, lenFloat);
 			ImGui::Text(timeBuf);
 			ImGui::Separator();
+
+			if (ImGui::CollapsingHeader("Additional Info")) {
+				float* bpm;
+				float currentFrequency;
+				float currentPitch;
+
+				//bpm = audioHandler.GetTrackBPM(sound);
+				currentFrequency = audioHandler.GetFrequencyAtCurrentFrame(channel);
+				channel->getPitch(&currentPitch);
+
+				//ImGui::Text("BPM: %4.1f", *bpm);
+				ImGui::Text("Current Frequency: %4.2f", currentFrequency);
+				ImGui::Text("Current Pitch: %4.2f", currentPitch);
+			}
+
+			ImGui::Separator();
 		}
 
 		ImGui::End();

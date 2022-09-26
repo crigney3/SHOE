@@ -11,22 +11,17 @@ AudioHandler::~AudioHandler() {
 }
 
 FMOD_RESULT AudioHandler::Initialize() {
-	FMOD_RESULT result;
-	
-	result = FMOD::System_Create(&soundSystem);
-	if (result != FMOD_OK) {
-		return result;
-	}
+	FMOD_RESULT_CHECK(FMOD::System_Create(&soundSystem));
 
-	result = soundSystem->init(512, FMOD_INIT_NORMAL, 0);
+	FMOD_RESULT_CHECK(soundSystem->init(512, FMOD_INIT_NORMAL, 0));
 
-	if (result != FMOD_OK) {
-		return result;
-	}
+	FMOD_RESULT_CHECK(soundSystem->createChannelGroup("Main Channel", &activeChannels));
 
-	result = soundSystem->createChannelGroup("Main Channel", &activeChannels);
+	FMOD::DSP* spectrumDSP;
+	FMOD_RESULT_CHECK(soundSystem->createDSPByType(FMOD_DSP_TYPE_FFT, &spectrumDSP));
+	allDSPs.push_back(spectrumDSP);
 
-	return result;
+	return FMOD_OK;
 }
 
 Sound* AudioHandler::LoadSound(std::string soundPath, FMOD_MODE mode) {
@@ -235,10 +230,58 @@ FMOD_RESULT F_CALLBACK ComponentSignalCallback(FMOD_CHANNELCONTROL* channelContr
 	AssetManager::GetInstance().BroadcastGlobalEntityEvent(eType, std::make_shared<AudioEventPacket>(*uData->name, channel, nullptr));
 }
 
-float* AudioHandler::getTrackBPM(FMOD::Sound* sound) {
+float* AudioHandler::GetTrackBPM(FMOD::Sound* sound) {
     float speed = 0;
     FMOD_RESULT result;
     result = sound->getMusicSpeed(&speed);
     if (result != FMOD_OK) return nullptr;
     return &speed;
+}
+
+float* AudioHandler::GetFrequencyArrayFromChannel(FMOD::Channel* channel, int sampleLength) {
+	FMOD_DSP_PARAMETER_FFT* fft = {};
+	FMOD::DSP* spectrumDSP;
+	std::vector<float> frequencies;
+	FMOD_RESULT result;
+
+	spectrumDSP = allDSPs[0];
+	result = channel->addDSP(FMOD_DSP_PARAMETER_DATA_TYPE_FFT, spectrumDSP);
+
+	if (result != FMOD_OK) return nullptr;
+
+	result = spectrumDSP->getParameterData(FMOD_DSP_FFT_SPECTRUMDATA, (void**)fft, 0, 0, 0);
+
+	if (result != FMOD_OK) return nullptr;
+
+	for (int bin = 0; bin < sampleLength; ++bin) {
+		frequencies.push_back(fft->spectrum[0][bin]);
+	}
+
+	return frequencies.data();
+}
+
+std::vector<float> AudioHandler::GetFrequencyVectorFromChannel(FMOD::Channel* channel, int sampleLength) {
+	FMOD_DSP_PARAMETER_FFT* fft = {};
+	FMOD::DSP* spectrumDSP;
+	std::vector<float> frequencies;
+
+	spectrumDSP = allDSPs[0];
+	channel->addDSP(FMOD_DSP_PARAMETER_DATA_TYPE_FFT, spectrumDSP);
+	spectrumDSP->getParameterData(FMOD_DSP_FFT_SPECTRUMDATA, (void**)fft, 0, 0, 0);
+	for (int bin = 0; bin < sampleLength; ++bin) {
+		frequencies.push_back(fft->spectrum[0][bin]);
+	}
+
+	return frequencies;
+}
+
+float AudioHandler::GetFrequencyAtCurrentFrame(Channel* channel) {
+	FMODUserData* uData;
+	Sound* sound = {};
+	unsigned int currentPosition;
+	
+	sound->getUserData((void**)&uData);
+	channel->getPosition(&currentPosition, FMOD_TIMEUNIT_MS);
+
+	return uData->waveform[currentPosition % uData->waveformSampleLength];
 }
