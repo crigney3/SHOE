@@ -20,6 +20,9 @@ AudioHandler::~AudioHandler() {
 }
 
 FMOD_RESULT AudioHandler::Initialize() {
+	allChannels = std::vector<FMOD::Channel*>();
+	allDSPs = std::vector<FMOD::DSP*>();
+
 	FMOD_RESULT_CHECK(FMOD::System_Create(&soundSystem));
 
 	FMOD_RESULT_CHECK(soundSystem->init(512, FMOD_INIT_NORMAL, 0));
@@ -124,6 +127,8 @@ Channel* AudioHandler::LoadSoundAndInitChannel(std::string soundPath, FMOD_MODE 
 
 	channel->setCallback(ComponentSignalCallback);
 
+	//channel->addDSP(1, allDSPs[0]);
+
 	return channel;
 }
 
@@ -161,9 +166,8 @@ Channel* AudioHandler::BasicPlaySound(FMOD::Channel* channel, bool isPaused) {
 
 	if (HasSoundEnded(channel)) {
 		int deadChannelIndex = GetChannelIndexBySound(currentSound);
-		allChannels[deadChannelIndex] = nullptr;
 		soundSystem->playSound(currentSound, 0, true, &channel);
-		allChannels.push_back(channel);
+		allChannels[deadChannelIndex] = channel;
 		channel->setPosition(0, FMOD_TIMEUNIT_MS);
 	}
 
@@ -286,7 +290,7 @@ FMOD_RESULT AudioHandler::GetFrequencyArrayFromChannel(FMOD::Channel* channel, f
 	return FMOD_OK;
 }
 
-FMOD_RESULT AudioHandler::GetFrequencyVectorFromChannel(FMOD::Channel* channel, std::vector<float> freqVector, int sampleLength) {
+FMOD_RESULT AudioHandler::GetFrequencyVectorFromChannel(FMOD::Channel* channel, std::vector<float>* freqVector, int sampleLength) {
 	FMOD::DSP* spectrumDSP;
 	std::vector<float> frequencies;
 	FMOD_RESULT result;
@@ -312,7 +316,7 @@ FMOD_RESULT AudioHandler::GetFrequencyVectorFromChannel(FMOD::Channel* channel, 
 
 			for (count = 0; count < data->length_samples; count++)
 			{
-				freqVector.push_back(fabs(data->buffer[(count * data->channels) + channel]));
+				freqVector->push_back(fabs(data->buffer[(count * data->channels) + channel]));
 			}
 		}
 	}
@@ -331,7 +335,7 @@ FMOD_RESULT AudioHandler::GetFrequencyAtCurrentFrame(Channel* channel, float* cu
 
 	FMOD_RESULT_CHECK(channel->getPosition(&currentPosition, FMOD_TIMEUNIT_MS));
 
-	*currentFrequency = uData->waveform[currentPosition % uData->waveformSampleLength];
+	*currentFrequency = uData->waveform[currentPosition / uData->waveformSampleLength];
 
 	return FMOD_OK;
 }

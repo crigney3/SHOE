@@ -948,6 +948,9 @@ void SceneManager::LoadScene(std::string filepath) {
 		// Remove the current scene from memory
 		assetManager.CleanAllVectors();
 
+		// Reinitialize the audio handler
+		assetManager.audioInstance.Initialize();
+
 //#if defined(DEBUG) || defined(_DEBUG)
 //		printf("Took %3.4f seconds for pre-initialization. \n", DXCore::GetTotalTime());
 //#endif

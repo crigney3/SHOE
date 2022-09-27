@@ -107,7 +107,7 @@ public:
 
 	FMOD::DSP* GetSpectrumReaderDSP();
 	FMOD_RESULT GetFrequencyArrayFromChannel(FMOD::Channel* channel, OUT float** freqArray, int sampleLength);
-	FMOD_RESULT GetFrequencyVectorFromChannel(FMOD::Channel* channel, OUT std::vector<float> freqVector, int sampleLength);
+	FMOD_RESULT GetFrequencyVectorFromChannel(FMOD::Channel* channel, OUT std::vector<float>* freqVector, int sampleLength);
 
 	FMOD_RESULT GetFrequencyAtCurrentFrame(FMOD::Channel* channel, OUT float* currentFrequency);
 };

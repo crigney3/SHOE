@@ -1079,7 +1079,8 @@ void EditingUI::GenerateEditingUI() {
 			ImGui::Text(timeBuf);
 			ImGui::Separator();
 
-			if (ImGui::CollapsingHeader("Additional Info")) {
+			std::string infoName = "Additional Info ##" + std::to_string(i);
+			if (ImGui::CollapsingHeader(infoName.c_str())) {
 				float* bpm;
 				float currentFrequency;
 				float currentPitch;

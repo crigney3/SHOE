@@ -111,10 +111,15 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
 	// Read and store the frequency data for this sound
-	waveformSampleLength = 64;
+	waveformSampleLength = 1024;
 	waveformData = std::vector<float>();
-	audioInstance.GetFrequencyVectorFromChannel(channel, waveformData, waveformSampleLength);
-	uData->waveform = waveformData.data();
+	audioInstance.GetFrequencyVectorFromChannel(channel, &waveformData, waveformSampleLength);
+
+	//uData->waveform = (float*)malloc(sizeof(float) * waveformSampleLength);
+	//RtlZeroMemory(uData->waveform, sizeof(float) * waveformSampleLength);
+
+	//memcpy(uData->waveform, waveformData.data(), sizeof(float) * waveformSampleLength);
+
 	uData->waveformSampleLength = waveformSampleLength;
 	uData->filenameKey = std::make_shared<std::string>(baseFilename);
 	uData->name = std::make_shared<std::string>(name);
@@ -1387,6 +1392,13 @@ void AssetManager::InitializeAudio() {
 	CreateSound("PianoNotes/pinkyfinger__piano-d.wav", FMOD_DEFAULT, "piano-d");
 	CreateSound("PianoNotes/pinkyfinger__piano-f.wav", FMOD_DEFAULT, "piano-f");
 	CreateSound("PianoNotes/pinkyfinger__piano-g.wav", FMOD_DEFAULT, "piano-g");
+
+	CreateSound("SadMachine.mp3", FMOD_DEFAULT, "sad-machine");
+	CreateSound("Stems/split_sadmachine/bass.wav", FMOD_DEFAULT, "sad-machine-bass");
+	CreateSound("Stems/split_sadmachine/drums.wav", FMOD_DEFAULT, "sad-machine-drums");
+	CreateSound("Stems/split_sadmachine/other.wav", FMOD_DEFAULT, "sad-machine-other");
+	CreateSound("Stems/split_sadmachine/piano.wav", FMOD_DEFAULT, "sad-machine-piano");
+	CreateSound("Stems/split_sadmachine/vocals.wav", FMOD_DEFAULT, "sad-machine-vocal");
 }
 
 void AssetManager::InitializeFonts() {
@@ -2116,6 +2128,8 @@ void AssetManager::CleanAllVectors() {
 	textureSampleStates.clear();
 	textureState = nullptr;
 	clampState = nullptr;
+
+	audioInstance.~AudioHandler();
 
 	context->Flush();
 }
