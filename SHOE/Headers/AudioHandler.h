@@ -14,6 +14,32 @@ FMOD_RESULT F_CALLBACK ComponentSignalCallback(FMOD_CHANNELCONTROL* channelContr
 	void* commandData1,
 	void* commandData2);
 
+FMOD_RESULT F_CALLBACK DefaultDSPCallback(FMOD_DSP_STATE * dsp_state,
+	float* inbuffer,
+	float* outbuffer,
+	unsigned int length,
+	int inchannels,
+	int* outchannels);
+
+FMOD_RESULT F_CALLBACK CreateDSPCallback(FMOD_DSP_STATE * dsp_state);
+
+FMOD_RESULT F_CALLBACK ReleaseDSPCallback(FMOD_DSP_STATE * dsp_state);
+
+FMOD_RESULT F_CALLBACK GetParameterDataDSPCallback(FMOD_DSP_STATE * dsp_state,
+	int index,
+	void** data,
+	unsigned int* length,
+	char*);
+
+FMOD_RESULT F_CALLBACK SetParameterFloatDSPCallback(FMOD_DSP_STATE * dsp_state,
+	int index,
+	float value);
+
+FMOD_RESULT F_CALLBACK GetParameterFloatDSPCallback(FMOD_DSP_STATE * dsp_state,
+	int index,
+	float* value,
+	char* valstr);
+
 class AudioHandler
 {
 #pragma region Singleton
@@ -55,6 +81,7 @@ public:
 	~AudioHandler();
 
 	FMOD_RESULT Initialize();
+	FMOD_RESULT InitializeDSPs();
 
 	FMOD::Sound* LoadSound(std::string soundPath, FMOD_MODE mode);
 	FMOD::Channel* LoadSoundAndInitChannel(std::string soundPath, FMOD_MODE mode);
@@ -79,8 +106,8 @@ public:
 	size_t GetDSPVectorLength();
 
 	FMOD::DSP* GetSpectrumReaderDSP();
-	float* GetFrequencyArrayFromChannel(FMOD::Channel* channel, int sampleLength);
-	std::vector<float> GetFrequencyVectorFromChannel(FMOD::Channel* channel, int sampleLength);
+	FMOD_RESULT GetFrequencyArrayFromChannel(FMOD::Channel* channel, OUT float** freqArray, int sampleLength);
+	FMOD_RESULT GetFrequencyVectorFromChannel(FMOD::Channel* channel, OUT std::vector<float> freqVector, int sampleLength);
 
-	float GetFrequencyAtCurrentFrame(FMOD::Channel* channel);
+	FMOD_RESULT GetFrequencyAtCurrentFrame(FMOD::Channel* channel, OUT float* currentFrequency);
 };

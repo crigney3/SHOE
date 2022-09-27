@@ -1085,7 +1085,7 @@ void EditingUI::GenerateEditingUI() {
 				float currentPitch;
 
 				//bpm = audioHandler.GetTrackBPM(sound);
-				currentFrequency = audioHandler.GetFrequencyAtCurrentFrame(channel);
+				audioHandler.GetFrequencyAtCurrentFrame(channel, &currentFrequency);
 				channel->getPitch(&currentPitch);
 
 				//ImGui::Text("BPM: %4.1f", *bpm);

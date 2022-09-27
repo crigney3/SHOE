@@ -47,3 +47,11 @@ struct FMODUserData {
 	float* waveform;
 	unsigned int waveformSampleLength;
 };
+
+struct FMODDSPData
+{
+	float* buffer;
+	float volume_linear;
+	int   length_samples;
+	int   channels;
+};

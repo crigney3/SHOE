@@ -92,6 +92,7 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 	FMODUserData* uData = new FMODUserData;
 	FMOD::Sound* sound;
 	FMOD::Channel* channel;
+	std::vector<float> waveformData;
 	unsigned int waveformSampleLength;
 
 	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
@@ -111,7 +112,9 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 
 	// Read and store the frequency data for this sound
 	waveformSampleLength = 64;
-	uData->waveform = audioInstance.GetFrequencyArrayFromChannel(channel, waveformSampleLength);
+	waveformData = std::vector<float>();
+	audioInstance.GetFrequencyVectorFromChannel(channel, waveformData, waveformSampleLength);
+	uData->waveform = waveformData.data();
 	uData->waveformSampleLength = waveformSampleLength;
 	uData->filenameKey = std::make_shared<std::string>(baseFilename);
 	uData->name = std::make_shared<std::string>(name);

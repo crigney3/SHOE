@@ -317,8 +317,8 @@ typedef struct FMOD_DSP_METERING_INFO
 #define FMOD_DSP_INIT_PARAMDESC_FLOAT(_paramstruct, _name, _label, _description, _min, _max, _defaultval) \
     memset(&(_paramstruct), 0, sizeof(_paramstruct)); \
     (_paramstruct).type         = FMOD_DSP_PARAMETER_TYPE_FLOAT; \
-    strncpy((_paramstruct).name,  _name,  15); \
-    strncpy((_paramstruct).label, _label, 15); \
+    strncpy_s((_paramstruct).name,  _name,  15); \
+    strncpy_s((_paramstruct).label, _label, 15); \
     (_paramstruct).description  = _description; \
     (_paramstruct).floatdesc.min          = _min; \
     (_paramstruct).floatdesc.max          = _max; \
@@ -328,8 +328,8 @@ typedef struct FMOD_DSP_METERING_INFO
 #define FMOD_DSP_INIT_PARAMDESC_FLOAT_WITH_MAPPING(_paramstruct, _name, _label, _description, _defaultval, _values, _positions); \
     memset(&(_paramstruct), 0, sizeof(_paramstruct)); \
     (_paramstruct).type         = FMOD_DSP_PARAMETER_TYPE_FLOAT; \
-    strncpy((_paramstruct).name,  _name , 15); \
-    strncpy((_paramstruct).label, _label, 15); \
+    strncpy_s((_paramstruct).name,  _name , 15); \
+    strncpy_s((_paramstruct).label, _label, 15); \
     (_paramstruct).description  = _description; \
     (_paramstruct).floatdesc.min          = _values[0]; \
     (_paramstruct).floatdesc.max          = _values[sizeof(_values) / sizeof(float) - 1]; \
@@ -342,8 +342,8 @@ typedef struct FMOD_DSP_METERING_INFO
 #define FMOD_DSP_INIT_PARAMDESC_INT(_paramstruct, _name, _label, _description, _min, _max, _defaultval, _goestoinf, _valuenames) \
     memset(&(_paramstruct), 0, sizeof(_paramstruct)); \
     (_paramstruct).type         = FMOD_DSP_PARAMETER_TYPE_INT; \
-    strncpy((_paramstruct).name,  _name , 15); \
-    strncpy((_paramstruct).label, _label, 15); \
+    strncpy_s((_paramstruct).name,  _name , 15); \
+    strncpy_s((_paramstruct).label, _label, 15); \
     (_paramstruct).description  = _description; \
     (_paramstruct).intdesc.min          = _min; \
     (_paramstruct).intdesc.max          = _max; \
@@ -354,8 +354,8 @@ typedef struct FMOD_DSP_METERING_INFO
 #define FMOD_DSP_INIT_PARAMDESC_INT_ENUMERATED(_paramstruct, _name, _label, _description, _defaultval, _valuenames) \
     memset(&(_paramstruct), 0, sizeof(_paramstruct)); \
     (_paramstruct).type         = FMOD_DSP_PARAMETER_TYPE_INT; \
-    strncpy((_paramstruct).name,  _name , 15); \
-    strncpy((_paramstruct).label, _label, 15); \
+    strncpy_s((_paramstruct).name,  _name , 15); \
+    strncpy_s((_paramstruct).label, _label, 15); \
     (_paramstruct).description  = _description; \
     (_paramstruct).intdesc.min          = 0; \
     (_paramstruct).intdesc.max          = sizeof(_valuenames) / sizeof(char*) - 1; \
@@ -366,8 +366,8 @@ typedef struct FMOD_DSP_METERING_INFO
 #define FMOD_DSP_INIT_PARAMDESC_BOOL(_paramstruct, _name, _label, _description, _defaultval, _valuenames) \
     memset(&(_paramstruct), 0, sizeof(_paramstruct)); \
     (_paramstruct).type         = FMOD_DSP_PARAMETER_TYPE_BOOL; \
-    strncpy((_paramstruct).name,  _name , 15); \
-    strncpy((_paramstruct).label, _label, 15); \
+    strncpy_s((_paramstruct).name,  _name , 15); \
+    strncpy_s((_paramstruct).label, _label, 15); \
     (_paramstruct).description  = _description; \
     (_paramstruct).booldesc.defaultval   = _defaultval; \
     (_paramstruct).booldesc.valuenames   = _valuenames;
@@ -375,8 +375,8 @@ typedef struct FMOD_DSP_METERING_INFO
 #define FMOD_DSP_INIT_PARAMDESC_DATA(_paramstruct, _name, _label, _description, _datatype) \
     memset(&(_paramstruct), 0, sizeof(_paramstruct)); \
     (_paramstruct).type         = FMOD_DSP_PARAMETER_TYPE_DATA; \
-    strncpy((_paramstruct).name,  _name , 15); \
-    strncpy((_paramstruct).label, _label, 15); \
+    strncpy_s((_paramstruct).name,  _name , 15); \
+    strncpy_s((_paramstruct).label, _label, 15); \
     (_paramstruct).description  = _description; \
     (_paramstruct).datadesc.datatype     = _datatype;
 
