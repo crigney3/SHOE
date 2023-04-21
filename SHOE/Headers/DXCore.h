@@ -105,6 +105,9 @@ public:
 	void SetVSAssetPaths();
 	void SetBuildAssetPaths();
 
+	// Syncing tools
+	Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+
 	// Size of the window's client area
 	unsigned int width;
 	unsigned int height;

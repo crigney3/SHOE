@@ -209,6 +209,57 @@ std::shared_ptr<SimplePixelShader> Material::GetRefractivePixelShader() {
 
 #pragma endregion
 
+#pragma region DX11Material
+
+DX11Material::DX11Material(std::shared_ptr<SimplePixelShader> pix,
+						   std::shared_ptr<SimpleVertexShader> vert,
+						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
+						   Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
+						   Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
+						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
+						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
+						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
+						   std::string name = "material",
+						   bool transparent = false,
+						   bool refractive = false)
+{
+
+}
+
+DX11Material::~DX11Material() {
+
+}
+
+#pragma endregion
+
+#pragma region DX12Material
+
+DX12Material::DX12Material(std::shared_ptr<SimplePixelShader> pix,
+						   std::shared_ptr<SimpleVertexShader> vert,
+						   std::string name = "material",
+						   bool transparent = false,
+						   bool refractive = false) 
+{
+
+}
+
+DX12Material::DX12Material(std::shared_ptr<SimplePixelShader> pix,
+						   std::shared_ptr<SimpleVertexShader> vert,
+						   std::shared_ptr<RootSignature> rootSignature,
+						   Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState,
+						   std::string name = "material",
+						   bool transparent = false,
+						   bool refractive = false) 
+{
+
+}
+
+DX12Material::~DX12Material() {
+
+}
+
+#pragma endregion
+
 #pragma region TerrainMaterial
 
 TerrainMaterial::TerrainMaterial(std::string name) {

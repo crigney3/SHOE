@@ -177,6 +177,9 @@
     <ClInclude Include="Headers\DX12Renderer.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\RootSignature.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\PixelShaders\IBLBrdfLookUpTablePS.hlsl">
@@ -378,6 +381,9 @@
     </ClCompile>
     <ClCompile Include="Source\DX12Renderer.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\RootSignature.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -18,7 +18,7 @@ Renderer::Renderer(
 	this->swapChain = swapChain;
 
 	// Whichever version of the renderer is running, initialize it
-	InitRenderTargetViews();
+	
 }
 
 Renderer::~Renderer() {

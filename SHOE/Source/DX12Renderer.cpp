@@ -17,6 +17,8 @@ DX12Renderer::DX12Renderer(
     this->commandQueue = commandQueue;
     this->commandList = commandList;
 
+	this->dxInstance = DXCore::DXCoreInstance;
+
 	InitRenderTargetViews();
 
 	this->currentSwapBuffer = 0;
@@ -25,6 +27,10 @@ DX12Renderer::DX12Renderer(
 
 DX12Renderer::~DX12Renderer() {
 
+	// Can't actually clean up the GPU until it's finished
+	// all the work we've passed it
+
+	dx12Helper.WaitForGPU();
 }
 
 void DX12Renderer::InitRenderTargetViews() {
@@ -257,10 +263,10 @@ void DX12Renderer::Draw(std::shared_ptr<Camera> camera, EngineState engineState)
 
 		// Set up other commands for rendering
 		commandList->OMSetRenderTargets(1, &rtvHandles[currentSwapBuffer], true, &dsvHandle);
-		commandList->RSSetViewports(1, &viewport);
-		commandList->RSSetScissorRects(1, &scissorRect);
-		commandList->IASetVertexBuffers(0, 1, &vbView);
-		commandList->IASetIndexBuffer(&ibView);
+		//commandList->RSSetViewports(1, &(dxInstance->viewport)); // This may not need to be set per frame
+		//commandList->RSSetScissorRects(1, &dxInstance->scissorRect); // This probably does
+		//commandList->IASetVertexBuffers(0, 1, &dxInstance->vbView); // Not implemented, need actual shader + root sig
+		//commandList->IASetIndexBuffer(&dxInstance->ibView); // Not implemented, need actual shader + root sig
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		// Draw

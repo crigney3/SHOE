@@ -391,6 +391,10 @@ HRESULT DXCore::InitDirectX12()
 		hr = dxgiFactory->CreateSwapChain(commandQueue.Get(), &swapDesc, swapChain.GetAddressOf());
 	}
 
+	// Initialize a fence event so manual GPU schronization is possible - already done in DXHelper?
+	/*device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf()));
+	fenceEvent = CreateEventEx(0, 0, 0, EVENT_ALL_ACCESS);*/
+
 	// Set up the viewport so we render into the correct
 	// portion of the render target
 	viewport = {};

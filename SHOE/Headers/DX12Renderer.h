@@ -6,6 +6,7 @@
 class DX12Renderer : public Renderer {
 private:
     DX12Helper& dx12Helper = DX12Helper::GetInstance();
+    DXCore* dxInstance;
 
     bool vsync;
 

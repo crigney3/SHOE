@@ -4,6 +4,7 @@
 #include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
 #include "DXCore.h"
 #include "SimpleShader.h"
+#include "RootSignature.h"
 #include <memory>
 #include <vector>
 
@@ -14,21 +15,22 @@ enum PBRTextureTypes {
 	ROUGH
 };
 
+enum MaterialTypes {
+	BaseMaterial,
+	DX11Material,
+	DX12Material,
+	DX11TerrainMaterial,
+	DX12TerrainMaterial
+};
+
 class Material
 {
-private:
+protected:
 	float uvTiling;
 	DirectX::XMFLOAT4 colorTint;
 	std::shared_ptr<SimplePixelShader> pixShader;
 	std::shared_ptr<SimplePixelShader> refractivePixShader;
 	std::shared_ptr<SimpleVertexShader> vertShader;
-
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture;
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState;
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap;
 
 	bool enabled;
 	std::string name;
@@ -45,15 +47,8 @@ private:
 	std::string roughnessFileKey;
 
 public:
-	Material(DirectX::XMFLOAT4 tint,
-			 std::shared_ptr<SimplePixelShader> pix,
+	Material(std::shared_ptr<SimplePixelShader> pix,
 			 std::shared_ptr<SimpleVertexShader> vert,
-			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
-			 Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
-			 Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
-			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
-			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
-			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
 			 std::string name = "material",
 			 bool transparent = false,
 			 bool refractive = false);
@@ -63,17 +58,6 @@ public:
 	void SetTint(DirectX::XMFLOAT4 tint);
 	std::shared_ptr<SimplePixelShader> GetPixShader();
 	std::shared_ptr<SimpleVertexShader> GetVertShader();
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetNormalMap();
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMetalMap();
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRoughMap();
-
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture();
-
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
-	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState);
-
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetClampSamplerState();
-	void SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState);
 
 	float GetTiling();
 	void SetTiling(float uv);
@@ -93,24 +77,91 @@ public:
 	void SetRefractionScale(float scale);
 	float GetRefractionScale();
 
-	void SetPixelShader(std::shared_ptr<SimplePixelShader> pix);
-	void SetVertexShader(std::shared_ptr<SimpleVertexShader> vert);
+	virtual void SetPixelShader(std::shared_ptr<SimplePixelShader> pix);
+	virtual void SetVertexShader(std::shared_ptr<SimpleVertexShader> vert);
 
-	void SetRefractivePixelShader(std::shared_ptr<SimplePixelShader> refractPix);
-	std::shared_ptr<SimplePixelShader> GetRefractivePixelShader();
+	virtual void SetRefractivePixelShader(std::shared_ptr<SimplePixelShader> refractPix);
+	virtual std::shared_ptr<SimplePixelShader> GetRefractivePixelShader();
 
 	std::string GetTextureFilenameKey(PBRTextureTypes textureType);
 	void SetTextureFilenameKey(PBRTextureTypes textureType, std::string newFileKey);
 };
 
+class DX11Material : public Material {
+
+public:
+
+	DX11Material(std::shared_ptr<SimplePixelShader> pix,
+				 std::shared_ptr<SimpleVertexShader> vert,
+				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
+				 Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
+				 Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
+				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
+				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
+				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
+				 std::string name = "material",
+				 bool transparent = false,
+				 bool refractive = false);
+	~DX11Material();
+
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
+	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState);
+
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetClampSamplerState();
+	void SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState);
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetNormalMap();
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMetalMap();
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRoughMap();
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture();
+
+protected:
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture;
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState;
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap;
+};
+
+class DX12Material : public Material {
+public:
+
+	DX12Material(std::shared_ptr<SimplePixelShader> pix,
+				 std::shared_ptr<SimpleVertexShader> vert,
+				 std::string name = "material",
+				 bool transparent = false,
+				 bool refractive = false);
+	DX12Material(std::shared_ptr<SimplePixelShader> pix,
+				 std::shared_ptr<SimpleVertexShader> vert,
+				 std::shared_ptr<RootSignature> rootSignature,
+				 Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState,
+				 std::string name = "material",
+				 bool transparent = false,
+				 bool refractive = false);
+	~DX12Material();
+
+	std::shared_ptr<RootSignature> GetRootSignature();
+	void SetRootSignature(std::shared_ptr<RootSignature> rootSignature);
+
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> GetPipelineState();
+	void SetPipelineState(Microsoft::WRL::ComPtr<ID3D12PipelineState> pipeState);
+
+protected:
+
+	// The root signature and pipeline state store all of the
+	// textures and other SRV info.
+	std::shared_ptr<RootSignature> rootSig;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState;
+
+};
+
 class TerrainMaterial {
 public:
 	TerrainMaterial(std::string name);
-	TerrainMaterial(std::string name, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap);
 	~TerrainMaterial();
-
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetBlendMap();
-	void SetBlendMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newBlendMap);
 
 	void AddMaterial(std::shared_ptr<Material> materialToAdd);
 	void SetMaterialAtID(std::shared_ptr<Material> materialToSet, int id);
@@ -138,8 +189,7 @@ public:
 
 	size_t GetMaterialCount();
 
-private:
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
+protected:
 	std::vector<std::shared_ptr<Material>> allMaterials;
 
 	std::string name;
@@ -150,4 +200,21 @@ private:
 
 	bool enabled;
 	bool blendMapEnabled;
+};
+
+class DX11TerrainMaterial : public TerrainMaterial {
+public:
+
+	DX11TerrainMaterial(std::string name, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap);
+	~DX11TerrainMaterial();
+
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetBlendMap();
+	void SetBlendMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newBlendMap);
+
+protected:
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
+};
+
+class DX12TerrainMaterial : public TerrainMaterial {
+
 };

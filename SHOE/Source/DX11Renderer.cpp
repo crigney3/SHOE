@@ -64,6 +64,8 @@ DX11Renderer::DX11Renderer(
 	device->CreateDepthStencilState(&depthDescription, &this->skyDepthState);
 
 	PostResize(windowHeight, windowWidth, backBufferRTV, depthBufferDSV);
+
+	InitRenderTargetViews();
 }
 
 DX11Renderer::~DX11Renderer() {
