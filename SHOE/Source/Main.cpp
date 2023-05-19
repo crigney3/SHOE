@@ -9,7 +9,7 @@ int WINAPI WinMain(
 	_In_ LPSTR lpCmdLine,				// Command line params
 	_In_ int nCmdShow)					// How the window should be shown (we ignore this)
 {
-	DirectXVersion dxVersion = DIRECT_X_11;
+	DirectXVersion dxVersion = DIRECT_X_12;
 
 #if defined(DEBUG) | defined(_DEBUG)
 	// Enable memory leak detection as a quick and dirty
@@ -34,7 +34,12 @@ int WINAPI WinMain(
 
 	// Attempt to initialize DirectX, and exit
 	// early if something failed
-	hr = dxGame.InitDirectX11();
+	if (DIRECT_X_12) {
+		hr = dxGame.InitDirectX12();
+	}
+	else {
+		hr = dxGame.InitDirectX11();
+	}
 	if(FAILED(hr)) return hr;
 
 	// Begin the message and game loop, and then return

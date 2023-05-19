@@ -88,24 +88,29 @@ void Game::Init()
 {
 	engineState = EngineState::INIT;
 
-	loadingSpriteBatch = new SpriteBatch(context.Get());
-
-#if defined(DEBUG) || defined(_DEBUG)
-	printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
-#endif
-
-	sceneManager.Initialize(&engineState);
-
 	if (dxVersion) {
 
 	}
 	else {
-		globalAssets.Initialize(device, context, hWnd, &engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
-	}
+		loadingSpriteBatch = new SpriteBatch(context.Get());
 
 #if defined(DEBUG) || defined(_DEBUG)
-	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
+		printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
 #endif
+
+		sceneManager.Initialize(&engineState);
+
+		globalAssets.Initialize(device, context, hWnd, &engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
+
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
+#endif
+
+		// Tell the input assembler stage of the pipeline what kind of
+		// geometric primitives (points, lines or triangles) we want to draw.  
+		// Essentially: "What kind of shape should the GPU draw with our data?"
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	}
 
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(this->hWnd);
@@ -118,11 +123,6 @@ void Game::Init()
 
 	entityUIIndex = 0;
 	skyUIIndex = 0;
-
-	// Tell the input assembler stage of the pipeline what kind of
-	// geometric primitives (points, lines or triangles) we want to draw.  
-	// Essentially: "What kind of shape should the GPU draw with our data?"
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	//With everything initialized, start the renderer
 
