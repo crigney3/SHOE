@@ -84,7 +84,7 @@ public:
 	LRESULT ProcessMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 	// Returns 0 for DirectX11 and 1 for DirectX12
-	DirectXVersion IsDirectX12();
+	bool IsDirectX12();
 
 	// Initialization and game-loop related methods
 	HRESULT InitWindow();

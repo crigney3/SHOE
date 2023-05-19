@@ -15,13 +15,13 @@ enum PBRTextureTypes {
 	ROUGH
 };
 
-enum MaterialTypes {
-	BaseMaterial,
-	DX11Material,
-	DX12Material,
-	DX11TerrainMaterial,
-	DX12TerrainMaterial
-};
+//enum MaterialTypes {
+//	BaseMaterial,
+//	DX11Material,
+//	DX12Material,
+//	DX11TerrainMaterial,
+//	DX12TerrainMaterial
+//};
 
 class Material
 {
@@ -76,6 +76,18 @@ public:
 
 	void SetRefractionScale(float scale);
 	float GetRefractionScale();
+
+	virtual Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
+	virtual void SetSamplerState(void*);
+
+	virtual Microsoft::WRL::ComPtr<ID3D11SamplerState> GetClampSamplerState();
+	virtual void SetClampSamplerState(void*);
+
+	virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetNormalMap();
+	virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMetalMap();
+	virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRoughMap();
+
+	virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture();
 
 	virtual void SetPixelShader(std::shared_ptr<SimplePixelShader> pix);
 	virtual void SetVertexShader(std::shared_ptr<SimpleVertexShader> vert);
@@ -137,7 +149,7 @@ public:
 	DX12Material(std::shared_ptr<SimplePixelShader> pix,
 				 std::shared_ptr<SimpleVertexShader> vert,
 				 std::shared_ptr<RootSignature> rootSignature,
-				 Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState,
+				 Microsoft::WRL::ComPtr<ID3D12PipelineState> pipeState,
 				 std::string name = "material",
 				 bool transparent = false,
 				 bool refractive = false);
@@ -148,6 +160,12 @@ public:
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> GetPipelineState();
 	void SetPipelineState(Microsoft::WRL::ComPtr<ID3D12PipelineState> pipeState);
+
+	void SetPixelShader(std::shared_ptr<SimplePixelShader> pix);
+	void SetVertexShader(std::shared_ptr<SimpleVertexShader> vert);
+
+	void SetRefractivePixelShader(std::shared_ptr<SimplePixelShader> refractPix);
+	std::shared_ptr<SimplePixelShader> GetRefractivePixelShader();
 
 protected:
 
@@ -181,11 +199,14 @@ public:
 	std::string GetName();
 	void SetName(std::string name);
 
-	std::shared_ptr<SimplePixelShader> GetPixelShader();
-	void SetPixelShader(std::shared_ptr<SimplePixelShader> pixShader);
+	virtual std::shared_ptr<SimplePixelShader> GetPixelShader();
+	virtual void SetPixelShader(std::shared_ptr<SimplePixelShader> pixShader);
 
-	std::shared_ptr<SimpleVertexShader> GetVertexShader();
-	void SetVertexShader(std::shared_ptr<SimpleVertexShader> vertShader);
+	virtual std::shared_ptr<SimpleVertexShader> GetVertexShader();
+	virtual void SetVertexShader(std::shared_ptr<SimpleVertexShader> vertShader);
+
+	virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetBlendMap();
+	virtual void SetBlendMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newBlendMap);
 
 	size_t GetMaterialCount();
 
@@ -199,7 +220,7 @@ protected:
 	std::shared_ptr<SimpleVertexShader> vertShader;
 
 	bool enabled;
-	bool blendMapEnabled;
+	bool blendMapEnabled = false;
 };
 
 class DX11TerrainMaterial : public TerrainMaterial {

@@ -17,13 +17,13 @@ void RootSignature::LoadShaderFromName(std::wstring name, SimpleShaderType type)
 
 	fullPath = dxInstance->GetFullPathTo_Wide(name);
 
-	if (type == SimpleDX12VertexShader) {
+	if (type == SimpleDX12VertexShaderType) {
 		D3DReadFileToBlob(fullPath.c_str(), vertexShaderByteCode.GetAddressOf());
 	} 
-	else if (type == SimpleDX12PixelShader) {
+	else if (type == SimpleDX12PixelShaderType) {
 		D3DReadFileToBlob(fullPath.c_str(), pixelShaderByteCode.GetAddressOf());
 	}
-	else if (type == SimpleDX12ComputeShader) {
+	else if (type == SimpleDX12ComputeShaderType) {
 		D3DReadFileToBlob(fullPath.c_str(), computeShaderByteCode.GetAddressOf());
 	}
 }

@@ -937,3 +937,13 @@ LRESULT DXCore::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
+
+bool DXCore::IsDirectX12() {
+	if (dxVersion == DirectXVersion::DIRECT_X_11) {
+		return 0;
+	}
+	else {
+		return 1;
+	}
+}
+

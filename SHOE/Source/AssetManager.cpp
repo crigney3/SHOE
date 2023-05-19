@@ -284,34 +284,48 @@ void AssetManager::SetMaterialTextureFileKey(std::string textureFilename, std::s
 }
 
 std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
-	std::string albedoNameToLoad,
-	std::string normalNameToLoad,
-	std::string metalnessNameToLoad,
-	std::string roughnessNameToLoad,
-	bool addToGlobalList) {
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
-
+														  std::string albedoNameToLoad,
+														  std::string normalNameToLoad,
+														  std::string metalnessNameToLoad,
+														  std::string roughnessNameToLoad,
+														  bool dx12Material,
+														  bool addToGlobalList) 
+{
+	std::shared_ptr<Material> newMat;
 	std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
 	std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
 
-	LoadPBRTexture(albedoNameToLoad, &albedo, PBRTextureTypes::ALBEDO);
-	LoadPBRTexture(normalNameToLoad, &normals, PBRTextureTypes::NORMAL);
-	LoadPBRTexture(metalnessNameToLoad, &metalness, PBRTextureTypes::METAL);
-	LoadPBRTexture(roughnessNameToLoad, &roughness, PBRTextureTypes::ROUGH);
+	if (!dx12Material) {
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
 
-	std::shared_ptr<Material> newMat = std::make_shared<Material>(whiteTint,
-		PSNormal,
-		VSNormal,
-		albedo,
-		textureState,
-		clampState,
-		normals,
-		roughness,
-		metalness,
-		id);
+		LoadPBRTexture(albedoNameToLoad, &albedo, PBRTextureTypes::ALBEDO);
+		LoadPBRTexture(normalNameToLoad, &normals, PBRTextureTypes::NORMAL);
+		LoadPBRTexture(metalnessNameToLoad, &metalness, PBRTextureTypes::METAL);
+		LoadPBRTexture(roughnessNameToLoad, &roughness, PBRTextureTypes::ROUGH);
+
+		newMat = std::make_shared<DX11Material>(PSNormal,
+												VSNormal,
+												albedo,
+												textureState,
+												clampState,
+												normals,
+												roughness,
+												metalness,
+												id);
+	}
+	else {
+		std::shared_ptr<RootSignature> rootSignature;
+		Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState;
+
+		newMat = std::make_shared<DX12Material>(PSNormal,
+												VSNormal,
+												rootSignature,
+												pipelineState,
+												id);
+	}
 
 	SetMaterialTextureFileKey(albedoNameToLoad, newMat, PBRTextureTypes::ALBEDO);
 	SetMaterialTextureFileKey(normalNameToLoad, newMat, PBRTextureTypes::NORMAL);
@@ -446,29 +460,37 @@ std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::shared_ptr<Mesh>
 	return CreateTerrainOnEntity(CreateGameEntity(name), terrainMesh, material);
 }
 
-std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string name, std::vector<std::shared_ptr<Material>> materials, std::string blendMapPath) {
-	std::shared_ptr<TerrainMaterial> newTMat = std::make_shared<TerrainMaterial>(name);
+std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string name, std::vector<std::shared_ptr<Material>> materials, std::string blendMapPath, bool dx12Material) {
+	std::shared_ptr<TerrainMaterial> newTMat;
 
-	for (auto m : materials) {
-		newTMat->AddMaterial(m);
+	if (dx12Material) {
+
 	}
-
-	if (blendMapPath != "") {
+	else {
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
 
-		std::wstring wPath;
-		ISimpleShader::ConvertToWide(namePath, wPath);
+		newTMat = std::make_shared<DX11TerrainMaterial>(name, blendMap);
 
-		CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
+		for (auto m : materials) {
+			newTMat->AddMaterial(m);
+		}
 
-		newTMat->SetBlendMap(blendMap);
+		if (blendMapPath != "") {
+			std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
 
-		newTMat->SetBlendMapFilenameKey(SerializeFileName("Assets\\Textures\\", namePath));
+			std::wstring wPath;
+			ISimpleShader::ConvertToWide(namePath, wPath);
+
+			CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
+
+			newTMat->SetBlendMap(blendMap);
+
+			newTMat->SetBlendMapFilenameKey(SerializeFileName("Assets\\Textures\\", namePath));
+		}
+
+		newTMat->SetPixelShader(GetPixelShaderByName("TerrainPS"));
+		newTMat->SetVertexShader(GetVertexShaderByName("TerrainVS"));
 	}
-
-	newTMat->SetPixelShader(GetPixelShaderByName("TerrainPS"));
-	newTMat->SetVertexShader(GetVertexShaderByName("TerrainVS"));
 
 	globalTerrainMaterials.push_back(newTMat);
 
@@ -479,36 +501,45 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 	std::vector<std::string> texturePaths,
 	std::vector<std::string> matNames,
 	bool isPBRMat,
+	bool dx12Material,
 	std::string blendMapPath)
 {
-	std::shared_ptr<TerrainMaterial> newTMat = std::make_shared<TerrainMaterial>(name);
+	std::shared_ptr<TerrainMaterial> newTMat;
 
-	for (int i = 0; i < matNames.size(); i++) {
-		std::shared_ptr<Material> newMat;
+	if (dx12Material) {
 
-		if (isPBRMat) {
-			int textureIndex = i * 4;
-			newMat = CreatePBRMaterial(matNames[i], texturePaths[textureIndex], texturePaths[textureIndex + 1], texturePaths[textureIndex + 2], texturePaths[textureIndex + 3]);
-		}
-		else {
-			// Currently unimplemented
-		}
-
-		newTMat->AddMaterial(newMat);
 	}
-
-	if (blendMapPath != "") {
+	else {
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
-		std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
 
-		std::wstring wPath;
-		ISimpleShader::ConvertToWide(namePath, wPath);
+		newTMat = std::make_shared<DX11TerrainMaterial>(name, blendMap);
 
-		CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
+		for (int i = 0; i < matNames.size(); i++) {
+			std::shared_ptr<Material> newMat;
 
-		newTMat->SetBlendMap(blendMap);
-		newTMat->SetBlendMapFilenameKey(SerializeFileName("Assets\\Textures\\", namePath));
-	}
+			if (isPBRMat) {
+				int textureIndex = i * 4;
+				newMat = CreatePBRMaterial(matNames[i], texturePaths[textureIndex], texturePaths[textureIndex + 1], texturePaths[textureIndex + 2], texturePaths[textureIndex + 3]);
+			}
+			else {
+				// Currently unimplemented
+			}
+
+			newTMat->AddMaterial(newMat);
+		}
+
+		if (blendMapPath != "") {
+			std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
+
+			std::wstring wPath;
+			ISimpleShader::ConvertToWide(namePath, wPath);
+
+			CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
+
+			newTMat->SetBlendMap(blendMap);
+			newTMat->SetBlendMapFilenameKey(SerializeFileName("Assets\\Textures\\", namePath));
+		}
+	}	
 
 	newTMat->SetPixelShader(GetPixelShaderByName("TerrainPS"));
 	newTMat->SetVertexShader(GetVertexShaderByName("TerrainVS"));
@@ -856,123 +887,130 @@ void AssetManager::InitializeGameEntities() {
 }
 
 void AssetManager::InitializeMaterials() {
-	// Make reflective PBR materials
-	CreatePBRMaterial(std::string("reflectiveMetal"),
-		"BlankAlbedo.png",
-		"blank_normals.png",
-		"bronze_metal.png",
-		"GenericRoughness0.png");
+	if (!dxInstance->IsDirectX12()) {
+		// Initialize DX11 Materials
 
-	CreatePBRMaterial(std::string("reflective"),
-		"BlankAlbedo.png",
-		"blank_normals.png",
-		"wood_metal.png",
-		"GenericRoughness0.png");
+		// Make reflective PBR materials
+		CreatePBRMaterial(std::string("reflectiveMetal"),
+			"BlankAlbedo.png",
+			"blank_normals.png",
+			"bronze_metal.png",
+			"GenericRoughness0.png");
 
-	CreatePBRMaterial(std::string("reflectiveRough"),
-		"BlankAlbedo.png",
-		"blank_normals.png",
-		"wood_metal.png",
-		"GenericRoughness100.png");
+		CreatePBRMaterial(std::string("reflective"),
+			"BlankAlbedo.png",
+			"blank_normals.png",
+			"wood_metal.png",
+			"GenericRoughness0.png");
 
-	CreatePBRMaterial(std::string("reflectiveRoughMetal"),
-		"BlankAlbedo.png",
-		"blank_normals.png",
-		"bronze_metal.png",
-		"GenericRoughness100.png");
+		CreatePBRMaterial(std::string("reflectiveRough"),
+			"BlankAlbedo.png",
+			"blank_normals.png",
+			"wood_metal.png",
+			"GenericRoughness100.png");
 
-	//Make PBR materials
-	CreatePBRMaterial(std::string("bronzeMat"),
-		"bronze_albedo.png",
-		"bronze_normals.png",
-		"bronze_metal.png",
-		"bronze_roughness.png")->SetTiling(0.3f);
+		CreatePBRMaterial(std::string("reflectiveRoughMetal"),
+			"BlankAlbedo.png",
+			"blank_normals.png",
+			"bronze_metal.png",
+			"GenericRoughness100.png");
 
-	CreatePBRMaterial(std::string("cobbleMat"),
-		"cobblestone_albedo.png",
-		"cobblestone_normals.png",
-		"cobblestone_metal.png",
-		"cobblestone_roughness.png");
+		//Make PBR materials
+		CreatePBRMaterial(std::string("bronzeMat"),
+			"bronze_albedo.png",
+			"bronze_normals.png",
+			"bronze_metal.png",
+			"bronze_roughness.png")->SetTiling(0.3f);
 
-	CreatePBRMaterial(std::string("largeCobbleMat"),
-		"cobblestone_albedo.png",
-		"cobblestone_normals.png",
-		"cobblestone_metal.png",
-		"cobblestone_roughness.png")->SetTiling(5.0f);
+		CreatePBRMaterial(std::string("cobbleMat"),
+			"cobblestone_albedo.png",
+			"cobblestone_normals.png",
+			"cobblestone_metal.png",
+			"cobblestone_roughness.png");
 
-	CreatePBRMaterial(std::string("floorMat"),
-		"floor_albedo.png",
-		"floor_normals.png",
-		"floor_metal.png",
-		"floor_roughness.png");
+		CreatePBRMaterial(std::string("largeCobbleMat"),
+			"cobblestone_albedo.png",
+			"cobblestone_normals.png",
+			"cobblestone_metal.png",
+			"cobblestone_roughness.png")->SetTiling(5.0f);
 
-	CreatePBRMaterial(std::string("terrainFloorMat"),
-		"floor_albedo.png",
-		"floor_normals.png",
-		"floor_metal.png",
-		"floor_roughness.png")->SetTiling(256.0f);
+		CreatePBRMaterial(std::string("floorMat"),
+			"floor_albedo.png",
+			"floor_normals.png",
+			"floor_metal.png",
+			"floor_roughness.png");
 
-	CreatePBRMaterial(std::string("paintMat"),
-		"paint_albedo.png",
-		"paint_normals.png",
-		"paint_metal.png",
-		"paint_roughness.png");
+		CreatePBRMaterial(std::string("terrainFloorMat"),
+			"floor_albedo.png",
+			"floor_normals.png",
+			"floor_metal.png",
+			"floor_roughness.png")->SetTiling(256.0f);
 
-	CreatePBRMaterial(std::string("largePaintMat"),
-		"paint_albedo.png",
-		"paint_normals.png",
-		"paint_metal.png",
-		"paint_roughness.png")->SetTiling(5.0f);
+		CreatePBRMaterial(std::string("paintMat"),
+			"paint_albedo.png",
+			"paint_normals.png",
+			"paint_metal.png",
+			"paint_roughness.png");
 
-	CreatePBRMaterial(std::string("roughMat"),
-		"rough_albedo.png",
-		"rough_normals.png",
-		"rough_metal.png",
-		"rough_roughness.png");
+		CreatePBRMaterial(std::string("largePaintMat"),
+			"paint_albedo.png",
+			"paint_normals.png",
+			"paint_metal.png",
+			"paint_roughness.png")->SetTiling(5.0f);
 
-	CreatePBRMaterial(std::string("scratchMat"),
-		"scratched_albedo.png",
-		"scratched_normals.png",
-		"scratched_metal.png",
-		"scratched_roughness.png");
+		CreatePBRMaterial(std::string("roughMat"),
+			"rough_albedo.png",
+			"rough_normals.png",
+			"rough_metal.png",
+			"rough_roughness.png");
 
-	CreatePBRMaterial(std::string("woodMat"),
-		"wood_albedo.png",
-		"wood_normals.png",
-		"wood_metal.png",
-		"wood_roughness.png");
+		CreatePBRMaterial(std::string("scratchMat"),
+			"scratched_albedo.png",
+			"scratched_normals.png",
+			"scratched_metal.png",
+			"scratched_roughness.png");
 
-	std::shared_ptr<Material> refractive = CreatePBRMaterial(std::string("refractivePaintMat"),
-		"paint_albedo.png",
-		"paint_normals.png",
-		"paint_metal.png",
-		"paint_roughness.png");
-	refractive->SetRefractive(true);
-	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		CreatePBRMaterial(std::string("woodMat"),
+			"wood_albedo.png",
+			"wood_normals.png",
+			"wood_metal.png",
+			"wood_roughness.png");
 
-	refractive = CreatePBRMaterial(std::string("refractiveWoodMat"),
-		"wood_albedo.png",
-		"wood_normals.png",
-		"wood_metal.png",
-		"wood_roughness.png");
-	refractive->SetTransparent(true);
-	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		std::shared_ptr<Material> refractive = CreatePBRMaterial(std::string("refractivePaintMat"),
+			"paint_albedo.png",
+			"paint_normals.png",
+			"paint_metal.png",
+			"paint_roughness.png");
+		refractive->SetRefractive(true);
+		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-	refractive = CreatePBRMaterial(std::string("refractiveRoughMat"),
-		"rough_albedo.png",
-		"rough_normals.png",
-		"rough_metal.png",
-		"rough_roughness.png");
-	refractive->SetRefractive(true);
-	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		refractive = CreatePBRMaterial(std::string("refractiveWoodMat"),
+			"wood_albedo.png",
+			"wood_normals.png",
+			"wood_metal.png",
+			"wood_roughness.png");
+		refractive->SetTransparent(true);
+		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-	refractive = CreatePBRMaterial(std::string("refractiveBronzeMat"),
-		"bronze_albedo.png",
-		"bronze_normals.png",
-		"bronze_metal.png",
-		"bronze_roughness.png");
-	refractive->SetRefractive(true);
-	refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		refractive = CreatePBRMaterial(std::string("refractiveRoughMat"),
+			"rough_albedo.png",
+			"rough_normals.png",
+			"rough_metal.png",
+			"rough_roughness.png");
+		refractive->SetRefractive(true);
+		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+
+		refractive = CreatePBRMaterial(std::string("refractiveBronzeMat"),
+			"bronze_albedo.png",
+			"bronze_normals.png",
+			"bronze_metal.png",
+			"bronze_roughness.png");
+		refractive->SetRefractive(true);
+		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+	}
+	else {
+		// Initialize DX12 Materials
+	}
 }
 
 void AssetManager::InitializeMeshes() {

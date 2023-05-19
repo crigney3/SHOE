@@ -817,11 +817,11 @@ void DX11Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam, EngineSt
 	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), 0);
 
 	fullscreenVS->SetShader();
-
+	
 	outlinePS->SetShader();
 	outlinePS->SetShaderResourceView("backBuffer", renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].Get());
 	outlinePS->SetShaderResourceView("FilledMeshTexture", outlineSRV.Get());
-	outlinePS->SetSamplerState("samplerOptions", globalAssets.GetMaterialAtID(0)->GetClampSamplerState().Get());
+	outlinePS->SetSamplerState("samplerOptions", (dynamic_cast<DX11Material*>(globalAssets.GetMaterialAtID(0).get())->GetClampSamplerState().Get()));
 	outlinePS->SetFloat3("borderColor", XMFLOAT3(1, 0, 1));
 	outlinePS->SetFloat("pixelWidth", 1.0f / windowWidth);
 	outlinePS->SetFloat("pixelHeight", 1.0f / windowHeight);
@@ -904,7 +904,7 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 
 	SimpleVertexShader* currentVS = 0;
 	SimplePixelShader* currentPS = 0;
-	Material* currentMaterial = 0;
+	DX11Material* currentMaterial = 0;
 	Mesh* currentMesh = 0;
 
 	std::vector<std::shared_ptr<MeshRenderer>> activeMeshes = ComponentManager::GetAll<MeshRenderer>();
@@ -922,7 +922,7 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 			// With shadows, it would also require passing in a lot of data
 			// And handling edge cases like main camera swaps
 
-			currentMaterial = activeMeshes[meshIt]->GetMaterial().get();
+			currentMaterial = dynamic_cast<DX11Material*>(activeMeshes[meshIt]->GetMaterial().get());
 
 			if (currentVS != currentMaterial->GetVertShader().get()) {
 				// Set new Shader and copy per-frame data
@@ -994,12 +994,15 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 
 	//Now deal with rendering the terrain, PS data first
 	std::vector<std::shared_ptr<Terrain>> terrains = ComponentManager::GetAll<Terrain>();
+	DX11Material* currentMat;
 	for (int i = 0; i < terrains.size(); i++) {
 		if (!terrains[i]->IsEnabled()) continue;
 
-		std::shared_ptr<TerrainMaterial> terrainMat = terrains[i]->GetMaterial();
+		std::shared_ptr<TerrainMaterial> tempTerrainMat = terrains[i]->GetMaterial();
 		std::shared_ptr<SimplePixelShader> PSTerrain = terrains[i]->GetMaterial()->GetPixelShader();
 		std::shared_ptr<SimpleVertexShader> VSTerrain = terrains[i]->GetMaterial()->GetVertexShader();
+		DX11TerrainMaterial* terrainMat = dynamic_cast<DX11TerrainMaterial*>(tempTerrainMat.get());
+		currentMat = dynamic_cast<DX11Material*>(tempTerrainMat->GetMaterialAtID(0).get());
 
 		PSTerrain->SetShader();
 		PSTerrain->SetData("lights", Light::GetLightArray(), sizeof(Light) * MAX_LIGHTS);
@@ -1012,17 +1015,20 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 			PSTerrain->SetSamplerState("shadowState", shadowSampler.Get());
 		}
 		PSTerrain->SetShaderResourceView("blendMap", terrainMat->GetBlendMap().Get());
-		PSTerrain->SetSamplerState("clampSampler", terrainMat->GetMaterialAtID(0)->GetClampSamplerState().Get());
+		PSTerrain->SetSamplerState("clampSampler", currentMat->GetClampSamplerState().Get());
 
 		for (int i = 0; i < terrainMat->GetMaterialCount(); i++) {
 			std::string a = "texture" + std::to_string(i + 1) + "Albedo";
 			std::string n = "texture" + std::to_string(i + 1) + "Normal";
 			std::string r = "texture" + std::to_string(i + 1) + "Rough";
 			std::string m = "texture" + std::to_string(i + 1) + "Metal";
-			PSTerrain->SetShaderResourceView(a, terrainMat->GetMaterialAtID(i)->GetTexture().Get());
-			PSTerrain->SetShaderResourceView(n, terrainMat->GetMaterialAtID(i)->GetNormalMap().Get());
-			PSTerrain->SetShaderResourceView(r, terrainMat->GetMaterialAtID(i)->GetRoughMap().Get());
-			PSTerrain->SetShaderResourceView(m, terrainMat->GetMaterialAtID(i)->GetMetalMap().Get());
+
+			currentMat = dynamic_cast<DX11Material*>(terrainMat->GetMaterialAtID(i).get());
+
+			PSTerrain->SetShaderResourceView(a, currentMat->GetTexture().Get());
+			PSTerrain->SetShaderResourceView(n, currentMat->GetNormalMap().Get());
+			PSTerrain->SetShaderResourceView(r, currentMat->GetRoughMap().Get());
+			PSTerrain->SetShaderResourceView(m, currentMat->GetMetalMap().Get());
 		}
 
 		if (globalAssets.currentSky->IsEnabled()) {

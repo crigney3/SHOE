@@ -4,28 +4,15 @@
 
 #pragma region Material
 
-Material::Material(DirectX::XMFLOAT4 tint, 
-				   std::shared_ptr<SimplePixelShader> pix, 
+Material::Material(std::shared_ptr<SimplePixelShader> pix, 
 				   std::shared_ptr<SimpleVertexShader> vert, 
-				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
-				   Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState, 
-				   Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState, 
-				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap, 
-				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap, 
-				   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
 				   std::string name,
 				   bool transparent,
 				   bool refractive) {
-	this->colorTint = tint;
+	this->colorTint = DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	this->pixShader = pix;
 	this->vertShader = vert;
-	this->texture = texture;
-	this->textureState = textureState;
-	this->normalMap = normalMap;
-	this->roughMap = roughMap;
-	this->metalMap = metalMap;
 	this->uvTiling = 1.0f;
-	this->clampState = clampState;
 	this->enabled = true;
 	this->name = name;
 	this->transparent = transparent;
@@ -63,30 +50,6 @@ std::shared_ptr<SimplePixelShader> Material::GetPixShader() {
 
 std::shared_ptr<SimpleVertexShader> Material::GetVertShader() {
 	return this->vertShader;
-}
-
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetNormalMap() {
-	return this->normalMap;
-}
-
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetMetalMap() {
-	return this->metalMap;
-}
-
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetRoughMap() {
-	return this->roughMap;
-}
-
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetTexture() {
-	return this->texture;
-}
-
-Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetSamplerState() {
-	return this->textureState;
-}
-
-void Material::SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState) {
-	this->textureState = texSamplerState;
 }
 
 float Material::GetTiling() {
@@ -136,14 +99,6 @@ void Material::SetTextureFilenameKey(PBRTextureTypes textureType, std::string ne
 	}
 }
 
-Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetClampSamplerState() {
-	return this->clampState;
-}
-
-void Material::SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState) {
-	this->clampState = clampSamplerState;
-}
-
 /// <summary>
 /// Sets whether to render the attached textures with transparency
 /// </summary>
@@ -189,6 +144,50 @@ float Material::GetRefractionScale() {
 	return this->refractionScale;
 }
 
+Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetSamplerState() {
+	printf("Error: Calling virtual base class!");
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> error;
+	return error;
+}
+
+void Material::SetSamplerState(void*) {
+	printf("Error: Calling virtual base class!");
+}
+
+Microsoft::WRL::ComPtr<ID3D11SamplerState> Material::GetClampSamplerState() {
+	printf("Error: Calling virtual base class!");
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> error;
+	return error;
+}
+
+void Material::SetClampSamplerState(void*) {
+	printf("Error: Calling virtual base class!");
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetNormalMap() {
+	printf("Error: Calling virtual base class!");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> error;
+	return error;
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetMetalMap() {
+	printf("Error: Calling virtual base class!");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> error;
+	return error;
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetRoughMap() {
+	printf("Error: Calling virtual base class!");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> error;
+	return error;
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetTexture() {
+	printf("Error: Calling virtual base class!");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> error;
+	return error;
+}
+
 void Material::SetPixelShader(std::shared_ptr<SimplePixelShader> pix) {
 	this->pixShader = pix;
 	ComponentManager::Sort<MeshRenderer>();
@@ -219,15 +218,53 @@ DX11Material::DX11Material(std::shared_ptr<SimplePixelShader> pix,
 						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
 						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
 						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
-						   std::string name = "material",
-						   bool transparent = false,
-						   bool refractive = false)
+						   std::string name,
+						   bool transparent,
+						   bool refractive)
+	: Material(pix, vert, name, transparent, refractive)
 {
-
+	this->texture = texture;
+	this->textureState = textureState;
+	this->normalMap = normalMap;
+	this->roughMap = roughMap;
+	this->metalMap = metalMap;
+	this->clampState = clampState;
 }
 
 DX11Material::~DX11Material() {
 
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetNormalMap() {
+	return this->normalMap;
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetMetalMap() {
+	return this->metalMap;
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetRoughMap() {
+	return this->roughMap;
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetTexture() {
+	return this->texture;
+}
+
+Microsoft::WRL::ComPtr<ID3D11SamplerState> DX11Material::GetSamplerState() {
+	return this->textureState;
+}
+
+void DX11Material::SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState) {
+	this->textureState = texSamplerState;
+}
+
+Microsoft::WRL::ComPtr<ID3D11SamplerState> DX11Material::GetClampSamplerState() {
+	return this->clampState;
+}
+
+void DX11Material::SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState) {
+	this->clampState = clampSamplerState;
 }
 
 #pragma endregion
@@ -236,9 +273,10 @@ DX11Material::~DX11Material() {
 
 DX12Material::DX12Material(std::shared_ptr<SimplePixelShader> pix,
 						   std::shared_ptr<SimpleVertexShader> vert,
-						   std::string name = "material",
-						   bool transparent = false,
-						   bool refractive = false) 
+						   std::string name,
+						   bool transparent,
+						   bool refractive) 
+	: Material(pix, vert, name, transparent, refractive)
 {
 
 }
@@ -246,16 +284,52 @@ DX12Material::DX12Material(std::shared_ptr<SimplePixelShader> pix,
 DX12Material::DX12Material(std::shared_ptr<SimplePixelShader> pix,
 						   std::shared_ptr<SimpleVertexShader> vert,
 						   std::shared_ptr<RootSignature> rootSignature,
-						   Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState,
-						   std::string name = "material",
-						   bool transparent = false,
-						   bool refractive = false) 
+						   Microsoft::WRL::ComPtr<ID3D12PipelineState> pipeState,
+						   std::string name,
+						   bool transparent,
+						   bool refractive) 
+	: Material(pix, vert, name, transparent, refractive)
 {
-
+	this->rootSig = rootSignature;
+	this->pipelineState = pipeState;
 }
 
 DX12Material::~DX12Material() {
 
+}
+
+std::shared_ptr<RootSignature> DX12Material::GetRootSignature() {
+	return this->rootSig;
+}
+
+void DX12Material::SetRootSignature(std::shared_ptr<RootSignature> rootSignature) {
+	this->rootSig = rootSignature;
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> DX12Material::GetPipelineState() {
+	return this->pipelineState;
+}
+
+void DX12Material::SetPipelineState(Microsoft::WRL::ComPtr<ID3D12PipelineState> pipeState) {
+	this->pipelineState = pipeState;
+}
+
+void DX12Material::SetPixelShader(std::shared_ptr<SimplePixelShader> pix) {
+	this->pixShader = pix;
+	ComponentManager::Sort<MeshRenderer>();
+}
+
+void DX12Material::SetVertexShader(std::shared_ptr<SimpleVertexShader> vert) {
+	this->vertShader = vert;
+	ComponentManager::Sort<MeshRenderer>();
+}
+
+void DX12Material::SetRefractivePixelShader(std::shared_ptr<SimplePixelShader> refractPix) {
+	this->refractivePixShader = refractPix;
+}
+
+std::shared_ptr<SimplePixelShader> DX12Material::GetRefractivePixelShader() {
+	return this->refractivePixShader;
 }
 
 #pragma endregion
@@ -263,21 +337,10 @@ DX12Material::~DX12Material() {
 #pragma region TerrainMaterial
 
 TerrainMaterial::TerrainMaterial(std::string name) {
-	this->blendMap = nullptr;
 	this->allMaterials = std::vector<std::shared_ptr<Material>>();
 	this->name = name;
 
 	this->enabled = true;
-	this->blendMapEnabled = false;
-}
-
-TerrainMaterial::TerrainMaterial(std::string name, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap) {
-	this->blendMap = blendMap;
-	this->allMaterials = std::vector<std::shared_ptr<Material>>();
-	this->name = name;
-
-	this->enabled = true;
-	this->blendMapEnabled = true;
 }
 
 TerrainMaterial::~TerrainMaterial() {
@@ -306,15 +369,6 @@ std::string TerrainMaterial::GetName() {
 
 void TerrainMaterial::SetName(std::string name) {
 	this->name = name;
-}
-
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> TerrainMaterial::GetBlendMap() {
-	return this->blendMap;
-}
-
-void TerrainMaterial::SetBlendMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newBlendMap) {
-	this->blendMap = newBlendMap;
-	this->blendMapEnabled = true;
 }
 
 void TerrainMaterial::AddMaterial(std::shared_ptr<Material> materialToAdd) {
@@ -369,5 +423,46 @@ std::shared_ptr<SimpleVertexShader> TerrainMaterial::GetVertexShader() {
 void TerrainMaterial::SetVertexShader(std::shared_ptr<SimpleVertexShader> vertShader) {
 	this->vertShader = vertShader;
 }
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> TerrainMaterial::GetBlendMap() {
+	printf("Error: Calling virtual base class!");
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> error;
+	return error;
+}
+
+void TerrainMaterial::SetBlendMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newBlendMap) {
+	printf("Error: Calling virtual base class!");
+}
+
+#pragma endregion
+
+#pragma region DX11TerrainMaterial
+
+DX11TerrainMaterial::DX11TerrainMaterial(std::string name, 
+										 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap) 
+	: TerrainMaterial(name)
+{
+	this->blendMap = blendMap;
+	this->blendMapEnabled = true;
+}
+
+DX11TerrainMaterial::~DX11TerrainMaterial() {
+
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11TerrainMaterial::GetBlendMap() {
+	return this->blendMap;
+}
+
+void DX11TerrainMaterial::SetBlendMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newBlendMap) {
+	this->blendMap = newBlendMap;
+	this->blendMapEnabled = true;
+}
+
+#pragma endregion
+
+#pragma region DX12TerrainMaterial
+
+
 
 #pragma endregion

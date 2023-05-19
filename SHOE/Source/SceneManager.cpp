@@ -235,37 +235,43 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 		currentLoadName = LoadDeserializedFileName(materialBlock[i], NAME);
 		if(progressListener) progressListener();
 
-		std::shared_ptr<Material> newMaterial = assetManager.CreatePBRMaterial(
-			currentLoadName,
-			LoadDeserializedFileName(materialBlock[i], MAT_TEXTURE_OR_ALBEDO_MAP),
-			LoadDeserializedFileName(materialBlock[i], MAT_NORMAL_MAP),
-			LoadDeserializedFileName(materialBlock[i], MAT_METAL_MAP),
-			LoadDeserializedFileName(materialBlock[i], MAT_ROUGHNESS_MAP));
+		if (assetManager.dxInstance->IsDirectX12()) {
 
-		newMaterial->SetTransparent(materialBlock[i].FindMember(MAT_IS_TRANSPARENT)->value.GetBool());
-
-		newMaterial->SetRefractive(materialBlock[i].FindMember(MAT_IS_REFRACTIVE)->value.GetBool());
-
-		newMaterial->SetTiling(materialBlock[i].FindMember(MAT_UV_TILING)->value.GetDouble());
-
-		newMaterial->SetIndexOfRefraction(materialBlock[i].FindMember(MAT_INDEX_OF_REFRACTION)->value.GetDouble());
-
-		newMaterial->SetRefractionScale(materialBlock[i].FindMember(MAT_REFRACTION_SCALE)->value.GetDouble());
-
-		newMaterial->SetSamplerState(assetManager.textureSampleStates[materialBlock[i].FindMember(MAT_TEXTURE_SAMPLER_STATE)->value.GetInt()]);
-
-		newMaterial->SetClampSamplerState(assetManager.textureSampleStates[materialBlock[i].FindMember(MAT_CLAMP_SAMPLER_STATE)->value.GetInt()]);
-
-		newMaterial->SetVertexShader(assetManager.GetVertexShaderAtID(materialBlock[i].FindMember(MAT_VERTEX_SHADER)->value.GetInt()));
-
-		newMaterial->SetPixelShader(assetManager.GetPixelShaderAtID(materialBlock[i].FindMember(MAT_PIXEL_SHADER)->value.GetInt()));
-
-		if (newMaterial->GetRefractive() || newMaterial->GetTransparent()) {
-			int index = materialBlock[i].FindMember(MAT_REFRACTION_PIXEL_SHADER)->value.GetInt();
-			newMaterial->SetRefractivePixelShader(assetManager.GetPixelShaderAtID(index));
 		}
+		else {
+			std::shared_ptr<Material> tempMat = assetManager.CreatePBRMaterial(
+				currentLoadName,
+				LoadDeserializedFileName(materialBlock[i], MAT_TEXTURE_OR_ALBEDO_MAP),
+				LoadDeserializedFileName(materialBlock[i], MAT_NORMAL_MAP),
+				LoadDeserializedFileName(materialBlock[i], MAT_METAL_MAP),
+				LoadDeserializedFileName(materialBlock[i], MAT_ROUGHNESS_MAP));
+			DX11Material* newMaterial = dynamic_cast<DX11Material*>(tempMat.get());
 
-		newMaterial->SetTint(LoadFloat4(materialBlock[i], MAT_COLOR_TINT));
+			newMaterial->SetTransparent(materialBlock[i].FindMember(MAT_IS_TRANSPARENT)->value.GetBool());
+
+			newMaterial->SetRefractive(materialBlock[i].FindMember(MAT_IS_REFRACTIVE)->value.GetBool());
+
+			newMaterial->SetTiling(materialBlock[i].FindMember(MAT_UV_TILING)->value.GetDouble());
+
+			newMaterial->SetIndexOfRefraction(materialBlock[i].FindMember(MAT_INDEX_OF_REFRACTION)->value.GetDouble());
+
+			newMaterial->SetRefractionScale(materialBlock[i].FindMember(MAT_REFRACTION_SCALE)->value.GetDouble());
+
+			newMaterial->SetSamplerState(assetManager.textureSampleStates[materialBlock[i].FindMember(MAT_TEXTURE_SAMPLER_STATE)->value.GetInt()]);
+
+			newMaterial->SetClampSamplerState(assetManager.textureSampleStates[materialBlock[i].FindMember(MAT_CLAMP_SAMPLER_STATE)->value.GetInt()]);
+
+			newMaterial->SetVertexShader(assetManager.GetVertexShaderAtID(materialBlock[i].FindMember(MAT_VERTEX_SHADER)->value.GetInt()));
+
+			newMaterial->SetPixelShader(assetManager.GetPixelShaderAtID(materialBlock[i].FindMember(MAT_PIXEL_SHADER)->value.GetInt()));
+
+			if (newMaterial->GetRefractive() || newMaterial->GetTransparent()) {
+				int index = materialBlock[i].FindMember(MAT_REFRACTION_PIXEL_SHADER)->value.GetInt();
+				newMaterial->SetRefractivePixelShader(assetManager.GetPixelShaderAtID(index));
+			}
+
+			newMaterial->SetTint(LoadFloat4(materialBlock[i], MAT_COLOR_TINT));
+		}
 	}
 
 	currentLoadCategory = "Meshes";

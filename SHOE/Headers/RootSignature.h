@@ -6,12 +6,12 @@
 
 enum SimpleShaderType
 {
-	SimpleVertexShader,
-	SimplePixelShader,
-	SimpleComputeShader,
-	SimpleDX12VertexShader,
-	SimpleDX12PixelShader,
-	SimpleDX12ComputeShader,
+	SimpleVertexShaderType,
+	SimplePixelShaderType,
+	SimpleComputeShaderType,
+	SimpleDX12VertexShaderType,
+	SimpleDX12PixelShaderType,
+	SimpleDX12ComputeShaderType,
 	MaxSimpleShaderTypeValue
 };
 

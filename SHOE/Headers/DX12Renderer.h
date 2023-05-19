@@ -52,8 +52,7 @@ public:
 
     void PostResize(
         unsigned int windowHeight,
-        unsigned int windowWidth,
-        Microsoft::WRL::ComPtr<ID3D12Resource> backBufferRTV
+        unsigned int windowWidth
     );
     void PreResize();
     void InitShadows();

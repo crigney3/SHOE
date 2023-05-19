@@ -209,8 +209,7 @@ void DX12Renderer::PreResize() {
 
 void DX12Renderer::PostResize(
     unsigned int windowHeight,
-    unsigned int windowWidth,
-    Microsoft::WRL::ComPtr<ID3D12Resource> backBufferRTV) {
+    unsigned int windowWidth) {
 
 }
 
@@ -301,102 +300,102 @@ void DX12Renderer::Draw(std::shared_ptr<Camera> camera, EngineState engineState)
 
 void DX12Renderer::CreateRootSignatureAndPipelineState() {
 	// Root Signature
-	{
-		// Define a table of CBV's (constant buffer views)
-		D3D12_DESCRIPTOR_RANGE cbvTable = {};
-		cbvTable.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-		cbvTable.NumDescriptors = 1;
-		cbvTable.BaseShaderRegister = 0;
-		cbvTable.RegisterSpace = 0;
-		cbvTable.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+	//{
+	//	// Define a table of CBV's (constant buffer views)
+	//	D3D12_DESCRIPTOR_RANGE cbvTable = {};
+	//	cbvTable.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+	//	cbvTable.NumDescriptors = 1;
+	//	cbvTable.BaseShaderRegister = 0;
+	//	cbvTable.RegisterSpace = 0;
+	//	cbvTable.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-		// Define the root parameter
-		D3D12_ROOT_PARAMETER rootParam = {};
-		rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		rootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-		rootParam.DescriptorTable.NumDescriptorRanges = 1;
-		rootParam.DescriptorTable.pDescriptorRanges = &cbvTable;
+	//	// Define the root parameter
+	//	D3D12_ROOT_PARAMETER rootParam = {};
+	//	rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	//	rootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	//	rootParam.DescriptorTable.NumDescriptorRanges = 1;
+	//	rootParam.DescriptorTable.pDescriptorRanges = &cbvTable;
 
-		// Describe and serialize the root signature
-		D3D12_ROOT_SIGNATURE_DESC rootSig = {};
-		rootSig.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-		rootSig.NumParameters = 1;
-		rootSig.pParameters = &rootParam;
-		rootSig.NumStaticSamplers = 0;
-		rootSig.pStaticSamplers = 0;
+	//	// Describe and serialize the root signature
+	//	D3D12_ROOT_SIGNATURE_DESC rootSig = {};
+	//	rootSig.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	//	rootSig.NumParameters = 1;
+	//	rootSig.pParameters = &rootParam;
+	//	rootSig.NumStaticSamplers = 0;
+	//	rootSig.pStaticSamplers = 0;
 
-		ID3DBlob* serializedRootSig = 0;
-		ID3DBlob* errors = 0;
+	//	ID3DBlob* serializedRootSig = 0;
+	//	ID3DBlob* errors = 0;
 
-		D3D12SerializeRootSignature(
-			&rootSig,
-			D3D_ROOT_SIGNATURE_VERSION_1,
-			&serializedRootSig,
-			&errors);
+	//	D3D12SerializeRootSignature(
+	//		&rootSig,
+	//		D3D_ROOT_SIGNATURE_VERSION_1,
+	//		&serializedRootSig,
+	//		&errors);
 
-		// Check for errors during serialization
-		if (errors != 0)
-		{
-			OutputDebugString((char*)errors->GetBufferPointer());
-		}
+	//	// Check for errors during serialization
+	//	if (errors != 0)
+	//	{
+	//		OutputDebugString((char*)errors->GetBufferPointer());
+	//	}
 
-		// Actually create the root sig
-		device->CreateRootSignature(
-			0,
-			serializedRootSig->GetBufferPointer(),
-			serializedRootSig->GetBufferSize(),
-			IID_PPV_ARGS(rootSignature.GetAddressOf()));
-	}
+	//	// Actually create the root sig
+	//	device->CreateRootSignature(
+	//		0,
+	//		serializedRootSig->GetBufferPointer(),
+	//		serializedRootSig->GetBufferSize(),
+	//		IID_PPV_ARGS(rootSignature.GetAddressOf()));
+	//}
 
 	// Pipeline state
-	{
-		// Describe the pipeline state
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+	//{
+	//	// Describe the pipeline state
+	//	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 
-		// -- Input assembler related ---
-		psoDesc.InputLayout.NumElements = inputElementCount;
-		psoDesc.InputLayout.pInputElementDescs = inputElements;
-		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		// Overall primitive topology type (triangle, line, etc.) is set here 
-		// IASetPrimTop() is still used to set list/strip/adj options
-		// See: https://docs.microsoft.com/en-us/windows/desktop/direct3d12/managing-graphics-pipeline-state-in-direct3d-12
+	//	// -- Input assembler related ---
+	//	psoDesc.InputLayout.NumElements = inputElementCount;
+	//	psoDesc.InputLayout.pInputElementDescs = inputElements;
+	//	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	//	// Overall primitive topology type (triangle, line, etc.) is set here 
+	//	// IASetPrimTop() is still used to set list/strip/adj options
+	//	// See: https://docs.microsoft.com/en-us/windows/desktop/direct3d12/managing-graphics-pipeline-state-in-direct3d-12
 
-		// Root sig
-		psoDesc.pRootSignature = rootSignature.Get();
+	//	// Root sig
+	//	psoDesc.pRootSignature = rootSignature.Get();
 
-		// -- Shaders (VS/PS) --- 
-		psoDesc.VS.pShaderBytecode = vertexShaderByteCode->GetBufferPointer();
-		psoDesc.VS.BytecodeLength = vertexShaderByteCode->GetBufferSize();
-		psoDesc.PS.pShaderBytecode = pixelShaderByteCode->GetBufferPointer();
-		psoDesc.PS.BytecodeLength = pixelShaderByteCode->GetBufferSize();
+	//	// -- Shaders (VS/PS) --- 
+	//	psoDesc.VS.pShaderBytecode = vertexShaderByteCode->GetBufferPointer();
+	//	psoDesc.VS.BytecodeLength = vertexShaderByteCode->GetBufferSize();
+	//	psoDesc.PS.pShaderBytecode = pixelShaderByteCode->GetBufferPointer();
+	//	psoDesc.PS.BytecodeLength = pixelShaderByteCode->GetBufferSize();
 
-		// -- Render targets ---
-		psoDesc.NumRenderTargets = 1;
-		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		psoDesc.SampleDesc.Count = 1;
-		psoDesc.SampleDesc.Quality = 0;
+	//	// -- Render targets ---
+	//	psoDesc.NumRenderTargets = 1;
+	//	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	//	psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	//	psoDesc.SampleDesc.Count = 1;
+	//	psoDesc.SampleDesc.Quality = 0;
 
-		// -- States ---
-		psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-		psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
-		psoDesc.RasterizerState.DepthClipEnable = true;
+	//	// -- States ---
+	//	psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+	//	psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+	//	psoDesc.RasterizerState.DepthClipEnable = true;
 
-		psoDesc.DepthStencilState.DepthEnable = true;
-		psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-		psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	//	psoDesc.DepthStencilState.DepthEnable = true;
+	//	psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	//	psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 
-		psoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
-		psoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ZERO;
-		psoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-		psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+	//	psoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
+	//	psoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ZERO;
+	//	psoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+	//	psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-		// -- Misc ---
-		psoDesc.SampleMask = 0xffffffff;
+	//	// -- Misc ---
+	//	psoDesc.SampleMask = 0xffffffff;
 
-		// Create the pipe state object
-		device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(pipelineState.GetAddressOf()));
-	}
+	//	// Create the pipe state object
+	//	device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(pipelineState.GetAddressOf()));
+	//}
 }
 
 void DX12Renderer::RenderShadows() {

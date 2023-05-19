@@ -116,7 +116,7 @@ void Game::Init()
 	objHierarchyEnabled = true;
 	rtvWindowEnabled = false;
 
-	entityUIIndex = -1;
+	entityUIIndex = 0;
 	skyUIIndex = 0;
 
 	// Tell the input assembler stage of the pipeline what kind of
@@ -1028,7 +1028,7 @@ void Game::OnResize()
 		// Handle base-level DX resize stuff
 		DXCore::OnResize();
 
-		dx12Renderer->PostResize(this->height, this->width, currentBackBuffer);
+		dx12Renderer->PostResize(this->height, this->width);
 	}
 	else {
 		dx11Renderer->PreResize();
