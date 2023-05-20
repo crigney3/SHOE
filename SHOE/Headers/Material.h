@@ -1,11 +1,9 @@
 #pragma once
 
-#include <DirectXMath.h>
-#include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
-#include "DXCore.h"
 #include "SimpleShader.h"
 #include "RootSignature.h"
 #include <memory>
+#include "Texture.h"
 #include <vector>
 
 enum PBRTextureTypes {
@@ -116,26 +114,36 @@ public:
 				 bool refractive = false);
 	~DX11Material();
 
+	std::shared_ptr<Texture> GetNormalMap();
+	std::shared_ptr<Texture> GetMetalMap();
+	std::shared_ptr<Texture> GetRoughMap();
+	std::shared_ptr<Texture> GetTexture();
+
+	void SetTexture(std::shared_ptr<Texture> texture);
+	void SetNormalMap(std::shared_ptr<Texture> normals);
+	void SetRoughMap(std::shared_ptr<Texture> roughMap);
+	void SetMetalMap(std::shared_ptr<Texture> metalMap);
+
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
 	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState);
 
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetClampSamplerState();
 	void SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState);
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetNormalMap();
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMetalMap();
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRoughMap();
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
+	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState);
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture();
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetClampSamplerState();
+	void SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState);
 
 protected:
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture;
+	std::shared_ptr<Texture> texture;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap;
+	std::shared_ptr<Texture> normalMap;
+	std::shared_ptr<Texture> metalMap;
+	std::shared_ptr<Texture> roughMap;
 };
 
 class DX12Material : public Material {

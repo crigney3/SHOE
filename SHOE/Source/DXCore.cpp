@@ -79,6 +79,8 @@ DXCore::~DXCore()
 	//   to call Release() on each DirectX object created in DXCore
 
 	delete& DX12Helper::GetInstance();
+	context->ClearState();
+	context->Flush();
 }
 
 // --------------------------------------------------------
@@ -170,6 +172,7 @@ HRESULT DXCore::InitDirectX11()
 	unsigned int deviceFlags = 0;
 
 #if defined(DEBUG) || defined(_DEBUG)
+
 	// If we're in debug mode in visual studio, we also
 	// want to make a "Debug DirectX Device" to see some
 	// errors and warnings in Visual Studio's output window

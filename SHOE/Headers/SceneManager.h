@@ -23,6 +23,7 @@
 // Categories:
 #define ENTITIES "e" // category - only used to fetch actual data
 #define MESHES "m" // category - only used to fetch actual data
+#define TEXTURES "tE" // category - only used to fetch actual data
 #define MATERIALS "a" // category - only used to fetch actual data
 #define VERTEX_SHADERS "vS" // category - only used to fetch actual data
 #define PIXEL_SHADERS "pS" // category - only used to fetch actual data
@@ -38,6 +39,9 @@
 #define MESH_MATERIAL_INDEX "mI" // int
 #define MESH_NEEDS_DEPTH_PREPASS "nDP" // bool
 
+// Texture Data:
+#define TEXTURE_ASSET_PATH_INDEX "tAP" // int
+
 // Material Data:
 #define MAT_UV_TILING "uT" // float
 #define MAT_IS_TRANSPARENT "t" // bool
@@ -48,10 +52,10 @@
 #define MAT_PIXEL_SHADER "pS" // int
 #define MAT_REFRACTION_PIXEL_SHADER "rPS" // int
 #define MAT_VERTEX_SHADER "vS" // int
-#define MAT_TEXTURE_OR_ALBEDO_MAP "aM" // string 
-#define MAT_NORMAL_MAP "nM" // string
-#define MAT_METAL_MAP "mM" // string
-#define MAT_ROUGHNESS_MAP "rM" // string
+#define MAT_TEXTURE_OR_ALBEDO_MAP "aM" // int 
+#define MAT_NORMAL_MAP "nM" // int
+#define MAT_METAL_MAP "mM" // int
+#define MAT_ROUGHNESS_MAP "rM" // int
 #define MAT_TEXTURE_SAMPLER_STATE "tS" // int
 #define MAT_CLAMP_SAMPLER_STATE "cS" // int
 
@@ -169,6 +173,7 @@ private:
 	AssetManager& assetManager = AssetManager::GetInstance();
 
 	EngineState* engineState;
+	std::function<void()> progressListener;
 
 	std::string currentSceneName;
 	std::string loadingSceneName;
@@ -192,10 +197,11 @@ private:
 	void SaveAssets(rapidjson::Document& sceneDocToSave);
 	void SaveEntities(rapidjson::Document& sceneDocToSave);
 public:
-	void Initialize(EngineState* engineState);
+	void Initialize(EngineState* engineState, std::function<void()> progressListener);
 
-	void LoadScene(std::string filepath, std::function<void()> progressListener = {});
+	void LoadScene(std::string filepath);
 	void SaveScene(std::string filepath, std::string sceneName = "");
+	void SaveSceneAs();
 
 	void PrePlaySave();
 	void PostPlayLoad();

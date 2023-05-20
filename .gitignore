@@ -10,8 +10,8 @@
 *.userosscache
 *.sln.docstates
 
-# Exclude Assets
-Assets/
+# Exclude Assets that shouldn't be tracked by git lfs
+Assets/Shaders/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -392,3 +392,8 @@ FodyWeavers.xsd
 
 # imgui state
 SHOE/imgui.ini
+*imgui.ini
+
+# Shaders
+Assets/Shaders/*
+Assets/Scenes/*

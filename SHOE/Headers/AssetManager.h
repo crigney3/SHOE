@@ -25,13 +25,9 @@
 #include "SpriteBatch.h"
 #include "Collider.h"
 #include "EngineState.h"
+#include <tchar.h>
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
-
-struct FMODUserData {
-	std::shared_ptr<std::string> name;
-	std::shared_ptr<std::string> filenameKey;
-};
 
 enum ComponentTypes {
 	// While Transform is tracked here, it is often skipped or handled uniquely
@@ -45,6 +41,7 @@ enum ComponentTypes {
 	CAMERA,
 	NOCLIP_CHAR_CONTROLLER,
 	FLASHLIGHT_CONTROLLER,
+	AUDIO_RESPONSE_DEVICE,
 	// Must always be the final enum
 	COMPONENT_TYPE_COUNT
 };
@@ -107,6 +104,7 @@ private:
 
 	void InitializeTextureSampleStates();
 	void InitializeMeshes();
+	void InitializeTextures();
 	void InitializeMaterials();
 	void InitializeShaders();
 	void InitializeGameEntities();
@@ -126,6 +124,7 @@ private:
 	std::vector<std::shared_ptr<SimpleComputeShader>> computeShaders;
 	std::vector<std::shared_ptr<Sky>> skies;
 	std::vector<std::shared_ptr<Mesh>> globalMeshes;
+	std::vector<std::shared_ptr<Texture>> globalTextures;
 	std::vector<std::shared_ptr<Material>> globalMaterials;
 	std::vector<std::shared_ptr<GameEntity>> globalEntities;
 	std::vector<std::shared_ptr<TerrainMaterial>> globalTerrainMaterials;
@@ -143,6 +142,14 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> GetContext();
 
 	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, HWND hwnd, EngineState* engineState, std::function<void(std::string)> progressListener = {});
+
+	void ImportSkyTexture();
+	void ImportFont();
+	void ImportSound();
+	void ImportMesh();
+	void ImportHeightMap();
+	void ImportTexture();
+	std::string GetImportedFileString(OPENFILENAME* file);
 
 	/// <summary>
 	/// Gets the full path to an asset that is inside the Assets/ dir.
@@ -182,17 +189,24 @@ public:
 	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::string nameToLoad);
 	std::shared_ptr<SimplePixelShader> CreatePixelShader(std::string id, std::string nameToLoad);
 	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::string nameToLoad);
-	std::shared_ptr<Mesh> CreateMesh(std::string id, std::string nameToLoad);
+	std::shared_ptr<Mesh> CreateMesh(std::string id, std::string nameToLoad, bool isNameFullPath = false);
 	std::shared_ptr<Camera> CreateCamera(std::string name, float aspectRatio = 0);
 	std::shared_ptr<Light> CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Light> CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Light> CreateSpotLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
+	std::shared_ptr<Texture> CreateTexture(std::string nameToLoad, std::string textureName = "newTexture", AssetPathIndex assetPath = ASSET_TEXTURE_PATH_BASIC, bool isNameFullPath = false);
 	std::shared_ptr<Material> CreatePBRMaterial(std::string id,
 											    std::string albedoNameToLoad,
 											    std::string normalNameToLoad,
 											    std::string metalnessNameToLoad,
 											    std::string roughnessNameToLoad,
 												bool dx12Material = false,
+												bool addToGlobalList = true);
+	std::shared_ptr<Material> CreatePBRMaterial(std::string id,
+											    std::shared_ptr<Texture> albedoTexture,
+											    std::shared_ptr<Texture> normalTexture,
+											    std::shared_ptr<Texture> metalnessTexture,
+											    std::shared_ptr<Texture> roughnessTexture,
 												bool addToGlobalList = true);
 	std::shared_ptr<Terrain> CreateTerrainEntity(std::string name = "Terrain");
 	std::shared_ptr<Terrain> CreateTerrainEntity(const char* heightmap, 
@@ -224,8 +238,8 @@ public:
 												   float particlesPerSecond,
 												   bool isMultiParticle = false,
 												   bool additiveBlendState = true);
-	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode, std::string name = "");
-	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false);
+	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode = FMOD_DEFAULT, std::string name = "", bool isNameFullPath = false);
+	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false, bool isNameFullPath = false);
 
 	// Create-On-Entity methods, for components and loading
 	std::shared_ptr<Terrain> CreateTerrainOnEntity(std::shared_ptr<GameEntity> entityToEdit,
@@ -264,7 +278,8 @@ public:
 
 	// Creation Helper Methods
 	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>* texture, PBRTextureTypes textureType);
-	void SetMaterialTextureFileKey(std::string textureFilename, std::shared_ptr<Material> mat, PBRTextureTypes textureType);
+	HRESULT LoadPBRTexture(std::string nameToLoad, OUT Texture* texture, PBRTextureTypes textureType);
+	std::string GetTextureFileKey(std::string textureFilename);
 	std::string SerializeFileName(std::string assetFolderPath, std::string fullPathToAsset);
 	std::string DeSerializeFileName(std::string assetPath);
 
@@ -296,6 +311,7 @@ public:
 	std::shared_ptr<SimplePixelShader> GetPixelShaderByName(std::string name);
 	std::shared_ptr<SimpleComputeShader> GetComputeShaderByName(std::string name);
 	std::shared_ptr<Mesh> GetMeshByName(std::string name);
+	std::shared_ptr<Texture> GetTextureByName(std::string name);
 	std::shared_ptr<Material> GetMaterialByName(std::string name);
 	std::shared_ptr<TerrainMaterial> GetTerrainMaterialByName(std::string name);
 	FMOD::Sound* GetSoundByName();
@@ -318,12 +334,14 @@ public:
 	size_t GetComputeShaderArraySize();
 	size_t GetSkyArraySize();
 	size_t GetMeshArraySize();
+	size_t GetTextureArraySize();
 	size_t GetMaterialArraySize();
 	size_t GetGameEntityArraySize();
 	size_t GetTerrainMaterialArraySize();
 	size_t GetSoundArraySize();
 
 	FMOD::Sound* GetSoundAtID(int id);
+	std::shared_ptr<Texture> GetTextureAtID(int id);
 	std::shared_ptr<Material> GetMaterialAtID(int id);
 	std::shared_ptr<Mesh> GetMeshAtID(int id);
 	std::shared_ptr<SimpleVertexShader> GetVertexShaderAtID(int id);
