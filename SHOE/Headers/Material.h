@@ -81,11 +81,11 @@ public:
 	virtual Microsoft::WRL::ComPtr<ID3D11SamplerState> GetClampSamplerState();
 	virtual void SetClampSamplerState(void*);
 
-	virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetNormalMap();
-	virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMetalMap();
-	virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRoughMap();
+	virtual std::shared_ptr<Texture> GetNormalMap();
+	virtual std::shared_ptr<Texture> GetMetalMap();
+	virtual std::shared_ptr<Texture> GetRoughMap();
 
-	virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture();
+	virtual std::shared_ptr<Texture> GetTexture();
 
 	virtual void SetPixelShader(std::shared_ptr<SimplePixelShader> pix);
 	virtual void SetVertexShader(std::shared_ptr<SimpleVertexShader> vert);
@@ -123,12 +123,6 @@ public:
 	void SetNormalMap(std::shared_ptr<Texture> normals);
 	void SetRoughMap(std::shared_ptr<Texture> roughMap);
 	void SetMetalMap(std::shared_ptr<Texture> metalMap);
-
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
-	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState);
-
-	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetClampSamplerState();
-	void SetClampSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState);
 
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
 	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState);

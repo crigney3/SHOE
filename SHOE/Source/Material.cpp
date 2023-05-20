@@ -164,27 +164,27 @@ void Material::SetClampSamplerState(void*) {
 	printf("Error: Calling virtual base class!");
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetNormalMap() {
+std::shared_ptr<Texture> Material::GetNormalMap() {
 	printf("Error: Calling virtual base class!");
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> error;
+	std::shared_ptr<Texture> error;
 	return error;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetMetalMap() {
+std::shared_ptr<Texture> Material::GetMetalMap() {
 	printf("Error: Calling virtual base class!");
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> error;
+	std::shared_ptr<Texture> error;
 	return error;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetRoughMap() {
+std::shared_ptr<Texture> Material::GetRoughMap() {
 	printf("Error: Calling virtual base class!");
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> error;
+	std::shared_ptr<Texture> error;
 	return error;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Material::GetTexture() {
+std::shared_ptr<Texture> Material::GetTexture() {
 	printf("Error: Calling virtual base class!");
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> error;
+	std::shared_ptr<Texture> error;
 	return error;
 }
 
@@ -235,19 +235,19 @@ DX11Material::~DX11Material() {
 
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetNormalMap() {
+std::shared_ptr<Texture> DX11Material::GetNormalMap() {
 	return this->normalMap;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetMetalMap() {
+std::shared_ptr<Texture> DX11Material::GetMetalMap() {
 	return this->metalMap;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetRoughMap() {
+std::shared_ptr<Texture> DX11Material::GetRoughMap() {
 	return this->roughMap;
 }
 
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetTexture() {
+std::shared_ptr<Texture> DX11Material::GetTexture() {
 	return this->texture;
 }
 
