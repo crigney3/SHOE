@@ -330,6 +330,7 @@ std::string AssetManager::GetTextureFileKey(std::string textureFilename) {
 std::shared_ptr<Texture> AssetManager::CreateTexture(std::string nameToLoad, std::string textureName, AssetPathIndex assetPath, bool isNameFullPath)
 {
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> coreTexture;
+	std::shared_ptr<Texture> newTexture;
 
 	std::string namePath;
 	if (isNameFullPath) {
@@ -342,9 +343,16 @@ std::shared_ptr<Texture> AssetManager::CreateTexture(std::string nameToLoad, std
 
 	HRESULT hr = ISimpleShader::ConvertToWide(namePath, widePath);
 
-	CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, coreTexture.GetAddressOf());
+	if (!dxInstance->IsDirectX12()) {
+		CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, coreTexture.GetAddressOf());
 
-	std::shared_ptr<Texture> newTexture = std::make_shared<Texture>(coreTexture, GetTextureFileKey(nameToLoad), textureName);
+		newTexture = std::make_shared<DX11Texture>(coreTexture, GetTextureFileKey(nameToLoad), textureName);
+	}
+	else {
+		CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, coreTexture.GetAddressOf());
+
+		newTexture = std::make_shared<DX12Texture>(coreTexture, GetTextureFileKey(nameToLoad), textureName);
+	}
 
 	if (isNameFullPath) {
 		newTexture->SetTextureFilenameKey(nameToLoad);
@@ -371,15 +379,19 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 	std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
 
 	if (!dx12Material) {
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> albedo;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normals;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalness;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughness;
+		std::shared_ptr<Texture> albedo;
+		std::shared_ptr<Texture> normals;
+		std::shared_ptr<Texture> metalness;
+		std::shared_ptr<Texture> roughness;
 
-		LoadPBRTexture(albedoNameToLoad, &albedo, PBRTextureTypes::ALBEDO);
-		LoadPBRTexture(normalNameToLoad, &normals, PBRTextureTypes::NORMAL);
-		LoadPBRTexture(metalnessNameToLoad, &metalness, PBRTextureTypes::METAL);
-		LoadPBRTexture(roughnessNameToLoad, &roughness, PBRTextureTypes::ROUGH);
+		// For now, every material can use the default sampler states
+		Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState = textureSampleStates[0];
+		Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState = textureSampleStates[1];
+
+		albedo = CreateTexture(albedoNameToLoad);
+		normals = CreateTexture(normalNameToLoad);
+		metalness = CreateTexture(metalnessNameToLoad);
+		roughness = CreateTexture(roughnessNameToLoad);
 
 		newMat = std::make_shared<DX11Material>(PSNormal,
 												VSNormal,
@@ -408,25 +420,34 @@ std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
 }
 
 std::shared_ptr<Material> AssetManager::CreatePBRMaterial(std::string id,
-	std::shared_ptr<Texture> albedoTexture,
-	std::shared_ptr<Texture> normalTexture,
-	std::shared_ptr<Texture> metalnessTexture,
-	std::shared_ptr<Texture> roughnessTexture,
-	bool addToGlobalList)
+														  std::shared_ptr<Texture> albedoTexture,
+														  std::shared_ptr<Texture> normalTexture,
+														  std::shared_ptr<Texture> metalnessTexture,
+														  std::shared_ptr<Texture> roughnessTexture,
+														  bool addToGlobalList)
 {
 	std::shared_ptr<SimpleVertexShader> VSNormal = GetVertexShaderByName("NormalsVS");
 	std::shared_ptr<SimplePixelShader> PSNormal = GetPixelShaderByName("NormalsPS");
+	std::shared_ptr<Material> newMat;
 
-	std::shared_ptr<Material> newMat = std::make_shared<Material>(whiteTint,
-		PSNormal,
-		VSNormal,
-		albedoTexture,
-		textureState,
-		clampState,
-		normalTexture,
-		roughnessTexture,
-		metalnessTexture,
-		id);
+	// For now, every material can use the default sampler states
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState = textureSampleStates[0];
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState = textureSampleStates[1];
+
+	if (!dxInstance->IsDirectX12()) {
+		newMat = std::make_shared<DX11Material>(PSNormal,
+												VSNormal,
+												albedoTexture,
+												textureState,
+												clampState,
+												normalTexture,
+												roughnessTexture,
+												metalnessTexture,
+												id);
+	}
+	else {
+
+	}
 
 	if (addToGlobalList) globalMaterials.push_back(newMat);
 

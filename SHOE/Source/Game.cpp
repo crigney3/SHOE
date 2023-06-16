@@ -119,7 +119,7 @@ void Game::Init()
 
 	// What graphics library are we using?
 	if (dxVersion) {
-		dx12Renderer = std::make_unique<DX12Renderer>(height,
+		renderer = std::make_shared<DX12Renderer>(height,
 			width,
 			deviceDX12,
 			swapChain,
@@ -128,7 +128,7 @@ void Game::Init()
 			commandList);
 	}
 	else {
-		dx11Renderer = std::make_unique<DX11Renderer>(height,
+		renderer = std::make_shared<DX11Renderer>(height,
 			width,
 			device,
 			context,
@@ -160,19 +160,19 @@ void Game::OnResize()
 	
 
 	if (dxVersion) {
-		dx12Renderer->PreResize();
+		renderer->PreResize();
 
 		// Handle base-level DX resize stuff
 		DXCore::OnResize();
 
-		dx12Renderer->PostResize(this->height, this->width);
+		(dynamic_cast<DX12Renderer*>(renderer.get()))->PostResize(this->height, this->width);
 	}
 	else {
-		dx11Renderer->PreResize();
+		renderer->PreResize();
 
 		DXCore::OnResize();
 
-		dx11Renderer->PostResize(this->height, this->width, this->backBufferRTV, this->depthStencilView);
+		(dynamic_cast<DX11Renderer*>(renderer.get()))->PostResize(this->height, this->width, this->backBufferRTV, this->depthStencilView);
 	}
 }
 
@@ -249,14 +249,25 @@ void Game::DrawLoadingScreen() {
 
 		context->Flush();
 
-		// With everything initialized, start the renderer
-		renderer = std::make_shared<Renderer>(height,
-			width,
-			device,
-			context,
-			swapChain,
-			backBufferRTV,
-			depthStencilView);
+		// What graphics library are we using?
+		if (dxVersion) {
+			renderer = std::make_shared<DX12Renderer>(height,
+				width,
+				deviceDX12,
+				swapChain,
+				commandAllocator,
+				commandQueue,
+				commandList);
+		}
+		else {
+			renderer = std::make_shared<DX11Renderer>(height,
+				width,
+				device,
+				context,
+				swapChain,
+				backBufferRTV,
+				depthStencilView);
+		}
 
 		// Start the UI now that IMGUI has initialized
 		editUI->ReInitializeEditingUI(renderer);
@@ -327,18 +338,18 @@ void Game::Draw()
 	switch (dxVersion) {
 	case DIRECT_X_11:
 		if (engineState == EngineState::EDITING) {
-			dx11Renderer->Draw(globalAssets.GetEditingCamera(), engineState);
+			renderer->Draw(globalAssets.GetEditingCamera(), engineState);
 		}
 		else if (engineState == EngineState::PLAY) {
-			dx11Renderer->Draw(globalAssets.GetMainCamera(), engineState);
+			renderer->Draw(globalAssets.GetMainCamera(), engineState);
 		}
 		break;
 	case DIRECT_X_12:
 		if (engineState == EngineState::EDITING) {
-			dx12Renderer->Draw(globalAssets.GetEditingCamera(), engineState);
+			renderer->Draw(globalAssets.GetEditingCamera(), engineState);
 		}
 		else if (engineState == EngineState::PLAY) {
-			dx12Renderer->Draw(globalAssets.GetMainCamera(), engineState);
+			renderer->Draw(globalAssets.GetMainCamera(), engineState);
 		}
 	}
 	

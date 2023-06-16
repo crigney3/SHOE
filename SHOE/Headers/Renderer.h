@@ -113,11 +113,20 @@ protected:
     virtual void InitRenderTargetViews();
 
     FileRenderData fileRenderData;
+    Microsoft::WRL::ComPtr<IMFDXGIDeviceManager> deviceManager;
+    UINT deviceManagerResetToken = 0;
 
     unsigned int windowHeight;
     unsigned int windowWidth;
 
     Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain;
+
+    // These are related to functions that can't be made covariant
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView>      renderTargetRTVs[RTVTypes::RTV_TYPE_COUNT];
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>    renderTargetSRVs[RTVTypes::RTV_TYPE_COUNT];
+
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> miscEffectSRVs[MiscEffectSRVTypes::MISC_EFFECT_SRV_COUNT];
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilView> miscEffectDepthBuffers[MiscEffectSRVTypes::MISC_EFFECT_SRV_COUNT];
 
     // Conditional Drawing
     static bool drawColliders;
@@ -132,6 +141,10 @@ public:
     virtual void PostResize();
     virtual void PreResize();
     virtual void InitShadows();
+
+    // These can't be made covariant, so they have to go here
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetDX11RenderTargetSRV(RTVTypes type);
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetDX11MiscEffectSRV(MiscEffectSRVTypes type);
 
     virtual void DrawPointLights(std::shared_ptr<Camera> cam) = 0;
     virtual void Draw(std::shared_ptr<Camera> camera, EngineState engineState) = 0;

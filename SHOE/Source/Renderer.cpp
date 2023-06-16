@@ -45,6 +45,14 @@ bool Renderer::GetDrawColliderStatus() { return drawColliders; }
 
 void Renderer::SetDrawColliderStatus(bool _newState) { drawColliders = _newState; }
 
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetDX11RenderTargetSRV(RTVTypes type) {
+	return renderTargetSRVs[type];
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> Renderer::GetDX11MiscEffectSRV(MiscEffectSRVTypes type) {
+	return miscEffectSRVs[type];
+}
+
 HRESULT Renderer::RenderToVideoFile(std::shared_ptr<Camera> renderCam, FileRenderData RenderParameters) {
 	return 1;
 }

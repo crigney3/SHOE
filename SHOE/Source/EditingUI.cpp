@@ -474,7 +474,16 @@ void EditingUI::GenerateEditingUI() {
 
 		ImGui::Separator();
 
-		ImGui::Image((ImTextureID*)currentTexture->GetTexture().Get(), ImVec2(256, 256));
+		ImTextureID* currentTexDisplay;
+
+		if (dxCore->IsDirectX12()) {
+			// Temporary
+			currentTexDisplay = NULL;
+		}
+		else {
+			currentTexDisplay = (ImTextureID*)currentTexture->GetDX11Texture().Get();
+		}
+		ImGui::Image(currentTexDisplay, ImVec2(256, 256));
 
 		ImGui::End();
 	}
@@ -1103,19 +1112,61 @@ void EditingUI::GenerateEditingUI() {
 
 		if (ImGui::CollapsingHeader("MRT Effects")) {
 			ImGui::Text("Color Without Ambient");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_NO_AMBIENT).Get(), ImVec2(500, 300));
+			if (dxCore->IsDirectX12()) {
+
+			}
+			else {
+				ImGui::Image(renderer->GetDX11RenderTargetSRV(RTVTypes::COLORS_NO_AMBIENT).Get(), ImVec2(500, 300));
+			}
+			
 			ImGui::Text("Ambient Color");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COLORS_AMBIENT).Get(), ImVec2(500, 300));
+			if (dxCore->IsDirectX12()) {
+
+			}
+			else {
+				ImGui::Image(renderer->GetDX11RenderTargetSRV(RTVTypes::COLORS_AMBIENT).Get(), ImVec2(500, 300));
+			}
+
 			ImGui::Text("Normals");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::NORMALS).Get(), ImVec2(500, 300));
+			if (dxCore->IsDirectX12()) {
+
+			}
+			else {
+				ImGui::Image(renderer->GetDX11RenderTargetSRV(RTVTypes::NORMALS).Get(), ImVec2(500, 300));
+			}
+
 			ImGui::Text("Depths");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::DEPTHS).Get(), ImVec2(500, 300));
+			if (dxCore->IsDirectX12()) {
+
+			}
+			else {
+				ImGui::Image(renderer->GetDX11RenderTargetSRV(RTVTypes::DEPTHS).Get(), ImVec2(500, 300));
+			}
+
 			ImGui::Text("SSAO");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
+			if (dxCore->IsDirectX12()) {
+
+			}
+			else {
+				ImGui::Image(renderer->GetDX11RenderTargetSRV(RTVTypes::SSAO_RAW).Get(), ImVec2(500, 300));
+			}
+
 			ImGui::Text("SSAO Post Blur");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
+			if (dxCore->IsDirectX12()) {
+
+			}
+			else {
+				ImGui::Image(renderer->GetDX11RenderTargetSRV(RTVTypes::SSAO_BLUR).Get(), ImVec2(500, 300));
+			}
+
 			ImGui::Text("Composite");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
+			if (dxCore->IsDirectX12()) {
+
+			}
+			else {
+				ImGui::Image(renderer->GetDX11RenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
+			}
+
 		}
 
 		if (ImGui::CollapsingHeader("Shadow Depth Views")) {
@@ -1129,11 +1180,28 @@ void EditingUI::GenerateEditingUI() {
 
 		if (ImGui::CollapsingHeader("Depth Prepass Views")) {
 			ImGui::Text("Refraction Silhouette Depths");
-			ImGui::Image(renderer->GetRenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
+			if (dxCore->IsDirectX12()) {
+
+			}
+			else {
+				ImGui::Image(renderer->GetDX11RenderTargetSRV(RTVTypes::REFRACTION_SILHOUETTE).Get(), ImVec2(500, 300));
+			}
+
 			ImGui::Text("Transparency Depth Prepass");
-			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+			if (dxCore->IsDirectX12()) {
+
+			}
+			else {
+				ImGui::Image(renderer->GetDX11MiscEffectSRV(MiscEffectSRVTypes::TRANSPARENT_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+			}
+
 			ImGui::Text("Render Depth Prepass (used for optimization)");
-			ImGui::Image(renderer->GetMiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+			if (dxCore->IsDirectX12()) {
+
+			}
+			else {
+				ImGui::Image(renderer->GetDX11MiscEffectSRV(MiscEffectSRVTypes::RENDER_PREPASS_DEPTHS).Get(), ImVec2(500, 300));
+			}
 		}
 
 		if (ImGui::CollapsingHeader("Selected Entity Filled View")) {
@@ -1165,7 +1233,7 @@ void EditingUI::GenerateEditingUI() {
 		};
 		ImGui::SameLine();
 
-		if (ImGui::ArrowButton("Next Paterial", ImGuiDir_Right)) {
+		if (ImGui::ArrowButton("Next Material", ImGuiDir_Right)) {
 			materialUIIndex++;
 			if (materialUIIndex > globalAssets.GetMaterialArraySize() - 1) {
 				materialUIIndex = 0;
@@ -1215,29 +1283,66 @@ void EditingUI::GenerateEditingUI() {
 		node = "Current Material View: " + infoStr;
 		ImGui::Text(node.c_str());
 
-		infoStr = "\t\t\t\t\t\t";
+		infoStr = currentTexture->GetName();
 		node = "Texture: \t" + infoStr;
 		ImGui::Text(node.c_str());
 		ImGui::SameLine();
 
+		infoStr = currentNormalMap->GetName();
 		node = "Normal Map: " + infoStr;
 		ImGui::Text(node.c_str());
 		ImGui::SameLine();
 
+		infoStr = currentMetalMap->GetName();
 		node = "Metal Map: " + infoStr;
 		ImGui::Text(node.c_str());
 		ImGui::SameLine();
 
-		node = "  Rough Map: ";
+		infoStr = currentRoughMap->GetName();
+		node = "Rough Map: " + infoStr;
 		ImGui::Text(node.c_str());
 
-		ImGui::Image((ImTextureID*)currentTexture->GetTexture().Get(), ImVec2(256, 256));
+		ImTextureID* currentTexDisplay;
+
+		if (dxCore->IsDirectX12()) {
+			// Temporary
+			currentTexDisplay = NULL;
+		}
+		else {
+			currentTexDisplay = (ImTextureID*)currentTexture->GetDX11Texture().Get();
+		}
+		ImGui::Image(currentTexDisplay, ImVec2(256, 256));
 		ImGui::SameLine();
-		ImGui::Image((ImTextureID*)currentNormalMap->GetTexture().Get(), ImVec2(256, 256));
+
+		if (dxCore->IsDirectX12()) {
+			// Temporary
+			currentTexDisplay = NULL;
+		}
+		else {
+			currentTexDisplay = (ImTextureID*)currentNormalMap->GetDX11Texture().Get();
+		}
+		ImGui::Image(currentTexDisplay, ImVec2(256, 256));
 		ImGui::SameLine();
-		ImGui::Image((ImTextureID*)currentMetalMap->GetTexture().Get(), ImVec2(256, 256));
+
+		if (dxCore->IsDirectX12()) {
+			// Temporary
+			currentTexDisplay = NULL;
+		}
+		else {
+			currentTexDisplay = (ImTextureID*)currentMetalMap->GetDX11Texture().Get();
+		}
+		ImGui::Image(currentTexDisplay, ImVec2(256, 256));
 		ImGui::SameLine();
-		ImGui::Image((ImTextureID*)currentRoughMap->GetTexture().Get(), ImVec2(256, 256));
+
+		if (dxCore->IsDirectX12()) {
+			// Temporary
+			currentTexDisplay = NULL;
+		}
+		else {
+			currentTexDisplay = (ImTextureID*)currentRoughMap->GetDX11Texture().Get();
+		}
+		ImGui::Image(currentTexDisplay, ImVec2(256, 256));
+		ImGui::SameLine();
 
 		// Texture Swapping
 		if (ImGui::CollapsingHeader("Texture Swapping")) {
@@ -1261,7 +1366,15 @@ void EditingUI::GenerateEditingUI() {
 
 				ImGui::EndListBox();
 				ImGui::SameLine();
-				ImGui::Image((ImTextureID*)globalAssets.GetTextureAtID(textureIndex)->GetTexture().Get(), ImVec2(256, 256));
+
+				if (dxCore->IsDirectX12()) {
+					// Temporary
+					currentTexDisplay = NULL;
+				}
+				else {
+					currentTexDisplay = (ImTextureID*)globalAssets.GetTextureAtID(textureIndex)->GetDX11Texture().Get();
+				}
+				ImGui::Image(currentTexDisplay, ImVec2(256, 256));
 
 			}
 
@@ -1292,7 +1405,15 @@ void EditingUI::GenerateEditingUI() {
 
 				ImGui::EndListBox();
 				ImGui::SameLine();
-				ImGui::Image((ImTextureID*)globalAssets.GetTextureAtID(normalIndex)->GetTexture().Get(), ImVec2(256, 256));
+
+				if (dxCore->IsDirectX12()) {
+					// Temporary
+					currentTexDisplay = NULL;
+				}
+				else {
+					currentTexDisplay = (ImTextureID*)globalAssets.GetTextureAtID(normalIndex)->GetDX11Texture().Get();
+				}
+				ImGui::Image(currentTexDisplay, ImVec2(256, 256));
 			}
 
 			if (ImGui::Button("Swap Normal Map")) {
@@ -1322,7 +1443,15 @@ void EditingUI::GenerateEditingUI() {
 
 				ImGui::EndListBox();
 				ImGui::SameLine();
-				ImGui::Image((ImTextureID*)globalAssets.GetTextureAtID(metalIndex)->GetTexture().Get(), ImVec2(256, 256));
+
+				if (dxCore->IsDirectX12()) {
+					// Temporary
+					currentTexDisplay = NULL;
+				}
+				else {
+					currentTexDisplay = (ImTextureID*)globalAssets.GetTextureAtID(metalIndex)->GetDX11Texture().Get();
+				}
+				ImGui::Image(currentTexDisplay, ImVec2(256, 256));
 			}
 
 			if (ImGui::Button("Swap Metal Map")) {
@@ -1352,7 +1481,15 @@ void EditingUI::GenerateEditingUI() {
 
 				ImGui::EndListBox();
 				ImGui::SameLine();
-				ImGui::Image((ImTextureID*)globalAssets.GetTextureAtID(roughIndex)->GetTexture().Get(), ImVec2(256, 256));
+
+				if (dxCore->IsDirectX12()) {
+					// Temporary
+					currentTexDisplay = NULL;
+				}
+				else {
+					currentTexDisplay = (ImTextureID*)globalAssets.GetTextureAtID(roughIndex)->GetDX11Texture().Get();
+				}
+				ImGui::Image(currentTexDisplay, ImVec2(256, 256));
 			}
 
 			if (ImGui::Button("Swap Rough Map")) {

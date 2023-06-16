@@ -45,8 +45,8 @@ private:
 	void DrawInitializingScreen(std::string category);
 	void DrawLoadingScreen();
 
-	std::unique_ptr<DX11Renderer> dx11Renderer;
-	std::unique_ptr<DX12Renderer> dx12Renderer;
+	//std::unique_ptr<DX11Renderer> dx11Renderer;
+	//std::unique_ptr<DX12Renderer> dx12Renderer;
 
 	// Loading screen info
 	DirectX::SpriteBatch* loadingSpriteBatch;

@@ -25,9 +25,6 @@ private:
     std::shared_ptr<Mesh> cubeMesh;
     std::shared_ptr<Mesh> sphereMesh;
 
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> miscEffectSRVs[MiscEffectSRVTypes::MISC_EFFECT_SRV_COUNT];
-    Microsoft::WRL::ComPtr<ID3D11DepthStencilView> miscEffectDepthBuffers[MiscEffectSRVTypes::MISC_EFFECT_SRV_COUNT];
-
     //components for shadows
     int shadowCount;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shadowDSVArraySRV;
@@ -48,9 +45,6 @@ private:
     Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive;
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> particleDepthState;
 
-    Microsoft::WRL::ComPtr<ID3D11RenderTargetView>      renderTargetRTVs[RTVTypes::RTV_TYPE_COUNT];
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>    renderTargetSRVs[RTVTypes::RTV_TYPE_COUNT];
-
     // Ambient Occlusion data
     std::shared_ptr<SimplePixelShader> ssaoPS;
     std::shared_ptr<SimplePixelShader> ssaoBlurPS;
@@ -67,6 +61,10 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> compositeTexture;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> silhouetteTexture;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> finalCompositeTexture;
+
+    // File Read/Write Video Buffers
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> fileWriteTexture;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> fileReadTexture;
 
     // Refraction data
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> refractionSilhouetteDepthState;
@@ -106,9 +104,6 @@ public:
         Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
     );
     void PreResize();
-
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRenderTargetSRV(RTVTypes type);
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMiscEffectSRV(MiscEffectSRVTypes type);
 
     void DrawPointLights(std::shared_ptr<Camera> cam);
     void Draw(std::shared_ptr<Camera> camera, EngineState engineState);

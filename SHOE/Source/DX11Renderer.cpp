@@ -955,11 +955,11 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 			// Set textures and samplers
 			currentPS->SetSamplerState("sampleState", currentMaterial->GetSamplerState().Get());
 			currentPS->SetSamplerState("clampSampler", currentMaterial->GetClampSamplerState().Get());
-			currentPS->SetShaderResourceView("textureAlbedo", currentMaterial->GetTexture().Get());
-			currentPS->SetShaderResourceView("textureRough", currentMaterial->GetRoughMap().Get());
-			currentPS->SetShaderResourceView("textureMetal", currentMaterial->GetMetalMap().Get());
+			currentPS->SetShaderResourceView("textureAlbedo", currentMaterial->GetTexture().get());
+			currentPS->SetShaderResourceView("textureRough", currentMaterial->GetRoughMap().get());
+			currentPS->SetShaderResourceView("textureMetal", currentMaterial->GetMetalMap().get());
 			if (currentMaterial->GetNormalMap() != nullptr) {
-				currentPS->SetShaderResourceView("textureNormal", currentMaterial->GetNormalMap().Get());
+				currentPS->SetShaderResourceView("textureNormal", currentMaterial->GetNormalMap().get());
 			}
 
 			if (shadowCount > 0) {
@@ -1000,11 +1000,11 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 	for (int i = 0; i < terrains.size(); i++) {
 		if (!terrains[i]->IsEnabled()) continue;
 
-		std::shared_ptr<TerrainMaterial> tempTerrainMat = terrains[i]->GetMaterial();
+		std::shared_ptr<TerrainMaterial> terrainMat = terrains[i]->GetMaterial();
 		std::shared_ptr<SimplePixelShader> PSTerrain = terrains[i]->GetMaterial()->GetPixelShader();
 		std::shared_ptr<SimpleVertexShader> VSTerrain = terrains[i]->GetMaterial()->GetVertexShader();
-		DX11TerrainMaterial* terrainMat = dynamic_cast<DX11TerrainMaterial*>(tempTerrainMat.get());
-		currentMat = dynamic_cast<DX11Material*>(tempTerrainMat->GetMaterialAtID(0).get());
+		//DX11TerrainMaterial* terrainMat = dynamic_cast<DX11TerrainMaterial*>(tempTerrainMat.get());
+		currentMat = dynamic_cast<DX11Material*>(terrainMat->GetMaterialAtID(0).get());
 
 		PSTerrain->SetShader();
 		PSTerrain->SetData("lights", Light::GetLightArray(), sizeof(Light) * MAX_LIGHTS);
@@ -1027,10 +1027,10 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 
 			currentMat = dynamic_cast<DX11Material*>(terrainMat->GetMaterialAtID(i).get());
 
-			PSTerrain->SetShaderResourceView(a, currentMat->GetTexture().Get());
-			PSTerrain->SetShaderResourceView(n, currentMat->GetNormalMap().Get());
-			PSTerrain->SetShaderResourceView(r, currentMat->GetRoughMap().Get());
-			PSTerrain->SetShaderResourceView(m, currentMat->GetMetalMap().Get());
+			PSTerrain->SetShaderResourceView(a, currentMat->GetTexture()->GetDX11Texture());
+			PSTerrain->SetShaderResourceView(n, currentMat->GetNormalMap()->GetDX11Texture());
+			PSTerrain->SetShaderResourceView(r, currentMat->GetRoughMap()->GetDX11Texture());
+			PSTerrain->SetShaderResourceView(m, currentMat->GetMetalMap()->GetDX11Texture());
 		}
 
 		if (globalAssets.currentSky->IsEnabled()) {
@@ -1244,9 +1244,9 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 
 			refractivePS->CopyBufferData("PerMaterial");
 
-			refractivePS->SetShaderResourceView("textureNormal", activeMeshes[meshIt]->GetMaterial()->GetNormalMap());
-			refractivePS->SetShaderResourceView("textureRoughness", activeMeshes[meshIt]->GetMaterial()->GetRoughMap());
-			refractivePS->SetShaderResourceView("textureMetal", activeMeshes[meshIt]->GetMaterial()->GetMetalMap());
+			refractivePS->SetShaderResourceView("textureNormal", activeMeshes[meshIt]->GetMaterial()->GetNormalMap()->GetDX11Texture());
+			refractivePS->SetShaderResourceView("textureRoughness", activeMeshes[meshIt]->GetMaterial()->GetRoughMap()->GetDX11Texture());
+			refractivePS->SetShaderResourceView("textureMetal", activeMeshes[meshIt]->GetMaterial()->GetMetalMap()->GetDX11Texture());
 
 			context->IASetVertexBuffers(0, 1, activeMeshes[meshIt]->GetMesh()->GetVertexBuffer().GetAddressOf(), &stride, &offset);
 			context->IASetIndexBuffer(activeMeshes[meshIt]->GetMesh()->GetIndexBuffer().Get(), DXGI_FORMAT_R32_UINT, 0);
@@ -1275,14 +1275,6 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 	// Unbind all in-use shader resources
 	ID3D11ShaderResourceView* nullSRVs[32] = {};
 	context->PSSetShaderResources(0, 32, nullSRVs);
-}
-
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Renderer::GetRenderTargetSRV(RTVTypes type) {
-	return renderTargetSRVs[type];
-}
-
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Renderer::GetMiscEffectSRV(MiscEffectSRVTypes type) {
-	return miscEffectSRVs[type];
 }
 
 HRESULT DX11Renderer::RenderToVideoFile(std::shared_ptr<Camera> renderCam, FileRenderData RenderParameters) {

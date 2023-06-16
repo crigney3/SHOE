@@ -84,8 +84,12 @@ public:
 	virtual std::shared_ptr<Texture> GetNormalMap();
 	virtual std::shared_ptr<Texture> GetMetalMap();
 	virtual std::shared_ptr<Texture> GetRoughMap();
-
 	virtual std::shared_ptr<Texture> GetTexture();
+
+	void SetTexture(std::shared_ptr<Texture> texture);
+	void SetNormalMap(std::shared_ptr<Texture> normals);
+	void SetRoughMap(std::shared_ptr<Texture> roughMap);
+	void SetMetalMap(std::shared_ptr<Texture> metalMap);
 
 	virtual void SetPixelShader(std::shared_ptr<SimplePixelShader> pix);
 	virtual void SetVertexShader(std::shared_ptr<SimpleVertexShader> vert);
@@ -101,14 +105,26 @@ class DX11Material : public Material {
 
 public:
 
+	// Deprecated
+	//DX11Material(std::shared_ptr<SimplePixelShader> pix,
+	//			 std::shared_ptr<SimpleVertexShader> vert,
+	//			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
+	//			 Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
+	//			 Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
+	//			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
+	//			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
+	//			 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
+	//			 std::string name = "material",
+	//			 bool transparent = false,
+	//			 bool refractive = false);
 	DX11Material(std::shared_ptr<SimplePixelShader> pix,
 				 std::shared_ptr<SimpleVertexShader> vert,
-				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
+				 std::shared_ptr<Texture> texture,
 				 Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
 				 Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
-				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
-				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
-				 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
+				 std::shared_ptr<Texture> normalMap,
+				 std::shared_ptr<Texture> roughMap,
+				 std::shared_ptr<Texture> metalMap,
 				 std::string name = "material",
 				 bool transparent = false,
 				 bool refractive = false);
@@ -118,11 +134,6 @@ public:
 	std::shared_ptr<Texture> GetMetalMap();
 	std::shared_ptr<Texture> GetRoughMap();
 	std::shared_ptr<Texture> GetTexture();
-
-	void SetTexture(std::shared_ptr<Texture> texture);
-	void SetNormalMap(std::shared_ptr<Texture> normals);
-	void SetRoughMap(std::shared_ptr<Texture> roughMap);
-	void SetMetalMap(std::shared_ptr<Texture> metalMap);
 
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
 	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState);

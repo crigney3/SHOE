@@ -188,6 +188,26 @@ std::shared_ptr<Texture> Material::GetTexture() {
 	return error;
 }
 
+void Material::SetNormalMap(std::shared_ptr<Texture> normals) {
+	printf("Error: Calling virtual base class!");
+	return;
+}
+
+void Material::SetMetalMap(std::shared_ptr<Texture> roughMap) {
+	printf("Error: Calling virtual base class!");
+	return;
+}
+
+void Material::SetRoughMap(std::shared_ptr<Texture> metalMap) {
+	printf("Error: Calling virtual base class!");
+	return;
+}
+
+void Material::SetTexture(std::shared_ptr<Texture> texture) {
+	printf("Error: Calling virtual base class!");
+	return;
+}
+
 void Material::SetPixelShader(std::shared_ptr<SimplePixelShader> pix) {
 	this->pixShader = pix;
 	ComponentManager::Sort<MeshRenderer>();
@@ -210,17 +230,34 @@ std::shared_ptr<SimplePixelShader> Material::GetRefractivePixelShader() {
 
 #pragma region DX11Material
 
+// Deprecated
+//DX11Material::DX11Material(std::shared_ptr<SimplePixelShader> pix,
+//						   std::shared_ptr<SimpleVertexShader> vert,
+//						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
+//						   Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
+//						   Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
+//						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
+//						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
+//						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
+//						   std::string name,
+//						   bool transparent,
+//						   bool refractive)
+//	: Material(pix, vert, name, transparent, refractive)
+//{
+//	std::shared_ptr<DX11Texture> tex = std::make_shared<DX11Texture>(texture, )
+//}
+
 DX11Material::DX11Material(std::shared_ptr<SimplePixelShader> pix,
 						   std::shared_ptr<SimpleVertexShader> vert,
-						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
+						   std::shared_ptr<Texture> texture,
 						   Microsoft::WRL::ComPtr<ID3D11SamplerState> textureState,
 						   Microsoft::WRL::ComPtr<ID3D11SamplerState> clampState,
-						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap,
-						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> roughMap,
-						   Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> metalMap,
+						   std::shared_ptr<Texture> normalMap,
+						   std::shared_ptr<Texture> roughMap,
+						   std::shared_ptr<Texture> metalMap,
 						   std::string name,
 						   bool transparent,
-						   bool refractive)
+						   bool refractive) 
 	: Material(pix, vert, name, transparent, refractive)
 {
 	this->texture = texture;
