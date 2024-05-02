@@ -9,6 +9,7 @@
 #include "../IMGUI/Headers/imgui_impl_win32.h"
 #include "../IMGUI/Headers/imgui_impl_dx11.h"
 #include "Input.h"
+#include <dxgidebug.h>
 
 // We can include the correct library files here
 // instead of in Visual Studio settings if we want

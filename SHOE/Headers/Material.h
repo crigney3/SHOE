@@ -86,10 +86,10 @@ public:
 	virtual std::shared_ptr<Texture> GetRoughMap();
 	virtual std::shared_ptr<Texture> GetTexture();
 
-	void SetTexture(std::shared_ptr<Texture> texture);
-	void SetNormalMap(std::shared_ptr<Texture> normals);
-	void SetRoughMap(std::shared_ptr<Texture> roughMap);
-	void SetMetalMap(std::shared_ptr<Texture> metalMap);
+	virtual void SetTexture(std::shared_ptr<Texture> texture);
+	virtual void SetNormalMap(std::shared_ptr<Texture> normals);
+	virtual void SetRoughMap(std::shared_ptr<Texture> roughMap);
+	virtual void SetMetalMap(std::shared_ptr<Texture> metalMap);
 
 	virtual void SetPixelShader(std::shared_ptr<SimplePixelShader> pix);
 	virtual void SetVertexShader(std::shared_ptr<SimpleVertexShader> vert);
@@ -134,6 +134,11 @@ public:
 	std::shared_ptr<Texture> GetMetalMap();
 	std::shared_ptr<Texture> GetRoughMap();
 	std::shared_ptr<Texture> GetTexture();
+
+	void SetTexture(std::shared_ptr<Texture> texture);
+	void SetNormalMap(std::shared_ptr<Texture> normals);
+	void SetRoughMap(std::shared_ptr<Texture> roughMap);
+	void SetMetalMap(std::shared_ptr<Texture> metalMap);
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetNormalMapSRV();
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMetalMapSRV();

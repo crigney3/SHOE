@@ -1164,7 +1164,7 @@ void EditingUI::GenerateEditingUI() {
 
 			}
 			else {
-				ImGui::Image(renderer->GetDX11RenderTargetSRV(RTVTypes::COMPOSITE).Get(), ImVec2(500, 300));
+				ImGui::Image(renderer->GetDX11RenderTargetSRV(RTVTypes::FINAL_COMPOSITE).Get(), ImVec2(500, 300));
 			}
 
 		}
@@ -1342,7 +1342,6 @@ void EditingUI::GenerateEditingUI() {
 			currentTexDisplay = (ImTextureID*)currentRoughMap->GetDX11Texture().Get();
 		}
 		ImGui::Image(currentTexDisplay, ImVec2(256, 256));
-		ImGui::SameLine();
 
 		// Texture Swapping
 		if (ImGui::CollapsingHeader("Texture Swapping")) {
