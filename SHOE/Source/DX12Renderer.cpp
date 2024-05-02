@@ -417,3 +417,15 @@ void DX12Renderer::RenderMeshBounds(std::shared_ptr<Camera> cam) {
 void DX12Renderer::RenderSelectedHighlight(std::shared_ptr<Camera> cam, EngineState engineState) {
 
 }
+
+HRESULT DX12Renderer::RenderToVideoFile(std::shared_ptr<Camera> renderCam, FileRenderData RenderParameters) {
+	return 0;
+}
+
+HRESULT DX12Renderer::WriteFrame(Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter, DWORD streamIndex, const long long int& timeStamp, FileRenderData* RenderParameters) {
+	return 0;
+}
+
+HRESULT DX12Renderer::InitializeFileSinkWriter(OUT Microsoft::WRL::ComPtr<IMFSinkWriter>* sinkWriterOut, DWORD* pStreamIndex, FileRenderData* RenderParameters) {
+	return 0;
+}

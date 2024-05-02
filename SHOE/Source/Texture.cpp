@@ -80,6 +80,24 @@ void DX11Texture::SetTexture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> te
 
 #pragma region DX12Texture
 
+// TODO: change types, make this actually work
+DX12Texture::DX12Texture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> coreTexture,
+						 std::string fileKey,
+						 std::string name,
+						 AssetPathIndex assetPathIndex){
 
+}
+
+DX12Texture::~DX12Texture() {
+
+}
+
+void DX12Texture::SetTexture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture) {
+
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX12Texture::GetTexture() {
+	return nullptr;
+}
 
 #pragma endregion

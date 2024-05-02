@@ -851,7 +851,7 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
 		1.0f,
 		0);
-	for (int i = 0; i < RTVTypes::RTV_TYPE_COUNT; i++) {
+	for (int i = 0; i < RTVTypes::RTV_TYPE_COUNT - 1; i++) {
 		context->ClearRenderTargetView(renderTargetRTVs[i].Get(), color);
 	}
 	const float depths[4] = { 1,0,0,0 };
@@ -955,11 +955,11 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 			// Set textures and samplers
 			currentPS->SetSamplerState("sampleState", currentMaterial->GetSamplerState().Get());
 			currentPS->SetSamplerState("clampSampler", currentMaterial->GetClampSamplerState().Get());
-			currentPS->SetShaderResourceView("textureAlbedo", currentMaterial->GetTexture().get());
-			currentPS->SetShaderResourceView("textureRough", currentMaterial->GetRoughMap().get());
-			currentPS->SetShaderResourceView("textureMetal", currentMaterial->GetMetalMap().get());
+			currentPS->SetShaderResourceView("textureAlbedo", currentMaterial->GetAlbedoMapSRV());
+			currentPS->SetShaderResourceView("textureRough", currentMaterial->GetRoughMapSRV());
+			currentPS->SetShaderResourceView("textureMetal", currentMaterial->GetMetalMapSRV());
 			if (currentMaterial->GetNormalMap() != nullptr) {
-				currentPS->SetShaderResourceView("textureNormal", currentMaterial->GetNormalMap().get());
+				currentPS->SetShaderResourceView("textureNormal", currentMaterial->GetNormalMapSRV());
 			}
 
 			if (shadowCount > 0) {

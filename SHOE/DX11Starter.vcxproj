@@ -420,7 +420,7 @@
     <ClCompile Include="Source\NoclipMovement.cpp" />
     <ClCompile Include="Source\ParticleSystem.cpp" />
     <ClCompile Include="Source\Renderer.cpp" />
-    <ClCompile Include="Source\RootSignature.cpp" />    
+    <ClCompile Include="Source\RootSignature.cpp" />
     <ClCompile Include="Source\SceneManager.cpp" />
     <ClCompile Include="Source\ShadowProjector.cpp" />
     <ClCompile Include="Source\SimpleShader.cpp" />

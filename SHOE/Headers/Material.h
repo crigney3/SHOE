@@ -135,6 +135,11 @@ public:
 	std::shared_ptr<Texture> GetRoughMap();
 	std::shared_ptr<Texture> GetTexture();
 
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetNormalMapSRV();
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetMetalMapSRV();
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetRoughMapSRV();
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetAlbedoMapSRV();
+
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> GetSamplerState();
 	void SetSamplerState(Microsoft::WRL::ComPtr<ID3D11SamplerState> texSamplerState);
 

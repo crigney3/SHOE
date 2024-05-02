@@ -22,7 +22,8 @@
 // 6 - Refraction Silhouette Render
 // 7 - Render of pre-transparency composite
 // 8 - Render of post-transparency composite
-// 9 - Count: always the last one, tracks size
+// 9 - Render for writing to a file
+// 10 - Count: always the last one, tracks size
 enum RTVTypes 
 {
     COLORS_NO_AMBIENT,

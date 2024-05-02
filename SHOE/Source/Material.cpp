@@ -288,6 +288,22 @@ std::shared_ptr<Texture> DX11Material::GetTexture() {
 	return this->texture;
 }
 
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetNormalMapSRV() {
+	return this->normalMap.get()->GetDX11Texture();
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetMetalMapSRV() {
+	return this->metalMap.get()->GetDX11Texture();
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetRoughMapSRV() {
+	return this->roughMap.get()->GetDX11Texture();
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11Material::GetAlbedoMapSRV() {
+	return this->texture.get()->GetDX11Texture();
+}
+
 Microsoft::WRL::ComPtr<ID3D11SamplerState> DX11Material::GetSamplerState() {
 	return this->textureState;
 }
