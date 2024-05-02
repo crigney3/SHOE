@@ -157,6 +157,42 @@ void DX11Renderer::InitRenderTargetViews() {
 
 	device->CreateShaderResourceView(finalCompositeTexture.Get(), 0, renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].GetAddressOf());
 
+	fileWriteTexture.Reset();
+	renderTargetSRVs[RTVTypes::FILE_WRITE_COMPOSITE].Reset();
+	renderTargetRTVs[RTVTypes::FILE_WRITE_COMPOSITE].Reset();
+	D3D11_TEXTURE2D_DESC fileTexDesc = {};
+	fileTexDesc.Width = windowWidth;
+	fileTexDesc.Height = windowHeight;
+	fileTexDesc.ArraySize = 1;
+	fileTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	fileTexDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	fileTexDesc.MipLevels = 1;
+	fileTexDesc.MiscFlags = 0;
+	fileTexDesc.SampleDesc.Count = 1;
+	device->CreateTexture2D(&fileTexDesc, 0, fileWriteTexture.GetAddressOf());
+
+	D3D11_RENDER_TARGET_VIEW_DESC fileWriteRTVDesc = {};
+	fileWriteRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	fileWriteRTVDesc.Texture2D.MipSlice = 0;
+	fileWriteRTVDesc.Format = fileTexDesc.Format;
+
+	device->CreateRenderTargetView(fileWriteTexture.Get(), &fileWriteRTVDesc, renderTargetRTVs[RTVTypes::FILE_WRITE_COMPOSITE].GetAddressOf());
+
+	device->CreateShaderResourceView(fileWriteTexture.Get(), 0, renderTargetSRVs[RTVTypes::FILE_WRITE_COMPOSITE].GetAddressOf());
+
+	fileReadTexture.Reset();
+	D3D11_TEXTURE2D_DESC fileReadTexDesc = {};
+	fileReadTexDesc.Width = windowWidth;
+	fileReadTexDesc.Height = windowHeight;
+	fileReadTexDesc.ArraySize = 1;
+	fileReadTexDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	fileReadTexDesc.MipLevels = 1;
+	fileReadTexDesc.MiscFlags = 0;
+	fileReadTexDesc.SampleDesc.Count = 1;
+	fileReadTexDesc.Usage = D3D11_USAGE_STAGING;
+	fileReadTexDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	device->CreateTexture2D(&fileReadTexDesc, 0, fileReadTexture.GetAddressOf());
+
 	silhouetteTexture.Reset();
 	renderTargetRTVs[RTVTypes::REFRACTION_SILHOUETTE].Reset();
 	renderTargetSRVs[RTVTypes::REFRACTION_SILHOUETTE].Reset();
@@ -1260,17 +1296,53 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 	context->OMSetBlendState(0, 0, 0xFFFFFFFF);
 	context->OMSetDepthStencilState(0, 0);
 
-	ImGui::Render();
-	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	if (engineState == EngineState::FILE_RENDER) {
+		// Don't present the screen to the user, and copy the final composite
+		// to the CPU-Accessible fileRender buffer. Also convert it to an ARGB
+		// format instead of RGBA
 
-	// Present the back buffer to the user
-	//  - Puts the final frame we're drawing into the window so the user can see it
-	//  - Do this exactly ONCE PER FRAME (always at the very end of the frame)
-	swapChain->Present(0, 0);
+		renderTargets[0] = renderTargetRTVs[RTVTypes::FILE_WRITE_COMPOSITE].Get();
+		context->OMSetRenderTargets(1, renderTargets, 0);
 
-	// Due to the usage of a more sophisticated swap chain,
-	// the render target must be re-bound after every call to Present()
-	context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+		std::shared_ptr<SimplePixelShader> rgbConvertPS = globalAssets.GetPixelShaderByName("CompressRGBPS");
+
+		fullscreenVS->SetShader();
+
+		rgbConvertPS->SetShader();
+		rgbConvertPS->SetShaderResourceView("RGBFrame", renderTargetSRVs[RTVTypes::FINAL_COMPOSITE].Get());
+		rgbConvertPS->SetSamplerState("BasicSampler", globalAssets.GetMaterialAtID(0)->GetSamplerState());
+		rgbConvertPS->CopyAllBufferData();
+		context->Draw(3, 0);
+
+		context->CopyResource(fileReadTexture.Get(), fileWriteTexture.Get());
+
+		// Present the back buffer to the user
+		//  - Puts the final frame we're drawing into the window so the user can see it
+		//  - Do this exactly ONCE PER FRAME (always at the very end of the frame)
+		swapChain->Present(0, 0);
+
+		// Due to the usage of a more sophisticated swap chain,
+		// the render target must be re-bound after every call to Present()
+		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+
+		//ID3D11Resource* finalCompositeResource;
+		//context->CopyResource(fileWriteTexture.Get(), finalCompositeTexture.Get());
+
+		//context->CopyResource(readableRenderComposite.Get(), finalCompositeResource);
+	}
+	else {
+		ImGui::Render();
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+		// Present the back buffer to the user
+		//  - Puts the final frame we're drawing into the window so the user can see it
+		//  - Do this exactly ONCE PER FRAME (always at the very end of the frame)
+		swapChain->Present(0, 0);
+
+		// Due to the usage of a more sophisticated swap chain,
+		// the render target must be re-bound after every call to Present()
+		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+	}
 
 	// Unbind all in-use shader resources
 	ID3D11ShaderResourceView* nullSRVs[32] = {};

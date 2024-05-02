@@ -17,8 +17,19 @@ Renderer::Renderer(
 	this->windowWidth = windowWidth;
 	this->swapChain = swapChain;
 
-	// Whichever version of the renderer is running, initialize it
-	
+	MFStartup(MF_VERSION);
+
+	// Initialize the basic File Renderer Data
+	this->fileRenderData.filePath = L"C:\\output.mp4";
+	this->fileRenderData.VideoBitRate = 800000;
+	this->fileRenderData.VideoEncodingFormat = MFVideoFormat_H264;
+	this->fileRenderData.VideoFPS = 30;
+	this->fileRenderData.VideoFrameCount = 20 * this->fileRenderData.VideoFPS;
+	this->fileRenderData.VideoFrameDuration = 10 * 1000 * 1000 / this->fileRenderData.VideoFPS;
+	this->fileRenderData.VideoHeight = windowHeight;
+	this->fileRenderData.VideoWidth = windowWidth;
+	this->fileRenderData.VideoInputFormat = MFVideoFormat_RGB32;
+	this->fileRenderData.VideoPels = this->fileRenderData.VideoWidth * this->fileRenderData.VideoHeight;
 }
 
 Renderer::~Renderer() {
