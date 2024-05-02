@@ -1056,123 +1056,123 @@ void AssetManager::InitializeTextures() {
 
 void AssetManager::InitializeMaterials() {
 	if (!dxInstance->IsDirectX12()) {
-		// Initialize DX11 Materials
+		// DX11 Material Initialization
 
 		// Make reflective PBR materials
 		CreatePBRMaterial(std::string("reflectiveMetal"),
-			"BlankAlbedo.png",
-			"blank_normals.png",
-			"bronze_metal.png",
-			"GenericRoughness0.png");
+			GetTextureByName("BlankTexture"),
+			GetTextureByName("BlankTexture"),
+			GetTextureByName("BronzeMetal"),
+			GetTextureByName("BlankTexture"));
 
 		CreatePBRMaterial(std::string("reflective"),
-			"BlankAlbedo.png",
-			"blank_normals.png",
-			"wood_metal.png",
-			"GenericRoughness0.png");
+			GetTextureByName("BlankTexture"),
+			GetTextureByName("BlankTexture"),
+			GetTextureByName("WoodMetal"),
+			GetTextureByName("BlankTexture"));
 
 		CreatePBRMaterial(std::string("reflectiveRough"),
-			"BlankAlbedo.png",
-			"blank_normals.png",
-			"wood_metal.png",
-			"GenericRoughness100.png");
+			GetTextureByName("BlankTexture"),
+			GetTextureByName("BlankTexture"),
+			GetTextureByName("WoodMetal"),
+			GetTextureByName("HighRoughness"));
 
 		CreatePBRMaterial(std::string("reflectiveRoughMetal"),
-			"BlankAlbedo.png",
-			"blank_normals.png",
-			"bronze_metal.png",
-			"GenericRoughness100.png");
+			GetTextureByName("BlankTexture"),
+			GetTextureByName("BlankTexture"),
+			GetTextureByName("BronzeMetal"),
+			GetTextureByName("HighRoughness"));
 
 		//Make PBR materials
 		CreatePBRMaterial(std::string("bronzeMat"),
-			"bronze_albedo.png",
-			"bronze_normals.png",
-			"bronze_metal.png",
-			"bronze_roughness.png")->SetTiling(0.3f);
+			GetTextureByName("BronzeAlbedo"),
+			GetTextureByName("BronzeNormals"),
+			GetTextureByName("BronzeMetal"),
+			GetTextureByName("BronzeRough"))->SetTiling(0.3f);
 
 		CreatePBRMaterial(std::string("cobbleMat"),
-			"cobblestone_albedo.png",
-			"cobblestone_normals.png",
-			"cobblestone_metal.png",
-			"cobblestone_roughness.png");
+			GetTextureByName("CobbleAlbedo"),
+			GetTextureByName("CobbleNormals"),
+			GetTextureByName("CobbleMetal"),
+			GetTextureByName("CobbleRough"));
 
 		CreatePBRMaterial(std::string("largeCobbleMat"),
-			"cobblestone_albedo.png",
-			"cobblestone_normals.png",
-			"cobblestone_metal.png",
-			"cobblestone_roughness.png")->SetTiling(5.0f);
+			GetTextureByName("CobbleAlbedo"),
+			GetTextureByName("CobbleNormals"),
+			GetTextureByName("CobbleMetal"),
+			GetTextureByName("CobbleRough"))->SetTiling(5.0f);
 
 		CreatePBRMaterial(std::string("floorMat"),
-			"floor_albedo.png",
-			"floor_normals.png",
-			"floor_metal.png",
-			"floor_roughness.png");
+			GetTextureByName("FloorAlbedo"),
+			GetTextureByName("FloorNormals"),
+			GetTextureByName("FloorMetal"),
+			GetTextureByName("FloorRough"));
 
 		CreatePBRMaterial(std::string("terrainFloorMat"),
-			"floor_albedo.png",
-			"floor_normals.png",
-			"floor_metal.png",
-			"floor_roughness.png")->SetTiling(256.0f);
+			GetTextureByName("FloorAlbedo"),
+			GetTextureByName("FloorNormals"),
+			GetTextureByName("FloorMetal"),
+			GetTextureByName("FloorRough"))->SetTiling(256.0f);
 
 		CreatePBRMaterial(std::string("paintMat"),
-			"paint_albedo.png",
-			"paint_normals.png",
-			"paint_metal.png",
-			"paint_roughness.png");
+			GetTextureByName("PaintAlbedo"),
+			GetTextureByName("PaintNormals"),
+			GetTextureByName("PaintMetal"),
+			GetTextureByName("PaintRough"));
 
 		CreatePBRMaterial(std::string("largePaintMat"),
-			"paint_albedo.png",
-			"paint_normals.png",
-			"paint_metal.png",
-			"paint_roughness.png")->SetTiling(5.0f);
+			GetTextureByName("PaintAlbedo"),
+			GetTextureByName("PaintNormals"),
+			GetTextureByName("PaintMetal"),
+			GetTextureByName("PaintRough"))->SetTiling(5.0f);
 
 		CreatePBRMaterial(std::string("roughMat"),
-			"rough_albedo.png",
-			"rough_normals.png",
-			"rough_metal.png",
-			"rough_roughness.png");
+			GetTextureByName("RoughAlbedo"),
+			GetTextureByName("RoughNormals"),
+			GetTextureByName("RoughMetal"),
+			GetTextureByName("RoughRough"));
 
 		CreatePBRMaterial(std::string("scratchMat"),
-			"scratched_albedo.png",
-			"scratched_normals.png",
-			"scratched_metal.png",
-			"scratched_roughness.png");
+			GetTextureByName("ScratchAlbedo"),
+			GetTextureByName("ScratchNormals"),
+			GetTextureByName("ScratchMetal"),
+			GetTextureByName("ScratchRough"));
 
 		CreatePBRMaterial(std::string("woodMat"),
-			"wood_albedo.png",
-			"wood_normals.png",
-			"wood_metal.png",
-			"wood_roughness.png");
+			GetTextureByName("WoodAlbedo"),
+			GetTextureByName("WoodNormals"),
+			GetTextureByName("WoodMetal"),
+			GetTextureByName("WoodRough"));
 
 		std::shared_ptr<Material> refractive = CreatePBRMaterial(std::string("refractivePaintMat"),
-			"paint_albedo.png",
-			"paint_normals.png",
-			"paint_metal.png",
-			"paint_roughness.png");
+			GetTextureByName("PaintAlbedo"),
+			GetTextureByName("PaintNormals"),
+			GetTextureByName("PaintMetal"),
+			GetTextureByName("PaintRough"));
 		refractive->SetRefractive(true);
 		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 		refractive = CreatePBRMaterial(std::string("refractiveWoodMat"),
-			"wood_albedo.png",
-			"wood_normals.png",
-			"wood_metal.png",
-			"wood_roughness.png");
+			GetTextureByName("WoodAlbedo"),
+			GetTextureByName("WoodNormals"),
+			GetTextureByName("WoodMetal"),
+			GetTextureByName("WoodRough"));
 		refractive->SetTransparent(true);
 		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 		refractive = CreatePBRMaterial(std::string("refractiveRoughMat"),
-			"rough_albedo.png",
-			"rough_normals.png",
-			"rough_metal.png",
-			"rough_roughness.png");
+			GetTextureByName("RoughAlbedo"),
+			GetTextureByName("RoughNormals"),
+			GetTextureByName("RoughMetal"),
+			GetTextureByName("RoughRough"));
 		refractive->SetRefractive(true);
 		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 		refractive = CreatePBRMaterial(std::string("refractiveBronzeMat"),
-			"bronze_albedo.png",
-			"bronze_normals.png",
-			"bronze_metal.png",
-			"bronze_roughness.png");
+			GetTextureByName("BronzeAlbedo"),
+			GetTextureByName("BronzeNormals"),
+			GetTextureByName("BronzeMetal"),
+			GetTextureByName("BronzeRough"));
 		refractive->SetRefractive(true);
 		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 	}
