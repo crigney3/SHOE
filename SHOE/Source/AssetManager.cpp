@@ -124,7 +124,7 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 }
 
 std::shared_ptr<Camera> AssetManager::CreateCamera(std::string name, float aspectRatio) {
-	float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
+	float ar = aspectRatio == 0 ? ((float)dxInstance->width / (float)dxInstance->height) : aspectRatio;
 	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
 	std::shared_ptr<Camera> cam = CreateCameraOnEntity(newEnt, ar);
 	return cam;
@@ -895,7 +895,7 @@ std::shared_ptr<Light> AssetManager::CreateSpotLightOnEntity(std::shared_ptr<Gam
 
 std::shared_ptr<Camera> AssetManager::CreateCameraOnEntity(std::shared_ptr<GameEntity> entityToEdit, float aspectRatio)
 {
-	float ar = aspectRatio == 0 ? (float)(dxInstance->width / dxInstance->height) : aspectRatio;
+	float ar = aspectRatio == 0 ? ((float)dxInstance->width / (float)dxInstance->height) : aspectRatio;
 	std::shared_ptr<Camera> cam = entityToEdit->AddComponent<Camera>();
 	cam->SetAspectRatio(ar);
 	return cam;
