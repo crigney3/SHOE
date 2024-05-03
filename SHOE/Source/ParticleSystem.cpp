@@ -266,6 +266,8 @@ void ParticleSystem::Draw(std::shared_ptr<Camera> cam, Microsoft::WRL::ComPtr<ID
 	ID3D11UnorderedAccessView* none[8] = {};
 	context->CSSetUnorderedAccessViews(0, 8, none, 0);
 
+	this->Update();
+
 	particleCopyComputeShader->SetShader();
 
 	particleCopyComputeShader->SetUnorderedAccessView("sortList", this->sortListUAV);
