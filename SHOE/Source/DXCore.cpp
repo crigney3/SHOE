@@ -3,6 +3,7 @@
 #include <WindowsX.h>
 #include <sstream>
 #include "../Headers/Time.h"
+#include "../Headers/DX12Helper.h"
 
 // Define the static instance variable so our OS-level 
 // message handling function below can talk to our object
@@ -33,7 +34,8 @@ DXCore::DXCore(
 	const char* titleBarText,	// Text for the window's title bar
 	unsigned int windowWidth,	// Width of the window's client area
 	unsigned int windowHeight,	// Height of the window's client area
-	bool debugTitleBarStats)	// Show extra stats (fps) in title bar?
+	bool debugTitleBarStats,    // Show extra stats (fps) in title bar?
+	DirectXVersion dxVersion)				// Which version of directX is this?
 {
 	// Save a static reference to this object.
 	//  - Since the OS-level message function must be a non-member (global) function, 
@@ -58,6 +60,8 @@ DXCore::DXCore(
 	this->startTime = 0;
 	this->totalTime = 0;
 
+	this->dxVersion = dxVersion;
+
 	// Query performance counter for accurate timing information
 	__int64 perfFreq;
 	QueryPerformanceFrequency((LARGE_INTEGER*)&perfFreq);
@@ -74,6 +78,7 @@ DXCore::~DXCore()
 	// - If we weren't using smart pointers, we'd need
 	//   to call Release() on each DirectX object created in DXCore
 
+	delete& DX12Helper::GetInstance();
 	context->ClearState();
 	context->Flush();
 }
@@ -157,11 +162,11 @@ HRESULT DXCore::InitWindow()
 
 
 // --------------------------------------------------------
-// Initializes DirectX, which requires a window.  This method
+// Initializes DirectX11, which requires a window.  This method
 // also creates several DirectX objects we'll need to start
 // drawing things to the screen.
 // --------------------------------------------------------
-HRESULT DXCore::InitDirectX()
+HRESULT DXCore::InitDirectX11()
 {
 	// This will hold options for DirectX initialization
 	unsigned int deviceFlags = 0;
@@ -283,6 +288,145 @@ HRESULT DXCore::InitDirectX()
 }
 
 // --------------------------------------------------------
+// Initializes DirectX11, which requires a window.  This method
+// also creates several DirectX objects we'll need to start
+// drawing things to the screen.
+// --------------------------------------------------------
+HRESULT DXCore::InitDirectX12()
+{
+#if defined(DEBUG) || defined(_DEBUG)
+	// If we're in debug mode in visual studio, we also
+	// want to enable the DX12 debug layer to see some
+	// errors and warnings in Visual Studio's output window
+	// when things go wrong!
+	ID3D12Debug* debugController;
+	D3D12GetDebugInterface(IID_PPV_ARGS(&debugController));
+	debugController->EnableDebugLayer();
+#endif
+
+	// Result variable for below function calls
+	HRESULT hr = S_OK;
+
+	// Create the DX 12 device and check which feature level
+	// we can reliably use in our application
+	{
+		hr = D3D12CreateDevice(
+			0,						// Not explicitly specifying which adapter (GPU)
+			D3D_FEATURE_LEVEL_11_0,	// MINIMUM feature level - NOT the level we'll necessarily turn on
+			IID_PPV_ARGS(deviceDX12.GetAddressOf()));	// Macro to grab necessary IDs of device
+		if (FAILED(hr)) return hr;
+
+		// Now that we have a device, determine the maximum
+		// feature level supported by the device
+		D3D_FEATURE_LEVEL levelsToCheck[] = {
+			D3D_FEATURE_LEVEL_11_0,
+			D3D_FEATURE_LEVEL_11_1,
+			D3D_FEATURE_LEVEL_12_0,
+			D3D_FEATURE_LEVEL_12_1
+		};
+		D3D12_FEATURE_DATA_FEATURE_LEVELS levels = {};
+		levels.pFeatureLevelsRequested = levelsToCheck;
+		levels.NumFeatureLevels = ARRAYSIZE(levelsToCheck);
+		deviceDX12->CheckFeatureSupport(
+			D3D12_FEATURE_FEATURE_LEVELS,
+			&levels,
+			sizeof(D3D12_FEATURE_DATA_FEATURE_LEVELS));
+		dxFeatureLevel = levels.MaxSupportedFeatureLevel;
+	}
+
+	// Set up DX12 command allocator / queue / list, 
+	// which are necessary pieces for issuing standard API calls
+	{
+		// Set up allocator
+		deviceDX12->CreateCommandAllocator(
+			D3D12_COMMAND_LIST_TYPE_DIRECT,
+			IID_PPV_ARGS(commandAllocator.GetAddressOf()));
+
+		// Command queue
+		D3D12_COMMAND_QUEUE_DESC qDesc = {};
+		qDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		qDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		deviceDX12->CreateCommandQueue(&qDesc, IID_PPV_ARGS(commandQueue.GetAddressOf()));
+
+		// Command list
+		deviceDX12->CreateCommandList(
+			0,								// Which physical GPU will handle these tasks?  0 for single GPU setup
+			D3D12_COMMAND_LIST_TYPE_DIRECT,	// Type of command list - direct is for standard API calls
+			commandAllocator.Get(),			// The allocator for this list
+			0,								// Initial pipeline state - none for now
+			IID_PPV_ARGS(commandList.GetAddressOf()));
+	}
+
+	// Now that we have a device and a command list,
+	// we can initialize the DX12 helper singleton, which will
+	// also create a fence for synchronization
+	{
+		DX12Helper::GetInstance().Initialize(
+			deviceDX12,
+			commandList,
+			commandQueue,
+			commandAllocator);
+	}
+
+	// Swap chain creation
+	{
+		// Create a description of how our swap chain should work
+		DXGI_SWAP_CHAIN_DESC swapDesc = {};
+		swapDesc.BufferCount = numBackBuffers;
+		swapDesc.BufferDesc.Width = width;
+		swapDesc.BufferDesc.Height = height;
+		swapDesc.BufferDesc.RefreshRate.Numerator = 60;
+		swapDesc.BufferDesc.RefreshRate.Denominator = 1;
+		swapDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		swapDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+		swapDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+		swapDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapDesc.Flags = 0; // DX12: Do we need DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH?
+		swapDesc.OutputWindow = hWnd;
+		swapDesc.SampleDesc.Count = 1;
+		swapDesc.SampleDesc.Quality = 0;
+		swapDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		swapDesc.Windowed = true;
+
+		// Create a DXGI factory, which is what we use to create a swap chain
+		Microsoft::WRL::ComPtr<IDXGIFactory> dxgiFactory;
+		CreateDXGIFactory(IID_PPV_ARGS(dxgiFactory.GetAddressOf()));
+		hr = dxgiFactory->CreateSwapChain(commandQueue.Get(), &swapDesc, swapChain.GetAddressOf());
+	}
+
+	// Initialize a fence event so manual GPU schronization is possible - already done in DXHelper?
+	/*device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf()));
+	fenceEvent = CreateEventEx(0, 0, 0, EVENT_ALL_ACCESS);*/
+
+	// Set up the viewport so we render into the correct
+	// portion of the render target
+	viewport = {};
+	viewport.TopLeftX = 0;
+	viewport.TopLeftY = 0;
+	viewport.Width = (float)width;
+	viewport.Height = (float)height;
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+
+	// Define a scissor rectangle that defines a portion of
+	// the render target for clipping.  This is different from
+	// a viewport in that it is applied after the pixel shader.
+	// We need at least one of these, but we're rendering to 
+	// the entire window, so it'll be the same size.
+	scissorRect = {};
+	scissorRect.left = 0;
+	scissorRect.top = 0;
+	scissorRect.right = width;
+	scissorRect.bottom = height;
+
+	// Wait for the GPU before we proceed
+	DX12Helper::GetInstance().WaitForGPU();
+
+	// Return the "everything is ok" HRESULT value
+	return S_OK;
+}
+
+// --------------------------------------------------------
 // When the window is resized, the underlying 
 // buffers (textures) must also be resized to match.
 //
@@ -292,75 +436,113 @@ HRESULT DXCore::InitDirectX()
 // --------------------------------------------------------
 void DXCore::OnResize()
 {
-	// Release the buffers before resizing the swap chain
-	backBufferRTV.Reset();
-	depthStencilView.Reset();
+	// Determine which resources need to be reset
+	if (dxVersion) {
+		// SHOE is running DX12, resize appropriately
+		DX12Helper& dx12Helper = DX12Helper::GetInstance();
 
-	// Resize the underlying swap chain buffers
-	swapChain->ResizeBuffers(
-		2,
-		width,
-		height,
-		DXGI_FORMAT_R8G8B8A8_UNORM,
-		0);
+		// Recreate the viewport and scissor rects, too,
+		// since the window size has changed
+		{
+			// Set up the viewport so we render into the correct
+			// portion of the render target
+			viewport = {};
+			viewport.TopLeftX = 0;
+			viewport.TopLeftY = 0;
+			viewport.Width = (float)width;
+			viewport.Height = (float)height;
+			viewport.MinDepth = 0.0f;
+			viewport.MaxDepth = 1.0f;
 
-	// Recreate the render target view for the back buffer
-	// texture, then release our local texture reference
-	ID3D11Texture2D* backBufferTexture = 0;
-	swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBufferTexture));
-	if (backBufferTexture != 0)
-	{
-		device->CreateRenderTargetView(
-			backBufferTexture, 
-			0, 
-			backBufferRTV.ReleaseAndGetAddressOf()); // ReleaseAndGetAddressOf() cleans up the old object before giving us the pointer
-		backBufferTexture->Release();
+			// Define a scissor rectangle that defines a portion of
+			// the render target for clipping.  This is different from
+			// a viewport in that it is applied after the pixel shader.
+			// We need at least one of these, but we're rendering to 
+			// the entire window, so it'll be the same size.
+			scissorRect = {};
+			scissorRect.left = 0;
+			scissorRect.top = 0;
+			scissorRect.right = width;
+			scissorRect.bottom = height;
+		}
+
+		// Wait for the GPU before we proceed
+		dx12Helper.WaitForGPU();
 	}
+	else {
+		// SHOE is running DX11, resize appropriately
 
-	// Set up the description of the texture to use for the depth buffer
-	D3D11_TEXTURE2D_DESC depthStencilDesc;
-	depthStencilDesc.Width				= width;
-	depthStencilDesc.Height				= height;
-	depthStencilDesc.MipLevels			= 1;
-	depthStencilDesc.ArraySize			= 1;
-	depthStencilDesc.Format				= DXGI_FORMAT_D24_UNORM_S8_UINT;
-	depthStencilDesc.Usage				= D3D11_USAGE_DEFAULT;
-	depthStencilDesc.BindFlags			= D3D11_BIND_DEPTH_STENCIL;
-	depthStencilDesc.CPUAccessFlags		= 0;
-	depthStencilDesc.MiscFlags			= 0;
-	depthStencilDesc.SampleDesc.Count	= 1;
-	depthStencilDesc.SampleDesc.Quality = 0;
+		// Release the buffers before resizing the swap chain
+		backBufferRTV.Reset();
+		depthStencilView.Reset();
 
-	// Create the depth buffer and its view, then 
-	// release our reference to the texture
-	ID3D11Texture2D* depthBufferTexture = 0;
-	device->CreateTexture2D(&depthStencilDesc, 0, &depthBufferTexture);
-	if (depthBufferTexture != 0)
-	{
-		device->CreateDepthStencilView(
-			depthBufferTexture, 
-			0, 
-			depthStencilView.ReleaseAndGetAddressOf()); // ReleaseAndGetAddressOf() cleans up the old object before giving us the pointer
-		depthBufferTexture->Release();
+		// Resize the underlying swap chain buffers
+		swapChain->ResizeBuffers(
+			2,
+			width,
+			height,
+			DXGI_FORMAT_R8G8B8A8_UNORM,
+			0);
+
+		// Recreate the render target view for the back buffer
+		// texture, then release our local texture reference
+		ID3D11Texture2D* backBufferTexture = 0;
+		swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBufferTexture));
+		if (backBufferTexture != 0)
+		{
+			device->CreateRenderTargetView(
+				backBufferTexture,
+				0,
+				backBufferRTV.ReleaseAndGetAddressOf()); // ReleaseAndGetAddressOf() cleans up the old object before giving us the pointer
+			backBufferTexture->Release();
+		}
+
+		// Set up the description of the texture to use for the depth buffer
+		D3D11_TEXTURE2D_DESC depthStencilDesc;
+		depthStencilDesc.Width = width;
+		depthStencilDesc.Height = height;
+		depthStencilDesc.MipLevels = 1;
+		depthStencilDesc.ArraySize = 1;
+		depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
+		depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+		depthStencilDesc.CPUAccessFlags = 0;
+		depthStencilDesc.MiscFlags = 0;
+		depthStencilDesc.SampleDesc.Count = 1;
+		depthStencilDesc.SampleDesc.Quality = 0;
+
+		// Create the depth buffer and its view, then 
+		// release our reference to the texture
+		ID3D11Texture2D* depthBufferTexture = 0;
+		device->CreateTexture2D(&depthStencilDesc, 0, &depthBufferTexture);
+		if (depthBufferTexture != 0)
+		{
+			device->CreateDepthStencilView(
+				depthBufferTexture,
+				0,
+				depthStencilView.ReleaseAndGetAddressOf()); // ReleaseAndGetAddressOf() cleans up the old object before giving us the pointer
+			depthBufferTexture->Release();
+		}
+
+		// Bind the views to the pipeline, so rendering properly 
+		// uses their underlying textures
+		context->OMSetRenderTargets(
+			1,
+			backBufferRTV.GetAddressOf(), // This requires a pointer to a pointer (an array of pointers), so we get the address of the pointer
+			depthStencilView.Get());
+
+		// Lastly, set up a viewport so we render into
+		// to correct portion of the window
+		D3D11_VIEWPORT viewport = {};
+		viewport.TopLeftX = 0;
+		viewport.TopLeftY = 0;
+		viewport.Width = (float)width;
+		viewport.Height = (float)height;
+		viewport.MinDepth = 0.0f;
+		viewport.MaxDepth = 1.0f;
+		context->RSSetViewports(1, &viewport);
 	}
-
-	// Bind the views to the pipeline, so rendering properly 
-	// uses their underlying textures
-	context->OMSetRenderTargets(
-		1, 
-		backBufferRTV.GetAddressOf(), // This requires a pointer to a pointer (an array of pointers), so we get the address of the pointer
-		depthStencilView.Get());
-
-	// Lastly, set up a viewport so we render into
-	// to correct portion of the window
-	D3D11_VIEWPORT viewport = {};
-	viewport.TopLeftX = 0;
-	viewport.TopLeftY = 0;
-	viewport.Width = (float)width;
-	viewport.Height = (float)height;
-	viewport.MinDepth = 0.0f;
-	viewport.MaxDepth = 1.0f;
-	context->RSSetViewports(1, &viewport);
+	
 }
 
 
@@ -526,6 +708,8 @@ void DXCore::UpdateTitleBarStats()
 	// Append the version of DirectX the app is using
 	switch (dxFeatureLevel)
 	{
+	case D3D_FEATURE_LEVEL_12_1: output << "    DX 12.1"; break;
+	case D3D_FEATURE_LEVEL_12_0: output << "    DX 12.0"; break;
 	case D3D_FEATURE_LEVEL_11_1: output << "    DX 11.1"; break;
 	case D3D_FEATURE_LEVEL_11_0: output << "    DX 11.0"; break;
 	case D3D_FEATURE_LEVEL_10_1: output << "    DX 10.1"; break;
@@ -754,5 +938,10 @@ LRESULT DXCore::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 	// Let Windows handle any messages we're not touching
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
+}
+
+
+bool DXCore::IsDirectX12() {
+	return dxVersion;
 }
 

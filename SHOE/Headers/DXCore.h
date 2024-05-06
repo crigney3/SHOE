@@ -2,16 +2,25 @@
 
 #include <Windows.h>
 #include <d3d11.h>
+#include <d3d12.h>
 #include <string>
 #include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
 #include "../IMGUI/Headers/imgui.h"
 #include "../IMGUI/Headers/imgui_impl_win32.h"
 #include "../IMGUI/Headers/imgui_impl_dx11.h"
 #include "Input.h"
+#include <dxgidebug.h>
 
 // We can include the correct library files here
 // instead of in Visual Studio settings if we want
 #pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "d3d12.lib")
+#pragma comment(lib, "dxgi.lib")
+
+// This is used both to build the buffer pool that stores all data needed for
+// the next X frames, as well as defining the point where the CPU must sync
+// if it is too far ahead.
+#define DX12_BUFFER_FRAME_COUNT 3
 
 enum AssetPathIndex {
 	ASSET_MODEL_PATH,
@@ -31,6 +40,26 @@ enum AssetPathIndex {
 	ASSET_PATH_COUNT
 };
 
+enum DirectXVersion {
+	DIRECT_X_11,
+	DIRECT_X_12
+};
+
+//DX12 update TODO:
+// Update API initialization and back buffer swapping
+// Replace context with command list/queue/allocator
+// Create fence for syncing
+// Don't use SimpleShader (or try and update it to do some of the work automatically)
+// Create root signatures for each shader (or at least each shader that has different inputs)
+// Replace shaders + pipeline state with pipeline state objects
+// Meshes should track views while dx12 is active
+// Manual SRV creation for loaded textures
+// Store groups of SRVs from materials into descriptor heap, then store resulting desc tables
+// Drawing must set PSO, root sig, descriptor tables, any remaining DX12 stuff. Must also update
+// appropriate constant buffers.
+// 
+//
+
 class DXCore
 {
 public:
@@ -39,7 +68,8 @@ public:
 		const char* titleBarText,	// Text for the window's title bar
 		unsigned int windowWidth,	// Width of the window's client area
 		unsigned int windowHeight,	// Height of the window's client area
-		bool debugTitleBarStats);	// Show extra stats (fps) in title bar?
+		bool debugTitleBarStats,	// Show extra stats (fps) in title bar?
+		DirectXVersion dxVersion);	
 	~DXCore();
 
 	// Static requirements for OS-level message processing
@@ -54,9 +84,13 @@ public:
 	// Internal method for message handling
 	LRESULT ProcessMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+	// Returns 0 for DirectX11 and 1 for DirectX12
+	bool IsDirectX12();
+
 	// Initialization and game-loop related methods
 	HRESULT InitWindow();
-	HRESULT InitDirectX();
+	HRESULT InitDirectX11();
+	HRESULT InitDirectX12();
 	HRESULT Run();
 	void Quit();
 	virtual void OnResize();
@@ -71,6 +105,9 @@ public:
 
 	void SetVSAssetPaths();
 	void SetBuildAssetPaths();
+
+	// Syncing tools
+	Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 
 	// Size of the window's client area
 	unsigned int width;
@@ -89,14 +126,29 @@ protected:
 	// Helpful if we want to pause while not the active window
 	bool hasFocus;
 
-	// DirectX related objects and variables
-	D3D_FEATURE_LEVEL		dxFeatureLevel;
-	Microsoft::WRL::ComPtr<IDXGISwapChain>		swapChain;
-	Microsoft::WRL::ComPtr<ID3D11Device>		device;
+	// DirectX11 related objects and variables
+
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext>	context;
 
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV;
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthStencilView;
+	Microsoft::WRL::ComPtr<ID3D11Device>		device;
+
+	// DirectX12 related objects and variables
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator>		commandAllocator;
+	Microsoft::WRL::ComPtr<ID3D12CommandQueue>			commandQueue;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>	commandList;
+
+	Microsoft::WRL::ComPtr<ID3D12Device>		deviceDX12;
+
+	static const unsigned int numBackBuffers = 2;
+
+	D3D12_VIEWPORT			viewport;
+	D3D12_RECT				scissorRect;
+
+	// Both versions of DirectX use these
+	D3D_FEATURE_LEVEL		dxFeatureLevel;
+	Microsoft::WRL::ComPtr<IDXGISwapChain>		swapChain;
 
 	// Helper function for allocating a console window
 	void CreateConsoleWindow(int bufferLines, int bufferColumns, int windowLines, int windowColumns);
@@ -109,6 +161,9 @@ protected:
 	float GetDeltaTime();
 
 	std::string assetPathStrings[ASSET_PATH_COUNT];
+
+	// What version of DX is this?
+	DirectXVersion dxVersion;
 
 private:
 	// Timing related data

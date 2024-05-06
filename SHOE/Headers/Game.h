@@ -7,13 +7,17 @@
 #include <fstream>
 #include <stdlib.h>
 #include <Windows.h>
+#include "Input.h"
+#include "DX11Renderer.h"
+#include "DX12Renderer.h"
+#include "AssetManager.h"
 #include <chrono>
 #include "EditingUI.h"
 
 class Game : public DXCore
 {
 public:
-	Game(HINSTANCE hInstance);
+	Game(HINSTANCE hInstance, DirectXVersion dxVersion);
 	~Game();
 
 	// Overridden setup and game loop methods, which
@@ -22,8 +26,9 @@ public:
 	void OnResize();
 	void Update();
 	void Draw();
-	
-	// Asset Manager instance
+
+private:
+	// Manager instances
 	AssetManager& globalAssets = AssetManager::GetInstance();
 	SceneManager& sceneManager = SceneManager::GetInstance();
 	AudioHandler& audioHandler = AudioHandler::GetInstance();
@@ -39,6 +44,9 @@ private:
 	// Rendering helper methods
 	void DrawInitializingScreen(std::string category);
 	void DrawLoadingScreen();
+
+	//std::unique_ptr<DX11Renderer> dx11Renderer;
+	//std::unique_ptr<DX12Renderer> dx12Renderer;
 
 	// Loading screen info
 	DirectX::SpriteBatch* loadingSpriteBatch;

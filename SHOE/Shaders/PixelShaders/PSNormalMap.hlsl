@@ -1,5 +1,13 @@
 #include "../ShaderHeaders/ShaderShared.hlsli"
 
+// @@InputLayout@@
+// POSITION;
+// SHADOW_POSITION;
+// COLOR;
+// NORMAL;
+// 
+//
+
 Texture2D textureAlbedo					: register(t0);
 Texture2D textureNormal					: register(t1);
 Texture2D textureRough					: register(t2);

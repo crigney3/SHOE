@@ -22,13 +22,14 @@ using namespace DirectX;
 //
 // hInstance - the application's OS-level handle (unique ID)
 // --------------------------------------------------------
-Game::Game(HINSTANCE hInstance)
+Game::Game(HINSTANCE hInstance, DirectXVersion dxVersion)
 	: DXCore(
 		hInstance,		   // The application's handle
-		"DirectX Game",	   // Text for the window's title bar
+		"SHOE",	   // Text for the window's title bar
 		1280,			   // Width of the window's client area
 		720,			   // Height of the window's client area
-		true)			   // Show extra stats (fps) in title bar?
+		true,			   // Show extra stats (fps) in title bar?
+		dxVersion)
 {
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -87,31 +88,54 @@ void Game::Init()
 {
 	engineState = EngineState::INIT;
 
-	loadingSpriteBatch = new SpriteBatch(context.Get());
+	if (dxVersion) {
 
-	sceneManager.Initialize(&engineState, std::bind(&Game::DrawLoadingScreen, this));
-	globalAssets.Initialize(device, context, hWnd, &engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
+	}
+	else {
+		loadingSpriteBatch = new SpriteBatch(context.Get());
 
 #if defined(DEBUG) || defined(_DEBUG)
-	printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
+		printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
 #endif
+
+		sceneManager.Initialize(&engineState, std::bind(&Game::DrawLoadingScreen, this));
+
+		globalAssets.Initialize(device, context, hWnd, &engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
+
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
+#endif
+
+		// Tell the input assembler stage of the pipeline what kind of
+		// geometric primitives (points, lines or triangles) we want to draw.  
+		// Essentially: "What kind of shape should the GPU draw with our data?"
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	}
 
 	// Initialize the input manager with the window's handle
 	Input::GetInstance().Initialize(this->hWnd);
 
-	// Tell the input assembler stage of the pipeline what kind of
-	// geometric primitives (points, lines or triangles) we want to draw.  
-	// Essentially: "What kind of shape should the GPU draw with our data?"
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
 	//With everything initialized, start the renderer
-	renderer = std::make_unique<Renderer>(height,
-		width,
-		device,
-		context,
-		swapChain,
-		backBufferRTV,
-		depthStencilView);
+
+	// What graphics library are we using?
+	if (dxVersion) {
+		renderer = std::make_shared<DX12Renderer>(height,
+			width,
+			deviceDX12,
+			swapChain,
+			commandAllocator,
+			commandQueue,
+			commandList);
+	}
+	else {
+		renderer = std::make_shared<DX11Renderer>(height,
+			width,
+			device,
+			context,
+			swapChain,
+			backBufferRTV,
+			depthStencilView);
+	}
 
 	// Start the UI now that IMGUI has initialized
 	editUI = std::make_unique<EditingUI>(renderer);
@@ -133,12 +157,23 @@ void Game::OnResize()
 		globalAssets.GetMainCamera()->SetAspectRatio((float)this->width / (float)this->height);
 	}
 
-	renderer->PreResize();
+	
 
-	// Handle base-level DX resize stuff
-	DXCore::OnResize();
+	if (dxVersion) {
+		renderer->PreResize();
 
-	renderer->PostResize(this->height, this->width, this->backBufferRTV, this->depthStencilView);
+		// Handle base-level DX resize stuff
+		DXCore::OnResize();
+
+		(dynamic_cast<DX12Renderer*>(renderer.get()))->PostResize(this->height, this->width);
+	}
+	else {
+		renderer->PreResize();
+
+		DXCore::OnResize();
+
+		(dynamic_cast<DX11Renderer*>(renderer.get()))->PostResize(this->height, this->width, this->backBufferRTV, this->depthStencilView);
+	}
 }
 
 // --------------------------------------------------------
@@ -214,14 +249,25 @@ void Game::DrawLoadingScreen() {
 
 		context->Flush();
 
-		// With everything initialized, start the renderer
-		renderer = std::make_shared<Renderer>(height,
-			width,
-			device,
-			context,
-			swapChain,
-			backBufferRTV,
-			depthStencilView);
+		// What graphics library are we using?
+		if (dxVersion) {
+			renderer = std::make_shared<DX12Renderer>(height,
+				width,
+				deviceDX12,
+				swapChain,
+				commandAllocator,
+				commandQueue,
+				commandList);
+		}
+		else {
+			renderer = std::make_shared<DX11Renderer>(height,
+				width,
+				device,
+				context,
+				swapChain,
+				backBufferRTV,
+				depthStencilView);
+		}
 
 		// Start the UI now that IMGUI has initialized
 		editUI->ReInitializeEditingUI(renderer);
@@ -289,10 +335,22 @@ void Game::DrawLoadingScreen() {
 // --------------------------------------------------------
 void Game::Draw()
 {
-	if (engineState == EngineState::EDITING) {
-		renderer->Draw(globalAssets.GetEditingCamera(), engineState);
+	switch (dxVersion) {
+	case DIRECT_X_11:
+		if (engineState == EngineState::EDITING) {
+			renderer->Draw(globalAssets.GetEditingCamera(), engineState);
+		}
+		else if (engineState == EngineState::PLAY) {
+			renderer->Draw(globalAssets.GetMainCamera(), engineState);
+		}
+		break;
+	case DIRECT_X_12:
+		if (engineState == EngineState::EDITING) {
+			renderer->Draw(globalAssets.GetEditingCamera(), engineState);
+		}
+		else if (engineState == EngineState::PLAY) {
+			renderer->Draw(globalAssets.GetMainCamera(), engineState);
+		}
 	}
-	else if (engineState == EngineState::PLAY) {
-		renderer->Draw(globalAssets.GetMainCamera(), engineState);
-	}
+	
 }

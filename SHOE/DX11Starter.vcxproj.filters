@@ -168,6 +168,18 @@
     <ClInclude Include="Headers\EngineState.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\DX12Helper.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\DX11Renderer.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\DX12Renderer.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\RootSignature.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
     <ClInclude Include="Headers\Texture.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
@@ -380,6 +392,18 @@
       <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
     <ClCompile Include="Source\SceneManager.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\DX12Helper.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\DX11Renderer.cpp">
+       <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\DX12Renderer.cpp">
+       <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\RootSignature.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
     <ClCompile Include="Source\Texture.cpp">

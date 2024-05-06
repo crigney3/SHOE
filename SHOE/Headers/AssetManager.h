@@ -200,6 +200,7 @@ public:
 											    std::string normalNameToLoad,
 											    std::string metalnessNameToLoad,
 											    std::string roughnessNameToLoad,
+												bool dx12Material = false,
 												bool addToGlobalList = true);
 	std::shared_ptr<Material> CreatePBRMaterial(std::string id,
 											    std::shared_ptr<Texture> albedoTexture,
@@ -217,11 +218,15 @@ public:
 	std::shared_ptr<Terrain> CreateTerrainEntity(std::shared_ptr<Mesh> terrainMesh, 
 												 std::shared_ptr<TerrainMaterial> material, 
 												 std::string name = "Terrain");
-	std::shared_ptr<TerrainMaterial> CreateTerrainMaterial(std::string name, std::vector<std::shared_ptr<Material>> materials, std::string blendMapPath = "");
+	std::shared_ptr<TerrainMaterial> CreateTerrainMaterial(std::string name,
+														   std::vector<std::shared_ptr<Material>> materials,
+														   std::string blendMapPath = "",
+														   bool dx12Material = false);
 	std::shared_ptr<TerrainMaterial> CreateTerrainMaterial(std::string name,
 														   std::vector<std::string> texturePaths,
 														   std::vector<std::string> matNames,
 														   bool isPBRMat = true,
+														   bool dx12Material = false,
 														   std::string blendMapPath = "");
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
 													std::string textureNameToLoad,
