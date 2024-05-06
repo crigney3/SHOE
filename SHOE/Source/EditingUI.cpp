@@ -23,13 +23,9 @@ EditingUI::EditingUI(std::shared_ptr<Renderer> renderer) {
 	objHierarchyEnabled = true;
 	rtvWindowEnabled = false;
 
-	entityUIIndex = -1;
+	entityUIIndex = 0;
 	skyUIIndex = 0;
 	materialUIIndex = 0;
-
-	objWindowEnabled = false;
-	skyWindowEnabled = false;
-	entityUIIndex = -1;
 
 	this->renderer = renderer;
 }
@@ -46,13 +42,9 @@ void EditingUI::ReInitializeEditingUI(std::shared_ptr<Renderer> renderer) {
 	objHierarchyEnabled = true;
 	rtvWindowEnabled = false;
 
-	entityUIIndex = -1;
+	entityUIIndex = 0;
 	skyUIIndex = 0;
 	materialUIIndex = 0;
-
-	objWindowEnabled = false;
-	skyWindowEnabled = false;
-	entityUIIndex = -1;
 
 	this->renderer = renderer;
 }
@@ -645,15 +637,15 @@ void EditingUI::GenerateEditingUI() {
 
 				float particlesPerSecond = particleSystem->GetParticlesPerSecond();
 				ImGui::SliderFloat("Particles per Second ", &particlesPerSecond, 0.1f, 20.0f);
-				ImGui::SameLine();
-				ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
-				particleSystem->SetParticlesPerSecond(particlesPerSecond);
+				//ImGui::SameLine();
+				//ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
+				//particleSystem->SetParticlesPerSecond(particlesPerSecond);
 
 				float particlesLifetime = particleSystem->GetParticleLifetime();
 				ImGui::SliderFloat("Particles Lifetime ", &particlesLifetime, 0.1f, 20.0f);
-				ImGui::SameLine();
-				ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
-				particleSystem->SetParticleLifetime(particlesLifetime);
+				//ImGui::SameLine();
+				//ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
+				//particleSystem->SetParticleLifetime(particlesLifetime);
 
 				float speed = particleSystem->GetSpeed();
 				ImGui::SliderFloat("Particle Speed ", &speed, 0.1f, 5.0f);

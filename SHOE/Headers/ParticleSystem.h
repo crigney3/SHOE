@@ -109,6 +109,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> drawListSRV;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> inBuffer;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> argsBuffer;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> deadListCounterBuffer;
 	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleUAV;
 	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> deadListUAV;
 	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> sortListUAV;

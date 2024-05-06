@@ -127,7 +127,6 @@ void ParticleSystem::SetParticleComputeShader(std::shared_ptr<SimpleComputeShade
 	case 3:
 		this->particleDeadListInitComputeShader = computeShader;
 		// Run the dead list initializer
-		// Add +1 thread as a buffer for "hidden counter" bug
 		particleDeadListInitComputeShader->SetShader();
 		particleDeadListInitComputeShader->SetInt("maxParticles", this->maxParticles);
 		particleDeadListInitComputeShader->SetUnorderedAccessView("DeadList", this->deadListUAV);
@@ -168,7 +167,7 @@ void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixe
 
 void ParticleSystem::Start()
 {
-	this->maxParticles = 20;
+	this->maxParticles = 10;
 
 	this->particlesPerSecond = 1.0f;
 	this->particleLifetime = 3.0f;
@@ -236,6 +235,9 @@ void ParticleSystem::Update() {
 	particleSimComputeShader->DispatchByThreads(this->maxParticles, 1, 1);
 
 	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+
+	// Copy the dead list's count to the counter buffer
+	context->CopyStructureCount(deadListCounterBuffer.Get(), 0, deadListUAV.Get());
 }
 
 void ParticleSystem::OnDestroy()
@@ -245,7 +247,7 @@ void ParticleSystem::OnDestroy()
 	drawListSRV.Reset();
 
 	// Unbind all UAVs
-	// Don't reset the Computer Shader pointers,
+	// Don't reset the Compute Shader pointers,
 	// We still need those
 	ID3D11UnorderedAccessView* none[8] = {};
 	context->CSSetUnorderedAccessViews(0, 8, none, 0);
@@ -320,7 +322,7 @@ void ParticleSystem::Initialize(int maxParticles)
 {
 	// Deadlist for ParticleEmit and ParticleFlow
 
-	ID3D11Buffer* deadListBuffer;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> deadListBuffer;
 
 	this->maxParticles = maxParticles;
 
@@ -330,8 +332,8 @@ void ParticleSystem::Initialize(int maxParticles)
 	deadDesc.Usage = D3D11_USAGE_DEFAULT;
 	deadDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	deadDesc.StructureByteStride = sizeof(unsigned int);
-	deadDesc.ByteWidth = (sizeof(unsigned int) * this->maxParticles) + sizeof(unsigned int);
-	device->CreateBuffer(&deadDesc, 0, &deadListBuffer);
+	deadDesc.ByteWidth = (sizeof(unsigned int) * this->maxParticles);// +sizeof(unsigned int);
+	device->CreateBuffer(&deadDesc, 0, deadListBuffer.GetAddressOf());
 
 	D3D11_UNORDERED_ACCESS_VIEW_DESC deadUavDesc = {};
 	deadUavDesc.Format = DXGI_FORMAT_UNKNOWN;
@@ -339,9 +341,17 @@ void ParticleSystem::Initialize(int maxParticles)
 	deadUavDesc.Buffer.FirstElement = 0;
 	deadUavDesc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_APPEND;
 	deadUavDesc.Buffer.NumElements = this->maxParticles;
-	device->CreateUnorderedAccessView(deadListBuffer, &deadUavDesc, this->deadListUAV.GetAddressOf());
+	device->CreateUnorderedAccessView(deadListBuffer.Get(), &deadUavDesc, this->deadListUAV.GetAddressOf());
 
-	deadListBuffer->Release();
+	// Create a buffer that holds the dead list counter
+	D3D11_BUFFER_DESC deadCountDesc = {};
+	deadCountDesc.Usage = D3D11_USAGE_DEFAULT;
+	deadCountDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	deadCountDesc.ByteWidth = 16; // technically sizeof(unsigned int), but cbuffers must be multiples of 16
+	deadCountDesc.CPUAccessFlags = 0;
+	deadCountDesc.MiscFlags = 0;
+	deadCountDesc.StructureByteStride = 0;
+	device->CreateBuffer(&deadCountDesc, 0, deadListCounterBuffer.GetAddressOf());
 
 	// Create and bind CopyDrawCount's sortList
 	// sortList defines the memory indices of living
@@ -454,6 +464,9 @@ void ParticleSystem::Initialize(int maxParticles)
 	ibDesc.StructureByteStride = 0;
 	device->CreateBuffer(&ibDesc, &indexData, inBuffer.GetAddressOf());
 	delete[] indices;
+
+	// Copy the dead list's count to the counter buffer
+	context->CopyStructureCount(deadListCounterBuffer.Get(), 0, deadListUAV.Get());
 }
 
 void ParticleSystem::EmitParticle(int emitCount) {
@@ -461,6 +474,7 @@ void ParticleSystem::EmitParticle(int emitCount) {
 
 	particleEmitComputeShader->SetUnorderedAccessView("particles", this->drawListUAV);
 	particleEmitComputeShader->SetUnorderedAccessView("deadList", this->deadListUAV);
+	context->CSSetConstantBuffers(1, 1, deadListCounterBuffer.GetAddressOf());
 	//particleEmitComputeShader->SetUnorderedAccessView("sortList", this->sortListUAV);
 
 	particleEmitComputeShader->SetFloat3("startPos", this->GetTransform()->GetGlobalPosition());

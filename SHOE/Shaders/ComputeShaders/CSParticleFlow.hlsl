@@ -21,8 +21,6 @@ void main(uint3 threadID : SV_DispatchThreadID)
 	// Need threads between 0 and maxParticles + 1, exclusive
 	if (threadID.x >= (uint)maxParticles) return;
 
-	// uint threadIndexWithOffset = threadID.x - 1;
-
 	Particle p = particles.Load(threadID.x);
 
 	if (p.alive == 0.0f) {
