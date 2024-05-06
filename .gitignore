@@ -397,3 +397,7 @@ SHOE/imgui.ini
 # Shaders
 Assets/Shaders/*
 Assets/Scenes/*
+
+# Launcher folders
+LauncherAssets/*
+SHOELauncher/SHOEBuild/*
