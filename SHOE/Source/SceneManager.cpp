@@ -156,7 +156,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	// Skies
 	// Audio
 
-	// Fonts
+	// Fonts - Must load at least the default
 	currentLoadCategory = "Fonts";
 	const rapidjson::Value& fontBlock = sceneDoc[FONTS];
 	assert(fontBlock.IsArray());
@@ -170,181 +170,202 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	currentLoadCategory = "Texture Sampler States";
 	currentLoadName = "";
 	if(progressListener) progressListener();
-	const rapidjson::Value& sampleStateBlock = sceneDoc[TEXTURE_SAMPLE_STATES];
-	assert(sampleStateBlock.IsArray());
-	for (rapidjson::SizeType i = 0; i < sampleStateBlock.Size(); i++) {
-		Microsoft::WRL::ComPtr<ID3D11SamplerState> loadedSampler;
+	if (sceneDoc.HasMember(TEXTURE_SAMPLE_STATES)) {
+		const rapidjson::Value& sampleStateBlock = sceneDoc[TEXTURE_SAMPLE_STATES];
+		assert(sampleStateBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < sampleStateBlock.Size(); i++) {
+			Microsoft::WRL::ComPtr<ID3D11SamplerState> loadedSampler;
 
-		D3D11_SAMPLER_DESC loadDesc;
-		loadDesc.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_U)->value.GetInt());
-		loadDesc.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_V)->value.GetInt());
-		loadDesc.AddressW = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_W)->value.GetInt());
-		loadDesc.Filter = (D3D11_FILTER)(sampleStateBlock[i].FindMember(SAMPLER_FILTER)->value.GetInt());
-		loadDesc.MaxAnisotropy = sampleStateBlock[i].FindMember(SAMPLER_MAX_ANISOTROPY)->value.GetInt();
-		loadDesc.MinLOD = sampleStateBlock[i].FindMember(SAMPLER_MIN_LOD)->value.GetDouble();
-		loadDesc.MaxLOD = sampleStateBlock[i].FindMember(SAMPLER_MAX_LOD)->value.GetDouble();
-		loadDesc.MipLODBias = sampleStateBlock[i].FindMember(SAMPLER_MIP_LOD_BIAS)->value.GetDouble();
-		loadDesc.ComparisonFunc = (D3D11_COMPARISON_FUNC)(sampleStateBlock[i].FindMember(SAMPLER_COMPARISON_FUNCTION)->value.GetInt());
+			D3D11_SAMPLER_DESC loadDesc;
+			loadDesc.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_U)->value.GetInt());
+			loadDesc.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_V)->value.GetInt());
+			loadDesc.AddressW = (D3D11_TEXTURE_ADDRESS_MODE)(sampleStateBlock[i].FindMember(SAMPLER_ADDRESS_W)->value.GetInt());
+			loadDesc.Filter = (D3D11_FILTER)(sampleStateBlock[i].FindMember(SAMPLER_FILTER)->value.GetInt());
+			loadDesc.MaxAnisotropy = sampleStateBlock[i].FindMember(SAMPLER_MAX_ANISOTROPY)->value.GetInt();
+			loadDesc.MinLOD = sampleStateBlock[i].FindMember(SAMPLER_MIN_LOD)->value.GetDouble();
+			loadDesc.MaxLOD = sampleStateBlock[i].FindMember(SAMPLER_MAX_LOD)->value.GetDouble();
+			loadDesc.MipLODBias = sampleStateBlock[i].FindMember(SAMPLER_MIP_LOD_BIAS)->value.GetDouble();
+			loadDesc.ComparisonFunc = (D3D11_COMPARISON_FUNC)(sampleStateBlock[i].FindMember(SAMPLER_COMPARISON_FUNCTION)->value.GetInt());
 
-		const rapidjson::Value& borderColorBlock = sampleStateBlock[i].FindMember(SAMPLER_BORDER_COLOR)->value;
-		for (int j = 0; j < 4; j++) {
-			loadDesc.BorderColor[j] = borderColorBlock[j].GetDouble();
+			const rapidjson::Value& borderColorBlock = sampleStateBlock[i].FindMember(SAMPLER_BORDER_COLOR)->value;
+			for (int j = 0; j < 4; j++) {
+				loadDesc.BorderColor[j] = borderColorBlock[j].GetDouble();
+			}
+
+			assetManager.device->CreateSamplerState(&loadDesc, &loadedSampler);
+
+			assetManager.textureSampleStates.push_back(loadedSampler);
 		}
 
-		assetManager.device->CreateSamplerState(&loadDesc, &loadedSampler);
-
-		assetManager.textureSampleStates.push_back(loadedSampler);
+		assetManager.textureState = assetManager.textureSampleStates[0];
+		assetManager.clampState = assetManager.textureSampleStates[1];
 	}
-
-	assetManager.textureState = assetManager.textureSampleStates[0];
-	assetManager.clampState = assetManager.textureSampleStates[1];
 
 	// Pixel Shaders
 	currentLoadCategory = "Pixel Shaders";
-	const rapidjson::Value& pixelShaderBlock = sceneDoc[PIXEL_SHADERS];
-	assert(pixelShaderBlock.IsArray());
-	for (rapidjson::SizeType i = 0; i < pixelShaderBlock.Size(); i++) {
-		currentLoadName = pixelShaderBlock[i].FindMember(NAME)->value.GetString();
-		if(progressListener) progressListener();
-		assetManager.CreatePixelShader(currentLoadName, LoadDeserializedFileName(pixelShaderBlock[i], SHADER_FILE_PATH));
+	if (sceneDoc.HasMember(PIXEL_SHADERS)) {
+		const rapidjson::Value& pixelShaderBlock = sceneDoc[PIXEL_SHADERS];
+		assert(pixelShaderBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < pixelShaderBlock.Size(); i++) {
+			currentLoadName = pixelShaderBlock[i].FindMember(NAME)->value.GetString();
+			if (progressListener) progressListener();
+			assetManager.CreatePixelShader(currentLoadName, LoadDeserializedFileName(pixelShaderBlock[i], SHADER_FILE_PATH));
+		}
 	}
 
 	// Vertex Shaders
 	currentLoadCategory = "Vertex Shaders";
-	const rapidjson::Value& vertexShaderBlock = sceneDoc[VERTEX_SHADERS];
-	assert(vertexShaderBlock.IsArray());
-	for (rapidjson::SizeType i = 0; i < vertexShaderBlock.Size(); i++) {
-		currentLoadName = vertexShaderBlock[i].FindMember(NAME)->value.GetString();
-		if(progressListener) progressListener();
-		assetManager.CreateVertexShader(currentLoadName, LoadDeserializedFileName(vertexShaderBlock[i], SHADER_FILE_PATH));
+	if (sceneDoc.HasMember(VERTEX_SHADERS)) {
+		const rapidjson::Value& vertexShaderBlock = sceneDoc[VERTEX_SHADERS];
+		assert(vertexShaderBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < vertexShaderBlock.Size(); i++) {
+			currentLoadName = vertexShaderBlock[i].FindMember(NAME)->value.GetString();
+			if (progressListener) progressListener();
+			assetManager.CreateVertexShader(currentLoadName, LoadDeserializedFileName(vertexShaderBlock[i], SHADER_FILE_PATH));
+		}
 	}
 
 	// Compute Shaders
 	currentLoadCategory = "Compute Shaders";
-	const rapidjson::Value& computeShaderBlock = sceneDoc[COMPUTE_SHADERS];
-	assert(computeShaderBlock.IsArray());
-	for (rapidjson::SizeType i = 0; i < computeShaderBlock.Size(); i++) {
-		currentLoadName = computeShaderBlock[i].FindMember(NAME)->value.GetString();
-		if(progressListener) progressListener();
-		assetManager.CreateComputeShader(currentLoadName, LoadDeserializedFileName(computeShaderBlock[i], SHADER_FILE_PATH));
+	if (sceneDoc.HasMember(COMPUTE_SHADERS)) {
+		const rapidjson::Value& computeShaderBlock = sceneDoc[COMPUTE_SHADERS];
+		assert(computeShaderBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < computeShaderBlock.Size(); i++) {
+			currentLoadName = computeShaderBlock[i].FindMember(NAME)->value.GetString();
+			if (progressListener) progressListener();
+			assetManager.CreateComputeShader(currentLoadName, LoadDeserializedFileName(computeShaderBlock[i], SHADER_FILE_PATH));
+		}
 	}
 
 	currentLoadCategory = "Textures";
-	const rapidjson::Value& textureBlock = sceneDoc[TEXTURES];
-	assert(textureBlock.IsArray());
-	for (rapidjson::SizeType i = 0; i < textureBlock.Size(); i++) {
-		currentLoadName = textureBlock[i].FindMember(NAME)->value.GetString();
-		if (progressListener) progressListener();
+	if (sceneDoc.HasMember(TEXTURES)) {
+		const rapidjson::Value& textureBlock = sceneDoc[TEXTURES];
+		assert(textureBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < textureBlock.Size(); i++) {
+			currentLoadName = textureBlock[i].FindMember(NAME)->value.GetString();
+			if (progressListener) progressListener();
 
-		// Textures require a check to determine which valid texture folder
-		// they're in.
-		AssetPathIndex assetPath;
-		assetPath = (AssetPathIndex)(textureBlock[i].FindMember(TEXTURE_ASSET_PATH_INDEX)->value.GetInt());
-		assetManager.CreateTexture(LoadDeserializedFileName(textureBlock[i], FILENAME_KEY), currentLoadName, assetPath);
+			// Textures require a check to determine which valid texture folder
+			// they're in.
+			AssetPathIndex assetPath;
+			assetPath = (AssetPathIndex)(textureBlock[i].FindMember(TEXTURE_ASSET_PATH_INDEX)->value.GetInt());
+			assetManager.CreateTexture(LoadDeserializedFileName(textureBlock[i], FILENAME_KEY), currentLoadName, assetPath);
+		}
 	}
 
+
 	currentLoadCategory = "Materials";
-	const rapidjson::Value& materialBlock = sceneDoc[MATERIALS];
-	assert(materialBlock.IsArray());
-	for (rapidjson::SizeType i = 0; i < materialBlock.Size(); i++) {
-		currentLoadName = LoadDeserializedFileName(materialBlock[i], NAME);
-		if(progressListener) progressListener();
+	if (sceneDoc.HasMember(MATERIALS)) {
+		const rapidjson::Value& materialBlock = sceneDoc[MATERIALS];
+		assert(materialBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < materialBlock.Size(); i++) {
+			currentLoadName = LoadDeserializedFileName(materialBlock[i], NAME);
+			if (progressListener) progressListener();
 
-		if (assetManager.dxInstance->IsDirectX12()) {
+			if (assetManager.dxInstance->IsDirectX12()) {
 
-		}
-		else {
-			std::shared_ptr<Material> tempMat = assetManager.CreatePBRMaterial(
-				currentLoadName,
-				LoadDeserializedFileName(materialBlock[i], MAT_TEXTURE_OR_ALBEDO_MAP),
-				LoadDeserializedFileName(materialBlock[i], MAT_NORMAL_MAP),
-				LoadDeserializedFileName(materialBlock[i], MAT_METAL_MAP),
-				LoadDeserializedFileName(materialBlock[i], MAT_ROUGHNESS_MAP));
-			DX11Material* newMaterial = dynamic_cast<DX11Material*>(tempMat.get());
-
-			newMaterial->SetTransparent(materialBlock[i].FindMember(MAT_IS_TRANSPARENT)->value.GetBool());
-
-			newMaterial->SetRefractive(materialBlock[i].FindMember(MAT_IS_REFRACTIVE)->value.GetBool());
-
-			newMaterial->SetTiling(materialBlock[i].FindMember(MAT_UV_TILING)->value.GetDouble());
-
-			newMaterial->SetIndexOfRefraction(materialBlock[i].FindMember(MAT_INDEX_OF_REFRACTION)->value.GetDouble());
-
-			newMaterial->SetRefractionScale(materialBlock[i].FindMember(MAT_REFRACTION_SCALE)->value.GetDouble());
-
-			newMaterial->SetSamplerState(assetManager.textureSampleStates[materialBlock[i].FindMember(MAT_TEXTURE_SAMPLER_STATE)->value.GetInt()]);
-
-			newMaterial->SetClampSamplerState(assetManager.textureSampleStates[materialBlock[i].FindMember(MAT_CLAMP_SAMPLER_STATE)->value.GetInt()]);
-
-			newMaterial->SetVertexShader(assetManager.GetVertexShaderAtID(materialBlock[i].FindMember(MAT_VERTEX_SHADER)->value.GetInt()));
-
-			newMaterial->SetPixelShader(assetManager.GetPixelShaderAtID(materialBlock[i].FindMember(MAT_PIXEL_SHADER)->value.GetInt()));
-
-			if (newMaterial->GetRefractive() || newMaterial->GetTransparent()) {
-				int index = materialBlock[i].FindMember(MAT_REFRACTION_PIXEL_SHADER)->value.GetInt();
-				newMaterial->SetRefractivePixelShader(assetManager.GetPixelShaderAtID(index));
 			}
+			else {
+				std::shared_ptr<Material> tempMat = assetManager.CreatePBRMaterial(
+					currentLoadName,
+					LoadDeserializedFileName(materialBlock[i], MAT_TEXTURE_OR_ALBEDO_MAP),
+					LoadDeserializedFileName(materialBlock[i], MAT_NORMAL_MAP),
+					LoadDeserializedFileName(materialBlock[i], MAT_METAL_MAP),
+					LoadDeserializedFileName(materialBlock[i], MAT_ROUGHNESS_MAP));
+				DX11Material* newMaterial = dynamic_cast<DX11Material*>(tempMat.get());
 
-			newMaterial->SetTint(LoadFloat4(materialBlock[i], MAT_COLOR_TINT));
+				newMaterial->SetTransparent(materialBlock[i].FindMember(MAT_IS_TRANSPARENT)->value.GetBool());
+
+				newMaterial->SetRefractive(materialBlock[i].FindMember(MAT_IS_REFRACTIVE)->value.GetBool());
+
+				newMaterial->SetTiling(materialBlock[i].FindMember(MAT_UV_TILING)->value.GetDouble());
+
+				newMaterial->SetIndexOfRefraction(materialBlock[i].FindMember(MAT_INDEX_OF_REFRACTION)->value.GetDouble());
+
+				newMaterial->SetRefractionScale(materialBlock[i].FindMember(MAT_REFRACTION_SCALE)->value.GetDouble());
+
+				newMaterial->SetSamplerState(assetManager.textureSampleStates[materialBlock[i].FindMember(MAT_TEXTURE_SAMPLER_STATE)->value.GetInt()]);
+
+				newMaterial->SetClampSamplerState(assetManager.textureSampleStates[materialBlock[i].FindMember(MAT_CLAMP_SAMPLER_STATE)->value.GetInt()]);
+
+				newMaterial->SetVertexShader(assetManager.GetVertexShaderAtID(materialBlock[i].FindMember(MAT_VERTEX_SHADER)->value.GetInt()));
+
+				newMaterial->SetPixelShader(assetManager.GetPixelShaderAtID(materialBlock[i].FindMember(MAT_PIXEL_SHADER)->value.GetInt()));
+
+				if (newMaterial->GetRefractive() || newMaterial->GetTransparent()) {
+					int index = materialBlock[i].FindMember(MAT_REFRACTION_PIXEL_SHADER)->value.GetInt();
+					newMaterial->SetRefractivePixelShader(assetManager.GetPixelShaderAtID(index));
+				}
+
+				newMaterial->SetTint(LoadFloat4(materialBlock[i], MAT_COLOR_TINT));
+			}
 		}
 	}
 
 	currentLoadCategory = "Meshes";
-	const rapidjson::Value& meshBlock = sceneDoc[MESHES];
-	for (rapidjson::SizeType i = 0; i < meshBlock.Size(); i++) {
-		currentLoadName = meshBlock[i].FindMember(NAME)->value.GetString();
-		if(progressListener) progressListener();
+	if (sceneDoc.HasMember(MESHES)) {
+		const rapidjson::Value& meshBlock = sceneDoc[MESHES];
+		for (rapidjson::SizeType i = 0; i < meshBlock.Size(); i++) {
+			currentLoadName = meshBlock[i].FindMember(NAME)->value.GetString();
+			if (progressListener) progressListener();
 
-		std::shared_ptr<Mesh> newMesh = assetManager.CreateMesh(currentLoadName, LoadDeserializedFileName(meshBlock[i], FILENAME_KEY));
-		newMesh->SetDepthPrePass(meshBlock[i].FindMember(MESH_NEEDS_DEPTH_PREPASS)->value.GetBool());
-		newMesh->SetMaterialIndex(meshBlock[i].FindMember(MESH_MATERIAL_INDEX)->value.GetInt());
+			std::shared_ptr<Mesh> newMesh = assetManager.CreateMesh(currentLoadName, LoadDeserializedFileName(meshBlock[i], FILENAME_KEY));
+			newMesh->SetDepthPrePass(meshBlock[i].FindMember(MESH_NEEDS_DEPTH_PREPASS)->value.GetBool());
+			newMesh->SetMaterialIndex(meshBlock[i].FindMember(MESH_MATERIAL_INDEX)->value.GetInt());
 
-		// This is currently generated automatically. Would need to change
-		// if storing meshes built through code arrays becomes supported.
-		// newMesh->SetIndexCount(meshBlock[i].FindMember(MESH_INDEX_COUNT)->value.GetInt());
+			// This is currently generated automatically. Would need to change
+			// if storing meshes built through code arrays becomes supported.
+			// newMesh->SetIndexCount(meshBlock[i].FindMember(MESH_INDEX_COUNT)->value.GetInt());
+		}
 	}
 
 	currentLoadCategory = "Terrain Materials";
-	const rapidjson::Value& terrainMaterialBlock = sceneDoc[TERRAIN_MATERIALS];
-	assert(terrainMaterialBlock.IsArray());
-	for (rapidjson::SizeType i = 0; i < terrainMaterialBlock.Size(); i++) {
-		const rapidjson::Value& tMatInternalBlock = terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_MATERIAL_ARRAY)->value;
-		currentLoadName = terrainMaterialBlock[i].FindMember(NAME)->value.GetString();
-		if(progressListener) progressListener();
+	if (sceneDoc.HasMember(TERRAIN_MATERIALS)) {
+		const rapidjson::Value& terrainMaterialBlock = sceneDoc[TERRAIN_MATERIALS];
+		assert(terrainMaterialBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < terrainMaterialBlock.Size(); i++) {
+			const rapidjson::Value& tMatInternalBlock = terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_MATERIAL_ARRAY)->value;
+			currentLoadName = terrainMaterialBlock[i].FindMember(NAME)->value.GetString();
+			if (progressListener) progressListener();
 
-		std::vector<std::shared_ptr<Material>> internalMaterials;
-		for (rapidjson::SizeType j = 0; j < tMatInternalBlock.Size(); j++) {
-			// Material texture strings are being incorrectly serialized/loaded
-			internalMaterials.push_back(assetManager.GetMaterialAtID(tMatInternalBlock[j].GetInt()));
-		}
+			std::vector<std::shared_ptr<Material>> internalMaterials;
+			for (rapidjson::SizeType j = 0; j < tMatInternalBlock.Size(); j++) {
+				// Material texture strings are being incorrectly serialized/loaded
+				internalMaterials.push_back(assetManager.GetMaterialAtID(tMatInternalBlock[j].GetInt()));
+			}
 
-		if (terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_BLEND_MAP_ENABLED)->value.GetBool()) {
-			std::shared_ptr<TerrainMaterial> newTMat = assetManager.CreateTerrainMaterial(currentLoadName, internalMaterials, LoadDeserializedFileName(terrainMaterialBlock[i], TERRAIN_MATERIAL_BLEND_MAP_PATH));
-		}
-		else {
-			std::shared_ptr<TerrainMaterial> newTMat = assetManager.CreateTerrainMaterial(currentLoadName, internalMaterials);
+			if (terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_BLEND_MAP_ENABLED)->value.GetBool()) {
+				std::shared_ptr<TerrainMaterial> newTMat = assetManager.CreateTerrainMaterial(currentLoadName, internalMaterials, LoadDeserializedFileName(terrainMaterialBlock[i], TERRAIN_MATERIAL_BLEND_MAP_PATH));
+			}
+			else {
+				std::shared_ptr<TerrainMaterial> newTMat = assetManager.CreateTerrainMaterial(currentLoadName, internalMaterials);
+			}
 		}
 	}
 
 	currentLoadCategory = "Skies";
-	const rapidjson::Value& skyBlock = sceneDoc[SKIES];
-	assert(skyBlock.IsArray());
-	for (rapidjson::SizeType i = 0; i < skyBlock.Size(); i++) {
-		currentLoadName = skyBlock[i].FindMember(NAME)->value.GetString();
-		if(progressListener) progressListener();
-		bool keyType = skyBlock[i].FindMember(SKY_FILENAME_KEY_TYPE)->value.GetBool();
-		std::string fileExt = keyType ? skyBlock[i].FindMember(SKY_FILENAME_EXTENSION)->value.GetString() : ".png";
-		assetManager.CreateSky(LoadDeserializedFileName(skyBlock[i], FILENAME_KEY), keyType, currentLoadName, fileExt);
+	if (sceneDoc.HasMember(SKIES)) {
+		const rapidjson::Value& skyBlock = sceneDoc[SKIES];
+		assert(skyBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < skyBlock.Size(); i++) {
+			currentLoadName = skyBlock[i].FindMember(NAME)->value.GetString();
+			if (progressListener) progressListener();
+			bool keyType = skyBlock[i].FindMember(SKY_FILENAME_KEY_TYPE)->value.GetBool();
+			std::string fileExt = keyType ? skyBlock[i].FindMember(SKY_FILENAME_EXTENSION)->value.GetString() : ".png";
+			assetManager.CreateSky(LoadDeserializedFileName(skyBlock[i], FILENAME_KEY), keyType, currentLoadName, fileExt);
+		}
 	}
 
 	currentLoadCategory = "Sounds";
-	const rapidjson::Value& soundBlock = sceneDoc[SOUNDS];
-	assert(soundBlock.IsArray());
-	for (rapidjson::SizeType i = 0; i < soundBlock.Size(); i++) {
-		currentLoadName = soundBlock[i].FindMember(NAME)->value.GetString();
-		if(progressListener) progressListener();
-		int mode = soundBlock[i].FindMember(SOUND_FMOD_MODE)->value.GetInt();
-		FMOD::Sound* newSound = assetManager.CreateSound(LoadDeserializedFileName(soundBlock[i], FILENAME_KEY), mode, currentLoadName);
+	if (sceneDoc.HasMember(SOUNDS)) {
+		const rapidjson::Value& soundBlock = sceneDoc[SOUNDS];
+		assert(soundBlock.IsArray());
+		for (rapidjson::SizeType i = 0; i < soundBlock.Size(); i++) {
+			currentLoadName = soundBlock[i].FindMember(NAME)->value.GetString();
+			if (progressListener) progressListener();
+			int mode = soundBlock[i].FindMember(SOUND_FMOD_MODE)->value.GetInt();
+			FMOD::Sound* newSound = assetManager.CreateSound(LoadDeserializedFileName(soundBlock[i], FILENAME_KEY), mode, currentLoadName);
+		}
 	}
 }
 

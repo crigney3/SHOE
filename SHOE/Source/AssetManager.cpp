@@ -812,9 +812,11 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitterOnEntity(std:
 	bool isMultiParticle) {
 
 	std::shared_ptr<ParticleSystem> newEmitter = entityToEdit->AddComponent<ParticleSystem>();
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> loadedTexture;
 
 	newEmitter->SetIsMultiParticle(isMultiParticle);
-	newEmitter->SetParticleTextureSRV(LoadParticleTexture(textureNameToLoad, isMultiParticle));
+	loadedTexture = LoadParticleTexture(textureNameToLoad, isMultiParticle);
+	newEmitter->SetParticleTextureSRV(loadedTexture);
 
 	std::string asset = GetFullPathToAssetFile(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
 
@@ -1949,6 +1951,7 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::CreateCubemap(
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTexture(std::string textureNameToLoad, bool isMultiParticle)
 {
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;
+	HRESULT hr;
 
 	if (isMultiParticle) {
 		// Load all particle textures in a specific subfolder
@@ -1961,7 +1964,13 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 			std::wstring path = L"";
 			ISimpleShader::ConvertToWide(p.path().string().c_str(), path);
 
-			CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), (ID3D11Resource**)textures[i].GetAddressOf(), nullptr);
+			hr = CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), (ID3D11Resource**)textures[i].GetAddressOf(), nullptr);
+
+			// on failure, return
+			// This will leave the particle's textures blank
+			if (hr != 0) {
+				return NULL;
+			}
 
 			i++;
 		}
