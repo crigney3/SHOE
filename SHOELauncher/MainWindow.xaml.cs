@@ -17,9 +17,11 @@ enum LauncherState
 {
     Initializing,
     UpdatingLauncher,
+    FirstSHOEInstall,
     UpdatingSHOE,
     Running,
-    LaunchingProject
+    LaunchingProject,
+    Failed
 }
 
 namespace SHOELauncher
@@ -33,14 +35,18 @@ namespace SHOELauncher
         private string versionFilePath;
         private string SHOEExecPath;
         private string selectedProjectPath;
+        private string SHOEOnlineZipPath;
+        private string SHOELocalZipPath;
+        private string SHOELocalZipName;
+        private string SHOEBuildPath;
 
-        private LauncherState launcherState;
-        internal LauncherState LauncherState
+        private LauncherState launcherStatus;
+        internal LauncherState LauncherStatus
         {
-            get => launcherState;
+            get => launcherStatus;
             set
             {
-                launcherState = value;
+                launcherStatus = value;
                 // Add switch here to update UI elements when launcher state changes
                 // not important for now
             }
@@ -55,14 +61,92 @@ namespace SHOELauncher
             SHOEExecPath = Path.Combine(launcherPath, "SHOE.exe");
         }
 
+        private void CheckForUpdates()
+        {
+            if (File.Exists(versionFilePath))
+            {
+                SHOEVersion localVersion = new SHOEVersion(File.ReadAllText(versionFilePath));
+                EngineVersionText.Text = localVersion.ToString();
+
+                try
+                {
+                    WebClient webClient = new WebClient();
+                    SHOEVersion onlineVersion = new SHOEVersion(webClient.DownloadString("Version File"));
+
+                    if (onlineVersion.HasVersionChanged(localVersion))
+                    {
+                        // Offer option to update to new version of SHOE
+                    } else
+                    {
+                        launcherStatus = LauncherState.Running;
+                    }
+                } catch (Exception ex)
+                {
+                    launcherStatus = LauncherState.Failed;
+                    MessageBox.Show($"Error checking for SHOE Updates: {ex}");
+                }
+            } else
+            {
+                // SHOE isn't installed at all. Install it
+                InstallSHOEFiles(false, SHOEVersion.zero);
+            }
+        }
+
+        private void InstallSHOEFiles(bool _isUpdate, SHOEVersion _onlineVersion)
+        {
+            try
+            {
+                WebClient webClient = new WebClient();
+                if (_isUpdate)
+                {
+                    launcherStatus = LauncherState.UpdatingSHOE;
+                }
+                else
+                {
+                    launcherStatus = LauncherState.FirstSHOEInstall;
+                    _onlineVersion = new SHOEVersion(webClient.DownloadString("Version File Link"));
+                }
+
+                webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(DownloadSHOECompletedCallback);
+                webClient.DownloadFileAsync(new Uri("SHOE main link"), SHOEOnlineZipPath, _onlineVersion);
+            }
+            catch (Exception ex)
+            {
+                launcherStatus = LauncherState.Failed;
+                MessageBox.Show($"Error installing SHOE files: {ex}");
+            }
+        }
+
+        private void DownloadSHOECompletedCallback(object sender, AsyncCompletedEventArgs e)
+        {
+            try
+            {
+                string onlineVersion = ((SHOEVersion)e.UserState).ToString();
+                ZipFile.ExtractToDirectory(SHOELocalZipName, SHOEBuildPath, true);
+                File.Delete(SHOELocalZipName);
+
+                File.WriteAllText(versionFilePath, onlineVersion);
+
+                EngineVersionText.Text = onlineVersion;
+                launcherStatus = LauncherState.Running;
+            } catch (Exception ex)
+            {
+                launcherStatus = LauncherState.Failed;
+                MessageBox.Show($"Error finishing SHOE download: {ex}");
+            }
+        }
+
         private void Launcher_ContentRendered(object sender, EventArgs e)
         {
-
+            CheckForUpdates();
         }
 
         private void LaunchSHOEButton_Click(object sender, RoutedEventArgs e)
         {
+            if (File.Exists(SHOEExecPath) && launcherStatus == LauncherState.Running)
+            {
 
+            }
         }
     }
 
