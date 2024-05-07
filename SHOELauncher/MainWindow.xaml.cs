@@ -220,6 +220,7 @@ namespace SHOELauncher
                 File.WriteAllText(versionFilePath, _onlineVersion.ToString());
 
                 EngineVersionText.Text = _onlineVersion.ToString();
+                SHOEExecPath = Path.Combine(SHOEBuildPath, selectedAppRing.Title) + "\\SHOE.exe";
                 launcherStatus = LauncherState.Running;
             } catch (Exception ex)
             {
