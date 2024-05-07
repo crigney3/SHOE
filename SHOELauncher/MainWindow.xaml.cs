@@ -93,7 +93,7 @@ namespace SHOELauncher
             launcherPath = Directory.GetCurrentDirectory();
             versionFilePath = Path.Combine(launcherPath, "version.txt");
             projectsFilePath = Path.Combine(launcherPath, "projects.txt");
-            SHOEExecPath = Path.Combine(launcherPath, "SHOE.exe");
+            SHOEExecPath = "";
             selectedProjectPath = "";
             SHOELocalZipName = "SHOE.zip";
             SHOEOnlineZipPath = "";
@@ -105,7 +105,13 @@ namespace SHOELauncher
             appRings.Add(new AppRing() { Title = "Experimental", LocalPath = "", OnlinePath = "http://dionysus.headass.house:3000/Experimental/" });
             RingChoiceListBox.ItemsSource = appRings;
             selectedAppRing = appRings[0];
-            
+
+            if (File.Exists("EngineInstallLocation.txt"))
+            {
+                SHOEBuildPath = File.ReadAllText("EngineInstallLocation.txt");
+                SHOEExecPath = Path.Combine(SHOEBuildPath, selectedAppRing.Title) + "\\SHOE.exe";
+            }
+
             LoadProjects();
             ProjectsListView.ItemsSource = projects;
         }
@@ -119,7 +125,6 @@ namespace SHOELauncher
                 string[] allProjStrings = File.ReadAllLines(projectsFilePath);
                 foreach (string projString in allProjStrings)
                 {
-                    Console.WriteLine(projString);
                     string[] projData = projString.Split(',');
                     projects.Add(new SHOEProject(projData[0], projData[1], (DXVersion)int.Parse(projData[2])));
                 }
@@ -149,6 +154,7 @@ namespace SHOELauncher
                     } else
                     {
                         launcherStatus = LauncherState.Running;
+                        UpdateButton.Content = "No updates on " + selectedAppRing.Title;
                     }
                 } catch (Exception ex)
                 {
@@ -199,15 +205,16 @@ namespace SHOELauncher
         {
             try
             {
-                if(!Directory.Exists(selectedAppRing.Title))
+                string ringFilePath = SHOEBuildPath + "\\" + selectedAppRing.Title;
+                if (!Directory.Exists(ringFilePath))
                 {
-                    Directory.CreateDirectory(selectedAppRing.Title);
+                    Directory.CreateDirectory(ringFilePath);
                 } else
                 {
-                    Directory.Delete(selectedAppRing.Title, true);
-                    Directory.CreateDirectory(selectedAppRing.Title);
+                    Directory.Delete(ringFilePath, true);
+                    Directory.CreateDirectory(ringFilePath);
                 }
-                ZipFile.ExtractToDirectory(SHOEBuildPath + "\\SHOE.zip", SHOEBuildPath + "\\" + selectedAppRing.Title, true);
+                ZipFile.ExtractToDirectory(SHOEBuildPath + "\\SHOE.zip", ringFilePath, true);
                 File.Delete(SHOEBuildPath + "\\SHOE.zip");
 
                 File.WriteAllText(versionFilePath, _onlineVersion.ToString());
@@ -228,7 +235,7 @@ namespace SHOELauncher
 
         private void LaunchSHOEButton_Click(object sender, RoutedEventArgs e)
         {
-            if (File.Exists(SHOEExecPath) && launcherStatus == LauncherState.Running)
+            if (File.Exists(SHOEExecPath))
             {
                 ProcessStartInfo startInfo = new ProcessStartInfo(SHOEExecPath);
                 startInfo.WorkingDirectory = SHOEBuildPath;
@@ -274,6 +281,8 @@ namespace SHOELauncher
                 var folderName = folderDialog.FolderName;
                 SHOEBuildPath = folderName;
             }
+
+            File.WriteAllText("EngineInstallLocation.txt", SHOEBuildPath);
         }
     }
 
