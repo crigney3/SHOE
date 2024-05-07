@@ -12,6 +12,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
+using Microsoft.Win32;
+using System.Net.Http;
 
 enum LauncherState
 {
@@ -35,10 +37,10 @@ namespace SHOELauncher
         private string versionFilePath;
         private string SHOEExecPath;
         private string selectedProjectPath;
-        private string SHOEOnlineZipPath;
-        private string SHOELocalZipPath;
         private string SHOELocalZipName;
         private string SHOEBuildPath;
+        private string SHOEOnlineZipPath;
+        private string projectsFilePath;
 
         private LauncherState launcherStatus;
         internal LauncherState LauncherStatus
@@ -47,10 +49,42 @@ namespace SHOELauncher
             set
             {
                 launcherStatus = value;
-                // Add switch here to update UI elements when launcher state changes
-                // not important for now
+                switch(launcherStatus)
+                {
+                    case LauncherState.Initializing:
+                        UpdateButton.Content = "Starting up";
+                        break;
+                    case LauncherState.Running:
+                        UpdateButton.Content = "Check for Updates";
+                        break;
+                    case LauncherState.Failed:
+                        UpdateButton.Content = "Update failed!";
+                        break;
+                    case LauncherState.FirstSHOEInstall:
+                        UpdateButton.Content = "Installing SHOE";
+                        break;
+                    case LauncherState.UpdatingSHOE:
+                        UpdateButton.Content = "Updating SHOE";
+                        break;
+                    default:
+                        break;
+                }
             }
         }
+
+        private SHOEProject selectedProject;
+        internal SHOEProject SelectedProject
+        {
+            get => selectedProject;
+            set
+            {
+                // Maybe need to add other triggers here
+                selectedProject = value;
+            }
+        }
+
+        private List<SHOEProject> projects;
+        private AppRing selectedAppRing;
 
         public MainWindow()
         {
@@ -58,11 +92,46 @@ namespace SHOELauncher
 
             launcherPath = Directory.GetCurrentDirectory();
             versionFilePath = Path.Combine(launcherPath, "version.txt");
+            projectsFilePath = Path.Combine(launcherPath, "projects.txt");
             SHOEExecPath = Path.Combine(launcherPath, "SHOE.exe");
+            selectedProjectPath = "";
+            SHOELocalZipName = "SHOE.zip";
+            SHOEOnlineZipPath = "";
+            SHOEBuildPath = "";
+
+            List<AppRing> appRings = new List<AppRing>();
+            appRings.Add(new AppRing() { Title = "Stable", LocalPath = "", OnlinePath = "http://dionysus.headass.house:3000/Stable/" });
+            appRings.Add(new AppRing() { Title = "Canary", LocalPath = "", OnlinePath = "http://dionysus.headass.house:3000/Canary/" });
+            appRings.Add(new AppRing() { Title = "Experimental", LocalPath = "", OnlinePath = "http://dionysus.headass.house:3000/Experimental/" });
+            RingChoiceListBox.ItemsSource = appRings;
+            selectedAppRing = appRings[0];
+            
+            LoadProjects();
+            ProjectsListView.ItemsSource = projects;
+        }
+
+        private void LoadProjects()
+        {
+            projects = new List<SHOEProject>();
+            // If no projects exist, then the listview should just have the "new project" button
+            if(File.Exists(projectsFilePath))
+            {
+                string[] allProjStrings = File.ReadAllLines(projectsFilePath);
+                foreach (string projString in allProjStrings)
+                {
+                    Console.WriteLine(projString);
+                    string[] projData = projString.Split(',');
+                    projects.Add(new SHOEProject(projData[0], projData[1], (DXVersion)int.Parse(projData[2])));
+                }
+            }
         }
 
         private void CheckForUpdates()
         {
+            if(SHOEBuildPath == "")
+            {
+                UpdateButton.Content = "Please Select a Directory First";
+            }
             if (File.Exists(versionFilePath))
             {
                 SHOEVersion localVersion = new SHOEVersion(File.ReadAllText(versionFilePath));
@@ -71,11 +140,12 @@ namespace SHOELauncher
                 try
                 {
                     WebClient webClient = new WebClient();
-                    SHOEVersion onlineVersion = new SHOEVersion(webClient.DownloadString("Version File"));
+                    string versionString = selectedAppRing.OnlinePath + "version.txt";
+                    SHOEVersion onlineVersion = new SHOEVersion(webClient.DownloadString(versionString));
 
                     if (onlineVersion.HasVersionChanged(localVersion))
                     {
-                        // Offer option to update to new version of SHOE
+                        InstallSHOEFiles(true, SHOEVersion.zero);
                     } else
                     {
                         launcherStatus = LauncherState.Running;
@@ -97,6 +167,10 @@ namespace SHOELauncher
             try
             {
                 WebClient webClient = new WebClient();
+                HttpClient httpClient = new HttpClient();
+
+                string versionString = selectedAppRing.OnlinePath + "version.txt";
+
                 if (_isUpdate)
                 {
                     launcherStatus = LauncherState.UpdatingSHOE;
@@ -104,11 +178,15 @@ namespace SHOELauncher
                 else
                 {
                     launcherStatus = LauncherState.FirstSHOEInstall;
-                    _onlineVersion = new SHOEVersion(webClient.DownloadString("Version File Link"));
                 }
 
-                webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(DownloadSHOECompletedCallback);
-                webClient.DownloadFileAsync(new Uri("SHOE main link"), SHOEOnlineZipPath, _onlineVersion);
+                _onlineVersion = new SHOEVersion(webClient.DownloadString(versionString));
+
+                Uri engineString = new Uri(selectedAppRing.OnlinePath + "SHOE.zip");
+                //webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(DownloadSHOECompletedCallback);
+                var fileBytes = httpClient.GetByteArrayAsync(engineString);
+                File.WriteAllBytes(SHOEBuildPath + "\\SHOE.zip", fileBytes.Result);
+                DownloadSHOECompletedCallback(_onlineVersion);
             }
             catch (Exception ex)
             {
@@ -117,17 +195,24 @@ namespace SHOELauncher
             }
         }
 
-        private void DownloadSHOECompletedCallback(object sender, AsyncCompletedEventArgs e)
+        private void DownloadSHOECompletedCallback(SHOEVersion _onlineVersion)
         {
             try
             {
-                string onlineVersion = ((SHOEVersion)e.UserState).ToString();
-                ZipFile.ExtractToDirectory(SHOELocalZipName, SHOEBuildPath, true);
-                File.Delete(SHOELocalZipName);
+                if(!Directory.Exists(selectedAppRing.Title))
+                {
+                    Directory.CreateDirectory(selectedAppRing.Title);
+                } else
+                {
+                    Directory.Delete(selectedAppRing.Title, true);
+                    Directory.CreateDirectory(selectedAppRing.Title);
+                }
+                ZipFile.ExtractToDirectory(SHOEBuildPath + "\\SHOE.zip", SHOEBuildPath + "\\" + selectedAppRing.Title, true);
+                File.Delete(SHOEBuildPath + "\\SHOE.zip");
 
-                File.WriteAllText(versionFilePath, onlineVersion);
+                File.WriteAllText(versionFilePath, _onlineVersion.ToString());
 
-                EngineVersionText.Text = onlineVersion;
+                EngineVersionText.Text = _onlineVersion.ToString();
                 launcherStatus = LauncherState.Running;
             } catch (Exception ex)
             {
@@ -138,14 +223,56 @@ namespace SHOELauncher
 
         private void Launcher_ContentRendered(object sender, EventArgs e)
         {
-            CheckForUpdates();
+
         }
 
         private void LaunchSHOEButton_Click(object sender, RoutedEventArgs e)
         {
             if (File.Exists(SHOEExecPath) && launcherStatus == LauncherState.Running)
             {
+                ProcessStartInfo startInfo = new ProcessStartInfo(SHOEExecPath);
+                startInfo.WorkingDirectory = SHOEBuildPath;
+                startInfo.Arguments = $"/DXVersion:{selectedProject.DirectXVersion} /ProjectPath:{selectedProject.ProjectPath}";
+                Process.Start(startInfo);
 
+                Close();
+            }
+        }
+
+        private void RingChoiceListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if(RingChoiceListBox.SelectedItem != null)
+            {
+                this.SHOEOnlineZipPath = (RingChoiceListBox.SelectedItem as AppRing).OnlinePath;
+            }
+        }
+        
+        private void ProjectsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if(ProjectsListView.SelectedItem != null)
+            {
+                this.selectedProject = ProjectsListView.SelectedItem as SHOEProject;
+                LaunchSHOEButton.Content = "Launch " + this.selectedProject.ProjectName;
+            }
+        }
+
+        private void UpdateButton_Click(object sender, RoutedEventArgs e)
+        {
+            CheckForUpdates();
+        }
+
+        private void SelectInstallDirectory_Click(object sender, RoutedEventArgs e)
+        {
+            var folderDialog = new OpenFolderDialog
+            {
+                Title = "Select Folder For Install",
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+            };
+
+            if (folderDialog.ShowDialog() == true)
+            {
+                var folderName = folderDialog.FolderName;
+                SHOEBuildPath = folderName;
             }
         }
     }
@@ -201,4 +328,58 @@ namespace SHOELauncher
             return $"{major}.{minor}.{subMinor}";
         }
     }
+
+    public enum DXVersion
+    {
+        DX11,
+        DX12
+    }
+
+    public class SHOEProject
+    {
+        private string projectName;
+        private string projectPath;
+        private DXVersion dxVersion;
+
+        public string ProjectName
+        {
+            get => projectName;
+            set => projectName = value;
+        }
+
+        public string ProjectPath
+        {
+            get => projectPath;
+            set
+            {
+                // Make any other adjustments that changing the project path needs here
+                projectPath = value;
+            }
+        }
+
+        public DXVersion DirectXVersion
+        {
+            get => dxVersion;
+            set
+            {
+                dxVersion = value;
+            }
+        }
+
+        internal SHOEProject(string _projectName, string _projectPath, DXVersion _dxVersion = DXVersion.DX11)
+        {
+            projectName = _projectName;
+            projectPath = _projectPath;
+            dxVersion = _dxVersion;
+        }
+    }
+
+    public class AppRing
+    {
+        public string Title { get; set; }
+        public string OnlinePath { get; set; }
+        public string LocalPath { get; set; }
+
+    }
 }
+

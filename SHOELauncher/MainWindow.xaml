@@ -7,10 +7,30 @@
         mc:Ignorable="d"
         WindowStartupLocation="CenterScreen"
         ContentRendered="Launcher_ContentRendered"
-        Title="MainWindow" Height="1280" Width="720">
-    <Grid>
-        <Image Stretch="UniformToFill" Source="LauncherAssets/SHOELogo.png" HorizontalAlignment="Right"/>
-        <TextBlock Name="EngineVersionText" VerticalAlignment="Bottom" HorizontalAlignment="Right" FontSize="20" Foreground="White" Margin="0, 0, 5, 0"/>
-        <Button Name="LaunchSHOEButton" Content="Launch Project" Click="LaunchSHOEButton_Click" Height="60" FontSize="30" />
+        Title="Sorta Helpful Open Engine Launcher" Height="720" Width="1280">
+    <Grid Background="Black">
+        <Image Source="LauncherAssets/SHOELogo.png" HorizontalAlignment="Right"/>
+        <TextBlock Name="EngineVersionText" VerticalAlignment="Bottom" HorizontalAlignment="Right" FontSize="20" Foreground="White" Margin="0,0,10,146" Width="140"/>
+        <TextBox Name="RingLabel" Width="140" Foreground="White" Margin="950,64,190,610">Choose Ring:</TextBox>
+        <ListBox Name="RingChoiceListBox" SelectionChanged="RingChoiceListBox_SelectionChanged" SelectionMode="Single" Margin="1095,53,10,600">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Title}"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <TextBox Name="ProjectsLabel" Width="140" Foreground="White" Margin="10,10,1130,656">Choose Project:</TextBox>
+        <ListView Name="ProjectsListView" MaxHeight="400" MaxWidth="900" Margin="-180,-99,180,99" SelectionChanged="ProjectsListView_SelectionChanged">
+            <ListView.View>
+                <GridView AllowsColumnReorder="True" ColumnHeaderToolTip="Projects">
+                    <GridViewColumn DisplayMemberBinding="{Binding Path=ProjectName}" Header="Project Name" Width="100" />
+                    <GridViewColumn DisplayMemberBinding="{Binding Path=ProjectPath}" Header="Project Path" Width="100" />
+                    <GridViewColumn DisplayMemberBinding="{Binding Path=DirectXVersion}" Header="DirectX Version" Width="100" />
+                </GridView>
+            </ListView.View>
+        </ListView>
+        <Button Name="UpdateButton" Content="Check For Updates" Click="UpdateButton_Click" FontSize="20" Margin="950,234,0,408" />
+        <Button Name="SelectInstallDirectory" Content="Select Install Directory" Click="SelectInstallDirectory_Click" FontSize="20" Margin="1062,151,4,504"/>
+        <Button Name="LaunchSHOEButton" Content="Launch Project" Click="LaunchSHOEButton_Click" FontSize="30" Margin="0,578,0,50" />
     </Grid>
 </Window>
