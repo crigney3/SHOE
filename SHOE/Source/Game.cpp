@@ -75,7 +75,6 @@ Game::Game(HINSTANCE hInstance, LPSTR cmdLine)
 
 			if (!firstHalfOfParameter.compare("/EngineInstallPath")) {
 				SetEngineInstallPath(secondHalfOfParameter);
-				printf(GetEngineAssetsPath().c_str());
 			}
 
 			if (end == std::string::npos) {

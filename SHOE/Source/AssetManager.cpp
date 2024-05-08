@@ -772,10 +772,9 @@ std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::st
 	}
 
 	std::shared_ptr<SHOEFont> newFont = std::make_shared<SHOEFont>();
+	std::wstring wPathBuf;
 
 	try {
-		std::wstring wPathBuf;
-
 		ISimpleShader::ConvertToWide(namePath, wPathBuf);
 		
 		if (!isEngineAsset) {
@@ -784,7 +783,7 @@ std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::st
 		}
 		newFont->name = name;
 #if defined(DEBUG) || defined(_DEBUG)
-		wprintf(wPathBuf.c_str());
+		wprintf(L"Font loaded: %ls\n", wPathBuf.c_str());
 #endif
 		newFont->spritefont = std::make_shared<DirectX::SpriteFont>(device.Get(), wPathBuf.c_str());
 
@@ -792,7 +791,7 @@ std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::st
 	}
 	catch (...) {
 #if defined(DEBUG) || defined(_DEBUG)
-		printf("Failed to initialize font!");
+		wprintf(L"Failed to initialize font! At %ls\n", wPathBuf.c_str());
 #endif
 	}
 
@@ -939,34 +938,46 @@ std::shared_ptr<Collider> AssetManager::CreateTriggerBoxOnEntity(std::shared_ptr
 
 #pragma region initAssets
 void AssetManager::InitializeTextureSampleStates() {
-	//Create sampler state
-	D3D11_SAMPLER_DESC textureDesc;
-	textureDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	textureDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	textureDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	textureDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	textureDesc.MaxAnisotropy = 10;
-	textureDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	textureDesc.MipLODBias = 0;
-	textureDesc.MinLOD = 0;
+	try {
+		//Create sampler state
+		D3D11_SAMPLER_DESC textureDesc;
+		textureDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		textureDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		textureDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		textureDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+		textureDesc.MaxAnisotropy = 10;
+		textureDesc.MaxLOD = D3D11_FLOAT32_MAX;
+		textureDesc.MipLODBias = 0;
+		textureDesc.MinLOD = 0;
 
-	device->CreateSamplerState(&textureDesc, &textureState);
+		device->CreateSamplerState(&textureDesc, &textureState);
 
-	//Create clamp sampler state
-	D3D11_SAMPLER_DESC clampDesc;
-	clampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	clampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	clampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	clampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	clampDesc.MaxAnisotropy = 10;
-	clampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	clampDesc.MipLODBias = 0;
-	clampDesc.MinLOD = 0;
+		//Create clamp sampler state
+		D3D11_SAMPLER_DESC clampDesc;
+		clampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+		clampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+		clampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		clampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+		clampDesc.MaxAnisotropy = 10;
+		clampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+		clampDesc.MipLODBias = 0;
+		clampDesc.MinLOD = 0;
 
-	device->CreateSamplerState(&clampDesc, &clampState);
+		device->CreateSamplerState(&clampDesc, &clampState);
 
-	textureSampleStates.push_back(textureState);
-	textureSampleStates.push_back(clampState);
+		textureSampleStates.push_back(textureState);
+		textureSampleStates.push_back(clampState);
+
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully loaded critical texture sampler states\n");
+#endif
+	}
+	catch (const std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to load critical texture sample states with error: %s\n", e.what());
+#endif
+	}
+
 }
 
 void AssetManager::InitializeGameEntities() {
