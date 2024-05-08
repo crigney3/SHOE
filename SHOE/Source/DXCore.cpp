@@ -215,7 +215,12 @@ HRESULT DXCore::InitDirectX11()
 		device.GetAddressOf(),		// Pointer to our Device pointer
 		&dxFeatureLevel,			// This will hold the actual feature level the app will use
 		context.GetAddressOf());	// Pointer to our Device Context pointer
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr)) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to create device with errorcode: %i", hr);
+#endif
+		return hr;
+	}
 
 	// The above function created the back buffer render target
 	// for us, but we need a reference to it
@@ -612,51 +617,58 @@ void DXCore::Quit()
 
 void DXCore::SetProjectPath(std::string projPath) {
 	this->projectPath = projPath;
-	// Change the asset paths here
+	this->mainAssetPath = projPath + "\\Assets\\";
+}
+
+void DXCore::SetEngineInstallPath(std::string enginePath) {
+	this->engineInstallPath = enginePath;
+	this->engineAssetsPath = enginePath + "\\Assets\\";
 }
 
 std::string DXCore::GetProjectPath() {
 	return this->projectPath;
 }
 
+std::string DXCore::GetProjectAssetPath() {
+	return this->mainAssetPath;
+}
+
+std::string DXCore::GetEngineInstallPath() {
+	return this->engineInstallPath;
+}
+
+std::string DXCore::GetEngineAssetsPath() {
+	return this->engineAssetsPath;
+}
+
 // This is so cursed. Visual Studio why
 // Finally going to fix this by going around it entirely
 void DXCore::SetBuildAssetPaths() {
-	assetPathStrings[0] = "..\\..\\..\\Assets\\Models\\";
-	assetPathStrings[1] = "..\\..\\..\\Assets\\Scenes\\";
-	assetPathStrings[2] = "..\\..\\..\\Assets\\HeightMaps\\";
-	assetPathStrings[3] = "..\\..\\..\\Assets\\Fonts\\";
-	assetPathStrings[4] = "..\\..\\..\\Assets\\Particles\\";
-	assetPathStrings[5] = "..\\..\\..\\Assets\\Sounds\\";
-	assetPathStrings[6] = "..\\..\\..\\Assets\\Textures\\";
-	assetPathStrings[7] = "..\\..\\..\\Assets\\Textures\\Skies\\";
-	assetPathStrings[8] = "..\\..\\..\\Assets\\PBR\\";
-	assetPathStrings[9] = "..\\..\\..\\Assets\\PBR\\Albedo\\";
-	assetPathStrings[10] = "..\\..\\..\\Assets\\PBR\\Normals\\";
-	assetPathStrings[11] = "..\\..\\..\\Assets\\PBR\\Metalness\\";
-	assetPathStrings[12] = "..\\..\\..\\Assets\\PBR\\Roughness\\";
-	assetPathStrings[13] = "..\\..\\..\\Assets\\Shaders\\";
+	criticalAssetPaths[0] = this->engineAssetsPath + "\\Models\\";
+	criticalAssetPaths[3] = this->engineAssetsPath + "\\Fonts\\";
+	criticalAssetPaths[6] = this->engineAssetsPath + "\\Textures\\";
+	criticalAssetPaths[7] = this->engineAssetsPath + "\\Textures\\Skies\\";
 }
 
 void DXCore::SetVSAssetPaths() {
-	assetPathStrings[0] = "..\\Assets\\Models\\";
-	assetPathStrings[1] = "..\\Assets\\Scenes\\";
-	assetPathStrings[2] = "..\\Assets\\HeightMaps\\";
-	assetPathStrings[3] = "..\\Assets\\Fonts\\";
-	assetPathStrings[4] = "..\\Assets\\Particles\\";
-	assetPathStrings[5] = "..\\Assets\\Sounds\\";
-	assetPathStrings[6] = "..\\Assets\\Textures\\";
-	assetPathStrings[7] = "..\\Assets\\Textures\\Skies\\";
-	assetPathStrings[8] = "..\\Assets\\PBR\\";
-	assetPathStrings[9] = "..\\Assets\\PBR\\Albedo\\";
-	assetPathStrings[10] = "..\\Assets\\PBR\\Normals\\";
-	assetPathStrings[11] = "..\\Assets\\PBR\\Metalness\\";
-	assetPathStrings[12] = "..\\Assets\\PBR\\Roughness\\";
-	assetPathStrings[13] = "..\\Assets\\Shaders\\";
+	criticalAssetPaths[0] = "..\\Assets\\Models\\";
+	criticalAssetPaths[1] = "..\\Assets\\Scenes\\";
+	criticalAssetPaths[2] = "..\\Assets\\HeightMaps\\";
+	criticalAssetPaths[3] = "..\\Assets\\Fonts\\";
+	criticalAssetPaths[4] = "..\\Assets\\Particles\\";
+	criticalAssetPaths[5] = "..\\Assets\\Sounds\\";
+	criticalAssetPaths[6] = "..\\Assets\\Textures\\";
+	criticalAssetPaths[7] = "..\\Assets\\Textures\\Skies\\";
+	criticalAssetPaths[8] = "..\\Assets\\PBR\\";
+	criticalAssetPaths[9] = "..\\Assets\\PBR\\Albedo\\";
+	criticalAssetPaths[10] = "..\\Assets\\PBR\\Normals\\";
+	criticalAssetPaths[11] = "..\\Assets\\PBR\\Metalness\\";
+	criticalAssetPaths[12] = "..\\Assets\\PBR\\Roughness\\";
+	criticalAssetPaths[13] = "..\\Assets\\Shaders\\";
 }
 
 std::string DXCore::GetAssetPathString(AssetPathIndex index) {
-	return assetPathStrings[index];
+	return criticalAssetPaths[index];
 }
 
 // --------------------------------------------------------

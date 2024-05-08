@@ -93,13 +93,13 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 	FMOD::Sound* sound;
 	FMOD::Channel* channel;
 
-	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
+	std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SOUND_PATH, path);
 
 	if (isNameFullPath) {
 		namePath = path;
 	}
 	else {
-		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SOUND_PATH, path);
+		namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SOUND_PATH, path);
 	}
 
 	channel = audioInstance.LoadSoundAndInitChannel(namePath, mode);
@@ -132,7 +132,7 @@ std::shared_ptr<Camera> AssetManager::CreateCamera(std::string name, float aspec
 }
 
 std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::string nameToLoad) {
-	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
 	std::shared_ptr<SimpleVertexShader> newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), namePath, id);
 
@@ -149,7 +149,7 @@ std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string
 }
 
 std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string id, std::string nameToLoad) {
-	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
 	std::shared_ptr<SimplePixelShader> newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), namePath, id);
 
@@ -166,7 +166,7 @@ std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string i
 }
 
 std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::string nameToLoad) {
-	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
 	std::shared_ptr<SimpleComputeShader> newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), namePath.c_str(), id);
 
@@ -203,7 +203,7 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 		namePath = nameToLoad;
 	}
 	else {
-		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, nameToLoad);
+		namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_MODEL_PATH, nameToLoad);
 	}
 
 	std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(namePath.c_str(), device, id);
@@ -267,7 +267,7 @@ std::string AssetManager::DeSerializeFileName(std::string assetPath) {
 //		break;
 //	};
 //
-//	std::string namePath = GetFullPathToAssetFile(assetPath, nameToLoad);
+//	std::string namePath = GetFullPathToEngineAsset(assetPath, nameToLoad);
 //	std::wstring widePath;
 //
 //	HRESULT hr = ISimpleShader::ConvertToWide(namePath, widePath);
@@ -300,7 +300,7 @@ std::string AssetManager::DeSerializeFileName(std::string assetPath) {
 //		break;
 //	};
 //
-//	std::string namePath = GetFullPathToAssetFile(assetPath, nameToLoad);
+//	std::string namePath = GetFullPathToEngineAsset(assetPath, nameToLoad);
 //	std::wstring widePath;
 //
 //	HRESULT hr = ISimpleShader::ConvertToWide(namePath, widePath);
@@ -321,7 +321,7 @@ std::string AssetManager::GetTextureFileKey(std::string textureFilename) {
 	assetPath = ASSET_TEXTURE_PATH_BASIC;
 	directAssetPath = "Assets\\Textures\\";
 
-	std::string namePath = GetFullPathToAssetFile(assetPath, textureFilename);
+	std::string namePath = GetFullPathToEngineAsset(assetPath, textureFilename);
 	std::string fileKey = SerializeFileName(directAssetPath, namePath);
 
 	return fileKey;
@@ -337,7 +337,7 @@ std::shared_ptr<Texture> AssetManager::CreateTexture(std::string nameToLoad, std
 		namePath = nameToLoad;
 	}
 	else {
-		namePath = GetFullPathToAssetFile(assetPath, nameToLoad);
+		namePath = GetFullPathToEngineAsset(assetPath, nameToLoad);
 	}
 	std::wstring widePath;
 
@@ -594,7 +594,7 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 		}
 
 		if (blendMapPath != "") {
-			std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
+			std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
 
 			std::wstring wPath;
 			ISimpleShader::ConvertToWide(namePath, wPath);
@@ -647,7 +647,7 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 		}
 
 		if (blendMapPath != "") {
-			std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
+			std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
 
 			std::wstring wPath;
 			ISimpleShader::ConvertToWide(namePath, wPath);
@@ -681,7 +681,7 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newSkyTexture;
 
-	std::string assetPath = GetFullPathToAssetFile(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
+	std::string assetPath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
 
 	if (fileType) {
 		// Process as 6 textures in a directory
@@ -755,24 +755,46 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 	return CreateParticleEmitterOnEntity(CreateGameEntity(name), textureNameToLoad, maxParticles, particleLifeTime, particlesPerSecond, isMultiParticle, additiveBlendState);
 }
 
-std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::string filePath, bool preInitializing, bool isNameFullPath) {
+std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::string filePath, bool preInitializing, bool isEngineAsset, bool isNameFullPath) {
 	std::string namePath;
 	if (isNameFullPath) {
 		namePath = filePath;
 	}
 	else {
-		namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_FONT_PATH, filePath);
+		if (isEngineAsset) {
+			namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_FONT_PATH, filePath);
+		}
+		else {
+			// Rework to use project-based asset folder
+			
+		}
+		
 	}
-	std::wstring wPathBuf;
-
-	ISimpleShader::ConvertToWide(namePath, wPathBuf);
 
 	std::shared_ptr<SHOEFont> newFont = std::make_shared<SHOEFont>();
-	newFont->fileNameKey = SerializeFileName("Assets\\Fonts\\", namePath);
-	newFont->name = name;
-	newFont->spritefont = std::make_shared<DirectX::SpriteFont>(device.Get(), wPathBuf.c_str());
 
-	globalFonts.push_back(newFont);
+	try {
+		std::wstring wPathBuf;
+
+		ISimpleShader::ConvertToWide(namePath, wPathBuf);
+		
+		if (!isEngineAsset) {
+			// This will probably break saving for now but I can make it better later
+			newFont->fileNameKey = SerializeFileName("Assets\\Fonts\\", namePath);
+		}
+		newFont->name = name;
+#if defined(DEBUG) || defined(_DEBUG)
+		wprintf(wPathBuf.c_str());
+#endif
+		newFont->spritefont = std::make_shared<DirectX::SpriteFont>(device.Get(), wPathBuf.c_str());
+
+		globalFonts.push_back(newFont);
+	}
+	catch (...) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to initialize font!");
+#endif
+	}
 
 	return newFont;
 }
@@ -818,7 +840,7 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitterOnEntity(std:
 	loadedTexture = LoadParticleTexture(textureNameToLoad, isMultiParticle);
 	newEmitter->SetParticleTextureSRV(loadedTexture);
 
-	std::string asset = GetFullPathToAssetFile(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
+	std::string asset = GetFullPathToEngineAsset(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
 
 	newEmitter->SetFilenameKey(SerializeFileName("Assets\\Particles\\", asset));
 
@@ -1432,28 +1454,28 @@ void AssetManager::InitializeEmitters() {
 void AssetManager::InitializeAudio() {
 	audioInstance.Initialize();
 
-	CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_DEFAULT, "piano-a");
-	CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_DEFAULT, "piano-b");
-	CreateSound("PianoNotes/pinkyfinger__piano-bb.wav", FMOD_DEFAULT, "piano-bb");
-	CreateSound("PianoNotes/pinkyfinger__piano-c.wav", FMOD_DEFAULT, "piano-c");
-	CreateSound("PianoNotes/pinkyfinger__piano-e.wav", FMOD_DEFAULT, "piano-e");
-	CreateSound("PianoNotes/pinkyfinger__piano-eb.wav", FMOD_DEFAULT, "piano-eb");
-	CreateSound("PianoNotes/pinkyfinger__piano-d.wav", FMOD_DEFAULT, "piano-d");
-	CreateSound("PianoNotes/pinkyfinger__piano-f.wav", FMOD_DEFAULT, "piano-f");
-	CreateSound("PianoNotes/pinkyfinger__piano-g.wav", FMOD_DEFAULT, "piano-g");
+	//CreateSound("PianoNotes/pinkyfinger__piano-a.wav", FMOD_DEFAULT, "piano-a");
+	//CreateSound("PianoNotes/pinkyfinger__piano-b.wav", FMOD_DEFAULT, "piano-b");
+	//CreateSound("PianoNotes/pinkyfinger__piano-bb.wav", FMOD_DEFAULT, "piano-bb");
+	//CreateSound("PianoNotes/pinkyfinger__piano-c.wav", FMOD_DEFAULT, "piano-c");
+	//CreateSound("PianoNotes/pinkyfinger__piano-e.wav", FMOD_DEFAULT, "piano-e");
+	//CreateSound("PianoNotes/pinkyfinger__piano-eb.wav", FMOD_DEFAULT, "piano-eb");
+	//CreateSound("PianoNotes/pinkyfinger__piano-d.wav", FMOD_DEFAULT, "piano-d");
+	//CreateSound("PianoNotes/pinkyfinger__piano-f.wav", FMOD_DEFAULT, "piano-f");
+	//CreateSound("PianoNotes/pinkyfinger__piano-g.wav", FMOD_DEFAULT, "piano-g");
 }
 
 void AssetManager::InitializeFonts() {
-	CreateSHOEFont("Roboto-Bold-72pt", "RobotoCondensed-Bold-72pt.spritefont", true);
-	CreateSHOEFont("SmoochSans-Bold", "SmoochSans-Bold.spritefont", true);
-	CreateSHOEFont("SmoochSans-Italic", "SmoochSans-Italic.spritefont", true);
-	CreateSHOEFont("Arial", "Arial.spritefont");
-	CreateSHOEFont("Roboto-Bold", "RobotoCondensed-Bold.spritefont");
-	CreateSHOEFont("Roboto-BoldItalic", "RobotoCondensed-BoldItalic.spritefont");
-	CreateSHOEFont("Roboto-Italic", "RobotoCondensed-Italic.spritefont");
-	CreateSHOEFont("Roboto-Regular", "RobotoCondensed-Regular.spritefont");
-	CreateSHOEFont("SmoochSans-BoldItalic", "SmoochSans-BoldItalic.spritefont");
-	CreateSHOEFont("SmoochSans-Regular", "SmoochSans-Regular.spritefont");
+	CreateSHOEFont("Roboto-Bold-72pt", "RobotoCondensed-Bold-72pt.spritefont", true, true);
+	CreateSHOEFont("SmoochSans-Bold", "SmoochSans-Bold.spritefont", true, true);
+	CreateSHOEFont("SmoochSans-Italic", "SmoochSans-Italic.spritefont", true, true);
+	CreateSHOEFont("Arial", "Arial.spritefont", false, true);
+	CreateSHOEFont("Roboto-Bold", "RobotoCondensed-Bold.spritefont", false, true);
+	CreateSHOEFont("Roboto-BoldItalic", "RobotoCondensed-BoldItalic.spritefont", false, true);
+	CreateSHOEFont("Roboto-Italic", "RobotoCondensed-Italic.spritefont", false, true);
+	CreateSHOEFont("Roboto-Regular", "RobotoCondensed-Regular.spritefont", false, true);
+	CreateSHOEFont("SmoochSans-BoldItalic", "SmoochSans-BoldItalic.spritefont", false, true);
+	CreateSHOEFont("SmoochSans-Regular", "SmoochSans-Regular.spritefont", false, true);
 }
 
 void AssetManager::InitializeIMGUI(HWND hwnd) {
@@ -1712,7 +1734,7 @@ void AssetManager::UpdateEditingCamera()
 #pragma region buildAssetData
 std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale) {
 
-	std::string fullPath = GetFullPathToAssetFile(AssetPathIndex::ASSET_HEIGHTMAP_PATH, filename);
+	std::string fullPath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_HEIGHTMAP_PATH, filename);
 
 	unsigned int numVertices = mapWidth * mapHeight;
 	unsigned int numIndices = (mapWidth - 1) * (mapHeight - 1) * 6;
@@ -1955,7 +1977,7 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 
 	if (isMultiParticle) {
 		// Load all particle textures in a specific subfolder
-		std::string assets = GetFullPathToAssetFile(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
+		std::string assets = GetFullPathToEngineAsset(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
 
 		std::vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>> textures;
 		int i = 0;
@@ -2026,7 +2048,7 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 void AssetManager::CreateComplexGeometry() {
 	Assimp::Importer importer;
 	std::vector<std::shared_ptr<Material>> specialMaterials = std::vector<std::shared_ptr<Material>>();
-	std::string namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, "human.obj");
+	std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_MODEL_PATH, "human.obj");
 	std::string serializedKey = SerializeFileName("Assets\\Models\\", namePath);
 
 	const aiScene* flashLightModel = importer.ReadFile(dxInstance->GetFullPathTo("..\\..\\..\\Assets\\Models\\human.obj").c_str(),
@@ -2040,7 +2062,7 @@ void AssetManager::CreateComplexGeometry() {
 		ProcessComplexModel(flashLightModel->mRootNode, flashLightModel, serializedKey, "Human");
 	}
 
-	namePath = GetFullPathToAssetFile(AssetPathIndex::ASSET_MODEL_PATH, "hat.obj");
+	namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_MODEL_PATH, "hat.obj");
 	serializedKey = SerializeFileName("Assets\\Models\\", namePath);
 
 	const aiScene* hatModel = importer.ReadFile(dxInstance->GetFullPathTo("..\\..\\..\\Assets\\Models\\hat.obj").c_str(),
@@ -2429,7 +2451,7 @@ int AssetManager::GetVertexShaderIDByPointer(std::shared_ptr<SimpleVertexShader>
 //	return -1;
 //}
 
-std::string AssetManager::GetFullPathToAssetFile(AssetPathIndex index, std::string filename) {
+std::string AssetManager::GetFullPathToEngineAsset(AssetPathIndex index, std::string filename) {
 	std::string asset = dxInstance->GetAssetPathString(index) + filename;
 	char pathBuf[1024];
 	GetFullPathNameA(asset.c_str(), sizeof(pathBuf), pathBuf, NULL);

@@ -157,7 +157,7 @@ public:
 	/// <param name="index"></param>
 	/// <param name="filename"></param>
 	/// <returns></returns>
-	std::string GetFullPathToAssetFile(AssetPathIndex index, std::string filename);
+	std::string GetFullPathToEngineAsset(AssetPathIndex index, std::string filename);
 
 	/// <summary>
 	/// Gets the full path to an asset that is outside the Assets/ dir.
@@ -239,7 +239,7 @@ public:
 												   bool isMultiParticle = false,
 												   bool additiveBlendState = true);
 	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode = FMOD_DEFAULT, std::string name = "", bool isNameFullPath = false);
-	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false, bool isNameFullPath = false);
+	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false, bool isEngineAsset = false, bool isNameFullPath = false);
 
 	// Create-On-Entity methods, for components and loading
 	std::shared_ptr<Terrain> CreateTerrainOnEntity(std::shared_ptr<GameEntity> entityToEdit,

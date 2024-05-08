@@ -105,7 +105,11 @@ public:
 	std::wstring GetFullPathTo_Wide(std::wstring relativeFilePath);
 
 	std::string GetProjectPath();
+	std::string GetProjectAssetPath();
+	std::string GetEngineAssetsPath();
+	std::string GetEngineInstallPath();
 	void SetProjectPath(std::string projPath);
+	void SetEngineInstallPath(std::string enginePath);
 
 	void SetVSAssetPaths();
 	void SetBuildAssetPaths();
@@ -164,7 +168,7 @@ protected:
 	float GetTotalTime();
 	float GetDeltaTime();
 
-	std::string assetPathStrings[ASSET_PATH_COUNT];
+	std::string criticalAssetPaths[ASSET_PATH_COUNT];
 
 	// What version of DX is this?
 	DirectXVersion dxVersion;
@@ -179,6 +183,9 @@ private:
 	__int64 previousTime;
 
 	std::string projectPath;
+	std::string mainAssetPath;
+	std::string engineInstallPath;
+	std::string engineAssetsPath;
 
 	// FPS calculation
 	int fpsFrameCount;

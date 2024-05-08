@@ -60,20 +60,22 @@ Game::Game(HINSTANCE hInstance, LPSTR cmdLine)
 
 			secondHalfOfParameter = currentSubstring.substr(innerSecondStart, currentSubstring.length() - innerSecondStart);
 
-			if (firstHalfOfParameter.compare("/DXVersion")) {
-				if (secondHalfOfParameter.compare("11")) {
+			if (!firstHalfOfParameter.compare("/DXVersion")) {
+				if (!secondHalfOfParameter.compare("11")) {
 					this->dxVersion = DIRECT_X_11;
-					printf(secondHalfOfParameter.c_str());
 				}
-				else if (secondHalfOfParameter.compare("12")) {
+				else if (!secondHalfOfParameter.compare("12")) {
 					this->dxVersion = DIRECT_X_12;
-					printf(secondHalfOfParameter.c_str());
 				}
 			}
 
-			if (firstHalfOfParameter.compare("/ProjectPath")) {
+			if (!firstHalfOfParameter.compare("/ProjectPath")) {
 				SetProjectPath(secondHalfOfParameter);
-				printf(GetProjectPath().c_str());
+			}
+
+			if (!firstHalfOfParameter.compare("/EngineInstallPath")) {
+				SetEngineInstallPath(secondHalfOfParameter);
+				printf(GetEngineAssetsPath().c_str());
 			}
 
 			if (end == std::string::npos) {
@@ -89,19 +91,23 @@ Game::Game(HINSTANCE hInstance, LPSTR cmdLine)
 	}
 
 	// Check if the directory defines are correct
+	// TODO: Remove in favor of launcher cmdline params
+	// But also, keeping a run in visual studio would be nice
+	// Could I teach VS to launch with parameters + copy critical assets?
 	char pathBuf[1024];
 
 	GetFullPathNameA("SHOE.exe", sizeof(pathBuf), pathBuf, NULL);
 	std::string::size_type pos = std::string(pathBuf).find_last_of("\\/");
 
-	std::string currentSubPath = std::string(pathBuf);// .substr(40, pos);
-
-	if (currentSubPath.find("SHOE\\x64\\") != std::string::npos) {
-		SetBuildAssetPaths();
-	}
-	else {
-		SetVSAssetPaths();
-	}
+	std::string currentSubPath = std::string(pathBuf);
+	
+	// Need to figure out a way to detect if this is run from visual studio
+	//if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VisualStudioEdition"))) {
+	SetBuildAssetPaths();
+	//}
+	//else {
+	//	SetVSAssetPaths();
+	//}
 }
 
 // --------------------------------------------------------
@@ -137,10 +143,7 @@ void Game::Init()
 {
 	engineState = EngineState::INIT;
 
-	if (dxVersion) {
-
-	}
-	else {
+	if (!IsDirectX12()) {
 		loadingSpriteBatch = new SpriteBatch(context.Get());
 
 #if defined(DEBUG) || defined(_DEBUG)

@@ -952,7 +952,7 @@ void SceneManager::LoadScene(std::string filepath) {
 	try {
 		rapidjson::Document sceneDoc;
 
-		std::string namePath = assetManager.GetFullPathToAssetFile(AssetPathIndex::ASSET_SCENE_PATH, filepath);
+		std::string namePath = assetManager.GetFullPathToEngineAsset(AssetPathIndex::ASSET_SCENE_PATH, filepath);
 
 		FILE* file;
 		fopen_s(&file, namePath.c_str(), "rb");
@@ -1034,7 +1034,7 @@ void SceneManager::SaveScene(std::string filepath, std::string sceneName) {
 
 		// At the end of gathering data, write it all
 		// to the appropriate file
-		std::string namePath = assetManager.GetFullPathToAssetFile(AssetPathIndex::ASSET_SCENE_PATH, filepath);
+		std::string namePath = assetManager.GetFullPathToEngineAsset(AssetPathIndex::ASSET_SCENE_PATH, filepath);
 
 		FILE* file;
 		fopen_s(&file, namePath.c_str(), "w");
@@ -1086,7 +1086,7 @@ void SceneManager::PrePlaySave()
 
 		// At the end of gathering data, write it all
 		// to the appropriate file
-		std::string namePath = assetManager.GetFullPathToAssetFile(AssetPathIndex::ASSET_SCENE_PATH, ".temp_play_save.json");
+		std::string namePath = assetManager.GetFullPathToEngineAsset(AssetPathIndex::ASSET_SCENE_PATH, ".temp_play_save.json");
 
 		FILE* file;
 		fopen_s(&file, namePath.c_str(), "w");
@@ -1121,7 +1121,7 @@ void SceneManager::PostPlayLoad()
 
 		rapidjson::Document sceneDoc;
 
-		std::string namePath = assetManager.GetFullPathToAssetFile(AssetPathIndex::ASSET_SCENE_PATH, ".temp_play_save.json");
+		std::string namePath = assetManager.GetFullPathToEngineAsset(AssetPathIndex::ASSET_SCENE_PATH, ".temp_play_save.json");
 
 		FILE* file;
 		fopen_s(&file, namePath.c_str(), "rb");
