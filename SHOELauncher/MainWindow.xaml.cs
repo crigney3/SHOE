@@ -86,9 +86,13 @@ namespace SHOELauncher
         private List<SHOEProject> projects;
         private AppRing selectedAppRing;
 
+        public static MainWindow windowRef;
+
         public MainWindow()
         {
             InitializeComponent();
+
+            windowRef = this;
 
             launcherPath = Directory.GetCurrentDirectory();
             versionFilePath = Path.Combine(launcherPath, "version.txt");
@@ -168,12 +172,11 @@ namespace SHOELauncher
             }
         }
 
-        private void InstallSHOEFiles(bool _isUpdate, SHOEVersion _onlineVersion)
+        private async void InstallSHOEFiles(bool _isUpdate, SHOEVersion _onlineVersion)
         {
             try
             {
                 WebClient webClient = new WebClient();
-                HttpClient httpClient = new HttpClient();
 
                 string versionString = selectedAppRing.OnlinePath + "version.txt";
 
@@ -189,10 +192,9 @@ namespace SHOELauncher
                 _onlineVersion = new SHOEVersion(webClient.DownloadString(versionString));
 
                 Uri engineString = new Uri(selectedAppRing.OnlinePath + "SHOE.zip");
-                //webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(DownloadSHOECompletedCallback);
-                var fileBytes = httpClient.GetByteArrayAsync(engineString);
-                File.WriteAllBytes(SHOEBuildPath + "\\SHOE.zip", fileBytes.Result);
-                DownloadSHOECompletedCallback(_onlineVersion);
+                await DownloadSHOEAndInstall(engineString, _onlineVersion);
+
+                Console.WriteLine("Downloading but not installing yet");
             }
             catch (Exception ex)
             {
@@ -201,10 +203,13 @@ namespace SHOELauncher
             }
         }
 
-        private void DownloadSHOECompletedCallback(SHOEVersion _onlineVersion)
+        private void DownloadSHOECompletedCallback(SHOEVersion _onlineVersion, byte[] zipBytes)
         {
             try
             {
+                Console.WriteLine("installing");
+                File.WriteAllBytes(SHOEBuildPath + "\\SHOE.zip", zipBytes);
+
                 string ringFilePath = SHOEBuildPath + "\\" + selectedAppRing.Title;
                 if (!Directory.Exists(ringFilePath))
                 {
@@ -285,9 +290,19 @@ namespace SHOELauncher
 
             File.WriteAllText("EngineInstallLocation.txt", SHOEBuildPath);
         }
+
+        public static async Task DownloadSHOEAndInstall(Uri engineTargetString, SHOEVersion onlineVersion)
+        {
+            HttpClient httpClient = new HttpClient();
+
+            Task downloadTask = Task.Run(() => { httpClient.GetByteArrayAsync(engineTargetString); });
+            //await downloadTask.ConfigureAwait
+
+            await downloadTask.ContinueWith(installation => { windowRef.DownloadSHOECompletedCallback(onlineVersion, (byte[])((dynamic)downloadTask).Result); });
+        }
     }
 
-    struct SHOEVersion
+    public struct SHOEVersion
     {
         internal static SHOEVersion zero = new SHOEVersion(0, 0, 0);
 

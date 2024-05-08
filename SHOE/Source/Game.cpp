@@ -22,22 +22,71 @@ using namespace DirectX;
 //
 // hInstance - the application's OS-level handle (unique ID)
 // --------------------------------------------------------
-Game::Game(HINSTANCE hInstance, DirectXVersion dxVersion)
+Game::Game(HINSTANCE hInstance, LPSTR cmdLine)
 	: DXCore(
 		hInstance,		   // The application's handle
 		"SHOE",	   // Text for the window's title bar
 		1280,			   // Width of the window's client area
 		720,			   // Height of the window's client area
-		true,			   // Show extra stats (fps) in title bar?
-		dxVersion)
+		true)			   // Show extra stats (fps) in title bar?
 {
 
 #if defined(DEBUG) || defined(_DEBUG)
 	// Do we want a console window?  Probably only in debug mode
 	CreateConsoleWindow(500, 120, 32, 120);
 	printf("Console window created successfully.  Feel free to printf() here.\n");
-	printf("Use arrow keys to switch skyboxes. \n");
 #endif
+
+	{
+		// Process Command line input
+		std::string startCmdString = cmdLine;
+		std::string currentSubstring;
+		std::string firstHalfOfParameter;
+		std::string secondHalfOfParameter;
+		std::string delimiter = " ";
+		std::string paramDelimiter = ":";
+		size_t innerEnd;
+		size_t innerSecondStart;
+
+		auto start = 0U;
+		auto end = startCmdString.find(delimiter);
+		while (true)
+		{
+			currentSubstring = startCmdString.substr(start, end - start);
+			innerEnd = currentSubstring.find(paramDelimiter, 0);
+			innerSecondStart = innerEnd + paramDelimiter.length();
+
+			firstHalfOfParameter = currentSubstring.substr(0, innerEnd);
+
+			secondHalfOfParameter = currentSubstring.substr(innerSecondStart, currentSubstring.length() - innerSecondStart);
+
+			if (firstHalfOfParameter.compare("/DXVersion")) {
+				if (secondHalfOfParameter.compare("11")) {
+					this->dxVersion = DIRECT_X_11;
+					printf(secondHalfOfParameter.c_str());
+				}
+				else if (secondHalfOfParameter.compare("12")) {
+					this->dxVersion = DIRECT_X_12;
+					printf(secondHalfOfParameter.c_str());
+				}
+			}
+
+			if (firstHalfOfParameter.compare("/ProjectPath")) {
+				SetProjectPath(secondHalfOfParameter);
+				printf(GetProjectPath().c_str());
+			}
+
+			if (end == std::string::npos) {
+				// Loop's over, break
+				// Can't just have this be the loop condition,
+				// because it misses the last argument
+				break;
+			}
+
+			start = end + delimiter.length();
+			end = startCmdString.find(delimiter, start);
+		}
+	}
 
 	// Check if the directory defines are correct
 	char pathBuf[1024];

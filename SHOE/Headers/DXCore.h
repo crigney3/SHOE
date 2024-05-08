@@ -42,7 +42,8 @@ enum AssetPathIndex {
 
 enum DirectXVersion {
 	DIRECT_X_11,
-	DIRECT_X_12
+	DIRECT_X_12,
+	BAD_VERSION
 };
 
 //DX12 update TODO:
@@ -68,8 +69,7 @@ public:
 		const char* titleBarText,	// Text for the window's title bar
 		unsigned int windowWidth,	// Width of the window's client area
 		unsigned int windowHeight,	// Height of the window's client area
-		bool debugTitleBarStats,	// Show extra stats (fps) in title bar?
-		DirectXVersion dxVersion);	
+		bool debugTitleBarStats);	// Show extra stats (fps) in title bar?
 	~DXCore();
 
 	// Static requirements for OS-level message processing
@@ -86,6 +86,7 @@ public:
 
 	// Returns 0 for DirectX11 and 1 for DirectX12
 	bool IsDirectX12();
+	DirectXVersion GetDXVersion();
 
 	// Initialization and game-loop related methods
 	HRESULT InitWindow();
@@ -102,6 +103,9 @@ public:
 
 	std::string GetFullPathTo(std::string relativeFilePath);
 	std::wstring GetFullPathTo_Wide(std::wstring relativeFilePath);
+
+	std::string GetProjectPath();
+	void SetProjectPath(std::string projPath);
 
 	void SetVSAssetPaths();
 	void SetBuildAssetPaths();
@@ -173,6 +177,8 @@ private:
 	__int64 startTime;
 	__int64 currentTime;
 	__int64 previousTime;
+
+	std::string projectPath;
 
 	// FPS calculation
 	int fpsFrameCount;

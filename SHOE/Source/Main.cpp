@@ -9,7 +9,7 @@ int WINAPI WinMain(
 	_In_ LPSTR lpCmdLine,				// Command line params
 	_In_ int nCmdShow)					// How the window should be shown (we ignore this)
 {
-	DirectXVersion dxVersion = DIRECT_X_11;
+	DirectXVersion dxVersion = BAD_VERSION;
 
 #if defined(DEBUG) | defined(_DEBUG)
 	// Enable memory leak detection as a quick and dirty
@@ -18,11 +18,11 @@ int WINAPI WinMain(
 	_CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
 #endif
 
-	printf(lpCmdLine);
-
 	// Create the Game object using
 	// the app handle we got from WinMain
-	Game dxGame(hInstance, dxVersion);
+	Game dxGame(hInstance, lpCmdLine);
+
+	dxVersion = dxGame.GetDXVersion();
 
 	// Result variable for function calls below
 	HRESULT hr = S_OK;
@@ -32,17 +32,23 @@ int WINAPI WinMain(
 	hr = dxGame.InitWindow();
 	if(FAILED(hr)) return hr;
 
-	// Attempt to initialize DirectX, and exit
-	// early if something failed
-	if (dxVersion) {
-		hr = dxGame.InitDirectX12();
-	}
-	else {
+	// If Game didn't initialize by command line, assume DX11
+	if (dxVersion == BAD_VERSION) {
 		hr = dxGame.InitDirectX11();
+	}
+	else if (dxVersion == DIRECT_X_11) {
+		hr = dxGame.InitDirectX11();
+	}
+	else if (dxVersion == DIRECT_X_12) {
+		hr = dxGame.InitDirectX12();
 	}
 	if(FAILED(hr)) return hr;
 
 	// Begin the message and game loop, and then return
 	// whatever we get back once the game loop is over
 	return dxGame.Run();
+}
+
+void ProcessCommandLine(LPSTR cmdLine, Game gameRef) {
+
 }

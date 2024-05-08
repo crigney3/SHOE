@@ -9,28 +9,38 @@
         ContentRendered="Launcher_ContentRendered"
         Title="Sorta Helpful Open Engine Launcher" Height="720" Width="1280">
     <Grid Background="Black">
-        <Image Source="LauncherAssets/SHOELogo.png" HorizontalAlignment="Right"/>
-        <TextBlock Name="EngineVersionText" VerticalAlignment="Bottom" HorizontalAlignment="Right" FontSize="20" Foreground="White" Margin="0,0,10,146" Width="140"/>
-        <TextBox Name="RingLabel" Width="140" Foreground="White" Margin="950,64,190,610">Choose Ring:</TextBox>
-        <ListBox Name="RingChoiceListBox" SelectionChanged="RingChoiceListBox_SelectionChanged" SelectionMode="Single" Margin="1095,53,10,600">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition></ColumnDefinition>
+            <ColumnDefinition></ColumnDefinition>
+            <ColumnDefinition></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
+        </Grid.RowDefinitions>
+        <ListView x:Name="ProjectsListView" Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2"  SelectionChanged="ProjectsListView_SelectionChanged">
+            <ListView.View>
+                <GridView AllowsColumnReorder="True" ColumnHeaderToolTip="Projects">
+                    <GridViewColumn DisplayMemberBinding="{Binding ProjectName}" Header="Project Name" Width="100" />
+                    <GridViewColumn DisplayMemberBinding="{Binding ProjectPath}" Header="Project Path" Width="100" />
+                    <GridViewColumn DisplayMemberBinding="{Binding DirectXVersion}" Header="DirectX Version" Width="100" />
+                </GridView>
+            </ListView.View>
+        </ListView>
+        <Image Source="LauncherAssets/SHOELogo.png" Grid.Column="2"/>
+        <TextBlock x:Name="EngineVersionText" VerticalAlignment="Bottom" HorizontalAlignment="Right" FontSize="20" Foreground="White" Width="140" Grid.Row="2" Grid.Column="2"/>
+        <TextBlock x:Name="RingLabel" FontSize="20" Foreground="White" Grid.Column="2"><Run Text="Choose Ring:"/></TextBlock>
+        <ListBox x:Name="RingChoiceListBox" SelectionChanged="RingChoiceListBox_SelectionChanged" Grid.Column="2" SelectionMode="Single" HorizontalAlignment="Right" VerticalAlignment="Top">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <TextBlock Text="{Binding Title}"/>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
-        <TextBox Name="ProjectsLabel" Width="140" Foreground="White" Margin="10,10,1130,656">Choose Project:</TextBox>
-        <ListView Name="ProjectsListView" MaxHeight="400" MaxWidth="900" Margin="-180,-99,180,99" SelectionChanged="ProjectsListView_SelectionChanged">
-            <ListView.View>
-                <GridView AllowsColumnReorder="True" ColumnHeaderToolTip="Projects">
-                    <GridViewColumn DisplayMemberBinding="{Binding Path=ProjectName}" Header="Project Name" Width="100" />
-                    <GridViewColumn DisplayMemberBinding="{Binding Path=ProjectPath}" Header="Project Path" Width="100" />
-                    <GridViewColumn DisplayMemberBinding="{Binding Path=DirectXVersion}" Header="DirectX Version" Width="100" />
-                </GridView>
-            </ListView.View>
-        </ListView>
-        <Button Name="UpdateButton" Content="Check For Updates" Click="UpdateButton_Click" FontSize="20" Margin="950,234,0,408" />
-        <Button Name="SelectInstallDirectory" Content="Select Install Directory" Click="SelectInstallDirectory_Click" FontSize="20" Margin="1062,151,4,504"/>
-        <Button Name="LaunchSHOEButton" Content="Launch Project" Click="LaunchSHOEButton_Click" FontSize="30" Margin="0,578,0,50" />
+        <TextBlock x:Name="ProjectsLabel" FontSize="30" Foreground="White" Grid.Column="0" VerticalAlignment="Bottom"><Run Text="Choose Project:"/></TextBlock>
+        <Button x:Name="UpdateButton" Content="Check For Updates" Click="UpdateButton_Click" FontSize="20" Grid.Row="1" Grid.Column="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" />
+        <Button x:Name="SelectInstallDirectory" Content="Select Install Directory" Click="SelectInstallDirectory_Click" FontSize="20" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        <Button x:Name="LaunchSHOEButton" Content="Launch Project" Click="LaunchSHOEButton_Click" FontSize="30" VerticalAlignment="Bottom" Grid.Column="1" Grid.Row="2"/>
     </Grid>
 </Window>

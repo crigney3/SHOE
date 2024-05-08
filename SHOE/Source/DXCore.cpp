@@ -34,8 +34,7 @@ DXCore::DXCore(
 	const char* titleBarText,	// Text for the window's title bar
 	unsigned int windowWidth,	// Width of the window's client area
 	unsigned int windowHeight,	// Height of the window's client area
-	bool debugTitleBarStats,    // Show extra stats (fps) in title bar?
-	DirectXVersion dxVersion)				// Which version of directX is this?
+	bool debugTitleBarStats)    // Show extra stats (fps) in title bar?
 {
 	// Save a static reference to this object.
 	//  - Since the OS-level message function must be a non-member (global) function, 
@@ -59,8 +58,6 @@ DXCore::DXCore(
 	this->deltaTime = 0;
 	this->startTime = 0;
 	this->totalTime = 0;
-
-	this->dxVersion = dxVersion;
 
 	// Query performance counter for accurate timing information
 	__int64 perfFreq;
@@ -179,6 +176,8 @@ HRESULT DXCore::InitDirectX11()
 	// when things go wrong!
 	deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
+
+	dxVersion = DIRECT_X_11;
 
 	// Create a description of how our swap
 	// chain should work
@@ -303,6 +302,7 @@ HRESULT DXCore::InitDirectX12()
 	D3D12GetDebugInterface(IID_PPV_ARGS(&debugController));
 	debugController->EnableDebugLayer();
 #endif
+	dxVersion = DIRECT_X_12;
 
 	// Result variable for below function calls
 	HRESULT hr = S_OK;
@@ -610,7 +610,17 @@ void DXCore::Quit()
 	PostMessage(this->hWnd, WM_CLOSE, NULL, NULL);
 }
 
+void DXCore::SetProjectPath(std::string projPath) {
+	this->projectPath = projPath;
+	// Change the asset paths here
+}
+
+std::string DXCore::GetProjectPath() {
+	return this->projectPath;
+}
+
 // This is so cursed. Visual Studio why
+// Finally going to fix this by going around it entirely
 void DXCore::SetBuildAssetPaths() {
 	assetPathStrings[0] = "..\\..\\..\\Assets\\Models\\";
 	assetPathStrings[1] = "..\\..\\..\\Assets\\Scenes\\";
@@ -940,8 +950,10 @@ LRESULT DXCore::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
-
 bool DXCore::IsDirectX12() {
 	return dxVersion;
 }
 
+DirectXVersion DXCore::GetDXVersion() {
+	return this->dxVersion;
+}
