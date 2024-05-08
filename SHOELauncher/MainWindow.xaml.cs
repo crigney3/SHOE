@@ -157,12 +157,12 @@ namespace SHOELauncher
                         InstallSHOEFiles(true, SHOEVersion.zero);
                     } else
                     {
-                        launcherStatus = LauncherState.Running;
+                        LauncherStatus = LauncherState.Running;
                         UpdateButton.Content = "No updates on " + selectedAppRing.Title;
                     }
                 } catch (Exception ex)
                 {
-                    launcherStatus = LauncherState.Failed;
+                    LauncherStatus = LauncherState.Failed;
                     MessageBox.Show($"Error checking for SHOE Updates: {ex}");
                 }
             } else
@@ -182,19 +182,32 @@ namespace SHOELauncher
 
                 if (_isUpdate)
                 {
-                    launcherStatus = LauncherState.UpdatingSHOE;
+                    LauncherStatus = LauncherState.UpdatingSHOE;
                 }
                 else
                 {
-                    launcherStatus = LauncherState.FirstSHOEInstall;
+                    LauncherStatus = LauncherState.FirstSHOEInstall;
                 }
 
                 _onlineVersion = new SHOEVersion(webClient.DownloadString(versionString));
 
                 Uri engineString = new Uri(selectedAppRing.OnlinePath + "SHOE.zip");
-                await DownloadSHOEAndInstall(engineString, _onlineVersion);
 
-                Console.WriteLine("Downloading but not installing yet");
+                using (HttpClient client = new HttpClient())
+                {
+                    using (HttpResponseMessage response = await client.GetAsync(engineString))
+                    {
+                        using (var stream = await response.Content.ReadAsStreamAsync())
+                        {
+                            using (var byteStream = new MemoryStream())
+                            {
+                                stream.CopyTo(byteStream);
+                                File.WriteAllBytes(SHOEBuildPath + "\\SHOE.zip", byteStream.ToArray());
+                                DownloadSHOECompletedCallback(_onlineVersion);
+                            }
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -203,13 +216,11 @@ namespace SHOELauncher
             }
         }
 
-        private void DownloadSHOECompletedCallback(SHOEVersion _onlineVersion, byte[] zipBytes)
+        private void DownloadSHOECompletedCallback(SHOEVersion _onlineVersion)
         {
             try
             {
-                Console.WriteLine("installing");
-                File.WriteAllBytes(SHOEBuildPath + "\\SHOE.zip", zipBytes);
-
+                Console.WriteLine("Installing");
                 string ringFilePath = SHOEBuildPath + "\\" + selectedAppRing.Title;
                 if (!Directory.Exists(ringFilePath))
                 {
@@ -226,10 +237,10 @@ namespace SHOELauncher
 
                 EngineVersionText.Text = _onlineVersion.ToString();
                 SHOEExecPath = Path.Combine(SHOEBuildPath, selectedAppRing.Title) + "\\SHOE.exe";
-                launcherStatus = LauncherState.Running;
+                LauncherStatus = LauncherState.Running;
             } catch (Exception ex)
             {
-                launcherStatus = LauncherState.Failed;
+                LauncherStatus = LauncherState.Failed;
                 MessageBox.Show($"Error finishing SHOE download: {ex}");
             }
         }
@@ -289,16 +300,6 @@ namespace SHOELauncher
             }
 
             File.WriteAllText("EngineInstallLocation.txt", SHOEBuildPath);
-        }
-
-        public static async Task DownloadSHOEAndInstall(Uri engineTargetString, SHOEVersion onlineVersion)
-        {
-            HttpClient httpClient = new HttpClient();
-
-            Task downloadTask = Task.Run(() => { httpClient.GetByteArrayAsync(engineTargetString); });
-            //await downloadTask.ConfigureAwait
-
-            await downloadTask.ContinueWith(installation => { windowRef.DownloadSHOECompletedCallback(onlineVersion, (byte[])((dynamic)downloadTask).Result); });
         }
     }
 
