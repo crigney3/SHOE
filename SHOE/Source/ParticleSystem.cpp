@@ -146,7 +146,6 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetDrawListSRV(
 
 void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixelShader,
 								 std::shared_ptr<SimpleVertexShader> particleVertexShader,
-								 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
 								 std::shared_ptr<SimpleComputeShader> particleEmitComputeShader,
 								 std::shared_ptr<SimpleComputeShader> particleSimComputeShader,
 								 std::shared_ptr<SimpleComputeShader> particleCopyComputeShader,
@@ -156,7 +155,6 @@ void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixe
 {
 	defaultParticlePixelShader = particlePixelShader;
 	defaultParticleVertexShader = particleVertexShader;
-	defaultParticleTextureSRV = particleTextureSRV;
 	defaultParticleCopyComputeShader = particleCopyComputeShader;
 	defaultParticleEmitComputeShader = particleEmitComputeShader;
 	defaultParticleSimComputeShader = particleSimComputeShader;
@@ -177,7 +175,7 @@ void ParticleSystem::Start()
 
 	this->particlePixelShader = defaultParticlePixelShader;
 	this->particleVertexShader = defaultParticleVertexShader;
-	this->particleTextureSRV = defaultParticleTextureSRV;
+	this->particleTextureSRV = nullptr;
 
 	this->device = defaultDevice;
 	this->context = defaultContext;
@@ -297,7 +295,9 @@ void ParticleSystem::Draw(std::shared_ptr<Camera> cam, Microsoft::WRL::ComPtr<ID
 
 	context->VSSetShaderResources(0, 1, this->drawListSRV.GetAddressOf());
 	context->VSSetShaderResources(1, 1, this->sortListSRV.GetAddressOf());
-	particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV);
+	if (this->particleTextureSRV != nullptr) {
+		particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV);
+	}
 
 	particleVertexShader->SetMatrix4x4("view", cam->GetViewMatrix());
 	particleVertexShader->SetMatrix4x4("projection", cam->GetProjectionMatrix());

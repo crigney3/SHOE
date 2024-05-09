@@ -648,6 +648,10 @@ void DXCore::SetBuildAssetPaths() {
 	criticalAssetPaths[3] = this->engineAssetsPath + "\\Fonts\\";
 	criticalAssetPaths[6] = this->engineAssetsPath + "\\Textures\\";
 	criticalAssetPaths[7] = this->engineAssetsPath + "\\Textures\\Skies\\";
+	criticalAssetPaths[9] = this->engineAssetsPath + "\\Textures\\Albedo\\";
+	criticalAssetPaths[10] = this->engineAssetsPath + "\\Textures\\Normals\\";
+	criticalAssetPaths[11] = this->engineAssetsPath + "\\Textures\\Metalness\\";
+	criticalAssetPaths[12] = this->engineAssetsPath + "\\Textures\\Roughness\\";
 }
 
 void DXCore::SetVSAssetPaths() {
