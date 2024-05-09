@@ -48,7 +48,3 @@ int WINAPI WinMain(
 	// whatever we get back once the game loop is over
 	return dxGame.Run();
 }
-
-void ProcessCommandLine(LPSTR cmdLine, Game gameRef) {
-
-}

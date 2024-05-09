@@ -717,36 +717,46 @@ std::shared_ptr<Terrain> AssetManager::CreateTerrainEntity(std::shared_ptr<Mesh>
 std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string name, std::vector<std::shared_ptr<Material>> materials, std::string blendMapPath, bool dx12Material) {
 	std::shared_ptr<TerrainMaterial> newTMat;
 
-	if (dx12Material) {
+	try {
+		if (dx12Material) {
 
-	}
-	else {
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
+		}
+		else {
+			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
 
-		newTMat = std::make_shared<DX11TerrainMaterial>(name, blendMap);
+			newTMat = std::make_shared<DX11TerrainMaterial>(name, blendMap);
 
-		for (auto m : materials) {
-			newTMat->AddMaterial(m);
+			for (auto m : materials) {
+				newTMat->AddMaterial(m);
+			}
+
+			if (blendMapPath != "") {
+				std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
+
+				std::wstring wPath;
+				ISimpleShader::ConvertToWide(namePath, wPath);
+
+				CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
+
+				newTMat->SetBlendMap(blendMap);
+
+				newTMat->SetBlendMapFilenameKey(SerializeFileName("Assets\\Textures\\", namePath));
+			}
+
+			newTMat->SetPixelShader(GetPixelShaderByName("TerrainPS"));
+			newTMat->SetVertexShader(GetVertexShaderByName("TerrainVS"));
 		}
 
-		if (blendMapPath != "") {
-			std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
-
-			std::wstring wPath;
-			ISimpleShader::ConvertToWide(namePath, wPath);
-
-			CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
-
-			newTMat->SetBlendMap(blendMap);
-
-			newTMat->SetBlendMapFilenameKey(SerializeFileName("Assets\\Textures\\", namePath));
-		}
-
-		newTMat->SetPixelShader(GetPixelShaderByName("TerrainPS"));
-		newTMat->SetVertexShader(GetVertexShaderByName("TerrainVS"));
+		globalTerrainMaterials.push_back(newTMat);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully created terrain material %s\n", name.c_str());
+#endif
 	}
-
-	globalTerrainMaterials.push_back(newTMat);
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to create terrain material %s with error: %s\n", name.c_str(), e.what());
+#endif
+	}
 
 	return newTMat;
 }
@@ -760,45 +770,55 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 {
 	std::shared_ptr<TerrainMaterial> newTMat;
 
-	if (dx12Material) {
+	try {
+		if (dx12Material) {
 
+		}
+		else {
+			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
+
+			newTMat = std::make_shared<DX11TerrainMaterial>(name, blendMap);
+
+			for (int i = 0; i < matNames.size(); i++) {
+				std::shared_ptr<Material> newMat;
+
+				if (isPBRMat) {
+					int textureIndex = i * 4;
+					newMat = CreatePBRMaterial(matNames[i], texturePaths[textureIndex], texturePaths[textureIndex + 1], texturePaths[textureIndex + 2], texturePaths[textureIndex + 3]);
+				}
+				else {
+					// Currently unimplemented
+				}
+
+				newTMat->AddMaterial(newMat);
+			}
+
+			if (blendMapPath != "") {
+				std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
+
+				std::wstring wPath;
+				ISimpleShader::ConvertToWide(namePath, wPath);
+
+				CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
+
+				newTMat->SetBlendMap(blendMap);
+				newTMat->SetBlendMapFilenameKey(SerializeFileName("Assets\\Textures\\", namePath));
+			}
+		}
+
+		newTMat->SetPixelShader(GetPixelShaderByName("TerrainPS"));
+		newTMat->SetVertexShader(GetVertexShaderByName("TerrainVS"));
+
+		globalTerrainMaterials.push_back(newTMat);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully created terrain material %s\n", name.c_str());
+#endif
 	}
-	else {
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
-
-		newTMat = std::make_shared<DX11TerrainMaterial>(name, blendMap);
-
-		for (int i = 0; i < matNames.size(); i++) {
-			std::shared_ptr<Material> newMat;
-
-			if (isPBRMat) {
-				int textureIndex = i * 4;
-				newMat = CreatePBRMaterial(matNames[i], texturePaths[textureIndex], texturePaths[textureIndex + 1], texturePaths[textureIndex + 2], texturePaths[textureIndex + 3]);
-			}
-			else {
-				// Currently unimplemented
-			}
-
-			newTMat->AddMaterial(newMat);
-		}
-
-		if (blendMapPath != "") {
-			std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_PATH_BASIC, blendMapPath);
-
-			std::wstring wPath;
-			ISimpleShader::ConvertToWide(namePath, wPath);
-
-			CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
-
-			newTMat->SetBlendMap(blendMap);
-			newTMat->SetBlendMapFilenameKey(SerializeFileName("Assets\\Textures\\", namePath));
-		}
-	}	
-
-	newTMat->SetPixelShader(GetPixelShaderByName("TerrainPS"));
-	newTMat->SetVertexShader(GetVertexShaderByName("TerrainVS"));
-
-	globalTerrainMaterials.push_back(newTMat);
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to create terrain material %s with error: %s\n", name.c_str(), e.what());
+#endif
+	}
 
 	return newTMat;
 }
@@ -1447,13 +1467,13 @@ void AssetManager::InitializeLights() {
 }
 
 void AssetManager::InitializeTerrainEntities() {
-	Terrain::SetDefaults(GetMeshByName("Cube"), GetTerrainMaterialByName("Forest Terrain Material"));
+	Terrain::SetDefaults(GetMeshByName("Cube"), GetTerrainMaterialByName("Default Terrain Material"));
 
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
-	std::shared_ptr<Terrain> mainTerrain = CreateTerrainEntity("valley.raw16", GetTerrainMaterialByName("Forest Terrain Material"), "Basic Terrain");
-	mainTerrain->GetTransform()->SetPosition(-256.0f, -14.0f, -256.0f);
-	mainTerrain->SetEnabled(false);
+	//std::shared_ptr<Terrain> mainTerrain = CreateTerrainEntity("valley.raw16", GetTerrainMaterialByName("Forest Terrain Material"), "Basic Terrain");
+	//mainTerrain->GetTransform()->SetPosition(-256.0f, -14.0f, -256.0f);
+	//mainTerrain->SetEnabled(false);
 }
 
 void AssetManager::InitializeTerrainMaterials() {
@@ -1462,39 +1482,39 @@ void AssetManager::InitializeTerrainMaterials() {
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
 
-	std::shared_ptr<Texture> albedoTexture;
-	std::shared_ptr<Texture> normalTexture;
-	std::shared_ptr<Texture> roughTexture;
+	//std::shared_ptr<Texture> albedoTexture;
+	//std::shared_ptr<Texture> normalTexture;
+	//std::shared_ptr<Texture> roughTexture;
 
-	albedoTexture = CreateTexture("forest_floor_albedo.png", "ForestAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
-	normalTexture = CreateTexture("forest_floor_Normal-ogl.png", "ForestNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
-	roughTexture = CreateTexture("forest_floor_Roughness.png", "ForestRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+	//albedoTexture = CreateTexture("forest_floor_albedo.png", "ForestAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	//normalTexture = CreateTexture("forest_floor_Normal-ogl.png", "ForestNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	//roughTexture = CreateTexture("forest_floor_Roughness.png", "ForestRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
 
-	std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
+	//std::shared_ptr<Material> forestMat = CreatePBRMaterial("Forest TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
 
-	albedoTexture = CreateTexture("bog_albedo.png", "BogAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
-	normalTexture = CreateTexture("bog_normal-ogl.png", "BogNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
-	roughTexture = CreateTexture("bog_roughness.png", "BogRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+	//albedoTexture = CreateTexture("bog_albedo.png", "BogAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	//normalTexture = CreateTexture("bog_normal-ogl.png", "BogNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	//roughTexture = CreateTexture("bog_roughness.png", "BogRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
 
-	std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
+	//std::shared_ptr<Material> bogMat = CreatePBRMaterial("Bog TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
 
-	albedoTexture = CreateTexture("rocky_dirt1-albedo.png", "RockyAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
-	normalTexture = CreateTexture("rocky_dirt1-normal-ogl.png", "RockyNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
-	roughTexture = CreateTexture("rocky_dirt1_Roughness.png", "RockyRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
+	//albedoTexture = CreateTexture("rocky_dirt1-albedo.png", "RockyAlbedo", ASSET_TEXTURE_PATH_PBR_ALBEDO);
+	//normalTexture = CreateTexture("rocky_dirt1-normal-ogl.png", "RockyNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	//roughTexture = CreateTexture("rocky_dirt1_Roughness.png", "RockyRough", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
 
-	std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
+	//std::shared_ptr<Material> rockyMat = CreatePBRMaterial("Rocky TMaterial", albedoTexture, normalTexture, GetTextureByName("WoodMetal"), roughTexture);
 
-	tMats.push_back(forestMat);
-	tMats.push_back(bogMat);
-	tMats.push_back(rockyMat);
+	//tMats.push_back(forestMat);
+	//tMats.push_back(bogMat);
+	//tMats.push_back(rockyMat);
 
-	//Set appropriate tiling
-	forestMat->SetTiling(10.0f);
-	bogMat->SetTiling(10.0f);
+	////Set appropriate tiling
+	//forestMat->SetTiling(10.0f);
+	//bogMat->SetTiling(10.0f);
 
-	std::shared_ptr<TerrainMaterial> forestTerrainMaterial = CreateTerrainMaterial("Forest Terrain Material", tMats, "blendMap.png");
+	//std::shared_ptr<TerrainMaterial> forestTerrainMaterial = CreateTerrainMaterial("Forest Terrain Material", tMats, "blendMap.png");
 
-	tMats.clear();
+	//tMats.clear();
 
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
@@ -1544,6 +1564,13 @@ void AssetManager::InitializeTerrainMaterials() {
 	//tMats.push_back(GetMaterialByName("terrainFloorMat"));
 
 	//floorTerrainMaterial = CreateTerrainMaterial("Floor Terrain Material", tMats);
+
+	std::shared_ptr<TerrainMaterial> defaultTMat;
+	tMats.clear();
+
+	// Get the default material
+	tMats.push_back(GetMaterialAtID(0));
+	defaultTMat = CreateTerrainMaterial("Default Terrain Material", tMats);
 }
 
 void AssetManager::InitializeCameras() {
