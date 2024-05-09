@@ -992,8 +992,12 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 			currentPS->SetSamplerState("sampleState", currentMaterial->GetSamplerState().Get());
 			currentPS->SetSamplerState("clampSampler", currentMaterial->GetClampSamplerState().Get());
 			currentPS->SetShaderResourceView("textureAlbedo", currentMaterial->GetAlbedoMapSRV().Get());
-			currentPS->SetShaderResourceView("textureRough", currentMaterial->GetRoughMapSRV().Get());
-			currentPS->SetShaderResourceView("textureMetal", currentMaterial->GetMetalMapSRV().Get());
+			if (currentMaterial->GetMetalMap() != nullptr) {
+				currentPS->SetShaderResourceView("textureMetal", currentMaterial->GetMetalMapSRV().Get());
+			}
+			if (currentMaterial->GetRoughMap() != nullptr) {
+				currentPS->SetShaderResourceView("textureRough", currentMaterial->GetRoughMapSRV().Get());
+			}
 			if (currentMaterial->GetNormalMap() != nullptr) {
 				currentPS->SetShaderResourceView("textureNormal", currentMaterial->GetNormalMapSRV().Get());
 			}

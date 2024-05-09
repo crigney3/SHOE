@@ -652,6 +652,7 @@ void DXCore::SetBuildAssetPaths() {
 	criticalAssetPaths[10] = this->engineAssetsPath + "\\Textures\\Normals\\";
 	criticalAssetPaths[11] = this->engineAssetsPath + "\\Textures\\Metalness\\";
 	criticalAssetPaths[12] = this->engineAssetsPath + "\\Textures\\Roughness\\";
+	criticalAssetPaths[13] = this->engineAssetsPath + "\\Shaders\\";
 }
 
 void DXCore::SetVSAssetPaths() {

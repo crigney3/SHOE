@@ -124,60 +124,109 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 }
 
 std::shared_ptr<Camera> AssetManager::CreateCamera(std::string name, float aspectRatio) {
-	float ar = aspectRatio == 0 ? ((float)dxInstance->width / (float)dxInstance->height) : aspectRatio;
-	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-	std::shared_ptr<Camera> cam = CreateCameraOnEntity(newEnt, ar);
+	std::shared_ptr<Camera> cam;
+	
+	try {
+		float ar = aspectRatio == 0 ? ((float)dxInstance->width / (float)dxInstance->height) : aspectRatio;
+		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+		cam = CreateCameraOnEntity(newEnt, ar);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully created camera named %s\n", name.c_str());
+#endif
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to create camera named %s with error: %s\n", name.c_str(), e.what());
+#endif
+	}
+
 	return cam;
 
 }
 
 std::shared_ptr<SimpleVertexShader> AssetManager::CreateVertexShader(std::string id, std::string nameToLoad) {
-	std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::shared_ptr<SimpleVertexShader> newVS;
+	try {
+		std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-	std::shared_ptr<SimpleVertexShader> newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), namePath, id);
+		newVS = std::make_shared<SimpleVertexShader>(device.Get(), context.Get(), namePath, id);
 
-	// Serialize the filename if it's in the right folder
-	std::string assetPathStr = "Assets\\Shaders\\";
+		// Serialize the filename if it's in the right folder
+		std::string assetPathStr = "Assets\\Shaders\\";
 
-	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
+		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-	newVS->SetFileNameKey(baseFilename);
+		newVS->SetFileNameKey(baseFilename);
 
-	vertexShaders.push_back(newVS);
+		vertexShaders.push_back(newVS);
+
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully loaded Vertex shader named %s\n", id.c_str());
+#endif
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to load Vertex shader named %s with error: %s\n", id.c_str(), e.what());
+#endif
+	}
 
 	return newVS;
 }
 
 std::shared_ptr<SimplePixelShader> AssetManager::CreatePixelShader(std::string id, std::string nameToLoad) {
-	std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::shared_ptr<SimplePixelShader> newPS;
 
-	std::shared_ptr<SimplePixelShader> newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), namePath, id);
+	try {
+		std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-	// Serialize the filename if it's in the right folder
-	std::string assetPathStr = "Assets\\Shaders\\";
+		newPS = std::make_shared<SimplePixelShader>(device.Get(), context.Get(), namePath, id);
 
-	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
+		// Serialize the filename if it's in the right folder
+		std::string assetPathStr = "Assets\\Shaders\\";
 
-	newPS->SetFileNameKey(baseFilename);
+		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-	pixelShaders.push_back(newPS);
+		newPS->SetFileNameKey(baseFilename);
+
+		pixelShaders.push_back(newPS);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully loaded Pixel shader named %s\n", id.c_str());
+#endif
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to load Pixel shader named %s with error: %s\n", id.c_str(), e.what());
+#endif
+	}
 
 	return newPS;
 }
 
 std::shared_ptr<SimpleComputeShader> AssetManager::CreateComputeShader(std::string id, std::string nameToLoad) {
-	std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
+	std::shared_ptr<SimpleComputeShader> newCS;
 
-	std::shared_ptr<SimpleComputeShader> newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), namePath.c_str(), id);
+	try {
+		std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SHADER_PATH, nameToLoad);
 
-	// Serialize the filename if it's in the right folder
-	std::string assetPathStr = "Assets\\Shaders\\";
+		newCS = std::make_shared<SimpleComputeShader>(device.Get(), context.Get(), namePath.c_str(), id);
 
-	std::string baseFilename = SerializeFileName(assetPathStr, namePath);
+		// Serialize the filename if it's in the right folder
+		std::string assetPathStr = "Assets\\Shaders\\";
 
-	newCS->SetFileNameKey(baseFilename);
+		std::string baseFilename = SerializeFileName(assetPathStr, namePath);
 
-	computeShaders.push_back(newCS);
+		newCS->SetFileNameKey(baseFilename);
+
+		computeShaders.push_back(newCS);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully loaded Compute shader named %s\n", id.c_str());
+#endif
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to load Compute shader named %s with error: %s\n", id.c_str(), e.what());
+#endif
+	}
 
 	// Prints the shader to a readable blob
 	/*Microsoft::WRL::ComPtr<ID3DBlob> assembly;
@@ -513,11 +562,24 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::string name)
 /// <param name="name">Name of the GameEntity</param>
 /// <returns>Pointer to the new GameEntity</returns>
 std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> mat, std::string name) {
-	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+	std::shared_ptr<GameEntity> newEnt;
 
-	std::shared_ptr<MeshRenderer> renderer = newEnt->AddComponent<MeshRenderer>();
-	renderer->SetMesh(mesh);
-	renderer->SetMaterial(mat);
+	try {
+		newEnt = CreateGameEntity(name);
+
+		std::shared_ptr<MeshRenderer> renderer = newEnt->AddComponent<MeshRenderer>();
+		renderer->SetMesh(mesh);
+		renderer->SetMaterial(mat);
+
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully initialized gameEntity with mesh renderer named %s\n", name.c_str());
+#endif
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to initialize gameEntity with mesh renderer named %s at error: %s\n", name.c_str(), e.what());
+#endif
+	}
 
 	return newEnt;
 }
@@ -532,8 +594,21 @@ std::shared_ptr<GameEntity> AssetManager::CreateGameEntity(std::shared_ptr<Mesh>
 /// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 color, float intensity)
 {
-	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-	std::shared_ptr<Light> light = CreateDirectionalLightOnEntity(newEnt, color, intensity);
+	std::shared_ptr<Light> light;
+
+	try {
+		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+		light = CreateDirectionalLightOnEntity(newEnt, color, intensity);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully created directional light named %s\n", name.c_str());
+#endif
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to create directional light named %s with error: %s\n", name.c_str(), e.what());
+#endif
+	}
+
 	return light;
 }
 
@@ -547,8 +622,21 @@ std::shared_ptr<Light> AssetManager::CreateDirectionalLight(std::string name, Di
 /// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color, float intensity)
 {
-	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-	std::shared_ptr<Light> light = CreatePointLightOnEntity(newEnt, range, color, intensity);
+	std::shared_ptr<Light> light;
+
+	try {
+		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+		light = CreatePointLightOnEntity(newEnt, range, color, intensity);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully created point light named %s\n", name.c_str());
+#endif
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to create point light named %s with error: %s\n", name.c_str(), e.what());
+#endif
+	}
+
 	return light;
 }
 
@@ -563,8 +651,21 @@ std::shared_ptr<Light> AssetManager::CreatePointLight(std::string name, float ra
 /// <returns>Pointer to the new Light component</returns>
 std::shared_ptr<Light> AssetManager::CreateSpotLight(std::string name, float range, DirectX::XMFLOAT3 color, float intensity)
 {
-	std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
-	std::shared_ptr<Light> light = CreateSpotLightOnEntity(newEnt, range, color, intensity);
+	std::shared_ptr<Light> light;
+
+	try {
+		std::shared_ptr<GameEntity> newEnt = CreateGameEntity(name);
+		light = CreateSpotLightOnEntity(newEnt, range, color, intensity);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully created spot light named %s\n", name.c_str());
+#endif
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to create spot light named %s with error: %s\n", name.c_str(), e.what());
+#endif
+	}
+
 	return light;
 }
 
@@ -1034,6 +1135,8 @@ void AssetManager::InitializeGameEntities() {
 
 	// Show example render
 	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("defaultMaterial"), "Basic Cube");
+	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("basicGlassMaterial"), "Clear Sphere");
+	//CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveBasicGlass"), "Refractive Cube");
 
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
