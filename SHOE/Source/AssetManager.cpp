@@ -1046,7 +1046,7 @@ std::shared_ptr<Light> AssetManager::CreateDirectionalLightOnEntity(std::shared_
 	std::shared_ptr<Light> light = entityToEdit->AddComponent<Light>();
 	if (light != nullptr) {
 		light->SetType(0.0f);
-		light->SetColor(color);
+		light->SetColor(DirectX::XMFLOAT3(abs(color.x), abs(color.y), abs(color.z)));
 		light->SetIntensity(intensity);
 	}
 
@@ -1062,7 +1062,7 @@ std::shared_ptr<Light> AssetManager::CreatePointLightOnEntity(std::shared_ptr<Ga
 	if (light != nullptr) {
 		light->SetType(1.0f);
 		light->SetRange(range);
-		light->SetColor(color);
+		light->SetColor(DirectX::XMFLOAT3(abs(color.x), abs(color.y), abs(color.z)));
 		light->SetIntensity(intensity);
 	}
 
@@ -1078,7 +1078,7 @@ std::shared_ptr<Light> AssetManager::CreateSpotLightOnEntity(std::shared_ptr<Gam
 	if (light != nullptr) {
 		light->SetType(2.0f);
 		light->SetRange(range);
-		light->SetColor(color);
+		light->SetColor(DirectX::XMFLOAT3(abs(color.x), abs(color.y), abs(color.z)));
 		light->SetIntensity(intensity);
 	}
 
@@ -1440,12 +1440,12 @@ void AssetManager::InitializeSkies() {
 void AssetManager::InitializeLights() {
 	//white light from the top left
 	std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 0.7f);
-	mainLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 20.0f, -200.0f));
+	mainLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 40.0f, 0.0f));
 	mainLight->GetTransform()->Rotate(XM_PIDIV2, XM_PI, 0);
 	mainLight->SetCastsShadows(true);
 
 	//white light from the back
-	CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, -1))->SetEnabled(false);
+	CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, 1));
 
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
@@ -1458,12 +1458,13 @@ void AssetManager::InitializeLights() {
 	//centerLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0, 1.5f, 0));
 
 	//flashlight attached to camera +.5z and x
-	std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", 10.0f);
-	flashlight->GetGameEntity()->AddComponent<FlashlightController>();
-	flashlight->GetTransform()->SetParent(mainCamera->GetTransform());
-	flashlight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f));
-	flashlight->SetCastsShadows(true);
-	flashlight->GetGameEntity()->SetEnabled(false);
+	// Relic from when this project temporarily spun off as a horror game
+	//std::shared_ptr<Light> flashlight = CreateSpotLight("Flashlight", 10.0f);
+	//flashlight->GetGameEntity()->AddComponent<FlashlightController>();
+	//flashlight->GetTransform()->SetParent(mainCamera->GetTransform());
+	//flashlight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.5f, 0.0f, 0.5f));
+	//flashlight->SetCastsShadows(true);
+	//flashlight->GetGameEntity()->SetEnabled(false);
 }
 
 void AssetManager::InitializeTerrainEntities() {

@@ -260,6 +260,9 @@ namespace SHOELauncher
                 Process.Start(startInfo);
 
                 Close();
+            } else
+            {
+                MessageBox.Show("SHOE is not installed!");
             }
         }
 
@@ -277,6 +280,7 @@ namespace SHOELauncher
             {
                 this.selectedProject = ProjectsListView.SelectedItem as SHOEProject;
                 LaunchSHOEButton.Content = "Launch " + this.selectedProject.ProjectName;
+                LaunchSHOEButton.IsEnabled = true;
             }
         }
 
@@ -300,6 +304,12 @@ namespace SHOELauncher
             }
 
             File.WriteAllText("EngineInstallLocation.txt", SHOEBuildPath);
+        }
+
+        private void NewProjectsButton_Click(object sender, RoutedEventArgs e)
+        {
+            NewProjectWindow projectWindow = new NewProjectWindow();
+            projectWindow.Show();
         }
     }
 

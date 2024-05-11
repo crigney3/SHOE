@@ -39,8 +39,9 @@
             </ListBox.ItemTemplate>
         </ListBox>
         <TextBlock x:Name="ProjectsLabel" FontSize="30" Foreground="White" Grid.Column="0" VerticalAlignment="Bottom"><Run Text="Choose Project:"/></TextBlock>
+        <Button x:Name="NewProjectsButton" FontSize="25" Grid.Column="1" Grid.Row="0" VerticalAlignment="Bottom" HorizontalAlignment="Right" Click="NewProjectsButton_Click" Content="Create New Project"/>
         <Button x:Name="UpdateButton" Content="Check For Updates" Click="UpdateButton_Click" FontSize="20" Grid.Row="1" Grid.Column="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" />
         <Button x:Name="SelectInstallDirectory" Content="Select Install Directory" Click="SelectInstallDirectory_Click" FontSize="20" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-        <Button x:Name="LaunchSHOEButton" Content="Launch Project" Click="LaunchSHOEButton_Click" FontSize="30" VerticalAlignment="Bottom" Grid.Column="1" Grid.Row="2"/>
+        <Button x:Name="LaunchSHOEButton" Content="Launch Project" Click="LaunchSHOEButton_Click" FontSize="30" VerticalAlignment="Bottom" Grid.Column="1" Grid.Row="2" IsEnabled="False"></Button>
     </Grid>
 </Window>
