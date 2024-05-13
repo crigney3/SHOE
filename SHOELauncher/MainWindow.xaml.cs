@@ -14,6 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using Microsoft.Win32;
 using System.Net.Http;
+using System.Collections.ObjectModel;
 
 enum LauncherState
 {
@@ -83,7 +84,7 @@ namespace SHOELauncher
             }
         }
 
-        private List<SHOEProject> projects;
+        private ObservableCollection<SHOEProject> projects;
         private AppRing selectedAppRing;
 
         public static MainWindow windowRef;
@@ -116,14 +117,13 @@ namespace SHOELauncher
                 SHOEExecPath = Path.Combine(SHOEBuildPath, selectedAppRing.Title) + "\\SHOE.exe";
             }
 
+            projects = new ObservableCollection<SHOEProject>();
             LoadProjects();
-            ProjectsListView.ItemsSource = projects;
         }
 
         private void LoadProjects()
         {
-            projects = new List<SHOEProject>();
-            // If no projects exist, then the listview should just have the "new project" button
+            // If no projects exist, then the listview should be blank
             if(File.Exists(projectsFilePath))
             {
                 string[] allProjStrings = File.ReadAllLines(projectsFilePath);
@@ -133,6 +133,7 @@ namespace SHOELauncher
                     projects.Add(new SHOEProject(projData[0], projData[1], (DXVersion)int.Parse(projData[2])));
                 }
             }
+            ProjectsListView.ItemsSource = projects;
         }
 
         private void CheckForUpdates()
@@ -308,8 +309,36 @@ namespace SHOELauncher
 
         private void NewProjectsButton_Click(object sender, RoutedEventArgs e)
         {
-            NewProjectWindow projectWindow = new NewProjectWindow();
-            projectWindow.Show();
+            try
+            {
+                NewProjectWindow projectWindow = new NewProjectWindow();
+                projectWindow.Show();
+                projectWindow.Owner = this;
+            } catch (Exception ex)
+            {
+                LauncherStatus = LauncherState.Failed;
+                MessageBox.Show($"Error creating new project window: {ex}");
+            }
+        }
+
+        public void CreateNewProjectFromData(SHOEProject project)
+        {
+            try
+            {
+                if (File.Exists(projectsFilePath))
+                {
+                    File.AppendAllText(projectsFilePath, $"\n{project.ProjectName},{project.ProjectPath},{((int)project.DirectXVersion)}");
+                } else
+                {
+                    File.WriteAllText(projectsFilePath, $"{project.ProjectName},{project.ProjectPath},{((int)project.DirectXVersion)}");
+                }              
+                Directory.CreateDirectory(project.ProjectPath + "\\" + project.ProjectName);
+                projects.Add(project);
+            } catch (Exception ex)
+            {
+                LauncherStatus = LauncherState.Failed;
+                MessageBox.Show($"Error creating new project directory/saving project details: {ex}");
+            }
         }
     }
 
@@ -415,7 +444,13 @@ namespace SHOELauncher
         public string Title { get; set; }
         public string OnlinePath { get; set; }
         public string LocalPath { get; set; }
+    }
 
+    public class DXVersionChoice
+    {
+        public string Title { get; set; }
+
+        public DXVersion Value { get; set; }
     }
 }
 

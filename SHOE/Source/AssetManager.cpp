@@ -1230,6 +1230,7 @@ void AssetManager::InitializeTextures() {
 
 	// Load the engine critical textures - Normals
 	CreateTexture("blank_normals.png", "BlankNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
+	CreateTexture("paint_normals.png", "PaintNormals", ASSET_TEXTURE_PATH_PBR_NORMALS);
 
 	// Load the engine critical textures - Roughness
 	CreateTexture("GenericRoughness100.png", "HighRoughness", ASSET_TEXTURE_PATH_PBR_ROUGHNESS);
@@ -1298,13 +1299,13 @@ void AssetManager::InitializeMaterials() {
 			GetTextureByName("NoMetal"),
 			GetTextureByName("LowRoughness"));
 
-		CreatePBRMaterial(std::string("reflectiveRough"),
+		CreatePBRMaterial(std::string("basicRough"),
 			GetTextureByName("BlankTexture"),
 			GetTextureByName("BlankNormals"),
 			GetTextureByName("NoMetal"),
 			GetTextureByName("HighRoughness"));
 
-		CreatePBRMaterial(std::string("reflectiveRoughMetal"),
+		CreatePBRMaterial(std::string("reflectiveRough"),
 			GetTextureByName("BlankTexture"),
 			GetTextureByName("BlankNormals"),
 			GetTextureByName("SolidMetal"),
@@ -1313,7 +1314,7 @@ void AssetManager::InitializeMaterials() {
 		// Make clear and refractive materials
 		std::shared_ptr<Material> refractive = CreatePBRMaterial(std::string("refractiveBasicGlass"),
 			GetTextureByName("BlankTexture"),
-			GetTextureByName("BlankNormals"),
+			GetTextureByName("PaintNormals"),
 			GetTextureByName("NoMetal"),
 			GetTextureByName("MedRoughness"));
 		refractive->SetRefractive(true);
@@ -1337,7 +1338,7 @@ void AssetManager::InitializeMaterials() {
 
 		refractive = CreatePBRMaterial(std::string("refractiveRoughGlass"),
 			GetTextureByName("BlankTexture"),
-			GetTextureByName("BlankNormals"),
+			GetTextureByName("PaintNormals"),
 			GetTextureByName("NoMetal"),
 			GetTextureByName("HighRoughness"));
 		refractive->SetRefractive(true);
@@ -1345,7 +1346,7 @@ void AssetManager::InitializeMaterials() {
 
 		refractive = CreatePBRMaterial(std::string("refractiveMetallicGlass"),
 			GetTextureByName("BlankTexture"),
-			GetTextureByName("BlankNormals"),
+			GetTextureByName("PaintNormals"),
 			GetTextureByName("SolidMetal"),
 			GetTextureByName("MedRoughness"));
 		refractive->SetRefractive(true);
@@ -1439,12 +1440,12 @@ void AssetManager::InitializeSkies() {
 
 void AssetManager::InitializeLights() {
 	//white light from the top left
-	std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 0.7f);
-	mainLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 40.0f, 0.0f));
-	mainLight->GetTransform()->Rotate(XM_PIDIV2, XM_PI, 0);
+	std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 70.0f);
+	mainLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f));
+	//mainLight->GetTransform()->Rotate(XM_PIDIV2, XM_PI, 0);
 	mainLight->SetCastsShadows(true);
 
-	//white light from the back
+	//blue light from the back
 	CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, 1));
 
 	// OUTDATED: Initializes lots of objects for demo.
@@ -1634,9 +1635,9 @@ void AssetManager::InitializeEmitters() {
 		device,
 		context);
 
-	std::shared_ptr<ParticleSystem> basicEmitter = CreateParticleEmitter("basicParticle", "Smoke/smoke_01.png", 20, 1.0f, 1.0f);
-	basicEmitter->GetTransform()->SetPosition(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	basicEmitter->SetEnabled(false);
+	//std::shared_ptr<ParticleSystem> basicEmitter = CreateParticleEmitter("basicParticle", "Smoke/smoke_01.png", 20, 1.0f, 1.0f);
+	//basicEmitter->GetTransform()->SetPosition(XMFLOAT3(1.0f, 0.0f, 0.0f));
+	//basicEmitter->SetEnabled(false);
 
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.

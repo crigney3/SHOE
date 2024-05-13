@@ -16,5 +16,20 @@
             <RowDefinition></RowDefinition>
             <RowDefinition></RowDefinition>
         </Grid.RowDefinitions>
+        <TextBlock x:Name="NewProjectsLabel" FontSize="20" Foreground="White" Grid.Column="0" VerticalAlignment="Top" Text="New Project"></TextBlock>
+        <TextBlock x:Name="ProjectNameLabel" FontSize="14" Foreground="White" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" Text="Name:"/>
+        <TextBox x:Name="ProjectName" Grid.Column="0" VerticalAlignment="Center" TextChanged="ProjectName_TextChanged" HorizontalAlignment="Center" Text="NewProject" Width="135"/>
+        <TextBlock x:Name="ProjectDirLabel" Foreground="White" Text="Project Directory:" FontSize="14" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Left" />
+        <TextBox x:Name="ProjectDirectory" Grid.Column="0" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Text="C:\" Width="135"/>
+        <Button x:Name="SelectProjectDirectory" Content="Select Project Directory" Click="SelectProjectDirectory_Click" FontSize="14" Grid.Row="1" Grid.Column="2" VerticalAlignment="Bottom" HorizontalAlignment="Center"/>
+        <TextBlock x:Name="DirectXLabel" Foreground="White" Text="DirectX Version:" FontSize="14" Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Left" />
+        <ListBox x:Name="DirectXChoiceListBox" SelectionChanged="DirectXChoiceListBox_SelectionChanged" Grid.Column="0" Grid.Row="2" SelectionMode="Single" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Title}"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <Button x:Name="CreateProjectButton" Content="Create New Project" HorizontalAlignment="Center" IsEnabled="False" VerticalAlignment="Center" Grid.Row="3" Click="CreateProjectButton_Click"/>
     </Grid>
 </Window>

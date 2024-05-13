@@ -569,7 +569,7 @@ void EditingUI::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap##Material")) {
 						meshRenderer->SetMaterial(globalAssets.GetMaterialAtID(materialIndex));
 					}
 
@@ -601,7 +601,7 @@ void EditingUI::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap##Mesh")) {
 						meshRenderer->SetMesh(globalAssets.GetMeshAtID(meshIndex));
 					}
 				}
@@ -768,16 +768,30 @@ void EditingUI::GenerateEditingUI() {
 					light->SetEnabled(lightEnabled);
 
 				UILightType = light->GetType();
-				ImGui::DragFloat("Type ", &UILightType, 1.0f, 0.0f, 2.0f);
+				ImGui::Text("Light Type: ");
+				ImGui::SameLine();
+				ImGui::InputFloat("##LightTypeSelector", &UILightType); //ImGui::SetFloat("Type ", &UILightType, 1.0f, 0.0f, 2.0f);
+				ImGui::SameLine();
+				if (ImGui::ArrowButton("PrevLightType", ImGuiDir_Left)) {
+					if (UILightType != 0) {
+						UILightType -= 1;
+					}
+				}
+				ImGui::SameLine();
+				if (ImGui::ArrowButton("NextLightType", ImGuiDir_Right)) {
+					if (UILightType < 2) {
+						UILightType += 1;
+					}
+				}
 				light->SetType(UILightType);
 
-				//Directional Light
+				//Directional Light/Spot Light
 				if (light->GetType() == 0.0f || light->GetType() == 2.0f) {
 					bool castsShadows = light->CastsShadows();
 					ImGui::Checkbox("Casts Shadows ", &castsShadows);
 					light->SetCastsShadows(castsShadows);
 				}
-				//Point Light
+				//Point Light/Spot Light
 				if (light->GetType() == 1.0f || light->GetType() == 2.0f) {
 					UILightRange = light->GetRange();
 					ImGui::DragFloat("Range ", &UILightRange, 1, 5.0f, 20.0f);
@@ -790,9 +804,10 @@ void EditingUI::GenerateEditingUI() {
 				ImGui::DragFloat("Intensity ", &UILightIntensity, 0.1f, 0.01f, 1.0f);
 				light->SetIntensity(UILightIntensity);
 
-				if (ImGui::Button("Mark as main")) {
-					globalAssets.SetMainCamera(light->GetShadowProjector());
-				}
+				// What?
+				//if (ImGui::Button("Mark as main")) {
+				//	globalAssets.SetMainCamera(light->GetShadowProjector());
+				//}
 			}
 
 			else if (std::shared_ptr<Camera> camera = std::dynamic_pointer_cast<Camera>(componentList[c]))
