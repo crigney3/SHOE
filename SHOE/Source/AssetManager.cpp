@@ -2252,7 +2252,7 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 	}
 	else {
 		std::wstring wAssetString;
-		ISimpleShader::ConvertToWide(dxInstance->GetAssetPathString(ASSET_PARTICLE_PATH) + textureNameToLoad, wAssetString);
+		ISimpleShader::ConvertToWide(dxInstance->GetAssetPathString(ASSET_PARTICLE_PATH, PROJECT_ASSET) + textureNameToLoad, wAssetString);
 
 		CreateWICTextureFromFile(device.Get(), context.Get(), wAssetString.c_str(), nullptr, &particleTextureSRV);
 	}
@@ -2669,7 +2669,14 @@ int AssetManager::GetVertexShaderIDByPointer(std::shared_ptr<SimpleVertexShader>
 //}
 
 std::string AssetManager::GetFullPathToEngineAsset(AssetPathIndex index, std::string filename) {
-	std::string asset = dxInstance->GetAssetPathString(index) + filename;
+	std::string asset = dxInstance->GetAssetPathString(index, ENGINE_ASSET) + filename;
+	char pathBuf[1024];
+	GetFullPathNameA(asset.c_str(), sizeof(pathBuf), pathBuf, NULL);
+	return pathBuf;
+}
+
+std::string AssetManager::GetFullPathToProjectAsset(AssetPathIndex index, std::string filename) {
+	std::string asset = dxInstance->GetAssetPathString(index, PROJECT_ASSET) + filename;
 	char pathBuf[1024];
 	GetFullPathNameA(asset.c_str(), sizeof(pathBuf), pathBuf, NULL);
 	return pathBuf;

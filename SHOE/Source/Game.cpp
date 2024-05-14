@@ -77,6 +77,11 @@ Game::Game(HINSTANCE hInstance, LPSTR cmdLine)
 				SetEngineInstallPath(secondHalfOfParameter);
 			}
 
+			if (!firstHalfOfParameter.compare("/StartupScene")) {
+				SetStartupSceneName(secondHalfOfParameter);
+				SetHasStartupScene(true);
+			}
+
 			if (end == std::string::npos) {
 				// Loop's over, break
 				// Can't just have this be the loop condition,
@@ -101,6 +106,8 @@ Game::Game(HINSTANCE hInstance, LPSTR cmdLine)
 	std::string currentSubPath = std::string(pathBuf);
 	
 	// Need to figure out a way to detect if this is run from visual studio
+	// Or turns out I can just run VS with command line params targeting my
+	// local SHOE install
 	//if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VisualStudioEdition"))) {
 	SetBuildAssetPaths();
 	//}

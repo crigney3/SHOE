@@ -152,12 +152,20 @@ public:
 	std::string GetImportedFileString(OPENFILENAME* file);
 
 	/// <summary>
-	/// Gets the full path to an asset that is inside the Assets/ dir.
+	/// Gets the full path to an asset that is inside the Engine Assets/ dir.
 	/// </summary>
 	/// <param name="index"></param>
 	/// <param name="filename"></param>
 	/// <returns></returns>
 	std::string GetFullPathToEngineAsset(AssetPathIndex index, std::string filename);
+
+	/// <summary>
+	/// Gets the full path to an asset that is inside the Project Assets/ dir.
+	/// </summary>
+	/// <param name="index"></param>
+	/// <param name="filename"></param>
+	/// <returns></returns>
+	std::string GetFullPathToProjectAsset(AssetPathIndex index, std::string filename);
 
 	/// <summary>
 	/// Gets the full path to an asset that is outside the Assets/ dir.

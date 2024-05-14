@@ -952,7 +952,7 @@ void SceneManager::LoadScene(std::string filepath) {
 	try {
 		rapidjson::Document sceneDoc;
 
-		std::string namePath = assetManager.GetFullPathToEngineAsset(AssetPathIndex::ASSET_SCENE_PATH, filepath);
+		std::string namePath = assetManager.GetFullPathToProjectAsset(AssetPathIndex::ASSET_SCENE_PATH, filepath);
 
 		FILE* file;
 		fopen_s(&file, namePath.c_str(), "rb");

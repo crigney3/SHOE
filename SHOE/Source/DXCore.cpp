@@ -625,6 +625,14 @@ void DXCore::SetEngineInstallPath(std::string enginePath) {
 	this->engineAssetsPath = enginePath + "\\Assets\\";
 }
 
+void DXCore::SetStartupSceneName(std::string sceneName) {
+	this->startupSceneName = sceneName;
+}
+
+void DXCore::SetHasStartupScene(bool hasScene) {
+	this->hasStartupScene = hasScene;
+}
+
 std::string DXCore::GetProjectPath() {
 	return this->projectPath;
 }
@@ -641,9 +649,18 @@ std::string DXCore::GetEngineAssetsPath() {
 	return this->engineAssetsPath;
 }
 
+std::string DXCore::GetStartupSceneName() {
+	return this->startupSceneName;
+}
+
+bool DXCore::HasStartupScene() {
+	return this->hasStartupScene;
+}
+
 // This is so cursed. Visual Studio why
 // Finally going to fix this by going around it entirely
 void DXCore::SetBuildAssetPaths() {
+	// Set up the critical asset paths - not all paths need to be set
 	criticalAssetPaths[0] = this->engineAssetsPath + "\\Models\\";
 	criticalAssetPaths[3] = this->engineAssetsPath + "\\Fonts\\";
 	criticalAssetPaths[6] = this->engineAssetsPath + "\\Textures\\";
@@ -653,6 +670,22 @@ void DXCore::SetBuildAssetPaths() {
 	criticalAssetPaths[11] = this->engineAssetsPath + "\\Textures\\Metalness\\";
 	criticalAssetPaths[12] = this->engineAssetsPath + "\\Textures\\Roughness\\";
 	criticalAssetPaths[13] = this->engineAssetsPath + "\\Shaders\\";
+
+	// Set up the project-based asset paths - all paths should be set here
+	projectAssetPaths[0] = this->mainAssetPath + "\\Models\\";
+	projectAssetPaths[1] = this->mainAssetPath + "\\Scenes\\";
+	projectAssetPaths[2] = this->mainAssetPath + "\\HeightMaps\\";
+	projectAssetPaths[3] = this->mainAssetPath + "\\Fonts\\";
+	projectAssetPaths[4] = this->mainAssetPath + "\\Particles\\";
+	projectAssetPaths[5] = this->mainAssetPath + "\\Sounds\\";
+	projectAssetPaths[6] = this->mainAssetPath + "\\Textures\\";
+	projectAssetPaths[7] = this->mainAssetPath + "\\Textures\\Skies\\";
+	projectAssetPaths[8] = this->mainAssetPath + "\\Textures\\"; // No longer differentiating PBR
+	projectAssetPaths[9] = this->mainAssetPath + "\\Textures\\Albedo";
+	projectAssetPaths[10] = this->mainAssetPath + "\\Textures\\Normals";
+	projectAssetPaths[11] = this->mainAssetPath + "\\Textures\\Metalness";
+	projectAssetPaths[12] = this->mainAssetPath + "\\Textures\\Roughness";
+	projectAssetPaths[13] = this->mainAssetPath + "\\Shaders\\";
 }
 
 void DXCore::SetVSAssetPaths() {
@@ -672,8 +705,19 @@ void DXCore::SetVSAssetPaths() {
 	criticalAssetPaths[13] = "..\\Assets\\Shaders\\";
 }
 
-std::string DXCore::GetAssetPathString(AssetPathIndex index) {
-	return criticalAssetPaths[index];
+std::string DXCore::GetAssetPathString(AssetPathIndex index, AssetPathType type) {
+	if (type == ENGINE_ASSET) {
+		return criticalAssetPaths[index];
+	}
+	else if (type == PROJECT_ASSET) {
+		return projectAssetPaths[index];
+	}
+	else if (type == EXTERNAL_ASSET) {
+		// TODO: implement external asset storage
+		return "";
+	}
+	// Shouldn't reach this point if function is used correctly
+	return "";
 }
 
 // --------------------------------------------------------

@@ -40,6 +40,13 @@ enum AssetPathIndex {
 	ASSET_PATH_COUNT
 };
 
+enum AssetPathType {
+	ENGINE_ASSET,
+	PROJECT_ASSET,
+	EXTERNAL_ASSET,
+	ASSET_PATH_TYPE_COUNT
+};
+
 enum DirectXVersion {
 	DIRECT_X_11,
 	DIRECT_X_12,
@@ -108,8 +115,12 @@ public:
 	std::string GetProjectAssetPath();
 	std::string GetEngineAssetsPath();
 	std::string GetEngineInstallPath();
+	std::string GetStartupSceneName();
+	bool HasStartupScene();
 	void SetProjectPath(std::string projPath);
 	void SetEngineInstallPath(std::string enginePath);
+	void SetStartupSceneName(std::string sceneName);
+	void SetHasStartupScene(bool hasScene);
 
 	void SetVSAssetPaths();
 	void SetBuildAssetPaths();
@@ -121,7 +132,7 @@ public:
 	unsigned int width;
 	unsigned int height;
 
-	std::string GetAssetPathString(AssetPathIndex index);
+	std::string GetAssetPathString(AssetPathIndex index, AssetPathType type);
 
 	HWND		hWnd;			// The handle to the window itself
 
@@ -169,6 +180,7 @@ protected:
 	float GetDeltaTime();
 
 	std::string criticalAssetPaths[ASSET_PATH_COUNT];
+	std::string projectAssetPaths[ASSET_PATH_COUNT];
 
 	// What version of DX is this?
 	DirectXVersion dxVersion;
@@ -186,6 +198,9 @@ private:
 	std::string mainAssetPath;
 	std::string engineInstallPath;
 	std::string engineAssetsPath;
+	std::string startupSceneName;
+
+	bool hasStartupScene;
 
 	// FPS calculation
 	int fpsFrameCount;
