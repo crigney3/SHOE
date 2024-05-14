@@ -253,7 +253,7 @@ namespace SHOELauncher
 
         private void LaunchSHOEButton_Click(object sender, RoutedEventArgs e)
         {
-            if (File.Exists(SHOEExecPath))
+            if (File.Exists(SHOEExecPath) && LauncherStatus == LauncherState.Running)
             {
                 ProcessStartInfo startInfo = new ProcessStartInfo(SHOEExecPath);
                 startInfo.WorkingDirectory = SHOEBuildPath;
@@ -263,7 +263,7 @@ namespace SHOELauncher
                 Close();
             } else
             {
-                MessageBox.Show("SHOE is not installed!");
+                MessageBox.Show("SHOE or a component is not installed!");
             }
         }
 
@@ -325,6 +325,7 @@ namespace SHOELauncher
         {
             try
             {
+                string newProjectPath = project.ProjectPath + "\\" + project.ProjectName;
                 if (File.Exists(projectsFilePath))
                 {
                     File.AppendAllText(projectsFilePath, $"\n{project.ProjectName},{project.ProjectPath},{((int)project.DirectXVersion)}");
@@ -332,8 +333,14 @@ namespace SHOELauncher
                 {
                     File.WriteAllText(projectsFilePath, $"{project.ProjectName},{project.ProjectPath},{((int)project.DirectXVersion)}");
                 }              
-                Directory.CreateDirectory(project.ProjectPath + "\\" + project.ProjectName);
+                Directory.CreateDirectory(newProjectPath);
+                Directory.CreateDirectory(newProjectPath + "\\" + "Assets");
                 projects.Add(project);
+
+                if (project.StarterAssets)
+                {
+                    LauncherStatus = LauncherState.UpdatingSHOE;
+                }
             } catch (Exception ex)
             {
                 LauncherStatus = LauncherState.Failed;
@@ -405,6 +412,13 @@ namespace SHOELauncher
         private string projectName;
         private string projectPath;
         private DXVersion dxVersion;
+        private bool includesStarterAssets;
+
+        public bool StarterAssets
+        {
+            get => includesStarterAssets;
+            set => includesStarterAssets = value;
+        }
 
         public string ProjectName
         {
