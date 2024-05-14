@@ -1284,7 +1284,7 @@ void AssetManager::InitializeMaterials() {
 			GetTextureByName("BlankTexture"),
 			GetTextureByName("BlankNormals"),
 			GetTextureByName("NoMetal"),
-			GetTextureByName("LowRoughness"));
+			GetTextureByName("HighRoughness"));
 
 		// Make reflective PBR materials
 		CreatePBRMaterial(std::string("reflectiveMetal"),
@@ -1440,13 +1440,15 @@ void AssetManager::InitializeSkies() {
 
 void AssetManager::InitializeLights() {
 	//white light from the top left
-	std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 70.0f);
+	std::shared_ptr<Light> mainLight = CreateDirectionalLight("MainLight", DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), 100.0f);
 	mainLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f));
-	//mainLight->GetTransform()->Rotate(XM_PIDIV2, XM_PI, 0);
-	mainLight->SetCastsShadows(true);
+	mainLight->GetTransform()->Rotate(XM_PIDIV2, XM_PI, 0);
+	mainLight->SetCastsShadows(false);
 
 	//blue light from the back
-	CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, 1));
+	std::shared_ptr<Light> backLight = CreateDirectionalLight("BackLight", DirectX::XMFLOAT3(0, 0, 1), 100.0f);
+	backLight->GetTransform()->SetPosition(DirectX::XMFLOAT3(0.0f, 0.0f, 20.0f));
+	mainLight->GetTransform()->Rotate(0, 2.5f, 0);
 
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.

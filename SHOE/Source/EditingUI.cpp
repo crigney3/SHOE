@@ -789,7 +789,9 @@ void EditingUI::GenerateEditingUI() {
 				if (light->GetType() == 0.0f || light->GetType() == 2.0f) {
 					bool castsShadows = light->CastsShadows();
 					ImGui::Checkbox("Casts Shadows ", &castsShadows);
-					light->SetCastsShadows(castsShadows);
+					if ((castsShadows && !light->CastsShadows()) || (!castsShadows && light->CastsShadows())) {
+						light->SetCastsShadows(castsShadows);
+					}			
 				}
 				//Point Light/Spot Light
 				if (light->GetType() == 1.0f || light->GetType() == 2.0f) {
