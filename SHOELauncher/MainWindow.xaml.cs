@@ -42,6 +42,7 @@ namespace SHOELauncher
         private string SHOEBuildPath;
         private string SHOEOnlineZipPath;
         private string projectsFilePath;
+        private string OnlineAssetsPath;
 
         private LauncherState launcherStatus;
         internal LauncherState LauncherStatus
@@ -103,6 +104,7 @@ namespace SHOELauncher
             SHOELocalZipName = "SHOE.zip";
             SHOEOnlineZipPath = "";
             SHOEBuildPath = "";
+            OnlineAssetsPath = "http://dionysus.headass.house:3000/StarterAssets/";
 
             List<AppRing> appRings = new List<AppRing>();
             appRings.Add(new AppRing() { Title = "Stable", LocalPath = "", OnlinePath = "http://dionysus.headass.house:3000/Stable/" });
@@ -282,6 +284,16 @@ namespace SHOELauncher
                 this.selectedProject = ProjectsListView.SelectedItem as SHOEProject;
                 LaunchSHOEButton.Content = "Launch " + this.selectedProject.ProjectName;
                 LaunchSHOEButton.IsEnabled = true;
+                if (this.selectedProject.DirectXVersion == DXVersion.DX12)
+                {
+                    MiscMessageText.Text = "Warning! DX12 is not fully supported at this time. Expect significant issues.";
+                    MiscMessageText.Foreground = Brushes.Red;
+                    MiscMessageText.Visibility = Visibility.Visible;
+                } else
+                {
+                    MiscMessageText.Foreground = Brushes.White;
+                    MiscMessageText.Visibility = Visibility.Hidden;
+                }
             }
         }
 
@@ -321,11 +333,47 @@ namespace SHOELauncher
             }
         }
 
+        private async void DownloadStarterAssetsAndInstall(SHOEProject project)
+        {
+            try
+            {
+                string assetsString = OnlineAssetsPath + "StarterAssetsBackup.zip";
+                string localAssetsPath = project.ProjectPath + "\\Assets\\";
+                string localAssetsZipPath = localAssetsPath + "StarterAssets.zip";
+                
+                using (HttpClient client = new HttpClient())
+                {
+                    client.Timeout = System.TimeSpan.FromSeconds(500);
+                    using (HttpResponseMessage response = await client.GetAsync(assetsString))
+                    {
+                        using (var stream = await response.Content.ReadAsStreamAsync())
+                        {
+                            using (var byteStream = new MemoryStream())
+                            {
+                                stream.CopyTo(byteStream);
+                                File.WriteAllBytes(localAssetsZipPath, byteStream.ToArray());
+                                ZipFile.ExtractToDirectory(localAssetsZipPath, localAssetsPath);
+                                File.Delete(localAssetsZipPath);
+                            }
+                        }
+                    }
+
+                    LauncherStatus = LauncherState.Running;
+                    MiscMessageText.Visibility = Visibility.Hidden;
+                }
+            } catch (Exception ex)
+            {
+                LauncherStatus = LauncherState.Failed;
+                MessageBox.Show($"Error installing starter assets for project {project.ProjectName} with error: {ex}");
+            }
+        }
+
         public void CreateNewProjectFromData(SHOEProject project)
         {
             try
             {
                 string newProjectPath = project.ProjectPath + "\\" + project.ProjectName;
+                project.ProjectPath = newProjectPath;
                 if (File.Exists(projectsFilePath))
                 {
                     File.AppendAllText(projectsFilePath, $"\n{project.ProjectName},{project.ProjectPath},{((int)project.DirectXVersion)}");
@@ -340,6 +388,9 @@ namespace SHOELauncher
                 if (project.StarterAssets)
                 {
                     LauncherStatus = LauncherState.UpdatingSHOE;
+                    MiscMessageText.Text = $"Downloading starter assets for project {project.ProjectName}";
+                    MiscMessageText.Visibility = Visibility.Visible;
+                    DownloadStarterAssetsAndInstall(project);
                 }
             } catch (Exception ex)
             {
@@ -445,11 +496,12 @@ namespace SHOELauncher
             }
         }
 
-        internal SHOEProject(string _projectName, string _projectPath, DXVersion _dxVersion = DXVersion.DX11)
+        internal SHOEProject(string _projectName, string _projectPath, DXVersion _dxVersion = DXVersion.DX11, bool _starterAssets = true)
         {
             projectName = _projectName;
             projectPath = _projectPath;
             dxVersion = _dxVersion;
+            includesStarterAssets = _starterAssets;
         }
     }
 

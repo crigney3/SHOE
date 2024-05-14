@@ -19,6 +19,8 @@
         <TextBlock x:Name="NewProjectsLabel" FontSize="20" Foreground="White" Grid.Column="0" VerticalAlignment="Top" Text="New Project"></TextBlock>
         <TextBlock x:Name="ProjectNameLabel" FontSize="14" Foreground="White" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" Text="Name:"/>
         <TextBox x:Name="ProjectName" Grid.Column="0" VerticalAlignment="Center" TextChanged="ProjectName_TextChanged" HorizontalAlignment="Center" Text="NewProject" Width="135"/>
+        <TextBlock x:Name="StarterAssetsLabel" FontSize="14" Foreground="White" Grid.Column="0" VerticalAlignment="Bottom" HorizontalAlignment="Left" Text="Include Starter Assets:"/>
+        <CheckBox Name="StarterAssetsChecked" Checked="StarterAssetsChecked_Checked" Unchecked="StarterAssetsChecked_Unchecked" HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Row="0" IsChecked="True"/>
         <TextBlock x:Name="ProjectDirLabel" Foreground="White" Text="Project Directory:" FontSize="14" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Left" />
         <TextBox x:Name="ProjectDirectory" Grid.Column="0" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Text="C:\" Width="135"/>
         <Button x:Name="SelectProjectDirectory" Content="Select Project Directory" Click="SelectProjectDirectory_Click" FontSize="14" Grid.Row="1" Grid.Column="2" VerticalAlignment="Bottom" HorizontalAlignment="Center"/>
@@ -30,6 +32,7 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
+        <TextBlock x:Name="DirectXWarning" Foreground="Red" Text="Warning! DX12 is not fully supported at this time. Expect significant issues." FontSize="10" Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" Visibility="Hidden" />
         <Button x:Name="CreateProjectButton" Content="Create New Project" HorizontalAlignment="Center" IsEnabled="False" VerticalAlignment="Center" Grid.Row="3" Click="CreateProjectButton_Click"/>
     </Grid>
 </Window>

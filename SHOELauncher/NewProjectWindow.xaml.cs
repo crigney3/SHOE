@@ -52,6 +52,12 @@ namespace SHOELauncher
             if (DirectXChoiceListBox.SelectedItem != null)
             {
                 newProject.DirectXVersion = (DirectXChoiceListBox.SelectedItem as DXVersionChoice).Value;
+                if (newProject.DirectXVersion == DXVersion.DX12) {
+                    DirectXWarning.Visibility = Visibility.Visible;
+                } else
+                {
+                    DirectXWarning.Visibility = Visibility.Hidden;
+                }
             }
         }
 
@@ -91,6 +97,18 @@ namespace SHOELauncher
             {
                 CreateProjectButton.IsEnabled = true;
             }
+        }
+
+        private void StarterAssetsChecked_Checked(object sender, RoutedEventArgs e)
+        {
+            if (newProject == null) { return; }
+            newProject.StarterAssets = true;
+        }
+
+        private void StarterAssetsChecked_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (newProject == null) { return; }
+            newProject.StarterAssets = false;
         }
     }
 }
