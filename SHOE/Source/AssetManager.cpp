@@ -88,18 +88,23 @@ void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Micro
 #pragma endregion
 
 #pragma region createAssets
-FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::string name, bool isNameFullPath) {
+FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::string name, bool isNameFullPath, bool isProjectAsset) {
 	FMODUserData* uData = new FMODUserData;
 	FMOD::Sound* sound;
 	FMOD::Channel* channel;
 
-	std::string namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SOUND_PATH, path);
+	std::string namePath;
 
 	if (isNameFullPath) {
 		namePath = path;
 	}
 	else {
-		namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SOUND_PATH, path);
+		if (isProjectAsset) {
+			namePath = GetFullPathToProjectAsset(AssetPathIndex::ASSET_SOUND_PATH, path);
+		}
+		else {
+			namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_SOUND_PATH, path);
+		}	
 	}
 
 	channel = audioInstance.LoadSoundAndInitChannel(namePath, mode);
@@ -275,7 +280,7 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 }
 
 /// <summary>
-/// Given a path within the Assets/ dir, checks if the fullPathToAsset contains
+/// Given a path within any Assets/ dir, checks if the fullPathToAsset contains
 /// that subpath. If so, it returns a serialized filepath string to be used as
 /// a filename key. If not, it returns the full path to the asset.
 /// </summary>
@@ -287,22 +292,38 @@ std::string AssetManager::SerializeFileName(std::string assetFolderPath, std::st
 	std::string filenameKey;
 
 	// Serialize the filename if it's in the right folder
-	size_t dirPos = fullPathToAsset.find(assetFolderPath);
+	// First, check if it's an engine asset
+	size_t dirPos = fullPathToAsset.find(dxInstance->GetEngineInstallPath() + "\\" + assetFolderPath);
 	if (dirPos != std::string::npos) {
-		// File is in the assets folder
-		filenameKey = "t" + fullPathToAsset.substr(dirPos + assetFolderPath.size());;
+		// File is in the engine assets folder
+		filenameKey = "tE" + fullPathToAsset.substr(dirPos + assetFolderPath.size());;
 	}
 	else {
-		filenameKey = "f" + fullPathToAsset;
+		// Next, check if it's a project asset
+		dirPos = fullPathToAsset.find(dxInstance->GetProjectPath() + "\\" + assetFolderPath);
+		if (dirPos != std::string::npos) {
+			// File is in the project assets folder
+			filenameKey = "tP" + fullPathToAsset.substr(dirPos + assetFolderPath.size());;
+		}
+		else {
+			filenameKey = "f" + fullPathToAsset;
+		}	
 	}
 
 	return filenameKey;
 }
 
-std::string AssetManager::DeSerializeFileName(std::string assetPath) {
+std::string AssetManager::DeSerializeFileName(std::string assetPath, OUT AssetPathType* assetPathType) {
 	if (assetPath[0] == 't') {
-		// Return the assetPath and remove the t
-		return assetPath.substr(1);
+		if (assetPath[1] == 'E') {
+			assetPathType = ENGINE_ASSET;
+		}
+		else if (assetPath[1] == 'P') {
+			assetPathType = PROJECT_ASSET;
+		}
+
+		// Return the assetPath and remove the markers
+		return assetPath.substr(2);
 	}
 	else {
 		return assetPath;

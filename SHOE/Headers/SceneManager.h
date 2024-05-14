@@ -15,10 +15,16 @@
 #define VALID_SHOE_SCENE "v" // bool
 #define SCENE_NAME "sN" // string
 
+// Asset path type separation
+#define ASSET_ENGINE_PATHTYPE "Ep"
+#define ASSET_PROJECT_PATHTYPE "Pp"
+#define ASSET_EXTERNAL_PATHTYPE "EXp"
+
 //Shared
-#define NAME "n"
+#define NAME "n" // string
 #define FILENAME_KEY "fK" // string
 #define ENABLED "e" // bool
+#define ASSET_PATH_TYPE "A" // string
 
 // Categories:
 #define ENTITIES "e" // category - only used to fetch actual data
@@ -189,7 +195,7 @@ private:
 	void SaveFloat3(rapidjson::Value& jsonObject, const char* memberName, DirectX::XMFLOAT3 vec, rapidjson::Document& sceneDoc);
 	void SaveFloat4(rapidjson::Value& jsonObject, const char* memberName, DirectX::XMFLOAT4 vec, rapidjson::Document& sceneDoc);
 
-	std::string LoadDeserializedFileName(const rapidjson::Value& jsonBlock, const char* memberName);
+	std::string LoadDeserializedFileName(const rapidjson::Value& jsonBlock, const char* memberName, OUT AssetPathType* assetPathType);
 
 	void LoadAssets(const rapidjson::Value& sceneDoc, std::function<void()> progressListener = {});
 	void LoadEntities(const rapidjson::Value& sceneDoc, std::function<void()> progressListener = {});
