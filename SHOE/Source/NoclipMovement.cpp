@@ -5,7 +5,7 @@
 
 void NoclipMovement::Start()
 {
-	this->lookSpeed = 3.0f;
+	this->lookSpeed = 0.3f;
 	this->moveSpeed = 10.0f;
 }
 
@@ -24,6 +24,7 @@ void NoclipMovement::Update()
 
 	if (input.MouseLeftDown())
 	{
+		// TODO: Actually smooth mouse movement instead of just lowering lookSpeed
 		float xDiff = this->lookSpeed * Time::deltaTime * input.GetMouseXDelta();
 		float yDiff = this->lookSpeed * Time::deltaTime * input.GetMouseYDelta();
 

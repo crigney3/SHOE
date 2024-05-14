@@ -234,9 +234,8 @@ void Game::OnResize()
 	}
 }
 
-// --------------------------------------------------------
-// Update your game here - user input, move objects, AI, etc.
-// --------------------------------------------------------
+// The main logic loop for taking input and updating components.
+// No direct rendering is performed here - see Game::Draw().
 void Game::Update()
 {
 	audioHandler.GetSoundSystem()->update();
