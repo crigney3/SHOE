@@ -164,6 +164,24 @@ void Game::Init()
 		printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
 #endif
 
+		if (GetProjectPath() != "") {
+			globalAssets.ScanProjectAssetsAndImport(GetProjectAssetPath(), std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
+		}
+
+		if (HasStartupScene()) {
+			engineState = EngineState::LOAD_SCENE;
+			sceneManager.LoadScene(GetStartupSceneName());
+
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("Took %3.4f seconds for project-specific initialization. \n", this->GetDeltaTime());
+#endif
+		}
+		else {
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("No startup scene set, skipping project-specific initialization. \n");
+#endif
+		}
+
 		// Tell the input assembler stage of the pipeline what kind of
 		// geometric primitives (points, lines or triangles) we want to draw.  
 		// Essentially: "What kind of shape should the GPU draw with our data?"

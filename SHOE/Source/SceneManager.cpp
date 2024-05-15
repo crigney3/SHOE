@@ -993,9 +993,6 @@ void SceneManager::LoadScene(std::string filepath) {
 		// Remove the current scene from memory
 		assetManager.CleanAllVectors();
 
-//#if defined(DEBUG) || defined(_DEBUG)
-//		printf("Took %3.4f seconds for pre-initialization. \n", DXCore::GetTotalTime());
-//#endif
 
 		LoadAssets(sceneDoc, progressListener);
 		LoadEntities(sceneDoc, progressListener);
@@ -1005,10 +1002,6 @@ void SceneManager::LoadScene(std::string filepath) {
 		if(progressListener) progressListener();
 
 		fclose(file);
-
-//#if defined(DEBUG) || defined(_DEBUG)
-//		printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
-//#endif
 
 		currentSceneName = loadingSceneName;
 		loadingSceneName = "";

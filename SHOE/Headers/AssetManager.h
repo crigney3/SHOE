@@ -26,6 +26,7 @@
 #include "Collider.h"
 #include "EngineState.h"
 #include <tchar.h>
+#include <filesystem>
 
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 
@@ -150,6 +151,14 @@ public:
 	void ImportHeightMap();
 	void ImportTexture();
 	std::string GetImportedFileString(OPENFILENAME* file);
+
+	/// <summary>
+	/// Scans all directories in an assets subfolder, assuming it's structured as
+	/// expected, and imports those assets.
+	/// </summary>
+	/// <param name="assetsPath">The path to the assets folder to scan.</param>
+	/// <returns></returns>
+	void ScanProjectAssetsAndImport(std::string assetsPath, std::function<void(std::string)> progressListener);
 
 	/// <summary>
 	/// Gets the full path to an asset that is inside the Engine Assets/ dir.
@@ -372,6 +381,8 @@ public:
 	int GetVertexShaderIDByPointer(std::shared_ptr<SimpleVertexShader> vertexPointer);
 
 	void BroadcastGlobalEntityEvent(EntityEventType event, std::shared_ptr<void> message = nullptr);
+
+	bool CompareFilePaths(const std::filesystem::path& path, const std::filesystem::path& base);
 
 	std::shared_ptr<Sky> currentSky;
 };

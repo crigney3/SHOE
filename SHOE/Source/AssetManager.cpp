@@ -324,20 +324,22 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 /// <returns>Either a serialized file key string or the full path.</returns>
 std::string AssetManager::SerializeFileName(std::string assetFolderPath, std::string fullPathToAsset) {
 	std::string filenameKey;
+	std::string engineInstallPath = dxInstance->GetEngineInstallPath() + "\\" + assetFolderPath;
+	std::string projectInstallPath = dxInstance->GetProjectPath() + "\\" + assetFolderPath;
 
 	// Serialize the filename if it's in the right folder
 	// First, check if it's an engine asset
-	size_t dirPos = fullPathToAsset.find(dxInstance->GetEngineInstallPath() + "\\" + assetFolderPath);
+	size_t dirPos = fullPathToAsset.find(engineInstallPath);
 	if (dirPos != std::string::npos) {
 		// File is in the engine assets folder
-		filenameKey = "tE" + fullPathToAsset.substr(dirPos + assetFolderPath.size());;
+		filenameKey = "tE" + fullPathToAsset.substr(dirPos + engineInstallPath.size());;
 	}
 	else {
 		// Next, check if it's a project asset
-		dirPos = fullPathToAsset.find(dxInstance->GetProjectPath() + "\\" + assetFolderPath);
+		dirPos = fullPathToAsset.find(projectInstallPath);
 		if (dirPos != std::string::npos) {
 			// File is in the project assets folder
-			filenameKey = "tP" + fullPathToAsset.substr(dirPos + assetFolderPath.size());;
+			filenameKey = "tP" + fullPathToAsset.substr(dirPos + projectInstallPath.size());;
 		}
 		else {
 			filenameKey = "f" + fullPathToAsset;
@@ -2039,6 +2041,154 @@ void AssetManager::UpdateEditingCamera()
 	editingCamera->GetGameEntity()->PropagateEvent(EntityEventType::Update);
 }
 
+void AssetManager::ScanProjectAssetsAndImport(std::string assetsPath, std::function<void(std::string)> progressListener) {
+	std::filesystem::path assetPath;
+	std::filesystem::path subPath;
+	
+	try {
+		// TODO for all of these:
+		// Check the file extension to make sure it's a valid one
+		// Early tests imported a txt as a sound file with remarkable success
+		// Up until cleanup, when it causes a crash
+		assetPath = std::filesystem::path(assetsPath);	
+
+		for (std::filesystem::recursive_directory_iterator iter(assetPath), end; iter != end; ++iter) {
+
+			// The particles and skies need additional slashes to differentiate top level folders.
+			//subPath = std::filesystem::path("\\Particles\\");
+			//if (CompareFilePaths(subPath, iter->path())) {
+			//	// This is a particle texture - either a folder or single texture
+			//	
+			//	if (iter->is_directory()) {
+			//		// This is a folder of particles
+			//		CreateParticleEmitter(iter->path().stem().string(), iter->path().string(), true);
+			//		continue;
+			//	}
+			//	else {
+			//		// This is a single texture particle
+			//		CreateParticleEmitter(iter->path().stem().string(), iter->path().string(), false);
+			//	}
+			//	if (progressListener) progressListener("Particles");
+
+			//	// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
+
+
+			//	continue;
+			//}
+
+			//subPath = std::filesystem::path("\\Textures\\Skies\\");
+			//if (CompareFilePaths(subPath, iter->path())) {
+			//	// This is a skybox texture - either a folder of images or single dds
+
+			//	if (iter->is_directory()) {
+			//		// This is a folder of images
+			//		// TODO: Check filetype of files below the directory, so more than pngs can be imported
+			//		CreateSky(iter->path().string(), true, iter->path().stem().string());
+			//		continue;
+			//	}
+			//	else {
+			//		// This is a single dds
+			//		CreateSky(iter->path().string(), false, iter->path().stem().string());
+			//	}
+			//	if (progressListener) progressListener("Skies");
+
+			//	// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
+
+
+			//	continue;
+			//}
+
+			// Some assets require whole folder imports at once, so they're above this
+			if (iter->is_directory()) {
+				// Can't import a folder
+				continue;
+			}
+
+			// First determine what folder we're in, and therefore what type of asset to load
+			subPath = std::filesystem::path("\\Models");
+			if (CompareFilePaths(subPath, iter->path())) {
+				// This is a mesh
+
+				CreateMesh(iter->path().stem().string(), iter->path().string(), true);
+				if (progressListener) progressListener("Meshes");
+				// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
+
+
+				continue;
+			}		
+
+			// TODO: import heightmaps as a terrain object, or make heightmaps their own asset type
+
+
+			subPath = std::filesystem::path("\\Fonts");
+			if (CompareFilePaths(subPath, iter->path())) {
+				// This is a font
+
+				CreateSHOEFont(iter->path().stem().string(), iter->path().string(), false, false, true);
+				if (progressListener) progressListener("Fonts");
+				// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
+
+
+				continue;
+			}
+
+			subPath = std::filesystem::path("\\Sounds");
+			if (CompareFilePaths(subPath, iter->path())) {
+				// This is a sound
+
+				CreateSound(iter->path().string(), 0U, iter->path().stem().string(), true, true);
+				if (progressListener) progressListener("Sounds");
+				// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
+
+
+				continue;
+			}
+
+			subPath = std::filesystem::path("\\Textures\\BlendMaps");
+			if (CompareFilePaths(subPath, iter->path())) {
+				// This is a single blendmap
+
+				CreateTexture(iter->path().string(), iter->path().stem().string(), ASSET_TEXTURE_BLENDMAP_PATH, true);
+				if (progressListener) progressListener("Textures");
+				// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
+
+
+				continue;
+			}
+
+			subPath = std::filesystem::path("\\Textures");
+			if (CompareFilePaths(subPath, iter->path())) {
+				// This is a texture - all textures except skies and blendmaps can be handled here.
+				// Initialization of functionality like PBR is done through material creation.
+
+				CreateTexture(iter->path().string(), iter->path().stem().string(), ASSET_TEXTURE_PATH_BASIC, true);
+				if (progressListener) progressListener("Textures");
+
+				// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
+
+
+				continue;
+			}
+
+			// TODO: Add shader importing
+		}
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed while recursively loading assets from %s with error: %s\n", assetsPath, e.what());
+#endif
+	}
+}
+
+bool AssetManager::CompareFilePaths(const std::filesystem::path& path, const std::filesystem::path& base) {
+	if (base.string().find(path.string()) != std::string::npos) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
 #pragma region buildAssetData
 std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale, bool isProjectAsset) {
 
@@ -2114,8 +2264,8 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 					XMFLOAT3 normal0;
 					XMFLOAT3 normal1;
 
-					XMStoreFloat3(&normal0, XMVector3Normalize(XMVector3Cross(pos1 - pos0, pos2 - pos0)));
-					XMStoreFloat3(&normal1, XMVector3Normalize(XMVector3Cross(pos4 - pos3, pos5 - pos3)));
+					DirectX::XMStoreFloat3(&normal0, XMVector3Normalize(XMVector3Cross(pos1 - pos0, pos2 - pos0)));
+					DirectX::XMStoreFloat3(&normal1, XMVector3Normalize(XMVector3Cross(pos4 - pos3, pos5 - pos3)));
 
 					triangleNormals.push_back(normal0);
 					triangleNormals.push_back(normal1);
@@ -2178,7 +2328,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 				}
 
 				normalTotal /= normalCount;
-				XMStoreFloat3(&vertices[index].normal, normalTotal);
+				DirectX::XMStoreFloat3(&vertices[index].normal, normalTotal);
 
 				//Store data in vertex
 				XMFLOAT3 normal = XMFLOAT3(+0.0f, +1.0f, -0.0f);
@@ -2201,7 +2351,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 	}
 	catch (std::exception& e) {
 #if defined(DEBUG) || defined(_DEBUG)
-		printf("Failed to load terrain from %s\n", filename);
+		printf("Failed to load terrain from %s with error: %s\n", filename, e.what());
 #endif
 	}
 

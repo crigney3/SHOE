@@ -337,7 +337,7 @@ namespace SHOELauncher
         {
             try
             {
-                string assetsString = OnlineAssetsPath + "StarterAssetsBackup.zip";
+                string assetsString = OnlineAssetsPath + "StarterAssets.zip";
                 string localAssetsPath = project.ProjectPath + "\\Assets\\";
                 string localAssetsZipPath = localAssetsPath + "StarterAssets.zip";
                 
