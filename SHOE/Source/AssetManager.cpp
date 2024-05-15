@@ -125,6 +125,9 @@ FMOD::Sound* AssetManager::CreateSound(std::string path, FMOD_MODE mode, std::st
 		globalSounds.push_back(sound);
 
 		BroadcastGlobalEntityEvent(EntityEventType::OnAudioLoad, std::make_shared<AudioEventPacket>(baseFilename, nullptr));
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully loaded sound named %s\n", name.c_str());
+#endif
 	}
 	catch (std::exception& e) {
 #if defined(DEBUG) || defined(_DEBUG)
@@ -902,7 +905,7 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 	return newTMat;
 }
 
-std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension, bool isProjectAsset) {
+std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension, bool isProjectAsset, bool isFullPathToAsset) {
 	std::shared_ptr<Sky> newSky;
 
 	try {
@@ -921,12 +924,17 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 
 		std::string assetPath;
 		
-		if (isProjectAsset) {
-			assetPath = GetFullPathToProjectAsset(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
+		if (isFullPathToAsset) {
+			assetPath = filepath;
 		}
 		else {
-			assetPath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
-		}	
+			if (isProjectAsset) {
+				assetPath = GetFullPathToProjectAsset(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
+			}
+			else {
+				assetPath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
+			}
+		}
 
 		if (fileType) {
 			// Process as 6 textures in a directory
@@ -986,9 +994,10 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string name,
 	std::string textureNameToLoad,
 	bool isMultiParticle,
-	bool isProjectAsset)
+	bool isProjectAsset,
+	bool isFullPathToAsset)
 {
-	return CreateParticleEmitterOnEntity(CreateGameEntity(name), textureNameToLoad, isMultiParticle, isProjectAsset);
+	return CreateParticleEmitterOnEntity(CreateGameEntity(name), textureNameToLoad, isMultiParticle, isProjectAsset, isFullPathToAsset);
 }
 
 /// <summary>
@@ -1091,13 +1100,14 @@ std::shared_ptr<Terrain> AssetManager::CreateTerrainOnEntity(std::shared_ptr<Gam
 std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitterOnEntity(std::shared_ptr<GameEntity> entityToEdit,
 	std::string textureNameToLoad,
 	bool isMultiParticle,
-	bool isProjectAsset) {
+	bool isProjectAsset,
+	bool isFullPathToAsset) {
 
 	std::shared_ptr<ParticleSystem> newEmitter = entityToEdit->AddComponent<ParticleSystem>();
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> loadedTexture;
 
 	newEmitter->SetIsMultiParticle(isMultiParticle);
-	loadedTexture = LoadParticleTexture(textureNameToLoad, isMultiParticle, isProjectAsset);
+	loadedTexture = LoadParticleTexture(textureNameToLoad, isMultiParticle, isProjectAsset, isFullPathToAsset);
 	newEmitter->SetParticleTextureSRV(loadedTexture);
 
 	std::string asset = GetFullPathToEngineAsset(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
@@ -2055,48 +2065,71 @@ void AssetManager::ScanProjectAssetsAndImport(std::string assetsPath, std::funct
 		for (std::filesystem::recursive_directory_iterator iter(assetPath), end; iter != end; ++iter) {
 
 			// The particles and skies need additional slashes to differentiate top level folders.
-			//subPath = std::filesystem::path("\\Particles\\");
-			//if (CompareFilePaths(subPath, iter->path())) {
-			//	// This is a particle texture - either a folder or single texture
-			//	
-			//	if (iter->is_directory()) {
-			//		// This is a folder of particles
-			//		CreateParticleEmitter(iter->path().stem().string(), iter->path().string(), true);
-			//		continue;
-			//	}
-			//	else {
-			//		// This is a single texture particle
-			//		CreateParticleEmitter(iter->path().stem().string(), iter->path().string(), false);
-			//	}
-			//	if (progressListener) progressListener("Particles");
+			subPath = std::filesystem::path("\\Particles\\");
+			if (CompareFilePaths(subPath, iter->path())) {
+				// This is a particle texture - either a folder or single texture
+				std::shared_ptr<ParticleSystem> newSystem;
+				if (iter->is_directory()) {
+					// This is a folder of particles
+					// Don't need to determine extension like sky, because particles must be PNGs
+					newSystem = CreateParticleEmitter(iter->path().stem().string(), iter->path().string(), true, true, true);
 
-			//	// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
+					// Just like skies, increment iter by the number of textures in the directory
+					std::vector particleTexList(std::filesystem::directory_iterator(iter->path()), {});
 
+					for (int i = 0; i < particleTexList.size(); i++) {
+						iter++;
+					}
+				}
+				else {
+					// This is a single texture particle
+					newSystem = CreateParticleEmitter(iter->path().stem().string(), iter->path().string(), false, true, true);
+				}
+				newSystem->SetEnabled(false);
+				if (progressListener) progressListener("Particles");
 
-			//	continue;
-			//}
-
-			//subPath = std::filesystem::path("\\Textures\\Skies\\");
-			//if (CompareFilePaths(subPath, iter->path())) {
-			//	// This is a skybox texture - either a folder of images or single dds
-
-			//	if (iter->is_directory()) {
-			//		// This is a folder of images
-			//		// TODO: Check filetype of files below the directory, so more than pngs can be imported
-			//		CreateSky(iter->path().string(), true, iter->path().stem().string());
-			//		continue;
-			//	}
-			//	else {
-			//		// This is a single dds
-			//		CreateSky(iter->path().string(), false, iter->path().stem().string());
-			//	}
-			//	if (progressListener) progressListener("Skies");
-
-			//	// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
+				// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
 
 
-			//	continue;
-			//}
+				continue;
+			}
+
+			subPath = std::filesystem::path("\\Textures\\Skies\\");
+			if (CompareFilePaths(subPath, iter->path())) {
+				// This is a skybox texture - either a folder of images or single dds
+
+				if (iter->is_directory()) {
+					// This is a folder of images
+					// Get a list of all the files in this directory so that we can get the right extension
+					std::vector skyTexList(std::filesystem::directory_iterator(iter->path()), {});
+					std::string extension = skyTexList.at(0).path().extension().string();
+					CreateSky(iter->path().string() + "\\", true, iter->path().stem().string(), extension, true, true);
+
+					// Now we need to skip the next six files that the outer iter will encounter
+					// Otherwise we get 6 blank "skies" per directory-based skybox
+					iter++;
+					iter++;
+					iter++;
+					iter++;
+					iter++;
+					iter++;
+					// Yes, it has to be six iter++ in a row.
+					// No, += doesn't work.
+					// iter::increment also only goes up by one.
+					// This one's on the std::filesystem people, for once the terrible code isn't my fault
+					continue;
+				}
+				else {
+					// This is a single dds
+					CreateSky(iter->path().string(), false, iter->path().stem().string(), ".dds", true, true);
+				}
+				if (progressListener) progressListener("Skies");
+
+				// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
+
+
+				continue;
+			}
 
 			// Some assets require whole folder imports at once, so they're above this
 			if (iter->is_directory()) {
@@ -2448,81 +2481,97 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::CreateCubemap(
 /// <param name="isMultiParticle">True to recursively load from the file path</param>
 /// <param name="isProjectAsset">True if the asset is in the project assets folder</param>
 /// <returns>An SRV for the loaded textures</returns>
-Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTexture(std::string textureNameToLoad, bool isMultiParticle, bool isProjectAsset)
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTexture(std::string textureNameToLoad, bool isMultiParticle, bool isProjectAsset, bool isFullPathToAsset)
 {
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;
 	HRESULT hr;
 
-	if (isMultiParticle) {
-		// Load all particle textures in a specific subfolder
-		std::string assets;
-		if (isProjectAsset) {
-			assets = GetFullPathToProjectAsset(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
+	try {
+		if (isMultiParticle) {
+			// Load all particle textures in a specific subfolder
+			std::string assets;
+			if (isFullPathToAsset) {
+				assets = textureNameToLoad;
+			}
+			else {
+				if (isProjectAsset) {
+					assets = GetFullPathToProjectAsset(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
+				}
+				else {
+					assets = GetFullPathToEngineAsset(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
+				}
+			}
+
+			std::vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>> textures;
+			int i = 0;
+			for (auto& p : std::filesystem::recursive_directory_iterator(assets)) {
+				textures.push_back(nullptr);
+				std::wstring path = L"";
+				ISimpleShader::ConvertToWide(p.path().string().c_str(), path);
+
+				hr = CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), (ID3D11Resource**)textures[i].GetAddressOf(), nullptr);
+
+				// on failure, return
+				// This will leave the particle's textures blank
+				// And ususally means it'll render a random SRV with billboarding
+				if (hr != 0) {
+					return NULL;
+				}
+
+				i++;
+			}
+
+			D3D11_TEXTURE2D_DESC faceDesc = {};
+			textures[0]->GetDesc(&faceDesc);
+
+			D3D11_TEXTURE2D_DESC multiTextureDesc = {};
+			multiTextureDesc.ArraySize = (int)textures.size();
+			multiTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+			multiTextureDesc.CPUAccessFlags = 0;
+			multiTextureDesc.Format = faceDesc.Format;
+			multiTextureDesc.Width = faceDesc.Width;
+			multiTextureDesc.Height = faceDesc.Height;
+			multiTextureDesc.MipLevels = 1;
+			multiTextureDesc.Usage = D3D11_USAGE_DEFAULT;
+			multiTextureDesc.SampleDesc.Count = 1;
+			multiTextureDesc.SampleDesc.Quality = 0;
+
+			ID3D11Texture2D* outputTexture;
+			device->CreateTexture2D(&multiTextureDesc, 0, &outputTexture);
+
+			for (int i = 0; i < (int)textures.size(); i++) {
+				unsigned int subresource = D3D11CalcSubresource(0, i, 1);
+
+				if (textures[i] != nullptr) {
+					context->CopySubresourceRegion(outputTexture, subresource, 0, 0, 0, (ID3D11Resource*)textures[i].Get(), 0, 0);
+				}
+			}
+
+			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+			srvDesc.Format = multiTextureDesc.Format;
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+			srvDesc.Texture2DArray.MipLevels = 1;
+			srvDesc.Texture2DArray.ArraySize = (int)textures.size();
+
+			device->CreateShaderResourceView(outputTexture, &srvDesc, particleTextureSRV.GetAddressOf());
+
+			outputTexture->Release();
 		}
 		else {
-			assets = GetFullPathToEngineAsset(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
+			std::wstring wAssetString;
+			ISimpleShader::ConvertToWide(dxInstance->GetAssetPathString(ASSET_PARTICLE_PATH, PROJECT_ASSET) + textureNameToLoad, wAssetString);
+
+			CreateWICTextureFromFile(device.Get(), context.Get(), wAssetString.c_str(), nullptr, &particleTextureSRV);
 		}
 
-		std::vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>> textures;
-		int i = 0;
-		for (auto& p : std::experimental::filesystem::recursive_directory_iterator(assets)) {
-			textures.push_back(nullptr);
-			std::wstring path = L"";
-			ISimpleShader::ConvertToWide(p.path().string().c_str(), path);
-
-			hr = CreateWICTextureFromFile(device.Get(), context.Get(), (path).c_str(), (ID3D11Resource**)textures[i].GetAddressOf(), nullptr);
-
-			// on failure, return
-			// This will leave the particle's textures blank
-			// And ususally means it'll render a random SRV with billboarding
-			if (hr != 0) {
-				return NULL;
-			}
-
-			i++;
-		}
-
-		D3D11_TEXTURE2D_DESC faceDesc = {};
-		textures[0]->GetDesc(&faceDesc);
-
-		D3D11_TEXTURE2D_DESC multiTextureDesc = {};
-		multiTextureDesc.ArraySize = (int)textures.size();
-		multiTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		multiTextureDesc.CPUAccessFlags = 0;
-		multiTextureDesc.Format = faceDesc.Format;
-		multiTextureDesc.Width = faceDesc.Width;
-		multiTextureDesc.Height = faceDesc.Height;
-		multiTextureDesc.MipLevels = 1;
-		multiTextureDesc.Usage = D3D11_USAGE_DEFAULT;
-		multiTextureDesc.SampleDesc.Count = 1;
-		multiTextureDesc.SampleDesc.Quality = 0;
-
-		ID3D11Texture2D* outputTexture;
-		device->CreateTexture2D(&multiTextureDesc, 0, &outputTexture);
-
-		for (int i = 0; i < (int)textures.size(); i++) {
-			unsigned int subresource = D3D11CalcSubresource(0, i, 1);
-
-			if (textures[i] != nullptr) {
-				context->CopySubresourceRegion(outputTexture, subresource, 0, 0, 0, (ID3D11Resource*)textures[i].Get(), 0, 0);
-			}
-		}
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Format = multiTextureDesc.Format;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-		srvDesc.Texture2DArray.MipLevels = 1;
-		srvDesc.Texture2DArray.ArraySize = (int)textures.size();
-
-		device->CreateShaderResourceView(outputTexture, &srvDesc, particleTextureSRV.GetAddressOf());
-
-		outputTexture->Release();
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully loaded particle texture at %s %s\n", textureNameToLoad);
+#endif
 	}
-	else {
-		std::wstring wAssetString;
-		ISimpleShader::ConvertToWide(dxInstance->GetAssetPathString(ASSET_PARTICLE_PATH, PROJECT_ASSET) + textureNameToLoad, wAssetString);
-
-		CreateWICTextureFromFile(device.Get(), context.Get(), wAssetString.c_str(), nullptr, &particleTextureSRV);
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to load particle textures from %s with error: %s\n", textureNameToLoad, e.what());
+#endif
 	}
 
 	return particleTextureSRV;

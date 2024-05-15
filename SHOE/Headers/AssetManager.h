@@ -101,7 +101,7 @@ private:
 	void CreateComplexGeometry();
 	void ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey, std::string name);
 	std::shared_ptr<Mesh> ProcessComplexMesh(aiMesh* mesh, const aiScene* scene);
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::string textureNameToLoad, bool isMultiParticle, bool isProjectAsset);
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::string textureNameToLoad, bool isMultiParticle, bool isProjectAsset = true, bool isFullPathToAsset = false);
 
 	void InitializeTextureSampleStates();
 	void InitializeMeshes();
@@ -202,7 +202,7 @@ public:
 	/// <param name="name"></param>
 	/// <param name="fileExtension">Only needed if fileType is 1</param>
 	/// <returns></returns>
-	std::shared_ptr<Sky> CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension = ".png", bool isProjectAsset = true);
+	std::shared_ptr<Sky> CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension = ".png", bool isProjectAsset = true, bool isFullPathToAsset = false);
 	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::string nameToLoad, bool isProjectAsset = false);
 	std::shared_ptr<SimplePixelShader> CreatePixelShader(std::string id, std::string nameToLoad, bool isProjectAsset = false);
 	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::string nameToLoad, bool isProjectAsset = false);
@@ -252,7 +252,8 @@ public:
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
 													std::string textureNameToLoad,
 													bool isMultiParticle,
-													bool isProjectAsset = true);
+													bool isProjectAsset = true,
+													bool isFullPathToAsset = false);
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
 												   std::string textureNameToLoad,
 												   int maxParticles,
@@ -286,7 +287,8 @@ public:
 	std::shared_ptr<ParticleSystem> CreateParticleEmitterOnEntity(std::shared_ptr<GameEntity> entityToEdit, 
 																  std::string textureNameToLoad,
 																  bool isMultiParticle,
-																  bool isProjectAsset = true);
+																  bool isProjectAsset = true,
+																  bool isFullPathToAsset = false);
 	std::shared_ptr<Light> CreateDirectionalLightOnEntity(std::shared_ptr<GameEntity> entityToEdit,
 														  DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
 														  float intensity = 1.0f);
