@@ -95,12 +95,12 @@ private:
 		const wchar_t* down,
 		const wchar_t* front,
 		const wchar_t* back);
-	std::shared_ptr<Mesh> LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale);
+	std::shared_ptr<Mesh> LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale, bool isProjectAsset = true);
 
 	void CreateComplexGeometry();
 	void ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey, std::string name);
 	std::shared_ptr<Mesh> ProcessComplexMesh(aiMesh* mesh, const aiScene* scene);
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::string textureNameToLoad, bool isMultiParticle);
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> LoadParticleTexture(std::string textureNameToLoad, bool isMultiParticle, bool isProjectAsset);
 
 	void InitializeTextureSampleStates();
 	void InitializeMeshes();
@@ -168,7 +168,7 @@ public:
 	std::string GetFullPathToProjectAsset(AssetPathIndex index, std::string filename);
 
 	/// <summary>
-	/// Gets the full path to an asset that is outside the Assets/ dir.
+	/// Gets the full path to an asset that is outside any Assets/ dir.
 	/// </summary>
 	/// <param name="index"></param>
 	/// <param name="filename"></param>
@@ -194,14 +194,14 @@ public:
 	/// <param name="fileExtension">Only needed if fileType is 1</param>
 	/// <returns></returns>
 	std::shared_ptr<Sky> CreateSky(std::string filepath, bool fileType, std::string name, std::string fileExtension = ".png", bool isProjectAsset = true);
-	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::string nameToLoad, bool isProjectAsset = true);
-	std::shared_ptr<SimplePixelShader> CreatePixelShader(std::string id, std::string nameToLoad, bool isProjectAsset = true);
-	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::string nameToLoad, bool isProjectAsset = true);
+	std::shared_ptr<SimpleVertexShader> CreateVertexShader(std::string id, std::string nameToLoad, bool isProjectAsset = false);
+	std::shared_ptr<SimplePixelShader> CreatePixelShader(std::string id, std::string nameToLoad, bool isProjectAsset = false);
+	std::shared_ptr<SimpleComputeShader> CreateComputeShader(std::string id, std::string nameToLoad, bool isProjectAsset = false);
 	std::shared_ptr<Mesh> CreateMesh(std::string id, std::string nameToLoad, bool isNameFullPath = false, bool isProjectAsset = true);
-	std::shared_ptr<Camera> CreateCamera(std::string name, float aspectRatio = 0, bool isProjectAsset = true);
-	std::shared_ptr<Light> CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f, bool isProjectAsset = true);
-	std::shared_ptr<Light> CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f, bool isProjectAsset = true);
-	std::shared_ptr<Light> CreateSpotLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f, bool isProjectAsset = true);
+	std::shared_ptr<Camera> CreateCamera(std::string name, float aspectRatio = 0);
+	std::shared_ptr<Light> CreateDirectionalLight(std::string name, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
+	std::shared_ptr<Light> CreatePointLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
+	std::shared_ptr<Light> CreateSpotLight(std::string name, float range, DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f), float intensity = 1.0f);
 	std::shared_ptr<Texture> CreateTexture(std::string nameToLoad, std::string textureName = "newTexture", AssetPathIndex assetPath = ASSET_TEXTURE_PATH_BASIC, bool isNameFullPath = false, bool isProjectAsset = true);
 	std::shared_ptr<Material> CreatePBRMaterial(std::string id,
 											    std::string albedoNameToLoad,
@@ -209,45 +209,51 @@ public:
 											    std::string metalnessNameToLoad,
 											    std::string roughnessNameToLoad,
 												bool dx12Material = false,
-												bool addToGlobalList = true, bool isProjectAsset = true);
+												bool addToGlobalList = true,
+												bool isProjectAsset = true);
 	std::shared_ptr<Material> CreatePBRMaterial(std::string id,
 											    std::shared_ptr<Texture> albedoTexture,
 											    std::shared_ptr<Texture> normalTexture,
 											    std::shared_ptr<Texture> metalnessTexture,
 											    std::shared_ptr<Texture> roughnessTexture,
-												bool addToGlobalList = true, bool isProjectAsset = true);
-	std::shared_ptr<Terrain> CreateTerrainEntity(std::string name = "Terrain", bool isProjectAsset = true);
+												bool addToGlobalList = true);
+	std::shared_ptr<Terrain> CreateTerrainEntity(std::string name = "Terrain");
 	std::shared_ptr<Terrain> CreateTerrainEntity(const char* heightmap, 
 												 std::shared_ptr<TerrainMaterial> material, 
 												 std::string name = "Terrain", 
 												 unsigned int mapWidth = 512, 
 												 unsigned int mapHeight = 512, 
-												 float heightScale = 25.0f, bool isProjectAsset = true);
+												 float heightScale = 25.0f,
+												 bool isProjectAsset = true);
 	std::shared_ptr<Terrain> CreateTerrainEntity(std::shared_ptr<Mesh> terrainMesh, 
 												 std::shared_ptr<TerrainMaterial> material, 
-												 std::string name = "Terrain", bool isProjectAsset = true);
+												 std::string name = "Terrain");
 	std::shared_ptr<TerrainMaterial> CreateTerrainMaterial(std::string name,
 														   std::vector<std::shared_ptr<Material>> materials,
 														   std::string blendMapPath = "",
-														   bool dx12Material = false, bool isProjectAsset = true);
+														   bool dx12Material = false,
+														   bool isProjectAsset = true);
 	std::shared_ptr<TerrainMaterial> CreateTerrainMaterial(std::string name,
 														   std::vector<std::string> texturePaths,
 														   std::vector<std::string> matNames,
 														   bool isPBRMat = true,
 														   bool dx12Material = false,
-														   std::string blendMapPath = "", bool isProjectAsset = true);
+														   std::string blendMapPath = "",
+														   bool isProjectAsset = true);
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
 													std::string textureNameToLoad,
-													bool isMultiParticle, bool isProjectAsset = true);
+													bool isMultiParticle,
+													bool isProjectAsset = true);
 	std::shared_ptr<ParticleSystem> CreateParticleEmitter(std::string name,
 												   std::string textureNameToLoad,
 												   int maxParticles,
 												   float particleLifeTime,
 												   float particlesPerSecond,
 												   bool isMultiParticle = false,
-												   bool additiveBlendState = true, bool isProjectAsset = true);
+												   bool additiveBlendState = true,
+												   bool isProjectAsset = true);
 	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode = FMOD_DEFAULT, std::string name = "", bool isNameFullPath = false, bool isProjectAsset = true);
-	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false, bool isEngineAsset = false, bool isNameFullPath = false, bool isProjectAsset = true);
+	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false, bool isEngineAsset = false, bool isNameFullPath = false);
 
 	// Create-On-Entity methods, for components and loading
 	std::shared_ptr<Terrain> CreateTerrainOnEntity(std::shared_ptr<GameEntity> entityToEdit,
@@ -255,7 +261,8 @@ public:
 												   std::shared_ptr<TerrainMaterial> material, 
 												   unsigned int mapWidth = 512, 
 												   unsigned int mapHeight = 512, 
-												   float heightScale = 25.0f);
+												   float heightScale = 25.0f,
+												   bool isProjectAsset = true);
 	std::shared_ptr<Terrain> CreateTerrainOnEntity(std::shared_ptr<GameEntity> entityToEdit,
 												   std::shared_ptr<Mesh> terrainMesh,
 												   std::shared_ptr<TerrainMaterial> material);
@@ -265,10 +272,12 @@ public:
 																  float particleLifeTime,
 																  float particlesPerSecond,
 																  bool isMultiParticle = false,
-																  bool additiveBlendState = true);
+																  bool additiveBlendState = true,
+																  bool isProjectAsset = true);
 	std::shared_ptr<ParticleSystem> CreateParticleEmitterOnEntity(std::shared_ptr<GameEntity> entityToEdit, 
 																  std::string textureNameToLoad,
-																  bool isMultiParticle);
+																  bool isMultiParticle,
+																  bool isProjectAsset = true);
 	std::shared_ptr<Light> CreateDirectionalLightOnEntity(std::shared_ptr<GameEntity> entityToEdit,
 														  DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
 														  float intensity = 1.0f);

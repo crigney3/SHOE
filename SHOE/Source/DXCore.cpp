@@ -686,6 +686,7 @@ void DXCore::SetBuildAssetPaths() {
 	projectAssetPaths[11] = this->mainAssetPath + "\\Textures\\Metalness";
 	projectAssetPaths[12] = this->mainAssetPath + "\\Textures\\Roughness";
 	projectAssetPaths[13] = this->mainAssetPath + "\\Shaders\\";
+	projectAssetPaths[14] = this->mainAssetPath + "\\Textures\\BlendMaps";
 }
 
 void DXCore::SetVSAssetPaths() {

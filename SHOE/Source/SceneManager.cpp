@@ -157,7 +157,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	// Audio
 
 	// This var is constantly overwritten to determine each asset's path type
-	AssetPathType* pathType = ENGINE_ASSET;
+	AssetPathType* pathType = new AssetPathType();
+	*pathType = ENGINE_ASSET;
 
 	// Fonts - Must load at least the default
 	currentLoadCategory = "Fonts";
@@ -166,7 +167,7 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	for (rapidjson::SizeType i = 0; i < fontBlock.Size(); i++) {
 		currentLoadName = fontBlock[i].FindMember(NAME)->value.GetString();
 		//if(progressListener) progressListener(); NEEDS PRE-LOADED FONTS
-		assetManager.CreateSHOEFont(currentLoadName, LoadDeserializedFileName(fontBlock[i], FILENAME_KEY, pathType), false, false, false, (bool)pathType);
+		assetManager.CreateSHOEFont(currentLoadName, LoadDeserializedFileName(fontBlock[i], FILENAME_KEY, pathType), false, (bool)pathType, false);
 	}
 
 	// Texture Sampler States
@@ -375,6 +376,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 			FMOD::Sound* newSound = assetManager.CreateSound(LoadDeserializedFileName(soundBlock[i], FILENAME_KEY, pathType), mode, currentLoadName, false, (bool)pathType);
 		}
 	}
+
+	delete pathType;
 }
 
 /// <summary>
@@ -389,7 +392,8 @@ void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<
 	assert(entityBlock.IsArray());
 
 	// This var is constantly overwritten to determine each asset's path type
-	AssetPathType* pathType;
+	AssetPathType* pathType = new AssetPathType();
+	*pathType = ENGINE_ASSET;
 
 	for (rapidjson::SizeType i = 0; i < entityBlock.Size(); i++) {
 		currentLoadName = entityBlock[i].FindMember(NAME)->value.GetString();
@@ -495,6 +499,8 @@ void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<
 			}
 		}
 	}
+
+	delete pathType;
 }
 
 /// <summary>
@@ -522,7 +528,6 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 		
 		meshValue.AddMember(NAME, rapidjson::Value().SetString(me->GetName().c_str(), allocator), allocator);
 		meshValue.AddMember(FILENAME_KEY, rapidjson::Value().SetString(me->GetFileNameKey().c_str(), allocator), allocator);
-		//meshValue.AddMember(ASSET_PATH_TYPE, )
 
 		meshBlock.PushBack(meshValue, allocator);
 	}
