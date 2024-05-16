@@ -35,7 +35,9 @@ namespace SHOELauncher
     public partial class MainWindow : Window
     {
         private string launcherPath;
+        private string launcherResourcesPath;
         private string versionFilePath;
+        private string engineInstallResourcePath;
         private string SHOEExecPath;
         private string selectedProjectPath;
         private string SHOELocalZipName;
@@ -97,8 +99,12 @@ namespace SHOELauncher
             windowRef = this;
 
             launcherPath = Directory.GetCurrentDirectory();
-            versionFilePath = Path.Combine(launcherPath, "version.txt");
-            projectsFilePath = Path.Combine(launcherPath, "projects.txt");
+            
+            launcherResourcesPath = Directory.CreateDirectory(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\SHOEInstallerResources").ToString();
+
+            versionFilePath = Path.Combine(launcherResourcesPath, "version.txt");
+            projectsFilePath = Path.Combine(launcherResourcesPath, "projects.txt");
+            engineInstallResourcePath = Path.Combine(launcherResourcesPath, "EngineInstallLocation.txt");
             SHOEExecPath = "";
             selectedProjectPath = "";
             SHOELocalZipName = "SHOE.zip";
@@ -113,9 +119,9 @@ namespace SHOELauncher
             RingChoiceListBox.ItemsSource = appRings;
             selectedAppRing = appRings[0];
 
-            if (File.Exists("EngineInstallLocation.txt"))
+            if (File.Exists(engineInstallResourcePath))
             {
-                SHOEBuildPath = File.ReadAllText("EngineInstallLocation.txt");
+                SHOEBuildPath = File.ReadAllText(engineInstallResourcePath);
                 SHOEExecPath = Path.Combine(SHOEBuildPath, selectedAppRing.Title) + "\\SHOE.exe";
             }
 
@@ -326,7 +332,7 @@ namespace SHOELauncher
                 SHOEBuildPath = folderName;
             }
 
-            File.WriteAllText("EngineInstallLocation.txt", SHOEBuildPath);
+            File.WriteAllText(engineInstallResourcePath, SHOEBuildPath);
         }
 
         private void NewProjectsButton_Click(object sender, RoutedEventArgs e)
