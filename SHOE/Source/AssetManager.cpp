@@ -935,10 +935,15 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 				assetPath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_PATH_SKIES, filepath);
 			}
 		}
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Sky import - asset path is %s\n", assetPath.c_str());
+#endif
 
 		if (fileType) {
 			// Process as 6 textures in a directory
-
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("Sky import - importing as 6-texture cubemap\n");
+#endif
 			std::wstring skyDirWide;
 			std::wstring fileExtensionW;
 			ISimpleShader::ConvertToWide(assetPath, skyDirWide);
@@ -953,7 +958,9 @@ std::shared_ptr<Sky> AssetManager::CreateSky(std::string filepath, bool fileType
 		}
 		else {
 			// Process as a .dds
-
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("Sky import - importing as DDS\n");
+#endif
 			std::wstring skyDDSWide;
 			ISimpleShader::ConvertToWide(assetPath, skyDDSWide);
 
@@ -2121,7 +2128,7 @@ void AssetManager::ScanProjectAssetsAndImport(std::string assetsPath, std::funct
 				}
 				else {
 					// This is a single dds
-					CreateSky(iter->path().string(), false, iter->path().stem().string(), ".dds", true, true);
+					CreateSky(iter->path().string(), false, iter->path().stem().string(), "", true, true);
 				}
 				if (progressListener) progressListener("Skies");
 
@@ -2405,71 +2412,111 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::CreateCubemap(
 	const wchar_t* front,
 	const wchar_t* back)
 {
+#if defined(DEBUG) || defined(_DEBUG)
+	wprintf(L"Cubemap creation - Loading the following six texture paths:\n%s\n%s\n%s\n%s\n%s\n%s\n", right, left, up, down, front, back);
+#endif
 	// Load the 6 textures into an array.
 	// - We need references to the TEXTURES, not the SHADER RESOURCE VIEWS!
 	// - Specifically NOT generating mipmaps, as we usually don't need them for the sky!
 	// - Order matters here! +X, -X, +Y, -Y, +Z, -Z
 	ID3D11Texture2D* textures[6] = {};
-	CreateWICTextureFromFile(device.Get(), right, (ID3D11Resource**)&textures[0], 0);
-	CreateWICTextureFromFile(device.Get(), left, (ID3D11Resource**)&textures[1], 0);
-	CreateWICTextureFromFile(device.Get(), up, (ID3D11Resource**)&textures[2], 0);
-	CreateWICTextureFromFile(device.Get(), down, (ID3D11Resource**)&textures[3], 0);
-	CreateWICTextureFromFile(device.Get(), front, (ID3D11Resource**)&textures[4], 0);
-	CreateWICTextureFromFile(device.Get(), back, (ID3D11Resource**)&textures[5], 0);
-	// We'll assume all of the textures are the same color format and resolution,
-	// so get the description of the first shader resource view
-	D3D11_TEXTURE2D_DESC faceDesc = {};
-	textures[0]->GetDesc(&faceDesc);
-	// Describe the resource for the cube map, which is simply
-	// a "texture 2d array". This is a special GPU resource format,
-	// NOT just a C++ array of textures!!!
-	D3D11_TEXTURE2D_DESC cubeDesc = {};
-	cubeDesc.ArraySize = 6; // Cube map!
-	cubeDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE; // We'll be using as a texture in a shader
-	cubeDesc.CPUAccessFlags = 0; // No read back
-	cubeDesc.Format = faceDesc.Format; // Match the loaded texture's color format
-	cubeDesc.Width = faceDesc.Width; // Match the size
-	cubeDesc.Height = faceDesc.Height; // Match the size
-	cubeDesc.MipLevels = 1; // Only need 1
-	cubeDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE; // A CUBE MAP, not 6 separate textures
-	cubeDesc.Usage = D3D11_USAGE_DEFAULT; // Standard usage
-	cubeDesc.SampleDesc.Count = 1;
-	cubeDesc.SampleDesc.Quality = 0;
-	// Create the actual texture resource
-	ID3D11Texture2D* cubeMapTexture = 0;
-	device->CreateTexture2D(&cubeDesc, 0, &cubeMapTexture);
-	// Loop through the individual face textures and copy them,
-	// one at a time, to the cube map texure
-	for (int i = 0; i < 6; i++)
-	{
-		// Calculate the subresource position to copy into
-		unsigned int subresource = D3D11CalcSubresource(
-			0, // Which mip (zero, since there's only one)
-			i, // Which array element?
-			1); // How many mip levels are in the texture?
-			// Copy from one resource (texture) to another
-		context->CopySubresourceRegion(
-			cubeMapTexture, // Destination resource
-			subresource, // Dest subresource index (one of the array elements)
-			0, 0, 0, // XYZ location of copy
-			textures[i], // Source resource
-			0, // Source subresource index (we're assuming there's only one)
-			0); // Source subresource "box" of data to copy (zero means the whole thing)
-	}
-	// At this point, all of the faces have been copied into the
-	// cube map texture, so we can describe a shader resource view for it
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = cubeDesc.Format; // Same format as texture
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE; // Treat this as a cube!
-	srvDesc.TextureCube.MipLevels = 1; // Only need access to 1 mip
-	srvDesc.TextureCube.MostDetailedMip = 0; // Index of the first mip we want to see
-	// Make the SRV
+	HRESULT hr;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cubeSRV;
-	device->CreateShaderResourceView(cubeMapTexture, &srvDesc, cubeSRV.GetAddressOf());
-	// Now that we're done, clean up the stuff we don't need anymore
-	cubeMapTexture->Release(); // Done with this particular reference (the SRV has another)
-	for (int i = 0; i < 6; i++)
-		textures[i]->Release();
+	try {
+		hr = CreateWICTextureFromFile(device.Get(), right, (ID3D11Resource**)&textures[0], 0);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Cubemap creation - Texture creation code %d\n", hr);
+#endif
+		hr = CreateWICTextureFromFile(device.Get(), left, (ID3D11Resource**)&textures[1], 0);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Cubemap creation - Texture creation code %d\n", hr);
+#endif
+		hr = CreateWICTextureFromFile(device.Get(), up, (ID3D11Resource**)&textures[2], 0);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Cubemap creation - Texture creation code %d\n", hr);
+#endif
+		hr = CreateWICTextureFromFile(device.Get(), down, (ID3D11Resource**)&textures[3], 0);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Cubemap creation - Texture creation code %d\n", hr);
+#endif
+		hr = CreateWICTextureFromFile(device.Get(), front, (ID3D11Resource**)&textures[4], 0);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Cubemap creation - Texture creation code %d\n", hr);
+#endif
+		hr = CreateWICTextureFromFile(device.Get(), back, (ID3D11Resource**)&textures[5], 0);
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Cubemap creation - Texture creation code %d\n", hr);
+#endif
+		// We'll assume all of the textures are the same color format and resolution,
+		// so get the description of the first shader resource view
+		D3D11_TEXTURE2D_DESC faceDesc = {};
+		if (textures[0] == nullptr) {
+			// Something went very wrong with the texture load, throw
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("Cubemap creation - ERROR: primary texture was blank at %s\n", right);
+#endif
+			throw(ERROR_FILE_NOT_FOUND);
+		}
+		textures[0]->GetDesc(&faceDesc);
+		// Describe the resource for the cube map, which is simply
+		// a "texture 2d array". This is a special GPU resource format,
+		// NOT just a C++ array of textures!!!
+		D3D11_TEXTURE2D_DESC cubeDesc = {};
+		cubeDesc.ArraySize = 6; // Cube map!
+		cubeDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE; // We'll be using as a texture in a shader
+		cubeDesc.CPUAccessFlags = 0; // No read back
+		cubeDesc.Format = faceDesc.Format; // Match the loaded texture's color format
+		cubeDesc.Width = faceDesc.Width; // Match the size
+		cubeDesc.Height = faceDesc.Height; // Match the size
+		cubeDesc.MipLevels = 1; // Only need 1
+		cubeDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE; // A CUBE MAP, not 6 separate textures
+		cubeDesc.Usage = D3D11_USAGE_DEFAULT; // Standard usage
+		cubeDesc.SampleDesc.Count = 1;
+		cubeDesc.SampleDesc.Quality = 0;
+		// Create the actual texture resource
+		ID3D11Texture2D* cubeMapTexture = 0;
+		device->CreateTexture2D(&cubeDesc, 0, &cubeMapTexture);
+		// Loop through the individual face textures and copy them,
+		// one at a time, to the cube map texure
+		for (int i = 0; i < 6; i++)
+		{
+			// Calculate the subresource position to copy into
+			unsigned int subresource = D3D11CalcSubresource(
+				0, // Which mip (zero, since there's only one)
+				i, // Which array element?
+				1); // How many mip levels are in the texture?
+			// Copy from one resource (texture) to another
+			context->CopySubresourceRegion(
+				cubeMapTexture, // Destination resource
+				subresource, // Dest subresource index (one of the array elements)
+				0, 0, 0, // XYZ location of copy
+				textures[i], // Source resource
+				0, // Source subresource index (we're assuming there's only one)
+				0); // Source subresource "box" of data to copy (zero means the whole thing)
+		}
+		// At this point, all of the faces have been copied into the
+		// cube map texture, so we can describe a shader resource view for it
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = cubeDesc.Format; // Same format as texture
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE; // Treat this as a cube!
+		srvDesc.TextureCube.MipLevels = 1; // Only need access to 1 mip
+		srvDesc.TextureCube.MostDetailedMip = 0; // Index of the first mip we want to see
+		// Make the SRV
+		device->CreateShaderResourceView(cubeMapTexture, &srvDesc, cubeSRV.GetAddressOf());
+		// Now that we're done, clean up the stuff we don't need anymore
+		cubeMapTexture->Release(); // Done with this particular reference (the SRV has another)
+		for (int i = 0; i < 6; i++)
+			textures[i]->Release();
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Cubemap creation successful\n");
+#endif
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Cubemap creation - ERROR: %s\n", e.what());
+#endif
+	}
+	
 	// Send back the SRV, which is what we need for our shaders
 	return cubeSRV;
 }

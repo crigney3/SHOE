@@ -7,23 +7,48 @@ Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions,
 		 Microsoft::WRL::ComPtr<ID3D11Device> device,
 		 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,
 		 std::string name) {
-	this->samplerOptions = samplerOptions;
-	this->skyPixelShader = pixShaders[0];
-	this->skyVertexShader = vertShaders[0];
-	this->textureSRV = skyTexture;
+	// It's possible that, on older machines
+	// or on machines with high CPU but low GPU
+	// Skies will fail to initialize fast enough for the CPU to
+	// consider the app responsive. For some reason, instead of
+	// "not responding", windows just kills the app.
+	// Hopefully this try/catch can early out, breaking the Sky
+	// but allowing the engine to initialize.
+	try {
+		this->samplerOptions = samplerOptions;
+		this->skyPixelShader = pixShaders[0];
+		this->skyVertexShader = vertShaders[0];
+		this->textureSRV = skyTexture;
 
-	this->vertShaders = vertShaders;
-	this->pixShaders = pixShaders;
+		this->vertShaders = vertShaders;
+		this->pixShaders = pixShaders;
 
-	this->device = device;
-	this->context = context;
+		this->device = device;
+		this->context = context;
 
-	this->name = name;
-	this->enabled = true;
-
-	IBLCreateIrradianceMap();
-	IBLCreateConvolvedSpecularMap();
-	IBLCreateBRDFLookUpTexture();
+		this->name = name;
+		this->enabled = true;
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Sky constructor - Basic values set for sky %s\n", name.c_str());
+#endif
+		IBLCreateIrradianceMap();
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Sky constructor - Irradiance Map created for sky %s\n", name.c_str());
+#endif
+		IBLCreateConvolvedSpecularMap();
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Sky constructor - Convolved Specular Map created for sky %s\n", name.c_str());
+#endif
+		IBLCreateBRDFLookUpTexture();
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Sky constructor - BRDF Lookup Texture created for sky %s\n", name.c_str());
+#endif
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Sky constructor - Error constructing sky named %s with error: %s\n", name.c_str(), e.what());
+#endif
+	}
 }
 
 Sky::~Sky() {
@@ -48,6 +73,7 @@ int Sky::GetIBLMipLevelCount() {
 
 void Sky::IBLCreateIrradianceMap() {
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> finalIrrMapTexture;
+	HRESULT hr;
 
 	D3D11_TEXTURE2D_DESC texDesc = {};
 	texDesc.Width = CMFaceSize;
@@ -58,7 +84,7 @@ void Sky::IBLCreateIrradianceMap() {
 	texDesc.MipLevels = 1;
 	texDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	texDesc.SampleDesc.Count = 1;
-	device->CreateTexture2D(&texDesc, 0, finalIrrMapTexture.GetAddressOf());
+	hr = device->CreateTexture2D(&texDesc, 0, finalIrrMapTexture.GetAddressOf());
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
@@ -100,7 +126,7 @@ void Sky::IBLCreateIrradianceMap() {
 		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
 		device->CreateRenderTargetView(finalIrrMapTexture.Get(), &rtvDesc, rtv.GetAddressOf());
 
-		//context->Flush();
+		context->Flush();
 
 		float black[4] = {};
 		context->ClearRenderTargetView(rtv.Get(), black);
@@ -169,9 +195,21 @@ void Sky::IBLCreateConvolvedSpecularMap() {
 			Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
 			device->CreateRenderTargetView(finalSpecMapTexture.Get(), &rtvDesc, rtv.GetAddressOf());
 
+			context->Flush();
+
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("Sky specmap creation - mip: %d face: %d First flush\n", mipLevel, face);
+#endif
+
 			float black[4] = {};
 			context->ClearRenderTargetView(rtv.Get(), black);
 			context->OMSetRenderTargets(1, rtv.GetAddressOf(), 0);
+
+			context->Flush();
+
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("Sky specmap creation - mip: %d face: %d Second flush\n", mipLevel, face);
+#endif
 
 			D3D11_VIEWPORT vp = {};
 			vp.Width = (float)pow(2, mipLevelCount + mipLevelSkip - 1 - mipLevel);
@@ -179,6 +217,12 @@ void Sky::IBLCreateConvolvedSpecularMap() {
 			vp.MinDepth = 0.0f;
 			vp.MaxDepth = 1.0f;
 			context->RSSetViewports(1, &vp);
+
+			context->Flush();
+
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("Sky specmap creation - mip: %d face: %d Third flush\n", mipLevel, face);
+#endif
 
 			pixShaders[2]->SetFloat("roughness", mipLevel / (float)(mipLevelCount - 1));
 			pixShaders[2]->SetInt("faceIndex", face);

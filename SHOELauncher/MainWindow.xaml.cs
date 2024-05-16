@@ -283,6 +283,8 @@ namespace SHOELauncher
             if(RingChoiceListBox.SelectedItem != null)
             {
                 this.SHOEOnlineZipPath = (RingChoiceListBox.SelectedItem as AppRing).OnlinePath;
+                selectedAppRing = (RingChoiceListBox.SelectedItem as AppRing);
+                SHOEExecPath = Path.Combine(SHOEBuildPath, selectedAppRing.Title) + "\\SHOE.exe";
             }
         }
         

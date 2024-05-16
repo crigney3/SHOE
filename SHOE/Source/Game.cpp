@@ -291,7 +291,12 @@ void Game::Update()
 void Game::DrawInitializingScreen(std::string category)
 {
 	// Screen clear color
+	
+#if defined(DEBUG) || defined(_DEBUG)
+	const float color[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
+#else
 	const float color[4] = { 0.0f, 0.0f, 0.1f, 0.0f };
+#endif
 
 	DirectX::XMFLOAT2 categoryOrigin;
 
