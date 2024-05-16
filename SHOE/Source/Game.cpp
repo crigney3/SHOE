@@ -61,10 +61,10 @@ Game::Game(HINSTANCE hInstance, LPSTR cmdLine)
 			secondHalfOfParameter = currentSubstring.substr(innerSecondStart, currentSubstring.length() - innerSecondStart);
 
 			if (!firstHalfOfParameter.compare("/DXVersion")) {
-				if (!secondHalfOfParameter.compare("11")) {
+				if (!secondHalfOfParameter.compare("DX11")) {
 					this->dxVersion = DIRECT_X_11;
 				}
-				else if (!secondHalfOfParameter.compare("12")) {
+				else if (!secondHalfOfParameter.compare("DX12")) {
 					this->dxVersion = DIRECT_X_12;
 				}
 			}

@@ -121,6 +121,8 @@ namespace SHOELauncher
 
             projects = new ObservableCollection<SHOEProject>();
             LoadProjects();
+
+            LauncherStatus = LauncherState.Running;
         }
 
         private void LoadProjects()
@@ -259,7 +261,8 @@ namespace SHOELauncher
             {
                 ProcessStartInfo startInfo = new ProcessStartInfo(SHOEExecPath);
                 startInfo.WorkingDirectory = SHOEBuildPath;
-                startInfo.Arguments = $"/DXVersion:{selectedProject.DirectXVersion} /ProjectPath:{selectedProject.ProjectPath}";
+                startInfo.Arguments = $"/DXVersion:{selectedProject.DirectXVersion} /ProjectPath:{selectedProject.ProjectPath} /EngineInstallPath:{Path.Combine(SHOEBuildPath, selectedAppRing.Title)}";
+                Console.WriteLine($"/DXVersion:{selectedProject.DirectXVersion} /ProjectPath:{selectedProject.ProjectPath} /EngineInstallPath:{Path.Combine(SHOEBuildPath, selectedAppRing.Title)}");
                 Process.Start(startInfo);
 
                 Close();
@@ -299,7 +302,14 @@ namespace SHOELauncher
 
         private void UpdateButton_Click(object sender, RoutedEventArgs e)
         {
-            CheckForUpdates();
+            if (SHOEBuildPath != "")
+            {
+                CheckForUpdates();
+            } else
+            {
+                MessageBox.Show("Choose an installation directory first!");
+            }
+            
         }
 
         private void SelectInstallDirectory_Click(object sender, RoutedEventArgs e)
