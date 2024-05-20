@@ -5,7 +5,7 @@
 
 void NoclipMovement::Start()
 {
-	this->lookSpeed = 0.3f;
+	this->lookSpeed = 1.6f;
 	this->moveSpeed = 10.0f;
 }
 

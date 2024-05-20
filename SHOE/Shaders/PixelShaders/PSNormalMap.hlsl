@@ -30,6 +30,8 @@ cbuffer PerFrame : register(b0)
 	float3 cameraPos;
 	uint lightCount;
 	int specIBLTotalMipLevels;
+    int indirectLightingEnabled;
+    float iblIntensity;
 }
 
 cbuffer PerMaterial : register(b1)
@@ -90,7 +92,7 @@ PS_Output main(VertexToPixelNormal input)
 				shadowAmt = shadowMaps.SampleCmpLevelZero(shadowState, shadowUV, lightDepth).r;
 				currentShadow++;
 			}
-			totalLighting += calcLightExternal(input, lights[i], specularColor, roughness.r, metal.r) * shadowAmt;
+			totalLighting += calcLightExternal(input, lights[i], specularColor, roughness, metal) * shadowAmt;
 		}
 	}
 
@@ -133,18 +135,19 @@ PS_Output main(VertexToPixelNormal input)
 											   clampSampler,
 											   viewRefl,
 											   NdotV,
-											   roughness.r,
+											   roughness,
 											   specularColor);
 
-	float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse, indirectSpecular, metal.r) * albedoColor.rgb;
+	float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse, indirectSpecular, metal) * albedoColor.rgb;
+    float3 fullIndirect = indirectSpecular + balancedDiff * albedoColor.rgb;
 
-	totalLighting *= albedoColor.rgb;
+	//totalLighting *= albedoColor.rgb;
 
 	//totalLighting += fullIndirect;
 
 	PS_Output output;
-    output.colorNoAmbient = float4(totalLighting + indirectSpecular, 1);
-	output.ambientColor   = float4(balancedDiff, 1);
+    output.colorNoAmbient = float4(totalLighting, 1);
+	output.ambientColor   = float4(fullIndirect * iblIntensity * indirectLightingEnabled, 1);
 	output.normals		  = float4(input.normal * 0.5f + 0.5f, 1);
 	output.depths		  = input.position.z;
 
