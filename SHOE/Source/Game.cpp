@@ -156,7 +156,7 @@ void Game::Init()
 		printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
 #endif
 
-		sceneManager.Initialize(&engineState, std::bind(&Game::DrawLoadingScreen, this));
+		sceneManager.Initialize(&engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
 
 		globalAssets.Initialize(device, context, hWnd, &engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
 

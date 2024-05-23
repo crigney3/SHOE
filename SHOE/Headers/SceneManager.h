@@ -185,7 +185,7 @@ private:
 	AssetManager& assetManager = AssetManager::GetInstance();
 
 	EngineState* engineState;
-	std::function<void()> progressListener;
+	std::function<void(std::string)> progressListener;
 
 	std::string currentSceneName;
 	std::string loadingSceneName;
@@ -205,15 +205,15 @@ private:
 
 	std::string LoadDeserializedFileName(const rapidjson::Value& jsonBlock, const char* memberName, OUT AssetPathType* assetPathType);
 
-	void LoadAssets(const rapidjson::Value& sceneDoc, std::function<void()> progressListener = {});
-	void LoadEntities(const rapidjson::Value& sceneDoc, std::function<void()> progressListener = {});
+	void LoadAssets(const rapidjson::Value& sceneDoc, std::function<void(std::string)> progressListener = {});
+	void LoadEntities(const rapidjson::Value& sceneDoc, std::function<void(std::string)> progressListener = {});
 
 	void SaveAssets(rapidjson::Document& sceneDocToSave);
 	void SaveEntities(rapidjson::Document& sceneDocToSave);
 public:
-	void Initialize(EngineState* engineState, std::function<void()> progressListener);
+	void Initialize(EngineState* engineState, std::function<void(std::string)> progressListener = {});
 
-	void LoadScene(std::string filepath);
+	void LoadScene(std::string filepath, bool isFullPathToScene = false);
 	void SaveScene(std::string filepath, std::string sceneName = "", bool isFullPathToScene = false);
 	void SaveSceneAs();
 

@@ -90,7 +90,22 @@ void EditingUI::DisplayMenu() {
 			}
 
 			if (ImGui::MenuItem("Load Scene", "ctrl+s")) {
-				sceneManager.LoadScene("structureTest.json");
+				char filename[MAX_PATH];
+				OPENFILENAME ofn;
+
+				ZeroMemory(&ofn, sizeof(ofn));
+				ZeroMemory(&filename, sizeof(filename));
+				ofn.lpstrFilter = _T("Scene JSON files (.json)\0*.json;\0Any File\0*.*\0");
+				ofn.lpstrTitle = _T("Select a scene file:");
+				ofn.lStructSize = sizeof(ofn);
+				ofn.hwndOwner = dxCore->hWnd;
+				ofn.lpstrFile = filename;
+				ofn.nMaxFile = MAX_PATH;
+				ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
+
+				if (GetOpenFileName(&ofn)) {
+					sceneManager.LoadScene(ofn.lpstrFile, true);
+				}
 			}
 
 			ImGui::Separator();
