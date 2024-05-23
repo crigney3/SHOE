@@ -160,6 +160,9 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	AssetPathType* pathType = new AssetPathType();
 	*pathType = ENGINE_ASSET;
 
+	// This one too
+	std::string deserializedFileName = std::string("");
+
 	// Fonts - Must load at least the default
 	currentLoadCategory = "Fonts";
 	const rapidjson::Value& fontBlock = sceneDoc[FONTS];
@@ -167,7 +170,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	for (rapidjson::SizeType i = 0; i < fontBlock.Size(); i++) {
 		currentLoadName = fontBlock[i].FindMember(NAME)->value.GetString();
 		//if(progressListener) progressListener(); NEEDS PRE-LOADED FONTS
-		assetManager.CreateSHOEFont(currentLoadName, LoadDeserializedFileName(fontBlock[i], FILENAME_KEY, pathType), false, (bool)pathType, false);
+		deserializedFileName = LoadDeserializedFileName(fontBlock[i], FILENAME_KEY, pathType);
+		assetManager.CreateSHOEFont(currentLoadName, deserializedFileName, false, (bool)*pathType, false);
 	}
 
 	// Texture Sampler States
@@ -213,7 +217,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 		for (rapidjson::SizeType i = 0; i < pixelShaderBlock.Size(); i++) {
 			currentLoadName = pixelShaderBlock[i].FindMember(NAME)->value.GetString();
 			if (progressListener) progressListener("Pixel Shaders");
-			assetManager.CreatePixelShader(currentLoadName, LoadDeserializedFileName(pixelShaderBlock[i], SHADER_FILE_PATH, pathType), (bool)pathType);
+			deserializedFileName = LoadDeserializedFileName(pixelShaderBlock[i], SHADER_FILE_PATH, pathType);
+			assetManager.CreatePixelShader(currentLoadName, deserializedFileName, (bool)*pathType);
 		}
 	}
 
@@ -225,7 +230,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 		for (rapidjson::SizeType i = 0; i < vertexShaderBlock.Size(); i++) {
 			currentLoadName = vertexShaderBlock[i].FindMember(NAME)->value.GetString();
 			if (progressListener) progressListener("Vertex Shaders");
-			assetManager.CreateVertexShader(currentLoadName, LoadDeserializedFileName(vertexShaderBlock[i], SHADER_FILE_PATH, pathType), (bool)pathType);
+			deserializedFileName = LoadDeserializedFileName(vertexShaderBlock[i], SHADER_FILE_PATH, pathType);
+			assetManager.CreateVertexShader(currentLoadName, deserializedFileName, (bool)*pathType);
 		}
 	}
 
@@ -237,7 +243,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 		for (rapidjson::SizeType i = 0; i < computeShaderBlock.Size(); i++) {
 			currentLoadName = computeShaderBlock[i].FindMember(NAME)->value.GetString();
 			if (progressListener) progressListener("Compute Shaders");
-			assetManager.CreateComputeShader(currentLoadName, LoadDeserializedFileName(computeShaderBlock[i], SHADER_FILE_PATH, pathType), (bool)pathType);
+			deserializedFileName = LoadDeserializedFileName(computeShaderBlock[i], SHADER_FILE_PATH, pathType);
+			assetManager.CreateComputeShader(currentLoadName, deserializedFileName, (bool)*pathType);
 		}
 	}
 
@@ -253,7 +260,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 			// they're in.
 			AssetPathIndex assetPath;
 			assetPath = (AssetPathIndex)(textureBlock[i].FindMember(TEXTURE_ASSET_PATH_INDEX)->value.GetInt());
-			assetManager.CreateTexture(LoadDeserializedFileName(textureBlock[i], FILENAME_KEY, pathType), currentLoadName, assetPath, false, (bool)pathType);
+			deserializedFileName = LoadDeserializedFileName(textureBlock[i], FILENAME_KEY, pathType);
+			assetManager.CreateTexture(deserializedFileName, currentLoadName, assetPath, false, (bool)*pathType);
 		}
 	}
 
@@ -263,24 +271,13 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 		const rapidjson::Value& materialBlock = sceneDoc[MATERIALS];
 		assert(materialBlock.IsArray());
 		for (rapidjson::SizeType i = 0; i < materialBlock.Size(); i++) {
-			currentLoadName = LoadDeserializedFileName(materialBlock[i], NAME, pathType);
+			currentLoadName = materialBlock[i].FindMember(NAME)->value.GetString();
 			if (progressListener) progressListener("Materials");
 
 			if (assetManager.dxInstance->IsDirectX12()) {
 
 			}
 			else {
-				// TODO: Could this be more efficient by pulling from the loaded textures?
-				// Also check if this causes the textures to be loaded in memory twice
-				//std::shared_ptr<Material> tempMat = assetManager.CreatePBRMaterial(
-				//	currentLoadName,
-				//	LoadDeserializedFileName(materialBlock[i], MAT_TEXTURE_OR_ALBEDO_MAP, pathType),
-				//	LoadDeserializedFileName(materialBlock[i], MAT_NORMAL_MAP, pathType),
-				//	LoadDeserializedFileName(materialBlock[i], MAT_METAL_MAP, pathType),
-				//	LoadDeserializedFileName(materialBlock[i], MAT_ROUGHNESS_MAP, pathType),
-				//	false,
-				//	true,
-				//	(bool)pathType);
 				std::shared_ptr<Material> tempMat = assetManager.CreatePBRMaterial(
 					currentLoadName,
 					assetManager.GetTextureAtID(materialBlock[i].FindMember(MAT_TEXTURE_OR_ALBEDO_MAP)->value.GetInt()),
@@ -325,7 +322,10 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 			currentLoadName = meshBlock[i].FindMember(NAME)->value.GetString();
 			if (progressListener) progressListener("Meshes");
 
-			std::shared_ptr<Mesh> newMesh = assetManager.CreateMesh(currentLoadName, LoadDeserializedFileName(meshBlock[i], FILENAME_KEY, pathType), false, (bool)pathType);
+			// Have to separate this string into its own line or the compiler optimizes out
+			// setting pathType, which causes lots of issues
+			deserializedFileName = LoadDeserializedFileName(meshBlock[i], FILENAME_KEY, pathType);
+			std::shared_ptr<Mesh> newMesh = assetManager.CreateMesh(currentLoadName, deserializedFileName, false, (bool)*pathType);
 			newMesh->SetDepthPrePass(meshBlock[i].FindMember(MESH_NEEDS_DEPTH_PREPASS)->value.GetBool());
 			newMesh->SetMaterialIndex(meshBlock[i].FindMember(MESH_MATERIAL_INDEX)->value.GetInt());
 
@@ -351,10 +351,11 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 			}
 
 			if (terrainMaterialBlock[i].FindMember(TERRAIN_MATERIAL_BLEND_MAP_ENABLED)->value.GetBool()) {
-				std::shared_ptr<TerrainMaterial> newTMat = assetManager.CreateTerrainMaterial(currentLoadName, internalMaterials, LoadDeserializedFileName(terrainMaterialBlock[i], TERRAIN_MATERIAL_BLEND_MAP_PATH, pathType), false, (bool)pathType);
+				deserializedFileName = LoadDeserializedFileName(terrainMaterialBlock[i], TERRAIN_MATERIAL_BLEND_MAP_PATH, pathType);
+				std::shared_ptr<TerrainMaterial> newTMat = assetManager.CreateTerrainMaterial(currentLoadName, internalMaterials, deserializedFileName, false, (bool)*pathType);
 			}
 			else {
-				std::shared_ptr<TerrainMaterial> newTMat = assetManager.CreateTerrainMaterial(currentLoadName, internalMaterials, "", false, (bool)pathType);
+				std::shared_ptr<TerrainMaterial> newTMat = assetManager.CreateTerrainMaterial(currentLoadName, internalMaterials, "", false, (bool)*pathType);
 			}
 		}
 	}
@@ -368,7 +369,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 			if (progressListener) progressListener("Skies");
 			bool keyType = skyBlock[i].FindMember(SKY_FILENAME_KEY_TYPE)->value.GetBool();
 			std::string fileExt = keyType ? skyBlock[i].FindMember(SKY_FILENAME_EXTENSION)->value.GetString() : ".png";
-			assetManager.CreateSky(LoadDeserializedFileName(skyBlock[i], FILENAME_KEY, pathType), keyType, currentLoadName, fileExt, (bool)pathType);
+			deserializedFileName = LoadDeserializedFileName(skyBlock[i], FILENAME_KEY, pathType);
+			assetManager.CreateSky(deserializedFileName, keyType, currentLoadName, fileExt, (bool)*pathType);
 		}
 	}
 
@@ -380,7 +382,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 			currentLoadName = soundBlock[i].FindMember(NAME)->value.GetString();
 			if (progressListener) progressListener("Sounds");
 			int mode = soundBlock[i].FindMember(SOUND_FMOD_MODE)->value.GetInt();
-			FMOD::Sound* newSound = assetManager.CreateSound(LoadDeserializedFileName(soundBlock[i], FILENAME_KEY, pathType), mode, currentLoadName, false, (bool)pathType);
+			deserializedFileName = LoadDeserializedFileName(soundBlock[i], FILENAME_KEY, pathType);
+			FMOD::Sound* newSound = assetManager.CreateSound(deserializedFileName, mode, currentLoadName, false, (bool)*pathType);
 		}
 	}
 
@@ -441,7 +444,7 @@ void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<
 				float particlesPerSecond = componentBlock[i].FindMember(PARTICLE_SYSTEM_PARTICLES_PER_SECOND)->value.GetDouble();
 				float particleLifetime = componentBlock[i].FindMember(PARTICLE_SYSTEM_PARTICLE_LIFETIME)->value.GetDouble();
 
-				std::shared_ptr<ParticleSystem> newParticles = assetManager.CreateParticleEmitterOnEntity(newEnt, filename, maxParticles, particleLifetime, particlesPerSecond, isMultiParticle, blendState);
+				std::shared_ptr<ParticleSystem> newParticles = assetManager.CreateParticleEmitterOnEntity(newEnt, filename, maxParticles, particleLifetime, particlesPerSecond, isMultiParticle, blendState, (bool)*pathType);
 
 				newParticles->SetScale(componentBlock[i].FindMember(PARTICLE_SYSTEM_SCALE)->value.GetDouble());
 				newParticles->SetSpeed(componentBlock[i].FindMember(PARTICLE_SYSTEM_SPEED)->value.GetDouble());

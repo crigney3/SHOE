@@ -681,12 +681,12 @@ void DXCore::SetBuildAssetPaths() {
 	projectAssetPaths[6] = this->mainAssetPath + "\\Textures\\";
 	projectAssetPaths[7] = this->mainAssetPath + "\\Textures\\Skies\\";
 	projectAssetPaths[8] = this->mainAssetPath + "\\Textures\\"; // No longer differentiating PBR
-	projectAssetPaths[9] = this->mainAssetPath + "\\Textures\\Albedo";
-	projectAssetPaths[10] = this->mainAssetPath + "\\Textures\\Normals";
-	projectAssetPaths[11] = this->mainAssetPath + "\\Textures\\Metalness";
-	projectAssetPaths[12] = this->mainAssetPath + "\\Textures\\Roughness";
+	projectAssetPaths[9] = this->mainAssetPath + "\\Textures\\Albedo\\";
+	projectAssetPaths[10] = this->mainAssetPath + "\\Textures\\Normals\\";
+	projectAssetPaths[11] = this->mainAssetPath + "\\Textures\\Metalness\\";
+	projectAssetPaths[12] = this->mainAssetPath + "\\Textures\\Roughness\\";
 	projectAssetPaths[13] = this->mainAssetPath + "\\Shaders\\";
-	projectAssetPaths[14] = this->mainAssetPath + "\\Textures\\BlendMaps";
+	projectAssetPaths[14] = this->mainAssetPath + "\\Textures\\BlendMaps\\";
 }
 
 void DXCore::SetVSAssetPaths() {

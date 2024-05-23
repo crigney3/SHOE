@@ -300,6 +300,7 @@ std::shared_ptr<Mesh> AssetManager::CreateMesh(std::string id, std::string nameT
 		}
 
 		newMesh = std::make_shared<Mesh>(namePath.c_str(), device, id);
+		newMesh->SetFileNameKey(SerializeFileName("Assets\\Models\\", namePath));
 
 		globalMeshes.push_back(newMesh);
 
@@ -362,9 +363,10 @@ std::string AssetManager::DeSerializeFileName(std::string assetPath, OUT AssetPa
 		}
 
 		// Return the assetPath and remove the markers
-		return assetPath.substr(2);
+		return assetPath.substr(2, assetPath.length() - 2);
 	}
 	else {
+		*assetPathType = EXTERNAL_ASSET;
 		return assetPath;
 	}
 }
@@ -474,20 +476,43 @@ std::shared_ptr<Texture> AssetManager::CreateTexture(std::string nameToLoad, std
 		if (!dxInstance->IsDirectX12()) {
 			CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, coreTexture.GetAddressOf());
 
-			newTexture = std::make_shared<DX11Texture>(coreTexture, GetTextureFileKey(nameToLoad), textureName);
+			newTexture = std::make_shared<DX11Texture>(coreTexture, "", textureName);
 		}
 		else {
 			CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, coreTexture.GetAddressOf());
 
-			newTexture = std::make_shared<DX12Texture>(coreTexture, GetTextureFileKey(nameToLoad), textureName);
+			newTexture = std::make_shared<DX12Texture>(coreTexture, "", textureName);
 		}
 
-		if (isNameFullPath) {
-			newTexture->SetTextureFilenameKey(nameToLoad);
+		// This is a cursed solution. I will send anyone $25 if they can tell me
+		// exactly why I think this is so cursed
+		switch (assetPath) {
+			case ASSET_TEXTURE_PATH_BASIC:
+			case ASSET_TEXTURE_PATH_PBR:
+			default:
+				newTexture->SetTextureFilenameKey(SerializeFileName("Assets\\Textures\\", namePath));
+				break;
+			case ASSET_TEXTURE_PATH_SKIES:
+				// No, use CreateSky.
+				break;
+			case ASSET_TEXTURE_BLENDMAP_PATH:
+				newTexture->SetTextureFilenameKey(SerializeFileName("Assets\\Textures\\BlendMaps\\", namePath));
+				break;
+			case ASSET_TEXTURE_PATH_PBR_ALBEDO:
+				newTexture->SetTextureFilenameKey(SerializeFileName("Assets\\Textures\\Albedo\\", namePath));
+				break;
+			case ASSET_TEXTURE_PATH_PBR_METALNESS:
+				newTexture->SetTextureFilenameKey(SerializeFileName("Assets\\Textures\\Metalness\\", namePath));
+				break;
+			case ASSET_TEXTURE_PATH_PBR_NORMALS:
+				newTexture->SetTextureFilenameKey(SerializeFileName("Assets\\Textures\\Normals\\", namePath));
+				break;
+			case ASSET_TEXTURE_PATH_PBR_ROUGHNESS:
+				newTexture->SetTextureFilenameKey(SerializeFileName("Assets\\Textures\\Roughness\\", namePath));
+				break;
 		}
-		else {
-			newTexture->SetAssetPathIndex(assetPath);
-		}
+		
+		newTexture->SetAssetPathIndex(assetPath);
 
 		globalTextures.push_back(newTexture);
 
@@ -1052,10 +1077,7 @@ std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::st
 	try {
 		ISimpleShader::ConvertToWide(namePath, wPathBuf);
 		
-		if (!isEngineAsset) {
-			// This will probably break saving for now but I can make it better later
-			newFont->fileNameKey = SerializeFileName("Assets\\Fonts\\", namePath);
-		}
+		newFont->fileNameKey = SerializeFileName("Assets\\Fonts\\", namePath);
 		newFont->name = name;
 #if defined(DEBUG) || defined(_DEBUG)
 		wprintf(L"Font loaded: %ls\n", wPathBuf.c_str());
@@ -2069,6 +2091,9 @@ void AssetManager::ScanProjectAssetsAndImport(std::string assetsPath, std::funct
 		// Up until cleanup, when it causes a crash
 		assetPath = std::filesystem::path(assetsPath);	
 
+		// Specifically for textures
+		AssetPathIndex textureAssetPath = ASSET_TEXTURE_PATH_BASIC;
+
 		for (std::filesystem::recursive_directory_iterator iter(assetPath), end; iter != end; ++iter) {
 
 			// The particles and skies need additional slashes to differentiate top level folders.
@@ -2199,9 +2224,24 @@ void AssetManager::ScanProjectAssetsAndImport(std::string assetsPath, std::funct
 			subPath = std::filesystem::path("\\Textures");
 			if (CompareFilePaths(subPath, iter->path())) {
 				// This is a texture - all textures except skies and blendmaps can be handled here.
-				// Initialization of functionality like PBR is done through material creation.
+				// Initialization of functionality like PBR is done through material creation
+				if (CompareFilePaths(std::filesystem::path("\\Albedo"), iter->path())) {
+					textureAssetPath = ASSET_TEXTURE_PATH_PBR_ALBEDO;
+				}
+				else if (CompareFilePaths(std::filesystem::path("\\Normals"), iter->path())) {
+					textureAssetPath = ASSET_TEXTURE_PATH_PBR_NORMALS;
+				}
+				else if (CompareFilePaths(std::filesystem::path("\\Metalness"), iter->path())) {
+					textureAssetPath = ASSET_TEXTURE_PATH_PBR_METALNESS;
+				}
+				else if (CompareFilePaths(std::filesystem::path("\\Roughness"), iter->path())) {
+					textureAssetPath = ASSET_TEXTURE_PATH_PBR_ROUGHNESS;
+				}
+				else {
+					textureAssetPath = ASSET_TEXTURE_PATH_BASIC;
+				}
 
-				CreateTexture(iter->path().string(), iter->path().stem().string(), ASSET_TEXTURE_PATH_BASIC, true);
+				CreateTexture(iter->path().string(), iter->path().stem().string(), textureAssetPath, true);
 				if (progressListener) progressListener("Textures");
 
 				// TODO: Each time we reach an asset, we should check if it's already loaded by a scene
