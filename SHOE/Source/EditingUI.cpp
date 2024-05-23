@@ -425,8 +425,16 @@ void EditingUI::GenerateEditingUI() {
 		currentSky->SetName(nameBuf);
 
 		bool skyEnabled = currentSky->IsEnabled();
-		ImGui::Checkbox("Enabled ", &skyEnabled);
+		ImGui::Checkbox("Enabled ##SkyEnabled", &skyEnabled);
 		currentSky->SetEnabled(skyEnabled);
+
+		bool skyIBLEnabled = currentSky->IsIBLEnabled();
+		ImGui::Checkbox("IBL Enabled ##SkyIBLEnabled", &skyIBLEnabled);
+		currentSky->SetIBLEnabled(skyIBLEnabled);
+
+		float skyIBLIntensity = currentSky->GetIBLIntensity();
+		ImGui::InputFloat("IBL Intensity ##SkyIBLIntensity", &skyIBLIntensity);
+		currentSky->SetIBLIntensity(skyIBLIntensity);
 
 		if (skyEnabled && ImGui::CollapsingHeader("BRDF Lookup Texture")) {
 			ImGui::Image((ImTextureID*)currentSky->GetBRDFLookupTexture().Get(), ImVec2(256, 256));
@@ -639,13 +647,13 @@ void EditingUI::GenerateEditingUI() {
 				ImGui::SliderFloat("Particles per Second ", &particlesPerSecond, 0.1f, 20.0f);
 				//ImGui::SameLine();
 				//ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
-				//particleSystem->SetParticlesPerSecond(particlesPerSecond);
+				particleSystem->SetParticlesPerSecond(particlesPerSecond);
 
 				float particlesLifetime = particleSystem->GetParticleLifetime();
 				ImGui::SliderFloat("Particles Lifetime ", &particlesLifetime, 0.1f, 20.0f);
 				//ImGui::SameLine();
 				//ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
-				//particleSystem->SetParticleLifetime(particlesLifetime);
+				particleSystem->SetParticleLifetime(particlesLifetime);
 
 				float speed = particleSystem->GetSpeed();
 				ImGui::SliderFloat("Particle Speed ", &speed, 0.1f, 5.0f);

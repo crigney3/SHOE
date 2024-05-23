@@ -1264,7 +1264,7 @@ void AssetManager::InitializeGameEntities() {
 	MeshRenderer::SetDefaults(GetMeshByName("Cube"), GetMaterialByName("defaultMaterial"));
 
 	// Show example render
-	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("defaultMaterial"), "Basic Cube");
+	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("defaultMaterial"), "Basic Sphere");
 	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("basicGlassMaterial"), "Clear Sphere");
 	//CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveBasicGlass"), "Refractive Cube");
 

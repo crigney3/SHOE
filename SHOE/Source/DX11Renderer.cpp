@@ -928,9 +928,8 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 	perFramePS->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 	if (globalAssets.currentSky->IsEnabled()) {
 		perFramePS->SetInt("specIBLTotalMipLevels", globalAssets.currentSky->GetIBLMipLevelCount());
-		// TODO: Store these values somewhere and add UI controls for them
-		perFramePS->SetInt("indirectLightingEnabled", 1);
-		perFramePS->SetFloat("iblIntensity", 1.0f);
+		perFramePS->SetInt("indirectLightingEnabled", (int)globalAssets.currentSky->IsIBLEnabled());
+		perFramePS->SetFloat("iblIntensity", globalAssets.currentSky->GetIBLIntensity());
 	}
 
 	int meshIt = 0;

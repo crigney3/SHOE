@@ -28,6 +28,9 @@ Sky::Sky(Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerOptions,
 
 		this->name = name;
 		this->enabled = true;
+
+		this->isIBLEnabled = true;
+		this->iblIntensity = 1.0f;
 #if defined(DEBUG) || defined(_DEBUG)
 		printf("Sky constructor - Basic values set for sky %s\n", name.c_str());
 #endif
@@ -323,6 +326,22 @@ void Sky::SetEnabled(bool value) {
 
 bool Sky::IsEnabled() {
 	return this->enabled;
+}
+
+void Sky::SetIBLEnabled(bool value) {
+	this->isIBLEnabled = value;
+}
+
+bool Sky::IsIBLEnabled() {
+	return this->isIBLEnabled;
+}
+
+void Sky::SetIBLIntensity(float value) {
+	this->iblIntensity = value;
+}
+
+float Sky::GetIBLIntensity() {
+	return this->iblIntensity;
 }
 
 std::string Sky::GetName() {
