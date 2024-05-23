@@ -149,6 +149,12 @@
 
 #define FILE_BUFFER_SIZE 65536
 
+enum SceneSaveState {
+	UNKNOWN_UNSAVED,
+	KNOWN_UNSAVED,
+	KNOWN_SAVED
+};
+
 class SceneManager
 {
 #pragma region Singleton
@@ -188,6 +194,8 @@ private:
 	std::string currentLoadName;
 	std::exception_ptr error;
 
+	SceneSaveState saveState;
+
 	DirectX::XMFLOAT2 LoadFloat2(const rapidjson::Value& jsonBlock, const char* memberName);
 	DirectX::XMFLOAT3 LoadFloat3(const rapidjson::Value& jsonBlock, const char* memberName);
 	DirectX::XMFLOAT4 LoadFloat4(const rapidjson::Value& jsonBlock, const char* memberName);
@@ -206,7 +214,7 @@ public:
 	void Initialize(EngineState* engineState, std::function<void()> progressListener);
 
 	void LoadScene(std::string filepath);
-	void SaveScene(std::string filepath, std::string sceneName = "");
+	void SaveScene(std::string filepath, std::string sceneName = "", bool isFullPathToScene = false);
 	void SaveSceneAs();
 
 	void PrePlaySave();

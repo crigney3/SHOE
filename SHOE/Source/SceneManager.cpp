@@ -1018,7 +1018,7 @@ void SceneManager::LoadScene(std::string filepath) {
 /// </summary>
 /// <param name="filepath">Path to the file</param>
 /// <param name="sceneName">Name to store the scene under</param>
-void SceneManager::SaveScene(std::string filepath, std::string sceneName) {
+void SceneManager::SaveScene(std::string filepath, std::string sceneName, bool isFullPathToScene) {
 	//Cannot save scene during play
 	if (*engineState == EngineState::PLAY)
 		return;
@@ -1043,9 +1043,14 @@ void SceneManager::SaveScene(std::string filepath, std::string sceneName) {
 		SaveAssets(sceneDocToSave);
 		SaveEntities(sceneDocToSave);
 
-		// At the end of gathering data, write it all
-		// to the appropriate file
-		std::string namePath = assetManager.GetFullPathToProjectAsset(AssetPathIndex::ASSET_SCENE_PATH, filepath);
+		// At the end of gathering data, write it all to the appropriate file
+		std::string namePath;
+		if (isFullPathToScene) {
+			namePath = filepath;
+		}
+		else {
+			namePath = assetManager.GetFullPathToProjectAsset(AssetPathIndex::ASSET_SCENE_PATH, filepath);
+		}	
 
 		FILE* file;
 		fopen_s(&file, namePath.c_str(), "w");
@@ -1070,9 +1075,31 @@ void SceneManager::SaveScene(std::string filepath, std::string sceneName) {
 /// to save a scene as.
 /// </summary>
 void SceneManager::SaveSceneAs() {
+
+	char filename[MAX_PATH];
+	OPENFILENAME ofn;
+	std::filesystem::path filePath;
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	ZeroMemory(&filename, sizeof(filename));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFilter = _T("JSON Files\0*.json;\0Any File\0*.*\0");
+	ofn.lpstrTitle = _T("Save current scene as:");
+	ofn.hwndOwner = assetManager.dxInstance->hWnd;
+	ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+	ofn.lpstrFile = filename;
+	ofn.nMaxFile = MAX_PATH;
+
+	if (GetSaveFileName(&ofn)) {
 #if defined(DEBUG) || defined(_DEBUG)
-	printf("Save Scene As is currently unimplemented.");
+		printf("Saving scene as %s.", ofn.lpstrFile);
 #endif
+		filePath = ofn.lpstrFile;
+
+		SaveScene(ofn.lpstrFile, filePath.filename().string(), true);
+	}
+
+	saveState = KNOWN_SAVED;
 }
 
 /// <summary>
