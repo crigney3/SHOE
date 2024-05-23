@@ -1277,10 +1277,16 @@ void EditingUI::GenerateEditingUI() {
 		bool currentTransparencyEnabled = currentMaterial->GetTransparent();
 		ImGui::Checkbox("Transparancy", &currentTransparencyEnabled);
 		currentMaterial->SetTransparent(currentTransparencyEnabled);
+		if (currentTransparencyEnabled && currentMaterial->GetRefractivePixelShader() == nullptr) {
+			currentMaterial->SetRefractivePixelShader(globalAssets.GetPixelShaderByName("RefractivePS"));
+		}
 
 		bool currentRefractionEnabled = currentMaterial->GetRefractive();
 		ImGui::Checkbox("Refraction (Enabling this will also enable transparency)", &currentRefractionEnabled);
 		currentMaterial->SetRefractive(currentRefractionEnabled);
+		if (currentRefractionEnabled && currentMaterial->GetRefractivePixelShader() == nullptr) {
+			currentMaterial->SetRefractivePixelShader(globalAssets.GetPixelShaderByName("RefractivePS"));
+		}
 
 		float currIndexOfRefraction = currentMaterial->GetIndexOfRefraction();
 		ImGui::DragFloat("Index of Refraction ", &currIndexOfRefraction);
