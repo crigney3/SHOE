@@ -29,6 +29,13 @@ AssetManager::~AssetManager() {
 	mainCamera = nullptr;
 }
 
+void AssetManager::Reset() {
+	CleanAllVectors();
+	//editingCamera->GetGameEntity()->Release();
+	//editingCamera = nullptr;
+	mainCamera = nullptr;
+}
+
 void AssetManager::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, HWND hwnd, EngineState* engineState, std::function<void(std::string)> progressListener) {
 	*engineState = EngineState::INIT;
 
@@ -2652,7 +2659,7 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> AssetManager::LoadParticleTextu
 		}
 
 #if defined(DEBUG) || defined(_DEBUG)
-		printf("Successfully loaded particle texture at %s %s\n", textureNameToLoad);
+		printf("Successfully loaded particle texture at %s\n", textureNameToLoad);
 #endif
 	}
 	catch (std::exception& e) {

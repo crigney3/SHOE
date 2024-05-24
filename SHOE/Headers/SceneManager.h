@@ -188,6 +188,7 @@ private:
 	std::function<void(std::string)> progressListener;
 
 	std::string currentSceneName;
+	std::string currentScenePath;
 	std::string loadingSceneName;
 
 	std::string currentLoadCategory;
@@ -215,6 +216,7 @@ public:
 
 	void LoadScene(std::string filepath, bool isFullPathToScene = false);
 	void SaveScene(std::string filepath, std::string sceneName = "", bool isFullPathToScene = false);
+	void SaveScene();
 	void SaveSceneAs();
 
 	void PrePlaySave();

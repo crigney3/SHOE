@@ -126,6 +126,10 @@ public:
 	void SetVSAssetPaths();
 	void SetBuildAssetPaths();
 
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> GetBackBufferRTV();
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> GetDepthStencilView();
+	Microsoft::WRL::ComPtr<IDXGISwapChain> GetSwapChain();
+
 	// Syncing tools
 	Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 

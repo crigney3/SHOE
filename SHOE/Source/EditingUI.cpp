@@ -82,7 +82,7 @@ void EditingUI::DisplayMenu() {
 		if (ImGui::BeginMenu("File")) {
 			ImGui::Text("This menu will eventually contain a saving and loading system, designed for swapping between feature test scenes.");
 			if (ImGui::MenuItem("Save Scene", "ctrl+s")) {
-				sceneManager.SaveScene("FIX");
+				sceneManager.SaveScene();
 			}
 
 			if (ImGui::MenuItem("Save Scene As", "ctrl++shift+s")) {
@@ -105,6 +105,30 @@ void EditingUI::DisplayMenu() {
 
 				if (GetOpenFileName(&ofn)) {
 					sceneManager.LoadScene(ofn.lpstrFile, true);
+
+					//// Once finished, we need to reset the renderer and reconstruct it
+					//if (dxCore->IsDirectX12()) {
+					//	renderer.reset();
+					//	globalAssets.GetContext()->Flush();
+					//	//renderer = std::make_shared<DX12Renderer>(dxCore->height,
+					//	//	dxCore->width,
+					//	//	globalAssets.GetDevice(),
+					//	//	swapChain,
+					//	//	commandAllocator,
+					//	//	commandQueue,
+					//	//	commandList);
+					//}
+					//else {
+					//	renderer.reset();
+					//	globalAssets.GetContext()->Flush();
+					//	renderer = std::make_shared<DX11Renderer>(dxCore->height,
+					//		dxCore->width,
+					//		globalAssets.GetDevice(),
+					//		globalAssets.GetContext(),
+					//		dxCore->GetSwapChain(),
+					//		dxCore->GetBackBufferRTV(),
+					//		dxCore->GetDepthStencilView());
+					//}
 				}
 			}
 
@@ -546,7 +570,7 @@ void EditingUI::GenerateEditingUI() {
 		UIScaleEdit = currentEntity->GetTransform()->GetLocalScale();
 
 		ImGui::DragFloat3("Position ", &UIPositionEdit.x, 0.5f);
-		ImGui::DragFloat3("Rotation ", &UIRotationEdit.x, 0.5f, 0, 360);
+		ImGui::DragFloat3("Rotation ", &UIRotationEdit.x, 0.01f, 0, XM_2PI);
 		ImGui::InputFloat3("Scale ", &UIScaleEdit.x);
 
 		currentEntity->GetTransform()->SetPosition(UIPositionEdit.x, UIPositionEdit.y, UIPositionEdit.z);
@@ -1286,7 +1310,7 @@ void EditingUI::GenerateEditingUI() {
 		currentMaterial->SetTiling(currTiling);
 
 		XMFLOAT4 currColorTint = currentMaterial->GetTint();
-		ImGui::DragFloat3("Color Tint ", &currColorTint.x);
+		ImGui::DragFloat3("Color Tint ", &currColorTint.x, 1.0f, 0.0f, 256.0f);
 		currentMaterial->SetTint(currColorTint);
 
 		bool currentTransparencyEnabled = currentMaterial->GetTransparent();
@@ -1304,11 +1328,11 @@ void EditingUI::GenerateEditingUI() {
 		}
 
 		float currIndexOfRefraction = currentMaterial->GetIndexOfRefraction();
-		ImGui::DragFloat("Index of Refraction ", &currIndexOfRefraction);
+		ImGui::DragFloat("Index of Refraction ", &currIndexOfRefraction, 0.05f, 0.0f, 1.0f);
 		currentMaterial->SetIndexOfRefraction(currIndexOfRefraction);
 
 		float currRefractionScale = currentMaterial->GetRefractionScale();
-		ImGui::DragFloat("Refraction Scale ", &currRefractionScale);
+		ImGui::DragFloat("Refraction Scale ", &currRefractionScale, 0.05f, 0.0f, 1.0f);
 		currentMaterial->SetRefractionScale(currRefractionScale);
 
 		ImGui::Separator();

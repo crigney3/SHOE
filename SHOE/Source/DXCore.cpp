@@ -653,6 +653,18 @@ std::string DXCore::GetStartupSceneName() {
 	return this->startupSceneName;
 }
 
+Microsoft::WRL::ComPtr<IDXGISwapChain> DXCore::GetSwapChain() {
+	return this->swapChain;
+}
+
+Microsoft::WRL::ComPtr<ID3D11DepthStencilView> DXCore::GetDepthStencilView() {
+	return this->depthStencilView;
+}
+
+Microsoft::WRL::ComPtr<ID3D11RenderTargetView> DXCore::GetBackBufferRTV() {
+	return this->backBufferRTV;
+}
+
 bool DXCore::HasStartupScene() {
 	return this->hasStartupScene;
 }

@@ -163,6 +163,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 	// This one too
 	std::string deserializedFileName = std::string("");
 
+	assetManager.Reset();
+
 	// Fonts - Must load at least the default
 	currentLoadCategory = "Fonts";
 	const rapidjson::Value& fontBlock = sceneDoc[FONTS];
@@ -171,7 +173,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 		currentLoadName = fontBlock[i].FindMember(NAME)->value.GetString();
 		//if(progressListener) progressListener(); NEEDS PRE-LOADED FONTS
 		deserializedFileName = LoadDeserializedFileName(fontBlock[i], FILENAME_KEY, pathType);
-		assetManager.CreateSHOEFont(currentLoadName, deserializedFileName, false, (bool)*pathType, false);
+		// logic is flipped for the bool here, TODO: fix that
+		assetManager.CreateSHOEFont(currentLoadName, deserializedFileName, false, !((bool)*pathType), false);
 	}
 
 	// Texture Sampler States
@@ -1020,12 +1023,25 @@ void SceneManager::LoadScene(std::string filepath, bool isFullPathToScene) {
 		fclose(file);
 
 		currentSceneName = loadingSceneName;
+		currentScenePath = namePath;
+		saveState = KNOWN_UNSAVED;
 		loadingSceneName = "";
 		*engineState = EngineState::EDITING;
 		if (progressListener) progressListener("Complete");
 	}
 	catch (...) {
 
+	}
+}
+
+/// <summary>
+/// Saves the current scene.
+/// </summary>
+void SceneManager::SaveScene() {
+	if (saveState != UNKNOWN_UNSAVED) {
+		SaveScene(currentScenePath, currentSceneName, true);
+
+		saveState = KNOWN_SAVED;
 	}
 }
 
@@ -1113,9 +1129,11 @@ void SceneManager::SaveSceneAs() {
 		filePath = ofn.lpstrFile;
 
 		SaveScene(ofn.lpstrFile, filePath.filename().string(), true);
-	}
 
-	saveState = KNOWN_SAVED;
+		currentScenePath = filePath.string();
+		currentSceneName = filePath.filename().string();
+		saveState = KNOWN_SAVED;
+	}
 }
 
 /// <summary>

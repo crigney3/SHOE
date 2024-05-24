@@ -143,6 +143,7 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> GetContext();
 
 	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Microsoft::WRL::ComPtr<ID3D11DeviceContext> context, HWND hwnd, EngineState* engineState, std::function<void(std::string)> progressListener = {});
+	void Reset();
 
 	void ImportSkyTexture();
 	void ImportFont();

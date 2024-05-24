@@ -1004,9 +1004,9 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 				currentPS->SetShaderResourceView("textureNormal", currentMaterial->GetNormalMapSRV().Get());
 			}
 
+			currentPS->SetSamplerState("shadowState", shadowSampler.Get());
 			if (shadowCount > 0) {
-				currentPS->SetShaderResourceView("shadowMaps", shadowDSVArraySRV.Get());
-				currentPS->SetSamplerState("shadowState", shadowSampler.Get());
+				currentPS->SetShaderResourceView("shadowMaps", shadowDSVArraySRV.Get());	
 			}
 
 			if (globalAssets.currentSky->IsEnabled()) {
