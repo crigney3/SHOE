@@ -144,6 +144,14 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetDrawListSRV(
 	return this->drawListSRV;
 }
 
+//void ParticleSystem::SetParticleTextureSRV(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTexture) {
+//	this->particleTextureSRV = particleTexture;
+//}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetParticleTextureSRV() {
+	return this->particleTextureSRV;
+}
+
 void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixelShader,
 								 std::shared_ptr<SimpleVertexShader> particleVertexShader,
 								 std::shared_ptr<SimpleComputeShader> particleEmitComputeShader,

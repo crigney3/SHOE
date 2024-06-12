@@ -58,6 +58,9 @@ public:
 	void SetFilenameKey(std::string filenameKey);
 	std::string GetFilenameKey();
 
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetParticleTextureSRV();
+	//void SetParticleTextureSRV(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTexture);
+
 	void SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> shader, ParticleComputeShaderType type);
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetDrawListSRV();

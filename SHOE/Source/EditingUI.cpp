@@ -106,29 +106,10 @@ void EditingUI::DisplayMenu() {
 				if (GetOpenFileName(&ofn)) {
 					sceneManager.LoadScene(ofn.lpstrFile, true);
 
-					//// Once finished, we need to reset the renderer and reconstruct it
-					//if (dxCore->IsDirectX12()) {
-					//	renderer.reset();
-					//	globalAssets.GetContext()->Flush();
-					//	//renderer = std::make_shared<DX12Renderer>(dxCore->height,
-					//	//	dxCore->width,
-					//	//	globalAssets.GetDevice(),
-					//	//	swapChain,
-					//	//	commandAllocator,
-					//	//	commandQueue,
-					//	//	commandList);
-					//}
-					//else {
-					//	renderer.reset();
-					//	globalAssets.GetContext()->Flush();
-					//	renderer = std::make_shared<DX11Renderer>(dxCore->height,
-					//		dxCore->width,
-					//		globalAssets.GetDevice(),
-					//		globalAssets.GetContext(),
-					//		dxCore->GetSwapChain(),
-					//		dxCore->GetBackBufferRTV(),
-					//		dxCore->GetDepthStencilView());
-					//}
+					// Reset the shaders used as defaults for DX11 rendering
+					// This is a virtual function so DX12 can also use it if it
+					// ends up needing it
+					renderer->ReloadDefaultShaders();
 				}
 			}
 
@@ -705,6 +686,20 @@ void EditingUI::GenerateEditingUI() {
 				int maxParticles = particleSystem->GetMaxParticles();
 				ImGui::InputInt("Max Particles ", &maxParticles);
 				particleSystem->SetMaxParticles(maxParticles);
+
+				//if (ImGui::CollapsingHeader("Particle Texture Swapping")) {
+				//	Texture* currentTexDisplay = particleSystem->GetParticleTextureSRV()->GetResource().;
+				//	if (dxCore->IsDirectX12()) {
+				//		// Temporary
+				//		currentTexDisplay = NULL;
+				//	}
+				//	else {
+				//		currentTexDisplay = (ImTextureID*)particleSystem->GetParticleTextureSRV();
+				//	}
+				//	ImGui::Image(currentTexDisplay, ImVec2(256, 256));
+				//	ImGui::SameLine();
+				//}
+
 			}
 
 			else if (std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(componentList[c]))

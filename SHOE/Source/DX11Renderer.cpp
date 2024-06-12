@@ -74,6 +74,20 @@ DX11Renderer::~DX11Renderer() {
 	shadowViewMatArray.clear();
 }
 
+void DX11Renderer::ReloadDefaultShaders() {
+	this->basicVS = globalAssets.GetVertexShaderByName("BasicVS");
+	this->perFrameVS = globalAssets.GetVertexShaderByName("NormalsVS");
+	this->fullscreenVS = globalAssets.GetVertexShaderByName("FullscreenVS");
+	this->solidColorPS = globalAssets.GetPixelShaderByName("SolidColorPS");
+	this->perFramePS = globalAssets.GetPixelShaderByName("NormalsPS");
+	this->textureSamplePS = globalAssets.GetPixelShaderByName("TextureSamplePS");
+	this->outlinePS = globalAssets.GetPixelShaderByName("OutlinePS");
+
+	this->ssaoPS = globalAssets.GetPixelShaderByName("SSAOPS");
+	this->ssaoBlurPS = globalAssets.GetPixelShaderByName("SSAOBlurPS");
+	this->ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
+}
+
 void DX11Renderer::InitRenderTargetViews() {
 	for (int i = 0; i < 3; i++) {
 		ssaoTexture2D[i].Reset();
