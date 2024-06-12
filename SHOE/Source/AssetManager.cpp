@@ -1773,6 +1773,7 @@ void AssetManager::InitializeEmitters() {
 		GetComputeShaderByName("ParticleMoveCS"),
 		GetComputeShaderByName("ParticleCopyCS"),
 		GetComputeShaderByName("ParticleInitDeadCS"),
+		GetTextureAtID(0),
 		device,
 		context);
 

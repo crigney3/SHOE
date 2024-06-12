@@ -9,6 +9,7 @@ std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleEmitComputeS
 std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleSimComputeShader = nullptr;
 std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleCopyComputeShader = nullptr;
 std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleDeadListInitComputeShader = nullptr;
+std::shared_ptr<Texture> ParticleSystem::defaultParticleTexture = nullptr;
 Microsoft::WRL::ComPtr<ID3D11Device> ParticleSystem::defaultDevice = nullptr;
 Microsoft::WRL::ComPtr<ID3D11DeviceContext> ParticleSystem::defaultContext = nullptr;
 
@@ -144,9 +145,14 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetDrawListSRV(
 	return this->drawListSRV;
 }
 
-//void ParticleSystem::SetParticleTextureSRV(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTexture) {
-//	this->particleTextureSRV = particleTexture;
-//}
+std::shared_ptr<Texture> ParticleSystem::GetParticleTexture() {
+	return this->particleTexture;
+}
+
+void ParticleSystem::SetParticleTexture(std::shared_ptr<Texture> particleTexture) {
+	this->particleTexture = particleTexture;
+	SetParticleTextureSRV(particleTexture->GetDX11Texture());
+}
 
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetParticleTextureSRV() {
 	return this->particleTextureSRV;
@@ -158,6 +164,7 @@ void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixe
 								 std::shared_ptr<SimpleComputeShader> particleSimComputeShader,
 								 std::shared_ptr<SimpleComputeShader> particleCopyComputeShader,
 								 std::shared_ptr<SimpleComputeShader> particleDeadListInitComputeShader,
+								 std::shared_ptr<Texture> particleBaseTexture,
 								 Microsoft::WRL::ComPtr<ID3D11Device> device,
 								 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context)
 {
@@ -167,6 +174,8 @@ void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixe
 	defaultParticleEmitComputeShader = particleEmitComputeShader;
 	defaultParticleSimComputeShader = particleSimComputeShader;
 	defaultParticleDeadListInitComputeShader = particleDeadListInitComputeShader;
+	defaultParticleTexture = particleBaseTexture;
+	defaultParticleTextureSRV = particleBaseTexture->GetDX11Texture();
 	defaultDevice = device;
 	defaultContext = context;
 }
@@ -183,7 +192,8 @@ void ParticleSystem::Start()
 
 	this->particlePixelShader = defaultParticlePixelShader;
 	this->particleVertexShader = defaultParticleVertexShader;
-	this->particleTextureSRV = nullptr;
+	this->particleTexture = defaultParticleTexture;
+	this->particleTextureSRV = defaultParticleTextureSRV;
 
 	this->device = defaultDevice;
 	this->context = defaultContext;

@@ -687,18 +687,19 @@ void EditingUI::GenerateEditingUI() {
 				ImGui::InputInt("Max Particles ", &maxParticles);
 				particleSystem->SetMaxParticles(maxParticles);
 
-				//if (ImGui::CollapsingHeader("Particle Texture Swapping")) {
-				//	Texture* currentTexDisplay = particleSystem->GetParticleTextureSRV()->GetResource().;
-				//	if (dxCore->IsDirectX12()) {
-				//		// Temporary
-				//		currentTexDisplay = NULL;
-				//	}
-				//	else {
-				//		currentTexDisplay = (ImTextureID*)particleSystem->GetParticleTextureSRV();
-				//	}
-				//	ImGui::Image(currentTexDisplay, ImVec2(256, 256));
-				//	ImGui::SameLine();
-				//}
+				if (ImGui::CollapsingHeader("Particle Texture Swapping")) {
+					Texture* currentTexture = particleSystem->GetParticleTexture().get();
+					ImTextureID* currentTexDisplay;
+					if (dxCore->IsDirectX12()) {
+						// Temporary
+						currentTexDisplay = NULL;
+					}
+					else {
+						currentTexDisplay = (ImTextureID*)currentTexture->GetDX11Texture().Get();
+					}
+					ImGui::Image(currentTexDisplay, ImVec2(256, 256));
+					ImGui::SameLine();
+				}
 
 			}
 

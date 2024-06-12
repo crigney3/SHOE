@@ -18,6 +18,7 @@ public:
 		std::shared_ptr<SimpleComputeShader> particleSimComputeShader,
 		std::shared_ptr<SimpleComputeShader> particleCopyComputeShader,
 		std::shared_ptr<SimpleComputeShader> particleDeadListInitComputeShader,
+		std::shared_ptr<Texture> particleBaseTexture,
 		Microsoft::WRL::ComPtr<ID3D11Device> device,
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> context
 	);
@@ -27,6 +28,7 @@ public:
 	void Draw(std::shared_ptr<Camera> cam, Microsoft::WRL::ComPtr<ID3D11BlendState> particleBlendAdditive);
 
 	void SetParticleTextureSRV(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV);
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetParticleTextureSRV();
 
 	void SetColorTint(DirectX::XMFLOAT4 color);
 	DirectX::XMFLOAT4 GetColorTint();
@@ -58,8 +60,8 @@ public:
 	void SetFilenameKey(std::string filenameKey);
 	std::string GetFilenameKey();
 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetParticleTextureSRV();
-	//void SetParticleTextureSRV(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTexture);
+	std::shared_ptr<Texture> GetParticleTexture();
+	void SetParticleTexture(std::shared_ptr<Texture> particleTexture);
 
 	void SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> shader, ParticleComputeShaderType type);
 
@@ -75,6 +77,7 @@ private:
 	static std::shared_ptr<SimpleComputeShader> defaultParticleCopyComputeShader;
 	static std::shared_ptr<SimpleComputeShader> defaultParticleDeadListInitComputeShader;
 	static Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> defaultParticleTextureSRV;
+	static std::shared_ptr<Texture> defaultParticleTexture;
 	static Microsoft::WRL::ComPtr<ID3D11Device> defaultDevice;
 	static Microsoft::WRL::ComPtr<ID3D11DeviceContext> defaultContext;
 
@@ -106,6 +109,7 @@ private:
 	bool isMultiParticle;
 	bool additiveBlend;
 	bool usesComputeShader;
+	std::shared_ptr<Texture> particleTexture;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> sortListSRV;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> drawListSRV;
