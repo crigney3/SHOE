@@ -318,6 +318,18 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 		}
 	}
 
+	// Set the defaults for particle systems to prevent cached buffer passing
+	ParticleSystem::SetDefaults(
+		assetManager.GetPixelShaderByName("ParticlesPS"),
+		assetManager.GetVertexShaderByName("ParticlesVS"),
+		assetManager.GetComputeShaderByName("ParticleEmitCS"),
+		assetManager.GetComputeShaderByName("ParticleMoveCS"),
+		assetManager.GetComputeShaderByName("ParticleCopyCS"),
+		assetManager.GetComputeShaderByName("ParticleInitDeadCS"),
+		assetManager.GetTextureAtID(0),
+		assetManager.GetDevice(),
+		assetManager.GetContext());
+
 	currentLoadCategory = "Meshes";
 	if (sceneDoc.HasMember(MESHES)) {
 		const rapidjson::Value& meshBlock = sceneDoc[MESHES];
@@ -336,6 +348,10 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 			// if storing meshes built through code arrays becomes supported.
 			// newMesh->SetIndexCount(meshBlock[i].FindMember(MESH_INDEX_COUNT)->value.GetInt());
 		}
+
+		// Once all meshes and materials are loaded, set defaults for the mesh renderer
+		// This prevents using old shaders which cause cbuffer issues
+		MeshRenderer::SetDefaults(assetManager.GetMeshByName("Cube"), assetManager.GetMaterialByName("defaultMaterial"));
 	}
 
 	currentLoadCategory = "Terrain Materials";
@@ -361,6 +377,8 @@ void SceneManager::LoadAssets(const rapidjson::Value& sceneDoc, std::function<vo
 				std::shared_ptr<TerrainMaterial> newTMat = assetManager.CreateTerrainMaterial(currentLoadName, internalMaterials, "", false, (bool)*pathType);
 			}
 		}
+
+		Terrain::SetDefaults(assetManager.GetMeshByName("Cube"), assetManager.GetTerrainMaterialByName("Default Terrain Material"));
 	}
 
 	currentLoadCategory = "Skies";

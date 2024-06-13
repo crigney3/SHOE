@@ -1860,6 +1860,7 @@ void AssetManager::InitializeColliders() {
 
 void AssetManager::ImportTexture() {
 	char filename[MAX_PATH];
+	std::filesystem::path filePath;
 	OPENFILENAME ofn;
 
 	ZeroMemory(&ofn, sizeof(ofn));
@@ -1873,18 +1874,34 @@ void AssetManager::ImportTexture() {
 	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
 
 	if (GetOpenFileName(&ofn)) {
-		CreateTexture(ofn.lpstrFile, "newTexture", ASSET_TEXTURE_PATH_BASIC, true);
+		filePath = ofn.lpstrFile;
+
+		CreateTexture(ofn.lpstrFile, filePath.filename().string(), ASSET_TEXTURE_PATH_BASIC, true);
 	}
 }
 
 void AssetManager::ImportSkyTexture() {
 	// unimplemented, requires some regex and stuff to deal with dds vs path
-	/*OPENFILENAME ofn;
-	ZeroMemory(&ofn, sizeof(ofn));
-	ofn.lpstrFilter = _T("Image Files\0*.png;*.jpg;*.jpeg;\0Any File\0*.*\0");
-	ofn.lpstrTitle = _T("Select a texture file:");
+	// Or I could force it to be dds
+	char filename[MAX_PATH];
+	std::filesystem::path filePath;
+	OPENFILENAME ofn;
 
-	CreateSky(GetImportedFileString(&ofn), "newTexture", ASSET_TEXTURE_PATH_BASIC, true);*/
+	ZeroMemory(&ofn, sizeof(ofn));
+	ZeroMemory(&filename, sizeof(filename));
+	ofn.lpstrFilter = _T("DDS Files\0*.dds;\0Any File\0*.*\0");
+	ofn.lpstrTitle = _T("Select a cubemap file:");
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = dxInstance->hWnd;
+	ofn.lpstrFile = filename;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
+
+	if (GetOpenFileName(&ofn)) {
+		filePath = ofn.lpstrFile;
+
+		CreateSky(ofn.lpstrFile, false, filePath.filename().string(), "", false, true);
+	}
 }
 
 void AssetManager::ImportHeightMap() {
@@ -1899,6 +1916,7 @@ void AssetManager::ImportHeightMap() {
 
 void AssetManager::ImportSound() {
 	char filename[MAX_PATH];
+	std::filesystem::path filePath;
 	OPENFILENAME ofn;
 
 	ZeroMemory(&ofn, sizeof(ofn));
@@ -1912,12 +1930,15 @@ void AssetManager::ImportSound() {
 	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
 
 	if (GetOpenFileName(&ofn)) {
-		CreateSound(ofn.lpstrFile, FMOD_DEFAULT, "newSound", true);
+		filePath = ofn.lpstrFile;
+
+		CreateSound(ofn.lpstrFile, FMOD_DEFAULT, filePath.filename().string(), true);
 	}
 }
 
 void AssetManager::ImportFont() {
 	char filename[MAX_PATH];
+	std::filesystem::path filePath;
 	OPENFILENAME ofn;
 
 	ZeroMemory(&ofn, sizeof(ofn));
@@ -1931,12 +1952,15 @@ void AssetManager::ImportFont() {
 	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
 
 	if (GetOpenFileName(&ofn)) {
-		CreateSHOEFont("newFont", ofn.lpstrFile, false, true);
+		filePath = ofn.lpstrFile;
+
+		CreateSHOEFont(filePath.filename().string(), ofn.lpstrFile, false, true);
 	}
 }
 
 void AssetManager::ImportMesh() {
 	char filename[MAX_PATH];
+	std::filesystem::path filePath;
 	OPENFILENAME ofn;
 
 	ZeroMemory(&ofn, sizeof(ofn));
@@ -1950,7 +1974,9 @@ void AssetManager::ImportMesh() {
 	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
 
 	if (GetOpenFileName(&ofn)) {
-		CreateMesh("NewMesh", ofn.lpstrFile, true);
+		filePath = ofn.lpstrFile;
+
+		CreateMesh(filePath.filename().string(), ofn.lpstrFile, true);
 	}
 }
 
