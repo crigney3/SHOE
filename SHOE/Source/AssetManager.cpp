@@ -2306,33 +2306,71 @@ bool AssetManager::CompareFilePaths(const std::filesystem::path& path, const std
 #pragma region buildAssetData
 std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale, bool isProjectAsset) {
 
-	std::string fullPath;
+	std::shared_ptr<HeightMap> hMap;
 	std::shared_ptr<Mesh> finalTerrain;
 
 	try {
+
+		hMap = CreateHeightMap(filename, "testName", mapWidth, mapHeight, heightScale, isProjectAsset);
+
+		//Mesh handles tangents
+		finalTerrain = std::make_shared<Mesh>(vertices.data(), numVertices, indices.data(), numIndices, device, "TerrainMesh");
+
+		finalTerrain->SetFileNameKey(hMap->filenameKey);
+		globalMeshes.push_back(finalTerrain);
+		//Terrain::SetDefaults(finalTerrain, globalTerrainMaterials[0]); Not sure this line should exist
+
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Successfully loaded terrain from %s\n", filename);
+#endif
+	}
+	catch (std::exception& e) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to load terrain from %s with error: %s\n", filename, e.what());
+#endif
+	}
+
+	return finalTerrain;
+}
+
+// Loading heightmaps separately from terrains makes them more accessible
+// as an asset. Also, more readable code in terrain loading.
+std::shared_ptr<HeightMap> AssetManager::CreateHeightMap(std::string heightmapPath,
+														 std::string heightmapName,
+														 unsigned int mapWidth,
+														 unsigned int mapHeight,
+														 float heightScale,
+														 bool isProjectAsset)
+{
+	std::shared_ptr<HeightMap> newHeightmap;
+	std::string fullPath;
+
+	try {
 		if (isProjectAsset) {
-			fullPath = GetFullPathToProjectAsset(AssetPathIndex::ASSET_HEIGHTMAP_PATH, filename);
+			fullPath = GetFullPathToProjectAsset(AssetPathIndex::ASSET_HEIGHTMAP_PATH, heightmapPath);
 		}
 		else {
-			fullPath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_HEIGHTMAP_PATH, filename);
+			fullPath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_HEIGHTMAP_PATH, heightmapPath);
 		}
 
-		unsigned int numVertices = mapWidth * mapHeight;
-		unsigned int numIndices = (mapWidth - 1) * (mapHeight - 1) * 6;
+		// Set up the struct
+		RtlZeroMemory(newHeightmap.get(), sizeof(HeightMap));
+		newHeightmap->numVertices = mapWidth * mapHeight;
+		newHeightmap->numIndices = (mapWidth - 1) * (mapHeight - 1) * 6;
 
-		std::vector<unsigned short> heights(numVertices);
-		std::vector<float> finalHeights(numVertices);
+		newHeightmap->heights = std::vector<unsigned short>(newHeightmap->numVertices);
+		newHeightmap->finalHeights = std::vector<float>(newHeightmap->numVertices);
 
-		std::vector<Vertex> vertices(numVertices);
-		std::vector<unsigned int> indices(numIndices);
-		std::vector<XMFLOAT3> triangleNormals;
+		newHeightmap->vertices = std::vector<Vertex>(newHeightmap->numVertices);
+		newHeightmap->indices = std::vector<unsigned int>(newHeightmap->numIndices);
+		newHeightmap->triangleNormals = std::vector<XMFLOAT3>();
 
 		//Read the file
 		std::ifstream file;
 		file.open(fullPath.c_str(), std::ios_base::binary);
 
 		if (file) {
-			file.read((char*)&heights[0], (std::streamsize)numVertices * 2);
+			file.read((char*)&newHeightmap->heights[0], (std::streamsize)newHeightmap->numVertices * 2);
 			file.close();
 		}
 		else {
@@ -2345,9 +2383,9 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 			for (int x = 0; x < (int)mapWidth; x++) {
 				//Get height map and positional data
 				index = mapWidth * z + x;
-				finalHeights[index] = (heights[index] / 65535.0f) * heightScale;
+				newHeightmap->finalHeights[index] = (newHeightmap->heights[index] / 65535.0f) * heightScale;
 
-				XMFLOAT3 position = XMFLOAT3((float)x, finalHeights[index], (float)z);
+				XMFLOAT3 position = XMFLOAT3((float)x, newHeightmap->finalHeights[index], (float)z);
 
 				if (z != mapHeight - 1 && x != mapWidth - 1) {
 					//Calculate indices
@@ -2359,21 +2397,21 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 					int i4 = index + 1 + mapWidth;
 					int i5 = index + 1;
 
-					indices[indexCounter++] = i0;
-					indices[indexCounter++] = i1;
-					indices[indexCounter++] = i2;
+					newHeightmap->indices[indexCounter++] = i0;
+					newHeightmap->indices[indexCounter++] = i1;
+					newHeightmap->indices[indexCounter++] = i2;
 
-					indices[indexCounter++] = i3;
-					indices[indexCounter++] = i4;
-					indices[indexCounter++] = i5;
+					newHeightmap->indices[indexCounter++] = i3;
+					newHeightmap->indices[indexCounter++] = i4;
+					newHeightmap->indices[indexCounter++] = i5;
 
-					XMVECTOR pos0 = XMLoadFloat3(&vertices[i0].Position);
-					XMVECTOR pos1 = XMLoadFloat3(&vertices[i1].Position);
-					XMVECTOR pos2 = XMLoadFloat3(&vertices[i2].Position);
+					XMVECTOR pos0 = XMLoadFloat3(&newHeightmap->vertices[i0].Position);
+					XMVECTOR pos1 = XMLoadFloat3(&newHeightmap->vertices[i1].Position);
+					XMVECTOR pos2 = XMLoadFloat3(&newHeightmap->vertices[i2].Position);
 
-					XMVECTOR pos3 = XMLoadFloat3(&vertices[i3].Position);
-					XMVECTOR pos4 = XMLoadFloat3(&vertices[i4].Position);
-					XMVECTOR pos5 = XMLoadFloat3(&vertices[i5].Position);
+					XMVECTOR pos3 = XMLoadFloat3(&newHeightmap->vertices[i3].Position);
+					XMVECTOR pos4 = XMLoadFloat3(&newHeightmap->vertices[i4].Position);
+					XMVECTOR pos5 = XMLoadFloat3(&newHeightmap->vertices[i5].Position);
 
 					XMFLOAT3 normal0;
 					XMFLOAT3 normal1;
@@ -2381,8 +2419,8 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 					DirectX::XMStoreFloat3(&normal0, XMVector3Normalize(XMVector3Cross(pos1 - pos0, pos2 - pos0)));
 					DirectX::XMStoreFloat3(&normal1, XMVector3Normalize(XMVector3Cross(pos4 - pos3, pos5 - pos3)));
 
-					triangleNormals.push_back(normal0);
-					triangleNormals.push_back(normal1);
+					newHeightmap->triangleNormals.push_back(normal0);
+					newHeightmap->triangleNormals.push_back(normal1);
 				}
 
 				//Calculate normals
@@ -2410,8 +2448,8 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 				if (z > 0 && x > 0)
 				{
 					// "Up left" and "up"
-					normalTotal += XMLoadFloat3(&triangleNormals[triIndexPrevRow - 1]);
-					normalTotal += XMLoadFloat3(&triangleNormals[triIndexPrevRow]);
+					normalTotal += XMLoadFloat3(&newHeightmap->triangleNormals[triIndexPrevRow - 1]);
+					normalTotal += XMLoadFloat3(&newHeightmap->triangleNormals[triIndexPrevRow]);
 
 					normalCount += 2;
 				}
@@ -2419,7 +2457,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 				if (z > 0 && x < (int)mapWidth - 1)
 				{
 					// "Up right"
-					normalTotal += XMLoadFloat3(&triangleNormals[triIndexPrevRow + 1]);
+					normalTotal += XMLoadFloat3(&newHeightmap->triangleNormals[triIndexPrevRow + 1]);
 
 					normalCount++;
 				}
@@ -2427,7 +2465,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 				if (z < (int)mapHeight - 1 && x > 0)
 				{
 					// "Down left"
-					normalTotal += XMLoadFloat3(&triangleNormals[triIndex - 1]);
+					normalTotal += XMLoadFloat3(&newHeightmap->triangleNormals[triIndex - 1]);
 
 					normalCount++;
 				}
@@ -2435,41 +2473,31 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 				if (z < (int)mapHeight - 1 && x < (int)mapWidth - 1)
 				{
 					// "Down right" and "down"
-					normalTotal += XMLoadFloat3(&triangleNormals[triIndex]);
-					normalTotal += XMLoadFloat3(&triangleNormals[triIndex + 1]);
+					normalTotal += XMLoadFloat3(&newHeightmap->triangleNormals[triIndex]);
+					normalTotal += XMLoadFloat3(&newHeightmap->triangleNormals[triIndex + 1]);
 
 					normalCount += 2;
 				}
 
 				normalTotal /= normalCount;
-				DirectX::XMStoreFloat3(&vertices[index].normal, normalTotal);
+				DirectX::XMStoreFloat3(&newHeightmap->vertices[index].normal, normalTotal);
 
 				//Store data in vertex
 				XMFLOAT3 normal = XMFLOAT3(+0.0f, +1.0f, -0.0f);
 				XMFLOAT3 tangents = XMFLOAT3(+0.0f, +0.0f, +0.0f);
 				XMFLOAT2 UV = XMFLOAT2(x / (float)mapWidth, z / (float)mapWidth);
-				vertices[index] = { position, normal, tangents, UV };
+				newHeightmap->vertices[index] = { position, normal, tangents, UV };
 			}
 		}
-
-		//Mesh handles tangents
-		finalTerrain = std::make_shared<Mesh>(vertices.data(), numVertices, indices.data(), numIndices, device, "TerrainMesh");
-
-		finalTerrain->SetFileNameKey(SerializeFileName("Assets\\HeightMaps\\", fullPath));
-		globalMeshes.push_back(finalTerrain);
-		Terrain::SetDefaults(finalTerrain, globalTerrainMaterials[0]);
-
 #if defined(DEBUG) || defined(_DEBUG)
-		printf("Successfully loaded terrain from %s\n", filename);
+		printf("Successfully loaded height map from %s\n", heightmapPath);
 #endif
 	}
 	catch (std::exception& e) {
 #if defined(DEBUG) || defined(_DEBUG)
-		printf("Failed to load terrain from %s with error: %s\n", filename, e.what());
+		printf("Failed to load height map from %s with error: %s\n", heightmapPath, e.what());
 #endif
 	}
-
-	return finalTerrain;
 }
 
 // --------------------------------------------------------

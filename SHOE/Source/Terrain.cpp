@@ -23,6 +23,13 @@ void Terrain::Start()
 	SetMesh(defaultMesh);
 	SetMaterial(defaultTerrainMat);
 	DrawBounds = false;
+
+	// Terrain should be big and flat, so make it big and flat.
+	GetTransform()->SetScale(DirectX::XMFLOAT3(100.0f, 0.1f, 100.0f));
+
+	// TODO: Set up terrains so they don't render on the bottom
+	// Did I already do that?
+	// Who knows
 }
 
 /// <summary>
@@ -42,6 +49,46 @@ void Terrain::OnTransform()
 void Terrain::OnParentTransform(std::shared_ptr<GameEntity> parent)
 {
 	CalculateBounds();
+}
+
+/// <summary>
+/// Sets this terrain's vertices/normals/height etc to a loaded heightmap.
+/// </summary>
+/// <param name="newHeightMap">See AssetManager's functions for loading heightmaps.</param>
+void Terrain::SetHeightMap(std::shared_ptr<HeightMap> newHeightMap) {
+	this->terrainHeight = newHeightMap;
+}
+
+/// <summary>
+/// Sets the name of the heightmap. Mainly useful for the UI.
+/// </summary>
+/// <param name="newName"></param>
+void Terrain::SetHeightMapName(std::string newName) {
+	this->terrainHeight->name = newName;
+}
+
+/// <summary>
+/// Returns all the data of this terrain's heightmap.
+/// </summary>
+/// <returns></returns>
+std::shared_ptr<HeightMap> Terrain::GetHeightMap() {
+	return this->terrainHeight;
+}
+
+/// <summary>
+/// Returns this terrain's heightmap's name. Makes UI code easier to read.
+/// </summary>
+/// <returns></returns>
+std::string Terrain::GetHeightMapName() {
+	return this->terrainHeight->name;
+}
+
+/// <summary>
+/// Returns this terrain's heightmap's filename key. Makes saving/loading code easier to read.
+/// </summary>
+/// <returns></returns>
+std::string Terrain::GetHeightMapFileNameKey() {
+	return this->terrainHeight->filenameKey;
 }
 
 /// <summary>

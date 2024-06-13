@@ -238,6 +238,12 @@ public:
 	std::shared_ptr<Terrain> CreateTerrainEntity(std::shared_ptr<Mesh> terrainMesh, 
 												 std::shared_ptr<TerrainMaterial> material, 
 												 std::string name = "Terrain");
+	std::shared_ptr<HeightMap> CreateHeightMap(std::string heightmapPath,
+											   std::string heightmapName = "defaultHeight",
+											   unsigned int mapWidth = 512,
+											   unsigned int mapHeight = 512,
+											   float heightScale = 25.0f,
+											   bool isProjectAsset = true);
 	std::shared_ptr<TerrainMaterial> CreateTerrainMaterial(std::string name,
 														   std::vector<std::shared_ptr<Material>> materials,
 														   std::string blendMapPath = "",
