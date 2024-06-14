@@ -26,6 +26,7 @@ EditingUI::EditingUI(std::shared_ptr<Renderer> renderer) {
 	entityUIIndex = 0;
 	skyUIIndex = 0;
 	materialUIIndex = 0;
+	terrainMaterialUIIndex = 0;
 
 	this->renderer = renderer;
 }
@@ -45,6 +46,7 @@ void EditingUI::ReInitializeEditingUI(std::shared_ptr<Renderer> renderer) {
 	entityUIIndex = 0;
 	skyUIIndex = 0;
 	materialUIIndex = 0;
+	terrainMaterialUIIndex = 0;
 
 	this->renderer = renderer;
 }
@@ -1561,7 +1563,35 @@ void EditingUI::GenerateEditingUI() {
 	if (*(GetTerrainMaterialWindowEnabled())) {
 		ImGui::Begin("Terrain Material Editor");
 
+		std::shared_ptr<TerrainMaterial> currentTMat = globalAssets.GetTerrainMaterialAtID(GetTerrainMaterialUIIndex());
 
+		std::string infoStr = currentTMat->GetName();
+		std::string node = "Edting Terrain Material: " + infoStr;
+
+		ImGui::Text(node.c_str());
+
+		if (ImGui::ArrowButton("Previous Terrain Material", ImGuiDir_Left)) {
+			terrainMaterialUIIndex--;
+			if (terrainMaterialUIIndex < 0) {
+				terrainMaterialUIIndex = globalAssets.GetMaterialArraySize() - 1;
+			}
+		};
+		ImGui::SameLine();
+
+		if (ImGui::ArrowButton("Next Terrain Material", ImGuiDir_Right)) {
+			terrainMaterialUIIndex++;
+			if (terrainMaterialUIIndex > globalAssets.GetMaterialArraySize() - 1) {
+				terrainMaterialUIIndex = 0;
+			}
+		};
+
+		std::string nameBuffer;
+		static char nameBuf[64] = "";
+		nameBuffer = currentTMat->GetName();
+		strcpy_s(nameBuf, nameBuffer.c_str());
+		ImGui::InputText("Rename Terrain Material ", nameBuf, sizeof(nameBuffer));
+
+		currentTMat->SetName(nameBuf);
 
 		ImGui::End();
 	}
@@ -1636,6 +1666,10 @@ bool* EditingUI::GetMaterialWindowEnabled() {
 	return &materialWindowEnabled;
 }
 
+bool* EditingUI::GetTerrainMaterialWindowEnabled() {
+	return &terrainMaterialWindowEnabled;
+}
+
 bool* EditingUI::GetCollidersWindowEnabled() {
 	return &collidersWindowEnabled;
 }
@@ -1665,6 +1699,10 @@ int EditingUI::GetSkyUIIndex() {
 int EditingUI::GetMaterialUIIndex() {
 	return materialUIIndex;
 };
+
+int EditingUI::GetTerrainMaterialUIIndex() {
+	return terrainMaterialUIIndex;
+}
 
 
 // Setters

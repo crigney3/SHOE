@@ -96,7 +96,7 @@ private:
 		const wchar_t* down,
 		const wchar_t* front,
 		const wchar_t* back);
-	std::shared_ptr<Mesh> LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale, _Out_ std::shared_ptr<HeightMap> heightMapOut, bool isProjectAsset = true);
+	std::shared_ptr<Mesh> LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale, _Out_ std::shared_ptr<HeightMap> heightMapOut, bool isProjectAsset = true, bool isFullPathToAsset = false);
 
 	void CreateComplexGeometry();
 	void ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey, std::string name);
@@ -243,7 +243,8 @@ public:
 											   unsigned int mapWidth = 512,
 											   unsigned int mapHeight = 512,
 											   float heightScale = 25.0f,
-											   bool isProjectAsset = true);
+											   bool isProjectAsset = true,
+											   bool isFullPathToAsset = false);
 	std::shared_ptr<TerrainMaterial> CreateTerrainMaterial(std::string name,
 														   std::vector<std::shared_ptr<Material>> materials,
 														   std::string blendMapPath = "",

@@ -74,6 +74,7 @@ public:
 	int GetEntityUIIndex();
 	int GetSkyUIIndex();
 	int GetMaterialUIIndex();
+	int GetTerrainMaterialUIIndex();
 
 private:
 	std::shared_ptr<Renderer> renderer;
@@ -97,6 +98,7 @@ private:
 	int entityUIIndex;
 	int skyUIIndex;
 	int materialUIIndex;
+	int terrainMaterialUIIndex;
 
 	//For selecting objects with a click
 	std::shared_ptr<GameEntity> GetClickedEntity();

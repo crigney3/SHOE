@@ -1907,13 +1907,28 @@ void AssetManager::ImportSkyTexture() {
 }
 
 void AssetManager::ImportHeightMap() {
-	// unimplemented, heightmap is tied to terrain for now
-	/*OPENFILENAME ofn;
+	char filename[MAX_PATH];
+	std::filesystem::path filePath;
+	OPENFILENAME ofn;
+
 	ZeroMemory(&ofn, sizeof(ofn));
+	ZeroMemory(&filename, sizeof(filename));
 	ofn.lpstrFilter = _T("Heightmap Files\0*.raw;*.raw16;\0Any File\0*.*\0");
 	ofn.lpstrTitle = _T("Select a heightmap file:");
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = dxInstance->hWnd;
+	ofn.lpstrFile = filename;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
 
-	CreateTexture(GetImportedFileString(&ofn), "newTexture", ASSET_TEXTURE_PATH_BASIC, true);*/
+	if (GetOpenFileName(&ofn)) {
+		filePath = ofn.lpstrFile;
+		std::shared_ptr<HeightMap> newHeight;
+
+		// This makes a lot of assumptions that should be corrected later
+		LoadTerrain(ofn.lpstrFile, 512, 512, 1.0f, newHeight, false, true);
+	}
+	CreateTexture(GetImportedFileString(&ofn), "newTexture", ASSET_TEXTURE_PATH_BASIC, true);
 }
 
 void AssetManager::ImportSound() {
@@ -2311,13 +2326,14 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename,
 												unsigned int mapHeight, 
 												float heightScale, 
 												std::shared_ptr<HeightMap> heightMapOut, 
-												bool isProjectAsset) 
+												bool isProjectAsset,
+												bool isFullPathToAsset) 
 {
 	std::shared_ptr<Mesh> finalTerrainMesh;
 
 	try {
 
-		heightMapOut = CreateHeightMap(filename, "testName", mapWidth, mapHeight, heightScale, isProjectAsset);
+		heightMapOut = CreateHeightMap(filename, "testName", mapWidth, mapHeight, heightScale, isProjectAsset, isFullPathToAsset);
 
 		//Mesh handles tangents
 		finalTerrainMesh = std::make_shared<Mesh>(heightMapOut->vertices.data(), heightMapOut->numVertices, heightMapOut->indices.data(), heightMapOut->numIndices, device, "TerrainMesh");
@@ -2346,21 +2362,28 @@ std::shared_ptr<HeightMap> AssetManager::CreateHeightMap(std::string heightmapPa
 														 unsigned int mapWidth,
 														 unsigned int mapHeight,
 														 float heightScale,
-														 bool isProjectAsset)
+														 bool isProjectAsset,
+														 bool isFullPathToAsset)
 {
 	std::shared_ptr<HeightMap> newHeightmap;
 	std::string fullPath;
 
 	try {
-		if (isProjectAsset) {
-			fullPath = GetFullPathToProjectAsset(AssetPathIndex::ASSET_HEIGHTMAP_PATH, heightmapPath);
+		if (!isFullPathToAsset) {
+			if (isProjectAsset) {
+				fullPath = GetFullPathToProjectAsset(AssetPathIndex::ASSET_HEIGHTMAP_PATH, heightmapPath);
+			}
+			else {
+				fullPath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_HEIGHTMAP_PATH, heightmapPath);
+			}
 		}
 		else {
-			fullPath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_HEIGHTMAP_PATH, heightmapPath);
+			fullPath = heightmapPath;
 		}
 
+
 		// Set up the struct
-		RtlZeroMemory(newHeightmap.get(), sizeof(HeightMap));
+		newHeightmap = std::make_shared<HeightMap>();
 		newHeightmap->numVertices = mapWidth * mapHeight;
 		newHeightmap->numIndices = (mapWidth - 1) * (mapHeight - 1) * 6;
 
