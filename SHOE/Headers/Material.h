@@ -231,6 +231,9 @@ public:
 	virtual Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetBlendMap();
 	virtual void SetBlendMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newBlendMap);
 
+	virtual std::shared_ptr<Texture> GetBlendMapTexture();
+	virtual void SetBlendMapFromTexture(std::shared_ptr<Texture> newBlendMap);
+
 	size_t GetMaterialCount();
 
 protected:
@@ -250,13 +253,18 @@ class DX11TerrainMaterial : public TerrainMaterial {
 public:
 
 	DX11TerrainMaterial(std::string name, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap);
+	DX11TerrainMaterial(std::string name, std::shared_ptr<Texture> blendMap);
 	~DX11TerrainMaterial();
 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetBlendMap();
 	void SetBlendMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newBlendMap);
 
+	std::shared_ptr<Texture> GetBlendMapTexture();
+	void SetBlendMapFromTexture(std::shared_ptr<Texture> newBlendMap);
+
 protected:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
+	std::shared_ptr<Texture> blendMapTexture;
 };
 
 class DX12TerrainMaterial : public TerrainMaterial {

@@ -1593,6 +1593,121 @@ void EditingUI::GenerateEditingUI() {
 
 		currentTMat->SetName(nameBuf);
 
+		ImGui::Text("Current Materials in TMat List:");
+		for (int i = 0; i < currentTMat->GetMaterialCount(); i++) {
+			ImGui::Text(currentTMat->GetMaterialAtID(i)->GetName().c_str());
+		}
+
+		if (ImGui::CollapsingHeader("Swap Blend Map")) {
+			static int textureIndex = 0;
+			ImTextureID* currentTexDisplay;
+			std::shared_ptr<Texture> currentBlendMap;
+
+			currentBlendMap = currentTMat->GetBlendMapTexture();
+
+			std::string nameBuffer;
+			static char nameBuf[64] = "";
+			if (currentBlendMap != nullptr) {
+				nameBuffer = currentBlendMap->GetName();							
+			}
+			else {
+				nameBuffer = "No blendmap assigned!";
+			}
+			strcpy_s(nameBuf, nameBuffer.c_str());
+			ImGui::Text(nameBuf);
+
+			if (ImGui::BeginListBox("TextureBlendMapList")) {
+				for (int i = 0; i < globalAssets.GetTextureArraySize(); i++) {
+					const bool is_selected = (textureIndex == i);
+					if (ImGui::Selectable(globalAssets.GetTextureAtID(i)->GetName().c_str(), is_selected)) {
+						textureIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+				ImGui::SameLine();
+
+				if (dxCore->IsDirectX12()) {
+					// Temporary
+					currentTexDisplay = NULL;
+				}
+				else {
+					currentTexDisplay = (ImTextureID*)globalAssets.GetTextureAtID(textureIndex)->GetDX11Texture().Get();
+				}
+				ImGui::Image(currentTexDisplay, ImVec2(256, 256));
+
+			}
+
+			if (ImGui::Button("Swap Texture###TMatBlendSwap")) {
+				currentTMat->SetBlendMapFromTexture(globalAssets.GetTextureAtID(textureIndex));
+			}
+		}
+
+		static int allMatsIndex = 0;
+		if (ImGui::CollapsingHeader("Change Individual Materials")) {
+			static int currentMatIndex = 0;
+			
+			std::string infoStr = currentTMat->GetMaterialAtID(currentMatIndex)->GetName();
+			std::string node = "Swapping Material: " + infoStr;
+
+			ImGui::Text(node.c_str());
+
+			if (ImGui::ArrowButton("Previous Material###TMatListPrev", ImGuiDir_Left)) {
+				currentMatIndex--;
+				if (currentMatIndex < 0) {
+					currentMatIndex = currentTMat->GetMaterialCount() - 1;
+				}
+			};
+			ImGui::SameLine();
+
+			if (ImGui::ArrowButton("Next Terrain Material###TMatListNext", ImGuiDir_Right)) {
+				currentMatIndex++;
+				if (currentMatIndex > currentTMat->GetMaterialCount() - 1) {
+					currentMatIndex = 0;
+				}
+			};
+
+			if (ImGui::BeginListBox("TMaterialList")) {
+				for (int i = 0; i < globalAssets.GetMaterialArraySize(); i++) {
+					const bool is_selected = (allMatsIndex == i);
+					if (ImGui::Selectable(globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
+						allMatsIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+				ImGui::SameLine();
+			}
+
+			if (ImGui::Button("Swap Material###TMaterialSwap")) {
+				currentTMat->SetMaterialAtID(globalAssets.GetMaterialAtID(allMatsIndex), currentMatIndex);
+			}
+		}
+
+		if (ImGui::CollapsingHeader("Add Material to Terrain Material")) {
+			if (ImGui::BeginListBox("TMaterialAddList")) {
+				for (int i = 0; i < globalAssets.GetMaterialArraySize(); i++) {
+					const bool is_selected = (allMatsIndex == i);
+					if (ImGui::Selectable(globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
+						allMatsIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+				ImGui::SameLine();
+			}
+
+			if (ImGui::Button("Add Material###TMaterialAdd")) {
+				currentTMat->AddMaterial(globalAssets.GetMaterialAtID(allMatsIndex));
+			}
+		}
+
 		ImGui::End();
 	}
 
@@ -1637,8 +1752,6 @@ void EditingUI::GenerateEditingUI() {
 
 		ImGui::End();
 	}
-
-	// TODO: Add Material Edit menu
 }
 
 // Getters

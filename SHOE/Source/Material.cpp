@@ -503,6 +503,16 @@ void TerrainMaterial::SetBlendMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceVie
 	printf("Error: Calling virtual base class!");
 }
 
+std::shared_ptr<Texture> TerrainMaterial::GetBlendMapTexture() {
+	printf("Error: Calling virtual base class!");
+	std::shared_ptr<Texture> error;
+	return error;
+}
+
+void TerrainMaterial::SetBlendMapFromTexture(std::shared_ptr<Texture> newBlendMap) {
+	printf("Error: Calling virtual base class!");
+}
+
 #pragma endregion
 
 #pragma region DX11TerrainMaterial
@@ -512,6 +522,17 @@ DX11TerrainMaterial::DX11TerrainMaterial(std::string name,
 	: TerrainMaterial(name)
 {
 	this->blendMap = blendMap;
+	this->blendMapEnabled = true;
+}
+
+DX11TerrainMaterial::DX11TerrainMaterial(std::string name, 
+										 std::shared_ptr<Texture> blendMap) 
+	: TerrainMaterial(name)
+{
+	this->blendMapTexture = blendMap;
+	if (blendMap != nullptr) {
+		this->blendMap = blendMap->GetDX11Texture();
+	}
 	this->blendMapEnabled = true;
 }
 
@@ -526,6 +547,15 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX11TerrainMaterial::GetBlendMa
 void DX11TerrainMaterial::SetBlendMap(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> newBlendMap) {
 	this->blendMap = newBlendMap;
 	this->blendMapEnabled = true;
+}
+
+std::shared_ptr<Texture> DX11TerrainMaterial::GetBlendMapTexture() {
+	return this->blendMapTexture;
+}
+
+void DX11TerrainMaterial::SetBlendMapFromTexture(std::shared_ptr<Texture> newBlendMap) {
+	this->blendMapTexture = newBlendMap;
+	this->blendMap = newBlendMap->GetDX11Texture();
 }
 
 #pragma endregion

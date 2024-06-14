@@ -821,7 +821,7 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 
 		}
 		else {
-			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
+			std::shared_ptr<Texture> blendMap;
 
 			newTMat = std::make_shared<DX11TerrainMaterial>(name, blendMap);
 
@@ -830,23 +830,10 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 			}
 
 			if (blendMapPath != "") {
-				std::string namePath;
+				blendMap = CreateTexture(blendMapPath, name + " Blend Map", AssetPathIndex::ASSET_TEXTURE_BLENDMAP_PATH);
 
-				if (isProjectAsset) {
-					namePath = GetFullPathToProjectAsset(AssetPathIndex::ASSET_TEXTURE_BLENDMAP_PATH, blendMapPath);
-				}
-				else {
-					namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_BLENDMAP_PATH, blendMapPath);
-				}
-
-				std::wstring wPath;
-				ISimpleShader::ConvertToWide(namePath, wPath);
-
-				CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
-
-				newTMat->SetBlendMap(blendMap);
-
-				newTMat->SetBlendMapFilenameKey(SerializeFileName("Assets\\Textures\\", namePath));
+				newTMat->SetBlendMapFromTexture(blendMap);
+				newTMat->SetBlendMapFilenameKey(blendMap->GetTextureFilenameKey());
 			}
 
 			newTMat->SetPixelShader(GetPixelShaderByName("TerrainPS"));
@@ -882,7 +869,7 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 
 		}
 		else {
-			Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blendMap;
+			std::shared_ptr<Texture> blendMap;
 
 			newTMat = std::make_shared<DX11TerrainMaterial>(name, blendMap);
 
@@ -901,22 +888,10 @@ std::shared_ptr<TerrainMaterial> AssetManager::CreateTerrainMaterial(std::string
 			}
 
 			if (blendMapPath != "") {
-				std::string namePath;
+				blendMap = CreateTexture(blendMapPath, name + " Blend Map", AssetPathIndex::ASSET_TEXTURE_BLENDMAP_PATH);
 
-				if (isProjectAsset) {
-					namePath = GetFullPathToProjectAsset(AssetPathIndex::ASSET_TEXTURE_BLENDMAP_PATH, blendMapPath);
-				}
-				else {
-					namePath = GetFullPathToEngineAsset(AssetPathIndex::ASSET_TEXTURE_BLENDMAP_PATH, blendMapPath);
-				}
-
-				std::wstring wPath;
-				ISimpleShader::ConvertToWide(namePath, wPath);
-
-				CreateWICTextureFromFile(device.Get(), context.Get(), wPath.c_str(), nullptr, blendMap.GetAddressOf());
-
-				newTMat->SetBlendMap(blendMap);
-				newTMat->SetBlendMapFilenameKey(SerializeFileName("Assets\\Textures\\", namePath));
+				newTMat->SetBlendMapFromTexture(blendMap);
+				newTMat->SetBlendMapFilenameKey(blendMap->GetTextureFilenameKey());
 			}
 		}
 
