@@ -11,7 +11,7 @@ struct HeightMap {
 	std::vector<float> finalHeights;
 	std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
-	std::vector<XMFLOAT3> triangleNormals;
+	std::vector<DirectX::XMFLOAT3> triangleNormals;
 	std::string name;
 	std::string filenameKey;
 };

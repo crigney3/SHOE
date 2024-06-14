@@ -157,6 +157,7 @@ void EditingUI::DisplayMenu() {
 			ImGui::MenuItem("Sound", "", GetSoundWindowEnabled());
 			ImGui::MenuItem("Texture", "", GetTextureWindowEnabled());
 			ImGui::MenuItem("Material", "", GetMaterialWindowEnabled());
+			ImGui::MenuItem("Terrain Materials", "", GetTerrainMaterialWindowEnabled());
 			ImGui::MenuItem("Colliders", "", GetCollidersWindowEnabled());
 
 			ImGui::EndMenu();
@@ -1553,6 +1554,14 @@ void EditingUI::GenerateEditingUI() {
 				currentMaterial->SetRoughMap(globalAssets.GetTextureAtID(roughIndex));
 			}
 		}
+
+		ImGui::End();
+	}
+
+	if (*(GetTerrainMaterialWindowEnabled())) {
+		ImGui::Begin("Terrain Material Editor");
+
+
 
 		ImGui::End();
 	}

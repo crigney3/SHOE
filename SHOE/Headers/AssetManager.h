@@ -96,7 +96,7 @@ private:
 		const wchar_t* down,
 		const wchar_t* front,
 		const wchar_t* back);
-	std::shared_ptr<Mesh> LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale, bool isProjectAsset = true);
+	std::shared_ptr<Mesh> LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale, _Out_ std::shared_ptr<HeightMap> heightMapOut, bool isProjectAsset = true);
 
 	void CreateComplexGeometry();
 	void ProcessComplexModel(aiNode* node, const aiScene* scene, std::string serializedFilenameKey, std::string name);

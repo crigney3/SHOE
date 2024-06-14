@@ -1114,9 +1114,11 @@ std::shared_ptr<Terrain> AssetManager::CreateTerrainOnEntity(std::shared_ptr<Gam
 	bool isProjectAsset) {
 
 	std::shared_ptr<Terrain> newTerrain = entityToEdit->AddComponent<Terrain>();
+	std::shared_ptr<HeightMap> tHeightmap;
 
-	newTerrain->SetMesh(LoadTerrain(heightmap, mapWidth, mapHeight, heightScale, isProjectAsset));
+	newTerrain->SetMesh(LoadTerrain(heightmap, mapWidth, mapHeight, heightScale, tHeightmap, isProjectAsset));
 	newTerrain->SetMaterial(material);
+	newTerrain->SetHeightMap(tHeightmap);
 
 	return newTerrain;
 }
@@ -2304,20 +2306,24 @@ bool AssetManager::CompareFilePaths(const std::filesystem::path& path, const std
 }
 
 #pragma region buildAssetData
-std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned int mapWidth, unsigned int mapHeight, float heightScale, bool isProjectAsset) {
-
-	std::shared_ptr<HeightMap> hMap;
-	std::shared_ptr<Mesh> finalTerrain;
+std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, 
+												unsigned int mapWidth, 
+												unsigned int mapHeight, 
+												float heightScale, 
+												std::shared_ptr<HeightMap> heightMapOut, 
+												bool isProjectAsset) 
+{
+	std::shared_ptr<Mesh> finalTerrainMesh;
 
 	try {
 
-		hMap = CreateHeightMap(filename, "testName", mapWidth, mapHeight, heightScale, isProjectAsset);
+		heightMapOut = CreateHeightMap(filename, "testName", mapWidth, mapHeight, heightScale, isProjectAsset);
 
 		//Mesh handles tangents
-		finalTerrain = std::make_shared<Mesh>(vertices.data(), numVertices, indices.data(), numIndices, device, "TerrainMesh");
+		finalTerrainMesh = std::make_shared<Mesh>(heightMapOut->vertices.data(), heightMapOut->numVertices, heightMapOut->indices.data(), heightMapOut->numIndices, device, "TerrainMesh");
 
-		finalTerrain->SetFileNameKey(hMap->filenameKey);
-		globalMeshes.push_back(finalTerrain);
+		finalTerrainMesh->SetFileNameKey(heightMapOut->filenameKey);
+		globalMeshes.push_back(finalTerrainMesh);
 		//Terrain::SetDefaults(finalTerrain, globalTerrainMaterials[0]); Not sure this line should exist
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -2330,7 +2336,7 @@ std::shared_ptr<Mesh> AssetManager::LoadTerrain(const char* filename, unsigned i
 #endif
 	}
 
-	return finalTerrain;
+	return finalTerrainMesh;
 }
 
 // Loading heightmaps separately from terrains makes them more accessible
@@ -2498,6 +2504,8 @@ std::shared_ptr<HeightMap> AssetManager::CreateHeightMap(std::string heightmapPa
 		printf("Failed to load height map from %s with error: %s\n", heightmapPath, e.what());
 #endif
 	}
+
+	return newHeightmap;
 }
 
 // --------------------------------------------------------

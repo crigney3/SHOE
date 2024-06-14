@@ -53,8 +53,8 @@ public:
 	void SetEntityUIIndex(int NewEntityUIIndex);
 	void SetSkyUIIndex(int NewSkyUIIndex);
 	void SetObjWindowEnabled(bool enabled);
-	void EditingUI::SetMaterialUIIndex(int newIndex);
-	void EditingUI::SetMaterialWindowEnabled(bool enabled);
+	void SetMaterialUIIndex(int newIndex);
+	void SetMaterialWindowEnabled(bool enabled);
 
 	// Getters
 	bool* GetObjWindowEnabled();
@@ -63,6 +63,7 @@ public:
 	bool* GetSoundWindowEnabled();
 	bool* GetTextureWindowEnabled();
 	bool* GetMaterialWindowEnabled();
+	bool* GetTerrainMaterialWindowEnabled();
 	bool* GetCollidersWindowEnabled();
 	bool* GetRtvWindowEnabled();
 	bool* GetRenderWindowEnabled();
@@ -84,6 +85,7 @@ private:
 	bool skyWindowEnabled;
 	bool textureWindowEnabled;
 	bool materialWindowEnabled;
+	bool terrainMaterialWindowEnabled;
 	bool movingEnabled;
 	bool rtvWindowEnabled;
 	bool soundWindowEnabled;
