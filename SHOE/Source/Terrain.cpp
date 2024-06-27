@@ -23,13 +23,6 @@ void Terrain::Start()
 	SetMesh(defaultMesh);
 	SetMaterial(defaultTerrainMat);
 	DrawBounds = false;
-
-	//// Terrain should be big and flat, so make it big and flat.
-	//GetTransform()->SetScale(DirectX::XMFLOAT3(100.0f, 0.1f, 100.0f));
-
-	// TODO: Set up terrains so they don't render on the bottom
-	// Did I already do that?
-	// Who knows
 }
 
 /// <summary>

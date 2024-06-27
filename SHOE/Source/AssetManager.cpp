@@ -1901,7 +1901,7 @@ void AssetManager::ImportHeightMap() {
 		std::shared_ptr<HeightMap> newHeight;
 
 		// This makes a lot of assumptions that should be corrected later
-		LoadTerrain(ofn.lpstrFile, 512, 512, 1.0f, newHeight, false, true);
+		LoadTerrain(ofn.lpstrFile, 512, 512, 25.0f, newHeight, false, true);
 	}
 	CreateTexture(GetImportedFileString(&ofn), "newTexture", ASSET_TEXTURE_PATH_BASIC, true);
 }
@@ -2359,8 +2359,12 @@ std::shared_ptr<HeightMap> AssetManager::CreateHeightMap(std::string heightmapPa
 
 		// Set up the struct
 		newHeightmap = std::make_shared<HeightMap>();
-		newHeightmap->numVertices = mapWidth * mapHeight;
-		newHeightmap->numIndices = (mapWidth - 1) * (mapHeight - 1) * 6;
+
+		unsigned int vertCount = mapWidth * mapHeight;
+		unsigned int indexCount = (mapWidth - 1) * (mapHeight - 1) * 6;
+
+		newHeightmap->numVertices = vertCount;
+		newHeightmap->numIndices = indexCount;
 
 		newHeightmap->heights = std::vector<unsigned short>(newHeightmap->numVertices);
 		newHeightmap->finalHeights = std::vector<float>(newHeightmap->numVertices);
@@ -2487,10 +2491,13 @@ std::shared_ptr<HeightMap> AssetManager::CreateHeightMap(std::string heightmapPa
 				DirectX::XMStoreFloat3(&newHeightmap->vertices[index].normal, normalTotal);
 
 				//Store data in vertex
-				XMFLOAT3 normal = XMFLOAT3(+0.0f, +1.0f, -0.0f);
+				//XMFLOAT3 normal = XMFLOAT3(+0.0f, +1.0f, -0.0f);
 				XMFLOAT3 tangents = XMFLOAT3(+0.0f, +0.0f, +0.0f);
 				XMFLOAT2 UV = XMFLOAT2(x / (float)mapWidth, z / (float)mapWidth);
-				newHeightmap->vertices[index] = { position, normal, tangents, UV };
+				/*newHeightmap->vertices[index] = { position, normal, tangents, UV };*/
+				newHeightmap->vertices[index].Position = position;
+				newHeightmap->vertices[index].Tangent = tangents;
+				newHeightmap->vertices[index].uv = UV;
 			}
 		}
 #if defined(DEBUG) || defined(_DEBUG)

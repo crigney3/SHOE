@@ -1063,7 +1063,7 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 		currentMat = dynamic_cast<DX11Material*>(terrainMat->GetMaterialAtID(0).get());
 
 		PSTerrain->SetShader();
-		PSTerrain->SetData("lights", Light::GetLightArray(), sizeof(Light) * MAX_LIGHTS);
+		PSTerrain->SetData("lights", Light::GetLightArray(), sizeof(LightData) * MAX_LIGHTS);
 		PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
 		PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 		PSTerrain->SetFloat("uvMultNear", 50.0f);
