@@ -740,7 +740,7 @@ void EditingUI::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap ##Terrain Material Swap Button")) {
 						terrain->SetMaterial(globalAssets.GetTerrainMaterialAtID(materialIndex));
 					}
 				}
@@ -768,7 +768,7 @@ void EditingUI::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap ##Terrain Mesh Swap Button")) {
 						terrain->SetMesh(globalAssets.GetMeshAtID(meshIndex));
 					}
 				}
@@ -1573,14 +1573,14 @@ void EditingUI::GenerateEditingUI() {
 		if (ImGui::ArrowButton("Previous Terrain Material", ImGuiDir_Left)) {
 			terrainMaterialUIIndex--;
 			if (terrainMaterialUIIndex < 0) {
-				terrainMaterialUIIndex = globalAssets.GetMaterialArraySize() - 1;
+				terrainMaterialUIIndex = globalAssets.GetTerrainMaterialArraySize() - 1;
 			}
 		};
 		ImGui::SameLine();
 
 		if (ImGui::ArrowButton("Next Terrain Material", ImGuiDir_Right)) {
 			terrainMaterialUIIndex++;
-			if (terrainMaterialUIIndex > globalAssets.GetMaterialArraySize() - 1) {
+			if (terrainMaterialUIIndex > globalAssets.GetTerrainMaterialArraySize() - 1) {
 				terrainMaterialUIIndex = 0;
 			}
 		};
@@ -1642,6 +1642,7 @@ void EditingUI::GenerateEditingUI() {
 
 			if (ImGui::Button("Swap Texture###TMatBlendSwap")) {
 				currentTMat->SetBlendMapFromTexture(globalAssets.GetTextureAtID(textureIndex));
+				currentTMat->SetBlendMapFilenameKey(globalAssets.GetTextureAtID(textureIndex)->GetTextureFilenameKey());
 			}
 		}
 

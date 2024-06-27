@@ -1903,7 +1903,7 @@ void AssetManager::ImportHeightMap() {
 		// This makes a lot of assumptions that should be corrected later
 		LoadTerrain(ofn.lpstrFile, 512, 512, 25.0f, newHeight, false, true);
 	}
-	CreateTexture(GetImportedFileString(&ofn), "newTexture", ASSET_TEXTURE_PATH_BASIC, true);
+	//CreateTexture(GetImportedFileString(&ofn), "newTexture", ASSET_TEXTURE_PATH_BASIC, true);
 }
 
 void AssetManager::ImportSound() {
@@ -2356,9 +2356,10 @@ std::shared_ptr<HeightMap> AssetManager::CreateHeightMap(std::string heightmapPa
 			fullPath = heightmapPath;
 		}
 
-
 		// Set up the struct
 		newHeightmap = std::make_shared<HeightMap>();
+
+		newHeightmap->filenameKey = SerializeFileName("Assets\\HeightMaps\\", fullPath);
 
 		unsigned int vertCount = mapWidth * mapHeight;
 		unsigned int indexCount = (mapWidth - 1) * (mapHeight - 1) * 6;
