@@ -145,13 +145,27 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetDrawListSRV(
 	return this->drawListSRV;
 }
 
-std::shared_ptr<Texture> ParticleSystem::GetParticleTexture() {
-	return this->particleTexture;
+std::shared_ptr<Texture> ParticleSystem::GetParticleTexture(int index) {
+	return this->particleTextures[index];
 }
 
-void ParticleSystem::SetParticleTexture(std::shared_ptr<Texture> particleTexture) {
-	this->particleTexture = particleTexture;
-	SetParticleTextureSRV(particleTexture->GetDX11Texture());
+std::vector<std::shared_ptr<Texture>> ParticleSystem::GetParticleTextures() {
+	return this->particleTextures;
+}
+
+int ParticleSystem::GetParticleTextureCount() {
+	return this->particleTextures.size();
+}
+
+void ParticleSystem::SetParticleTexture(std::shared_ptr<Texture> particleTexture, int index) {
+	this->particleTextures[index] = particleTexture;
+	MakeParticleSRVFromTextures(this->particleTextures);
+}
+
+void ParticleSystem::SetParticleTextures(std::vector<std::shared_ptr<Texture>> particleTextures) {
+	this->particleTextures = particleTextures;
+	// Set multiple particle SRV
+	MakeParticleSRVFromTextures(this->particleTextures);
 }
 
 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetParticleTextureSRV() {
@@ -192,7 +206,8 @@ void ParticleSystem::Start()
 
 	this->particlePixelShader = defaultParticlePixelShader;
 	this->particleVertexShader = defaultParticleVertexShader;
-	this->particleTexture = defaultParticleTexture;
+	this->particleTextures = std::vector<std::shared_ptr<Texture>>();
+	this->particleTextures.push_back(defaultParticleTexture);
 	this->particleTextureSRV = defaultParticleTextureSRV;
 
 	this->device = defaultDevice;
@@ -204,7 +219,7 @@ void ParticleSystem::Start()
 	this->destination = DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f);
 
 	this->additiveBlend = true;
-	this->isMultiParticle = true;
+	this->isMultiParticle = false;
 
 	// TODO: Set up a function to calculate if this emitter will overflow its buffer
 	// Then recalculate maxParticles if it will
@@ -504,4 +519,52 @@ void ParticleSystem::EmitParticle(int emitCount) {
 	particleEmitComputeShader->CopyAllBufferData();
 
 	particleEmitComputeShader->DispatchByThreads(emitCount, 1, 1);
+}
+
+void ParticleSystem::MakeParticleSRVFromTextures(std::vector<std::shared_ptr<Texture>> textures) {
+	if (isMultiParticle) {
+		D3D11_TEXTURE2D_DESC faceDesc = {};
+		faceDesc = std::dynamic_pointer_cast<DX11Texture>(textures[0])->GetTextureDesc();
+
+		D3D11_TEXTURE2D_DESC multiTextureDesc = {};
+		multiTextureDesc.ArraySize = (int)textures.size();
+		multiTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		multiTextureDesc.CPUAccessFlags = 0;
+		multiTextureDesc.Format = faceDesc.Format;
+		multiTextureDesc.Width = faceDesc.Width;
+		multiTextureDesc.Height = faceDesc.Height;
+		multiTextureDesc.MipLevels = 1;
+		multiTextureDesc.Usage = D3D11_USAGE_DEFAULT;
+		multiTextureDesc.SampleDesc.Count = 1;
+		multiTextureDesc.SampleDesc.Quality = 0;
+
+		ID3D11Texture2D* outputTexture;
+		device->CreateTexture2D(&multiTextureDesc, 0, &outputTexture);
+
+		for (int i = 0; i < (int)textures.size(); i++) {
+			unsigned int subresource = D3D11CalcSubresource(0, i, 1);
+
+			if (textures[i] != nullptr && outputTexture != nullptr) {
+				context->CopySubresourceRegion(outputTexture, subresource, 0, 0, 0, (ID3D11Resource*)std::dynamic_pointer_cast<DX11Texture>(textures[i])->GetInternalTexture().Get(), 0, 0);
+			}
+		}
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = multiTextureDesc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		srvDesc.Texture2DArray.MipLevels = 1;
+		srvDesc.Texture2DArray.ArraySize = (int)textures.size();
+
+		// This sets the actual field
+		// Not calling SetParticleTextureSRV, maybe bad design
+		device->CreateShaderResourceView(outputTexture, &srvDesc, particleTextureSRV.GetAddressOf());
+
+		outputTexture->Release();
+	}
+	else {
+		// If it's just an individual texture, the existing SRV
+		// from loading the texture works fine.
+		SetParticleTextureSRV(textures[0]->GetDX11Texture());
+	}
+
 }

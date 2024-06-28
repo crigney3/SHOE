@@ -30,10 +30,10 @@ void main(uint3 threadID : SV_DispatchThreadID)
 
 	p.age += deltaTime;
 	p.alive = (float)(p.age < lifeTime);
+	
+    p.position.y += deltaTime * speed;
 
 	//float distanceFromEnd = distance(p.position, endPos);
-
-	p.position.y += deltaTime * speed;
 
 	// float camDistance = distance(particles[threadID.x].startPosition, cameraPos);
 

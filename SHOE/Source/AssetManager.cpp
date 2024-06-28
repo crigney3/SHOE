@@ -481,9 +481,20 @@ std::shared_ptr<Texture> AssetManager::CreateTexture(std::string nameToLoad, std
 		HRESULT hr = ISimpleShader::ConvertToWide(namePath, widePath);
 
 		if (!dxInstance->IsDirectX12()) {
-			CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, coreTexture.GetAddressOf());
+			Microsoft::WRL::ComPtr<ID3D11Texture2D> baseTexture = Microsoft::WRL::ComPtr<ID3D11Texture2D>();
+			D3D11_TEXTURE2D_DESC baseDesc = {};
+
+			HRESULT hr = CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), (ID3D11Resource**)baseTexture.GetAddressOf(), coreTexture.GetAddressOf());
+
+			if (!SUCCEEDED(hr)) {
+				return nullptr;
+			}
 
 			newTexture = std::make_shared<DX11Texture>(coreTexture, "", textureName);
+
+			baseTexture->GetDesc(&baseDesc);
+			std::dynamic_pointer_cast<DX11Texture>(newTexture)->SetTextureDesc(baseDesc);
+			std::dynamic_pointer_cast<DX11Texture>(newTexture)->SetInternalTexture(baseTexture);
 		}
 		else {
 			CreateWICTextureFromFile(device.Get(), context.Get(), widePath.c_str(), nullptr, coreTexture.GetAddressOf());
@@ -1117,15 +1128,41 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitterOnEntity(std:
 	bool isFullPathToAsset) {
 
 	std::shared_ptr<ParticleSystem> newEmitter = entityToEdit->AddComponent<ParticleSystem>();
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> loadedTexture;
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> loadedTexture;
+	std::vector<std::shared_ptr<Texture>> loadedTextures;
+
+	std::string assets;
+	if (isFullPathToAsset) {
+		assets = textureNameToLoad;
+	}
+	else {
+		if (isProjectAsset) {
+			assets = GetFullPathToProjectAsset(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
+		}
+		else {
+			assets = GetFullPathToEngineAsset(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
+		}
+	}
 
 	newEmitter->SetIsMultiParticle(isMultiParticle);
-	loadedTexture = LoadParticleTexture(textureNameToLoad, isMultiParticle, isProjectAsset, isFullPathToAsset);
-	newEmitter->SetParticleTextureSRV(loadedTexture);
+	//loadedTexture = LoadParticleTexture(textureNameToLoad, isMultiParticle, isProjectAsset, isFullPathToAsset);
+	if (isMultiParticle) {
+		int i = 0;
+		for (auto& p : std::filesystem::recursive_directory_iterator(assets)) {
+			std::shared_ptr<Texture> newTexture = CreateTexture(p.path().string(), p.path().filename().string(), AssetPathIndex::ASSET_PARTICLE_PATH, isFullPathToAsset, isProjectAsset);
 
-	std::string asset = GetFullPathToEngineAsset(AssetPathIndex::ASSET_PARTICLE_PATH, textureNameToLoad);
+			loadedTextures.push_back(newTexture);
 
-	newEmitter->SetFilenameKey(SerializeFileName("Assets\\Particles\\", asset));
+			i++;
+		}
+	}
+	else {
+		loadedTextures[0] = CreateTexture(textureNameToLoad, textureNameToLoad, AssetPathIndex::ASSET_PARTICLE_PATH, isFullPathToAsset, isProjectAsset);
+	}
+
+	newEmitter->SetParticleTextures(loadedTextures);
+
+	newEmitter->SetFilenameKey(SerializeFileName("Assets\\Particles\\", assets));
 
 	// Set all the compute shaders here
 	newEmitter->SetParticleComputeShader(GetComputeShaderByName("ParticleEmitCS"), Emit);

@@ -76,6 +76,22 @@ void DX11Texture::SetTexture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> te
 	this->coreDx11Texture = texture;
 }
 
+D3D11_TEXTURE2D_DESC DX11Texture::GetTextureDesc() {
+	return this->textureDesc;
+}
+
+void DX11Texture::SetTextureDesc(D3D11_TEXTURE2D_DESC newDesc) {
+	this->textureDesc = newDesc;
+}
+
+Microsoft::WRL::ComPtr<ID3D11Texture2D> DX11Texture::GetInternalTexture() {
+	return this->internalTexture;
+}
+
+void DX11Texture::SetInternalTexture(Microsoft::WRL::ComPtr<ID3D11Texture2D> newInternalTexture) {
+	this->internalTexture = newInternalTexture;
+}
+
 #pragma endregion
 
 #pragma region DX12Texture

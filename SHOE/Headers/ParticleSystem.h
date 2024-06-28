@@ -60,8 +60,13 @@ public:
 	void SetFilenameKey(std::string filenameKey);
 	std::string GetFilenameKey();
 
-	std::shared_ptr<Texture> GetParticleTexture();
-	void SetParticleTexture(std::shared_ptr<Texture> particleTexture);
+	std::shared_ptr<Texture> GetParticleTexture(int index);
+	std::vector<std::shared_ptr<Texture>> GetParticleTextures();
+	int GetParticleTextureCount();
+	void SetParticleTexture(std::shared_ptr<Texture> particleTexture, int index);
+	void SetParticleTextures(std::vector<std::shared_ptr<Texture>> particleTextures);
+
+	void MakeParticleSRVFromTextures(std::vector<std::shared_ptr<Texture>> textures);
 
 	void SetParticleComputeShader(std::shared_ptr<SimpleComputeShader> shader, ParticleComputeShaderType type);
 
@@ -109,7 +114,7 @@ private:
 	bool isMultiParticle;
 	bool additiveBlend;
 	bool usesComputeShader;
-	std::shared_ptr<Texture> particleTexture;
+	std::vector<std::shared_ptr<Texture>> particleTextures;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> sortListSRV;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> drawListSRV;

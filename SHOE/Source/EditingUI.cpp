@@ -667,13 +667,13 @@ void EditingUI::GenerateEditingUI() {
 				particleSystem->SetScale(scale);
 
 				float particlesPerSecond = particleSystem->GetParticlesPerSecond();
-				ImGui::SliderFloat("Particles per Second ", &particlesPerSecond, 0.1f, 20.0f);
+				ImGui::SliderFloat("Particles per Second ", &particlesPerSecond, 0.1f, 100.0f);
 				//ImGui::SameLine();
 				//ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
 				particleSystem->SetParticlesPerSecond(particlesPerSecond);
 
 				float particlesLifetime = particleSystem->GetParticleLifetime();
-				ImGui::SliderFloat("Particles Lifetime ", &particlesLifetime, 0.1f, 20.0f);
+				ImGui::SliderFloat("Particles Lifetime ", &particlesLifetime, 0.1f, 100.0f);
 				//ImGui::SameLine();
 				//ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
 				particleSystem->SetParticleLifetime(particlesLifetime);
@@ -691,7 +691,7 @@ void EditingUI::GenerateEditingUI() {
 				particleSystem->SetMaxParticles(maxParticles);
 
 				if (ImGui::CollapsingHeader("Particle Texture Swapping")) {
-					Texture* currentTexture = particleSystem->GetParticleTexture().get();
+					Texture* currentTexture = particleSystem->GetParticleTexture(0).get();
 					ImTextureID* currentTexDisplay;
 					if (dxCore->IsDirectX12()) {
 						// Temporary

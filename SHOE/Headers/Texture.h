@@ -44,6 +44,16 @@ public:
 	~DX11Texture();
 
 	void SetTexture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture);
+
+	D3D11_TEXTURE2D_DESC GetTextureDesc();
+	void SetTextureDesc(D3D11_TEXTURE2D_DESC newDesc);
+
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> GetInternalTexture();
+	void SetInternalTexture(Microsoft::WRL::ComPtr<ID3D11Texture2D> newInternalTexture);
+
+protected:
+	D3D11_TEXTURE2D_DESC textureDesc;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> internalTexture;
 };
 
 class DX12Texture : public Texture {
