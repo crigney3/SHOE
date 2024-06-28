@@ -691,19 +691,98 @@ void EditingUI::GenerateEditingUI() {
 				particleSystem->SetMaxParticles(maxParticles);
 
 				if (ImGui::CollapsingHeader("Particle Texture Swapping")) {
-					Texture* currentTexture = particleSystem->GetParticleTexture(0).get();
+					static int particleTextureIndex = 0;
+					static int particleTexToEditIndex = 0;
+					static std::vector<std::string> particleTextureNames = std::vector<std::string>();
 					ImTextureID* currentTexDisplay;
-					if (dxCore->IsDirectX12()) {
-						// Temporary
-						currentTexDisplay = NULL;
-					}
-					else {
-						currentTexDisplay = (ImTextureID*)currentTexture->GetDX11Texture().Get();
-					}
-					ImGui::Image(currentTexDisplay, ImVec2(256, 256));
-					ImGui::SameLine();
-				}
+					Texture* currentTexture;
 
+					particleTextureNames.clear();
+
+					for (int i = 0; i < particleSystem->GetParticleTextureCount(); i++) {
+						currentTexture = particleSystem->GetParticleTexture(i).get();
+						ImTextureID* currentTexDisplay;
+
+						if (dxCore->IsDirectX12()) {
+							// Temporary
+							currentTexDisplay = NULL;
+						}
+						else {
+							currentTexDisplay = (ImTextureID*)currentTexture->GetDX11Texture().Get();
+						}
+						ImGui::Image(currentTexDisplay, ImVec2(256, 256));
+						if (i < particleSystem->GetParticleTextureCount() - 1) {
+							ImGui::SameLine();
+						}	
+
+						particleTextureNames.push_back(currentTexture->GetName());
+					}
+
+					if (ImGui::BeginCombo("Particle Texture to Swap", particleTextureNames[particleTexToEditIndex].c_str())) {
+						for (int n = 0; n < particleTextureNames.size(); n++)
+						{
+							const bool is_selected = (particleTexToEditIndex == n);
+							if (ImGui::Selectable(particleTextureNames[n].c_str(), is_selected))
+								particleTexToEditIndex = n;
+
+							// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+							if (is_selected)
+								ImGui::SetItemDefaultFocus();
+						}
+						ImGui::EndCombo();
+					}
+
+					if (ImGui::BeginListBox("TextureList ##ParticleTextureListBox")) {
+						for (int i = 0; i < globalAssets.GetTextureArraySize(); i++) {
+							const bool is_selected = (particleTextureIndex == i);
+							if (ImGui::Selectable(globalAssets.GetTextureAtID(i)->GetName().c_str(), is_selected)) {
+								particleTextureIndex = i;
+							}
+
+							if (is_selected) ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndListBox();
+						ImGui::SameLine();
+
+						if (dxCore->IsDirectX12()) {
+							// Temporary
+							currentTexDisplay = NULL;
+						}
+						else {
+							currentTexDisplay = (ImTextureID*)globalAssets.GetTextureAtID(particleTextureIndex)->GetDX11Texture().Get();
+						}
+						ImGui::Image(currentTexDisplay, ImVec2(256, 256));
+
+					}
+
+					if (ImGui::Button("Swap Texture##Swap ParticleTexture Button")) {
+						particleSystem->SetParticleTexture(globalAssets.GetTextureAtID(particleTextureIndex), particleTexToEditIndex);
+						ImGui::SameLine();
+					}
+
+					if (ImGui::Button("Add Texture##Add ParticleTexture Button")) {
+						std::vector<std::shared_ptr<Texture>> newTextures = particleSystem->GetParticleTextures();
+						newTextures.push_back(globalAssets.GetTextureAtID(particleTextureIndex));
+						particleSystem->SetParticleTextures(newTextures);
+						if (newTextures.size() > 1) {
+							particleSystem->SetIsMultiParticle(true);
+						}
+						ImGui::SameLine();
+					}
+
+					if (ImGui::Button("Remove Texture##Remove ParticleTexture Button")) {
+						std::vector<std::shared_ptr<Texture>> newTextures = particleSystem->GetParticleTextures();
+						newTextures.erase(newTextures.begin() + particleTexToEditIndex);
+						if (!newTextures.empty()) {
+							particleSystem->SetParticleTextures(newTextures);
+							if (newTextures.size() < 2) {
+								particleSystem->SetIsMultiParticle(false);
+							}
+							particleTexToEditIndex = 0;
+						}
+					}
+				}
 			}
 
 			else if (std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(componentList[c]))
