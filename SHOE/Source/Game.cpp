@@ -299,11 +299,16 @@ void Game::DrawInitializingScreen(std::string category)
 #endif
 
 	DirectX::XMFLOAT2 categoryOrigin;
+	DirectX::XMFLOAT2 titleOrigin;
 
 	static std::shared_ptr<SpriteFont> categoryFont = globalAssets.GetFontByName("SmoochSans-Bold")->spritefont;
+	static std::shared_ptr<SpriteFont> titleFont = globalAssets.GetFontByName("Roboto-Bold-72pt")->spritefont;
 
 	std::string categoryString = "Loading Default " + category;
+	std::string titleString = "SHOE";
+
 	DirectX::XMStoreFloat2(&categoryOrigin, categoryFont->MeasureString(categoryString.c_str()) / 2.0f);
+	DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
 
 	context->ClearRenderTargetView(backBufferRTV.Get(), color);
 	context->ClearDepthStencilView(
@@ -313,6 +318,7 @@ void Game::DrawInitializingScreen(std::string category)
 		0);
 
 	loadingSpriteBatch->Begin();
+	titleFont->DrawString(loadingSpriteBatch, titleString.c_str(), DirectX::XMFLOAT2(width / 2, height / 3), DirectX::Colors::Gold, 0.0f, titleOrigin);
 	categoryFont->DrawString(loadingSpriteBatch, categoryString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.5), DirectX::Colors::White, 0.0f, categoryOrigin);
 	loadingSpriteBatch->End();
 
