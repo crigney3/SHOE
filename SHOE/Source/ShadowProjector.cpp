@@ -9,6 +9,7 @@ void ShadowProjector::BindLight(std::shared_ptr<Light> light)
 {
 	boundLight = light;
 	Camera::Start();
+	UpdateFieldsByLightType();
 	SetProjectionDimensions(2048, 2048);
 }
 
