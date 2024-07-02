@@ -473,9 +473,6 @@ void SceneManager::LoadEntities(const rapidjson::Value& sceneDoc, std::function<
 				bool enabled = componentBlock[i].FindMember(ENABLED)->value.GetBool();
 
 				newParticles->SetColorTint(LoadFloat4(componentBlock[i], PARTICLE_SYSTEM_COLOR_TINT));
-
-				// Particles are a bit of a mess, and need to be initially disabled for at least the first frame.
-				newParticles->SetEnabled(false);
 			}
 			else if (componentType == ComponentTypes::LIGHT) {
 				std::shared_ptr<Light> light;
@@ -567,6 +564,11 @@ void SceneManager::SaveAssets(rapidjson::Document& sceneDocToSave)
 
 	rapidjson::Value textureBlock(rapidjson::kArrayType);
 	for (auto tex : assetManager.globalTextures) {
+		// Skip if this is a temp texture
+		if (tex->IsTextureTemp()) {
+			continue;
+		}
+
 		// Textures
 		rapidjson::Value textureValue(rapidjson::kObjectType);
 

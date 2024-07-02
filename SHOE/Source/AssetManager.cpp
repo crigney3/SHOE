@@ -1044,8 +1044,10 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitter(std::string 
 	float particlesPerSecond,
 	bool isMultiParticle,
 	bool additiveBlendState,
-	bool isProjectAsset) {
-	return CreateParticleEmitterOnEntity(CreateGameEntity(name), textureNameToLoad, maxParticles, particleLifeTime, particlesPerSecond, isMultiParticle, additiveBlendState, isProjectAsset);
+	bool isProjectAsset,
+	bool isFullPathToAsset) 
+{
+	return CreateParticleEmitterOnEntity(CreateGameEntity(name), textureNameToLoad, maxParticles, particleLifeTime, particlesPerSecond, isMultiParticle, additiveBlendState, isProjectAsset, isFullPathToAsset);
 }
 
 std::shared_ptr<SHOEFont> AssetManager::CreateSHOEFont(std::string name, std::string filePath, bool preInitializing, bool isEngineAsset, bool isNameFullPath) {
@@ -1149,15 +1151,17 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitterOnEntity(std:
 	if (isMultiParticle) {
 		int i = 0;
 		for (auto& p : std::filesystem::recursive_directory_iterator(assets)) {
-			std::shared_ptr<Texture> newTexture = CreateTexture(p.path().string(), p.path().filename().string(), AssetPathIndex::ASSET_PARTICLE_PATH, isFullPathToAsset, isProjectAsset);
+			std::shared_ptr<Texture> newTexture = CreateTexture(p.path().string(), p.path().filename().string(), AssetPathIndex::ASSET_PARTICLE_PATH, true, isProjectAsset);
 
+			newTexture->SetIsTextureTemp(true);
 			loadedTextures.push_back(newTexture);
 
 			i++;
 		}
 	}
 	else {
-		loadedTextures[0] = CreateTexture(textureNameToLoad, textureNameToLoad, AssetPathIndex::ASSET_PARTICLE_PATH, isFullPathToAsset, isProjectAsset);
+		loadedTextures[0] = CreateTexture(textureNameToLoad, textureNameToLoad, AssetPathIndex::ASSET_PARTICLE_PATH, true, isProjectAsset);
+		loadedTextures[0]->SetIsTextureTemp(true);
 	}
 
 	newEmitter->SetParticleTextures(loadedTextures);
@@ -1181,9 +1185,11 @@ std::shared_ptr<ParticleSystem> AssetManager::CreateParticleEmitterOnEntity(std:
 	float particlesPerSecond,
 	bool isMultiParticle,
 	bool additiveBlendState,
-	bool isProjectAsset) {
+	bool isProjectAsset,
+	bool isFullPathToAsset) 
+{
 
-	std::shared_ptr<ParticleSystem> newEmitter = CreateParticleEmitterOnEntity(entityToEdit, textureNameToLoad, isMultiParticle, isProjectAsset);
+	std::shared_ptr<ParticleSystem> newEmitter = CreateParticleEmitterOnEntity(entityToEdit, textureNameToLoad, isMultiParticle, isProjectAsset, isFullPathToAsset);
 	newEmitter->SetMaxParticles(maxParticles);
 	newEmitter->SetParticleLifetime(particleLifeTime);
 	newEmitter->SetParticlesPerSecond(particlesPerSecond);
@@ -1467,43 +1473,43 @@ void AssetManager::InitializeMaterials() {
 		// Make clear and refractive materials
 		std::shared_ptr<Material> refractive = CreatePBRMaterial(std::string("refractiveBasicGlass"),
 			GetTextureByName("BlankTexture"),
-			GetTextureByName("PaintNormals"),
+			GetTextureByName("BlankNormals"),
 			GetTextureByName("NoMetal"),
 			GetTextureByName("MedRoughness"));
 		refractive->SetRefractive(true);
 		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-		refractive = CreatePBRMaterial(std::string("basicGlassMaterial"),
-			GetTextureByName("BlankTexture"),
-			GetTextureByName("BlankNormals"),
-			GetTextureByName("NoMetal"),
-			GetTextureByName("LowRoughness"));
-		refractive->SetTransparent(true);
-		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		//refractive = CreatePBRMaterial(std::string("basicGlassMaterial"),
+		//	GetTextureByName("BlankTexture"),
+		//	GetTextureByName("BlankNormals"),
+		//	GetTextureByName("NoMetal"),
+		//	GetTextureByName("LowRoughness"));
+		//refractive->SetTransparent(true);
+		//refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-		refractive = CreatePBRMaterial(std::string("roughGlassMaterialNoRefraction"),
-			GetTextureByName("BlankTexture"),
-			GetTextureByName("BlankNormals"),
-			GetTextureByName("NoMetal"),
-			GetTextureByName("HighRoughness"));
-		refractive->SetTransparent(true);
-		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		//refractive = CreatePBRMaterial(std::string("roughGlassMaterialNoRefraction"),
+		//	GetTextureByName("BlankTexture"),
+		//	GetTextureByName("BlankNormals"),
+		//	GetTextureByName("NoMetal"),
+		//	GetTextureByName("HighRoughness"));
+		//refractive->SetTransparent(true);
+		//refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-		refractive = CreatePBRMaterial(std::string("refractiveRoughGlass"),
-			GetTextureByName("BlankTexture"),
-			GetTextureByName("PaintNormals"),
-			GetTextureByName("NoMetal"),
-			GetTextureByName("HighRoughness"));
-		refractive->SetRefractive(true);
-		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		//refractive = CreatePBRMaterial(std::string("refractiveRoughGlass"),
+		//	GetTextureByName("BlankTexture"),
+		//	GetTextureByName("BlankNormals"),
+		//	GetTextureByName("NoMetal"),
+		//	GetTextureByName("HighRoughness"));
+		//refractive->SetRefractive(true);
+		//refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
-		refractive = CreatePBRMaterial(std::string("refractiveMetallicGlass"),
-			GetTextureByName("BlankTexture"),
-			GetTextureByName("PaintNormals"),
-			GetTextureByName("SolidMetal"),
-			GetTextureByName("MedRoughness"));
-		refractive->SetRefractive(true);
-		refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
+		//refractive = CreatePBRMaterial(std::string("refractiveMetallicGlass"),
+		//	GetTextureByName("BlankTexture"),
+		//	GetTextureByName("BlankNormals"),
+		//	GetTextureByName("SolidMetal"),
+		//	GetTextureByName("MedRoughness"));
+		//refractive->SetRefractive(true);
+		//refractive->SetRefractivePixelShader(GetPixelShaderByName("RefractivePS"));
 
 		//Make PBR materials - DEMO, deprecated
 		//CreatePBRMaterial(std::string("bronzeMat"),

@@ -269,7 +269,8 @@ public:
 												   float particlesPerSecond,
 												   bool isMultiParticle = false,
 												   bool additiveBlendState = true,
-												   bool isProjectAsset = true);
+												   bool isProjectAsset = true,
+												   bool isFullPathToAsset = false);
 	FMOD::Sound* CreateSound(std::string filePath, FMOD_MODE mode = FMOD_DEFAULT, std::string name = "", bool isNameFullPath = false, bool isProjectAsset = true);
 	std::shared_ptr<SHOEFont> CreateSHOEFont(std::string name, std::string filePath, bool preInitializing = false, bool isEngineAsset = false, bool isNameFullPath = false);
 
@@ -291,7 +292,8 @@ public:
 																  float particlesPerSecond,
 																  bool isMultiParticle = false,
 																  bool additiveBlendState = true,
-																  bool isProjectAsset = true);
+																  bool isProjectAsset = true,
+																  bool isFullPathToAsset = false);
 	std::shared_ptr<ParticleSystem> CreateParticleEmitterOnEntity(std::shared_ptr<GameEntity> entityToEdit, 
 																  std::string textureNameToLoad,
 																  bool isMultiParticle,

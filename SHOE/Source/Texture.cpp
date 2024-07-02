@@ -13,6 +13,7 @@ Texture::Texture(std::string fileKey,
 	this->fileKey = fileKey;
 	this->name = name;
 	this->assetPathIndex = assetPathIndex;
+	this->tempTexture = false;
 }
 
 Texture::~Texture() {
@@ -50,6 +51,14 @@ AssetPathIndex Texture::GetAssetPathIndex() {
 
 void Texture::SetAssetPathIndex(AssetPathIndex pathIndex) {
 	this->assetPathIndex = pathIndex;
+}
+
+bool Texture::IsTextureTemp() {
+	return this->tempTexture;
+}
+
+void Texture::SetIsTextureTemp(bool tempState) {
+	this->tempTexture = tempState;
 }
 
 #pragma endregion

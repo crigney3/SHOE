@@ -13,6 +13,11 @@ protected:
 	std::string fileKey;
 	AssetPathIndex assetPathIndex;
 
+	// Setting a texture as "temp" means it will not be saved.
+	// Currently used to prevent particle textures from saving
+	// as individual textures instead of folders.
+	bool tempTexture;
+
 public:
 
 	Texture();
@@ -32,6 +37,9 @@ public:
 
 	AssetPathIndex GetAssetPathIndex();
 	void SetAssetPathIndex(AssetPathIndex pathIndex);
+
+	bool IsTextureTemp();
+	void SetIsTextureTemp(bool tempState);
 
 };
 
