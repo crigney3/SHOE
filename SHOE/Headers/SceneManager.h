@@ -15,10 +15,16 @@
 #define VALID_SHOE_SCENE "v" // bool
 #define SCENE_NAME "sN" // string
 
+// Asset path type separation
+#define ASSET_ENGINE_PATHTYPE "Ep"
+#define ASSET_PROJECT_PATHTYPE "Pp"
+#define ASSET_EXTERNAL_PATHTYPE "EXp"
+
 //Shared
-#define NAME "n"
+#define NAME "n" // string
 #define FILENAME_KEY "fK" // string
 #define ENABLED "e" // bool
+#define ASSET_PATH_TYPE "A" // string
 
 // Categories:
 #define ENTITIES "e" // category - only used to fetch actual data
@@ -143,6 +149,12 @@
 
 #define FILE_BUFFER_SIZE 65536
 
+enum SceneSaveState {
+	UNKNOWN_UNSAVED,
+	KNOWN_UNSAVED,
+	KNOWN_SAVED
+};
+
 class SceneManager
 {
 #pragma region Singleton
@@ -173,13 +185,17 @@ private:
 	AssetManager& assetManager = AssetManager::GetInstance();
 
 	EngineState* engineState;
+	std::function<void(std::string)> progressListener;
 
 	std::string currentSceneName;
+	std::string currentScenePath;
 	std::string loadingSceneName;
 
 	std::string currentLoadCategory;
 	std::string currentLoadName;
 	std::exception_ptr error;
+
+	SceneSaveState saveState;
 
 	DirectX::XMFLOAT2 LoadFloat2(const rapidjson::Value& jsonBlock, const char* memberName);
 	DirectX::XMFLOAT3 LoadFloat3(const rapidjson::Value& jsonBlock, const char* memberName);
@@ -188,18 +204,20 @@ private:
 	void SaveFloat3(rapidjson::Value& jsonObject, const char* memberName, DirectX::XMFLOAT3 vec, rapidjson::Document& sceneDoc);
 	void SaveFloat4(rapidjson::Value& jsonObject, const char* memberName, DirectX::XMFLOAT4 vec, rapidjson::Document& sceneDoc);
 
-	std::string LoadDeserializedFileName(const rapidjson::Value& jsonBlock, const char* memberName);
+	std::string LoadDeserializedFileName(const rapidjson::Value& jsonBlock, const char* memberName, OUT AssetPathType* assetPathType);
 
-	void LoadAssets(const rapidjson::Value& sceneDoc, std::function<void()> progressListener = {});
-	void LoadEntities(const rapidjson::Value& sceneDoc, std::function<void()> progressListener = {});
+	void LoadAssets(const rapidjson::Value& sceneDoc, std::function<void(std::string)> progressListener = {});
+	void LoadEntities(const rapidjson::Value& sceneDoc, std::function<void(std::string)> progressListener = {});
 
 	void SaveAssets(rapidjson::Document& sceneDocToSave);
 	void SaveEntities(rapidjson::Document& sceneDocToSave);
 public:
-	void Initialize(EngineState* engineState);
+	void Initialize(EngineState* engineState, std::function<void(std::string)> progressListener = {});
 
-	void LoadScene(std::string filepath, std::function<void()> progressListener = {});
-	void SaveScene(std::string filepath, std::string sceneName = "");
+	void LoadScene(std::string filepath, bool isFullPathToScene = false);
+	void SaveScene(std::string filepath, std::string sceneName = "", bool isFullPathToScene = false);
+	void SaveScene();
+	void SaveSceneAs();
 
 	void PrePlaySave();
 	void PostPlayLoad();

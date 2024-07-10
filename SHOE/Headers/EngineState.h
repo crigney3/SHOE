@@ -5,5 +5,6 @@ enum class EngineState {
 	EDITING,
 	PLAY,
 	UNLOAD_PLAY,
-	LOAD_SCENE
+	LOAD_SCENE,
+	FILE_RENDER
 };

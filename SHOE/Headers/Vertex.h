@@ -5,8 +5,6 @@
 
 // --------------------------------------------------------
 // A custom vertex definition
-//
-// You will eventually ADD TO this, and/or make more of these!
 // --------------------------------------------------------
 struct Vertex
 {
@@ -41,4 +39,9 @@ enum ParticleComputeShaderType
 	Simulate,
 	Copy,
 	DeadListInit
+};
+
+struct FMODUserData {
+	std::shared_ptr<std::string> name;
+	std::shared_ptr<std::string> filenameKey;
 };

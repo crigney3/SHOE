@@ -70,32 +70,38 @@ void Light::OnDestroy()
 	}
 }
 
-void Light::OnTransform()
-{
+void Light::MarkLightAndShadowsDirty() {
 	lightArrayDirty = true;
 	if (shadowProjector != nullptr)
 		shadowProjector->UpdateViewMatrix();
+}
+
+void Light::OnTransform()
+{
+	MarkLightAndShadowsDirty();
 }
 
 void Light::OnParentTransform(std::shared_ptr<GameEntity> parent)
 {
-	lightArrayDirty = true;
-	if (shadowProjector != nullptr)
-		shadowProjector->UpdateViewMatrix();
+	MarkLightAndShadowsDirty();
+}
+
+void Light::OnParentMove(std::shared_ptr<GameEntity> parent) {
+	MarkLightAndShadowsDirty();
+}
+
+void Light::OnMove(DirectX::XMFLOAT3 delta) {
+	MarkLightAndShadowsDirty();
 }
 
 void Light::OnEnable()
 {
-	lightArrayDirty = true;
-	if (shadowProjector != nullptr)
-		shadowProjector->SetEnabled(castsShadows);
+	MarkLightAndShadowsDirty();
 }
 
 void Light::OnDisable()
 {
-	lightArrayDirty = true;
-	if (shadowProjector != nullptr)
-		shadowProjector->SetEnabled(castsShadows);
+	MarkLightAndShadowsDirty();
 }
 
 float Light::GetType()

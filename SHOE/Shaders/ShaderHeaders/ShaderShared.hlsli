@@ -29,7 +29,7 @@ float DiffusePBR(float3 normal, float3 dirToLight)
 //
 // Metals should have an albedo of (0,0,0)...mostly
 // See slide 65: http://blog.selfshadow.com/publications/s2014-shadingcourse/hoffman/s2014_pbs_physics_math_slides.pdf
-float3 DiffuseEnergyConserve(float diffuse, float3 specular, float metalness)
+float3 DiffuseEnergyConserve(float3 diffuse, float3 specular, float metalness)
 {
 	return diffuse * ((1 - saturate(specular)) * (1 - metalness));
 }

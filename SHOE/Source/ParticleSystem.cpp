@@ -9,6 +9,7 @@ std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleEmitComputeS
 std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleSimComputeShader = nullptr;
 std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleCopyComputeShader = nullptr;
 std::shared_ptr<SimpleComputeShader> ParticleSystem::defaultParticleDeadListInitComputeShader = nullptr;
+std::shared_ptr<Texture> ParticleSystem::defaultParticleTexture = nullptr;
 Microsoft::WRL::ComPtr<ID3D11Device> ParticleSystem::defaultDevice = nullptr;
 Microsoft::WRL::ComPtr<ID3D11DeviceContext> ParticleSystem::defaultContext = nullptr;
 
@@ -127,7 +128,6 @@ void ParticleSystem::SetParticleComputeShader(std::shared_ptr<SimpleComputeShade
 	case 3:
 		this->particleDeadListInitComputeShader = computeShader;
 		// Run the dead list initializer
-		// Add +1 thread as a buffer for "hidden counter" bug
 		particleDeadListInitComputeShader->SetShader();
 		particleDeadListInitComputeShader->SetInt("maxParticles", this->maxParticles);
 		particleDeadListInitComputeShader->SetUnorderedAccessView("DeadList", this->deadListUAV);
@@ -145,30 +145,58 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetDrawListSRV(
 	return this->drawListSRV;
 }
 
+std::shared_ptr<Texture> ParticleSystem::GetParticleTexture(int index) {
+	return this->particleTextures[index];
+}
+
+std::vector<std::shared_ptr<Texture>> ParticleSystem::GetParticleTextures() {
+	return this->particleTextures;
+}
+
+int ParticleSystem::GetParticleTextureCount() {
+	return this->particleTextures.size();
+}
+
+void ParticleSystem::SetParticleTexture(std::shared_ptr<Texture> particleTexture, int index) {
+	this->particleTextures[index] = particleTexture;
+	MakeParticleSRVFromTextures(this->particleTextures);
+}
+
+void ParticleSystem::SetParticleTextures(std::vector<std::shared_ptr<Texture>> particleTextures) {
+	this->particleTextures = particleTextures;
+	// Set multiple particle SRV
+	MakeParticleSRVFromTextures(this->particleTextures);
+}
+
+Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ParticleSystem::GetParticleTextureSRV() {
+	return this->particleTextureSRV;
+}
+
 void ParticleSystem::SetDefaults(std::shared_ptr<SimplePixelShader> particlePixelShader,
 								 std::shared_ptr<SimpleVertexShader> particleVertexShader,
-								 Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTextureSRV,
 								 std::shared_ptr<SimpleComputeShader> particleEmitComputeShader,
 								 std::shared_ptr<SimpleComputeShader> particleSimComputeShader,
 								 std::shared_ptr<SimpleComputeShader> particleCopyComputeShader,
 								 std::shared_ptr<SimpleComputeShader> particleDeadListInitComputeShader,
+								 std::shared_ptr<Texture> particleBaseTexture,
 								 Microsoft::WRL::ComPtr<ID3D11Device> device,
 								 Microsoft::WRL::ComPtr<ID3D11DeviceContext> context)
 {
 	defaultParticlePixelShader = particlePixelShader;
 	defaultParticleVertexShader = particleVertexShader;
-	defaultParticleTextureSRV = particleTextureSRV;
 	defaultParticleCopyComputeShader = particleCopyComputeShader;
 	defaultParticleEmitComputeShader = particleEmitComputeShader;
 	defaultParticleSimComputeShader = particleSimComputeShader;
 	defaultParticleDeadListInitComputeShader = particleDeadListInitComputeShader;
+	defaultParticleTexture = particleBaseTexture;
+	defaultParticleTextureSRV = particleBaseTexture->GetDX11Texture();
 	defaultDevice = device;
 	defaultContext = context;
 }
 
 void ParticleSystem::Start()
 {
-	this->maxParticles = 20;
+	this->maxParticles = 10;
 
 	this->particlesPerSecond = 1.0f;
 	this->particleLifetime = 3.0f;
@@ -178,6 +206,8 @@ void ParticleSystem::Start()
 
 	this->particlePixelShader = defaultParticlePixelShader;
 	this->particleVertexShader = defaultParticleVertexShader;
+	this->particleTextures = std::vector<std::shared_ptr<Texture>>();
+	this->particleTextures.push_back(defaultParticleTexture);
 	this->particleTextureSRV = defaultParticleTextureSRV;
 
 	this->device = defaultDevice;
@@ -189,7 +219,7 @@ void ParticleSystem::Start()
 	this->destination = DirectX::XMFLOAT3(0.0f, 5.0f, 0.0f);
 
 	this->additiveBlend = true;
-	this->isMultiParticle = true;
+	this->isMultiParticle = false;
 
 	// TODO: Set up a function to calculate if this emitter will overflow its buffer
 	// Then recalculate maxParticles if it will
@@ -236,6 +266,9 @@ void ParticleSystem::Update() {
 	particleSimComputeShader->DispatchByThreads(this->maxParticles, 1, 1);
 
 	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+
+	// Copy the dead list's count to the counter buffer
+	context->CopyStructureCount(deadListCounterBuffer.Get(), 0, deadListUAV.Get());
 }
 
 void ParticleSystem::OnDestroy()
@@ -245,7 +278,7 @@ void ParticleSystem::OnDestroy()
 	drawListSRV.Reset();
 
 	// Unbind all UAVs
-	// Don't reset the Computer Shader pointers,
+	// Don't reset the Compute Shader pointers,
 	// We still need those
 	ID3D11UnorderedAccessView* none[8] = {};
 	context->CSSetUnorderedAccessViews(0, 8, none, 0);
@@ -265,6 +298,8 @@ void ParticleSystem::Draw(std::shared_ptr<Camera> cam, Microsoft::WRL::ComPtr<ID
 {
 	ID3D11UnorderedAccessView* none[8] = {};
 	context->CSSetUnorderedAccessViews(0, 8, none, 0);
+
+	this->Update();
 
 	particleCopyComputeShader->SetShader();
 
@@ -293,7 +328,9 @@ void ParticleSystem::Draw(std::shared_ptr<Camera> cam, Microsoft::WRL::ComPtr<ID
 
 	context->VSSetShaderResources(0, 1, this->drawListSRV.GetAddressOf());
 	context->VSSetShaderResources(1, 1, this->sortListSRV.GetAddressOf());
-	particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV);
+	if (this->particleTextureSRV != nullptr) {
+		particlePixelShader->SetShaderResourceView("textureParticle", particleTextureSRV);
+	}
 
 	particleVertexShader->SetMatrix4x4("view", cam->GetViewMatrix());
 	particleVertexShader->SetMatrix4x4("projection", cam->GetProjectionMatrix());
@@ -318,7 +355,7 @@ void ParticleSystem::Initialize(int maxParticles)
 {
 	// Deadlist for ParticleEmit and ParticleFlow
 
-	ID3D11Buffer* deadListBuffer;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> deadListBuffer;
 
 	this->maxParticles = maxParticles;
 
@@ -328,8 +365,8 @@ void ParticleSystem::Initialize(int maxParticles)
 	deadDesc.Usage = D3D11_USAGE_DEFAULT;
 	deadDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	deadDesc.StructureByteStride = sizeof(unsigned int);
-	deadDesc.ByteWidth = (sizeof(unsigned int) * this->maxParticles) + sizeof(unsigned int);
-	device->CreateBuffer(&deadDesc, 0, &deadListBuffer);
+	deadDesc.ByteWidth = (sizeof(unsigned int) * this->maxParticles);// +sizeof(unsigned int);
+	device->CreateBuffer(&deadDesc, 0, deadListBuffer.GetAddressOf());
 
 	D3D11_UNORDERED_ACCESS_VIEW_DESC deadUavDesc = {};
 	deadUavDesc.Format = DXGI_FORMAT_UNKNOWN;
@@ -337,9 +374,17 @@ void ParticleSystem::Initialize(int maxParticles)
 	deadUavDesc.Buffer.FirstElement = 0;
 	deadUavDesc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_APPEND;
 	deadUavDesc.Buffer.NumElements = this->maxParticles;
-	device->CreateUnorderedAccessView(deadListBuffer, &deadUavDesc, this->deadListUAV.GetAddressOf());
+	device->CreateUnorderedAccessView(deadListBuffer.Get(), &deadUavDesc, this->deadListUAV.GetAddressOf());
 
-	deadListBuffer->Release();
+	// Create a buffer that holds the dead list counter
+	D3D11_BUFFER_DESC deadCountDesc = {};
+	deadCountDesc.Usage = D3D11_USAGE_DEFAULT;
+	deadCountDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	deadCountDesc.ByteWidth = 16; // technically sizeof(unsigned int), but cbuffers must be multiples of 16
+	deadCountDesc.CPUAccessFlags = 0;
+	deadCountDesc.MiscFlags = 0;
+	deadCountDesc.StructureByteStride = 0;
+	device->CreateBuffer(&deadCountDesc, 0, deadListCounterBuffer.GetAddressOf());
 
 	// Create and bind CopyDrawCount's sortList
 	// sortList defines the memory indices of living
@@ -452,6 +497,9 @@ void ParticleSystem::Initialize(int maxParticles)
 	ibDesc.StructureByteStride = 0;
 	device->CreateBuffer(&ibDesc, &indexData, inBuffer.GetAddressOf());
 	delete[] indices;
+
+	// Copy the dead list's count to the counter buffer
+	context->CopyStructureCount(deadListCounterBuffer.Get(), 0, deadListUAV.Get());
 }
 
 void ParticleSystem::EmitParticle(int emitCount) {
@@ -459,6 +507,7 @@ void ParticleSystem::EmitParticle(int emitCount) {
 
 	particleEmitComputeShader->SetUnorderedAccessView("particles", this->drawListUAV);
 	particleEmitComputeShader->SetUnorderedAccessView("deadList", this->deadListUAV);
+	context->CSSetConstantBuffers(1, 1, deadListCounterBuffer.GetAddressOf());
 	//particleEmitComputeShader->SetUnorderedAccessView("sortList", this->sortListUAV);
 
 	particleEmitComputeShader->SetFloat3("startPos", this->GetTransform()->GetGlobalPosition());
@@ -470,4 +519,52 @@ void ParticleSystem::EmitParticle(int emitCount) {
 	particleEmitComputeShader->CopyAllBufferData();
 
 	particleEmitComputeShader->DispatchByThreads(emitCount, 1, 1);
+}
+
+void ParticleSystem::MakeParticleSRVFromTextures(std::vector<std::shared_ptr<Texture>> textures) {
+	if (isMultiParticle) {
+		D3D11_TEXTURE2D_DESC faceDesc = {};
+		faceDesc = std::dynamic_pointer_cast<DX11Texture>(textures[0])->GetTextureDesc();
+
+		D3D11_TEXTURE2D_DESC multiTextureDesc = {};
+		multiTextureDesc.ArraySize = (int)textures.size();
+		multiTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		multiTextureDesc.CPUAccessFlags = 0;
+		multiTextureDesc.Format = faceDesc.Format;
+		multiTextureDesc.Width = faceDesc.Width;
+		multiTextureDesc.Height = faceDesc.Height;
+		multiTextureDesc.MipLevels = 1;
+		multiTextureDesc.Usage = D3D11_USAGE_DEFAULT;
+		multiTextureDesc.SampleDesc.Count = 1;
+		multiTextureDesc.SampleDesc.Quality = 0;
+
+		ID3D11Texture2D* outputTexture;
+		device->CreateTexture2D(&multiTextureDesc, 0, &outputTexture);
+
+		for (int i = 0; i < (int)textures.size(); i++) {
+			unsigned int subresource = D3D11CalcSubresource(0, i, 1);
+
+			if (textures[i] != nullptr && outputTexture != nullptr) {
+				context->CopySubresourceRegion(outputTexture, subresource, 0, 0, 0, (ID3D11Resource*)std::dynamic_pointer_cast<DX11Texture>(textures[i])->GetInternalTexture().Get(), 0, 0);
+			}
+		}
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = multiTextureDesc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		srvDesc.Texture2DArray.MipLevels = 1;
+		srvDesc.Texture2DArray.ArraySize = (int)textures.size();
+
+		// This sets the actual field
+		// Not calling SetParticleTextureSRV, maybe bad design
+		device->CreateShaderResourceView(outputTexture, &srvDesc, particleTextureSRV.GetAddressOf());
+
+		outputTexture->Release();
+	}
+	else {
+		// If it's just an individual texture, the existing SRV
+		// from loading the texture works fine.
+		SetParticleTextureSRV(textures[0]->GetDX11Texture());
+	}
+
 }

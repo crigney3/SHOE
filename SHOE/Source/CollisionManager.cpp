@@ -27,6 +27,9 @@ CollisionManager::~CollisionManager()
 void CollisionManager::Update()
 {
 	std::vector<std::shared_ptr<Collider>> c = ComponentManager::GetAll<Collider>();
+
+	if (c.size() == 0) return;
+
 	for (int i = 0; i < c.size() - 1; i++)
 	{
 		if (!c[i]->IsEnabled()) continue;

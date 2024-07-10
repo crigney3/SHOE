@@ -168,7 +168,34 @@
     <ClInclude Include="Headers\EngineState.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\DX12Helper.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\DX11Renderer.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\DX12Renderer.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\RootSignature.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
     <ClInclude Include="Headers\Texture.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\EditingUI.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\AudioEventPacket.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\Timeframe.h">
+      <Filter>Header Files\SHOE-Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\AudioResponse.h">
+      <Filter>Header Files\SHOE-Headers\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\AudioHandler.fwd.h">
       <Filter>Header Files\SHOE-Headers</Filter>
     </ClInclude>
   </ItemGroup>
@@ -252,6 +279,9 @@
       <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\PixelShaders\PSSilhouette.hlsl">
+      <Filter>Shaders\PixelShaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PixelShaders\PSRGBCompression.hlsl">
       <Filter>Shaders\PixelShaders</Filter>
     </FxCompile>
   </ItemGroup>
@@ -364,8 +394,32 @@
     <ClCompile Include="Source\SceneManager.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\DX12Helper.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\DX11Renderer.cpp">
+       <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\DX12Renderer.cpp">
+       <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\RootSignature.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Texture.cpp">
       <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\EditingUI.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\AudioEventPacket.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Timeframe.cpp">
+      <Filter>Source Files\SHOE-Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\AudioResponse.cpp">
+      <Filter>Source Files\SHOE-Source\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

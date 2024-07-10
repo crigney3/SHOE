@@ -12,7 +12,7 @@
 #include <string>
 #include <memory>
 
-
+//TODO: Add a set of SimpleDx12<Type>Shaders, that at least store a root signature if not automating it
 // --------------------------------------------------------
 // Used by simple shaders to store information about
 // specific variables in constant buffers

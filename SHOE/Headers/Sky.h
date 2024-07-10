@@ -35,6 +35,12 @@ public:
 	void SetEnabled(bool value);
 	bool IsEnabled();
 
+	void SetIBLEnabled(bool value);
+	bool IsIBLEnabled();
+
+	void SetIBLIntensity(float value);
+	float GetIBLIntensity();
+
 	bool GetFilenameKeyType();
 	void SetFilenameKeyType(bool FKType);
 
@@ -70,6 +76,9 @@ private:
 	const int mipLevelSkip = 3;
 	const int CMFaceSize = 256;
 	const int lookupTextureSize = 256;
+
+	bool isIBLEnabled;
+	float iblIntensity;
 
 	std::shared_ptr<Mesh> skyGeometry;
 	std::shared_ptr<SimplePixelShader> skyPixelShader;

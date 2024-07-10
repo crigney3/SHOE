@@ -80,7 +80,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(SolutionDir)packages\directxtk_desktop_2017.2022.3.1.1\include\;$(SolutionDir)packages\directxtk_desktop_2017.2021.10.19.1\include\;$(IncludePath);$(SolutionDir)packages\FMOD\core\inc\;$(SolutionDir)packages\FMOD\studio\inc</IncludePath>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(WindowsSDK_LibraryPath);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(IncludePath);$(SolutionDir)packages\FMOD\core\inc\;$(SolutionDir)packages\FMOD\studio\inc</IncludePath>
@@ -92,13 +92,16 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS</PreprocessorDefinitions>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Mf.lib;Mfcore.lib;Mfplat.lib;mfplay.lib;mfuuid.lib;mfreadwrite.lib;fmodL_vc.lib;fmodstudioL_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <ShaderModel>5.1</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -106,19 +109,19 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;_DIR=$(strip$(lastword$(subst/,,$(dir$($(SolutionDir)$&lt;))))</PreprocessorDefinitions>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;_DIR=$(strip$(lastword$(subst/,,$(dir$($(SolutionDir)$&lt;))))</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>fmodL_vc.lib;fmodstudioL_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)packages\FMOD\core\lib\x64\;$(SolutionDir)packages\FMOD\studio\lib\x64\;$(SolutionDir)packages\BulletPhysics\include\bullet;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Mf.lib;Mfcore.lib;Mfplat.lib;mfplay.lib;mfuuid.lib;mfreadwrite.lib;fmodL_vc.lib;fmodstudioL_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)packages\FMOD\core\lib\x64\;$(SolutionDir)packages\FMOD\studio\lib\x64\;$(SolutionDir)packages\BulletPhysics\include\bullet;$(WindowsSDK_LibraryPath_x64);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(SolutionDir)packages\FMOD\core\lib\x64\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <FxCompile>
-      <ShaderModel>5.0</ShaderModel>
+      <ShaderModel>5.1</ShaderModel>
       <ObjectFileOutput>$(SolutionDir)\..\Assets\Shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
@@ -130,15 +133,18 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS</PreprocessorDefinitions>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Mf.lib;Mfcore.lib;Mfplat.lib;mfplay.lib;mfuuid.lib;mfreadwrite.lib;fmodL_vc.lib;fmodstudioL_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <ShaderModel>5.1</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -148,32 +154,39 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;_DIR=$(strip$(lastword$(subst/,,$(dir$($(SolutionDir)$&lt;))))</PreprocessorDefinitions>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_CRT_NON_CONFORMING_SWPRINTFS;_DIR=$(strip$(lastword$(subst/,,$(dir$($(SolutionDir)$&lt;))))</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>fmod_vc.lib;fmodstudio_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Mf.lib;Mfcore.lib;Mfplat.lib;mfplay.lib;mfuuid.lib;mfreadwrite.lib;fmodL_vc.lib;fmodstudioL_vc.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)packages\FMOD\core\lib\x64\;$(SolutionDir)packages\FMOD\studio\lib\x64\;$(SolutionDir)packages\BulletPhysics\include\bullet;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /y /d "$(SolutionDir)packages\FMOD\core\lib\x64\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
     <FxCompile>
-      <ShaderModel>5.0</ShaderModel>
+      <ShaderModel>5.1</ShaderModel>
       <ObjectFileOutput>$(SolutionDir)\..\Assets\Shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Headers\AssetManager.h" />
+    <ClInclude Include="Headers\AudioEventPacket.h" />
+    <ClInclude Include="Headers\AudioHandler.fwd.h" />
     <ClInclude Include="Headers\AudioHandler.h" />
+    <ClInclude Include="Headers\AudioResponse.h" />
     <ClInclude Include="Headers\Camera.h" />
     <ClInclude Include="Headers\CollisionManager.h" />
     <ClInclude Include="Headers\ComponentManager.h" />
     <ClInclude Include="Headers\ComponentPool.h" />
+    <ClInclude Include="Headers\DX11Renderer.h" />
+    <ClInclude Include="Headers\DX12Helper.h" />
+    <ClInclude Include="Headers\DX12Renderer.h" />
     <ClInclude Include="Headers\DXCore.h" />
+    <ClInclude Include="Headers\EditingUI.h" />
     <ClInclude Include="Headers\EngineState.h" />
     <ClInclude Include="Headers\FlashlightController.h" />
     <ClInclude Include="Headers\Game.h" />
@@ -190,6 +203,7 @@
     <ClInclude Include="Headers\NoclipMovement.h" />
     <ClInclude Include="Headers\ParticleSystem.h" />
     <ClInclude Include="Headers\Renderer.h" />
+    <ClInclude Include="Headers\RootSignature.h" />
     <ClInclude Include="Headers\SceneManager.h" />
     <ClInclude Include="Headers\ShadowProjector.h" />
     <ClInclude Include="Headers\SimpleShader.h" />
@@ -197,6 +211,7 @@
     <ClInclude Include="Headers\Terrain.h" />
     <ClInclude Include="Headers\Texture.h" />
     <ClInclude Include="Headers\Time.h" />
+    <ClInclude Include="Headers\Timeframe.h" />
     <ClInclude Include="Headers\Transform.h" />
     <ClInclude Include="Headers\Collider.h" />
     <ClInclude Include="Headers\Vertex.h" />
@@ -294,6 +309,12 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
+    <FxCompile Include="Shaders\PixelShaders\PSRGBCompression.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
     <FxCompile Include="Shaders\PixelShaders\PSSkybox.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
@@ -323,6 +344,10 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="Shaders\VertexShaders\FullscreenVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
@@ -382,11 +407,17 @@
     <ClCompile Include="IMGUI\Source\imgui_tables.cpp" />
     <ClCompile Include="IMGUI\Source\imgui_widgets.cpp" />
     <ClCompile Include="Source\AssetManager.cpp" />
+    <ClCompile Include="Source\AudioEventPacket.cpp" />
     <ClCompile Include="Source\AudioHandler.cpp" />
+    <ClCompile Include="Source\AudioResponse.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\ComponentPool.cpp" />
     <ClCompile Include="Source\CollisionManager.cpp" />
     <ClCompile Include="Source\DXCore.cpp" />
+    <ClCompile Include="Source\DX11Renderer.cpp" />
+    <ClCompile Include="Source\DX12Helper.cpp" />
+    <ClCompile Include="Source\DX12Renderer.cpp" />
+    <ClCompile Include="Source\EditingUI.cpp" />
     <ClCompile Include="Source\FlashlightController.cpp" />
     <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\GameEntity.cpp" />
@@ -402,6 +433,7 @@
     <ClCompile Include="Source\NoclipMovement.cpp" />
     <ClCompile Include="Source\ParticleSystem.cpp" />
     <ClCompile Include="Source\Renderer.cpp" />
+    <ClCompile Include="Source\RootSignature.cpp" />
     <ClCompile Include="Source\SceneManager.cpp" />
     <ClCompile Include="Source\ShadowProjector.cpp" />
     <ClCompile Include="Source\SimpleShader.cpp" />
@@ -409,6 +441,7 @@
     <ClCompile Include="Source\Terrain.cpp" />
     <ClCompile Include="Source\Texture.cpp" />
     <ClCompile Include="Source\Time.cpp" />
+    <ClCompile Include="Source\Timeframe.cpp" />
     <ClCompile Include="Source\Transform.cpp" />
     <ClCompile Include="Source\Collider.cpp" />
   </ItemGroup>

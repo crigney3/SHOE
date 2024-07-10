@@ -26,6 +26,8 @@ private:
 	void Start() override;
 	void OnTransform() override;
 	void OnParentTransform(std::shared_ptr<GameEntity> parent) override;
+	void OnParentMove(std::shared_ptr<GameEntity> parent) override;
+	void OnMove(DirectX::XMFLOAT3 delta) override;
 	void OnEnable() override;
 	void OnDisable() override;
 
@@ -38,6 +40,8 @@ private:
 	bool castsShadows;
 
 	LightData GetData();
+
+	void MarkLightAndShadowsDirty();
 public:
 	void OnDestroy() override;
 
