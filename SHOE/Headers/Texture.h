@@ -12,18 +12,28 @@ protected:
 	std::string name;
 	std::string fileKey;
 	AssetPathIndex assetPathIndex;
+<<<<<<< HEAD
 
 	// Setting a texture as "temp" means it will not be saved.
 	// Currently used to prevent particle textures from saving
 	// as individual textures instead of folders.
 	bool tempTexture;
+=======
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 
 public:
 
 	Texture();
+<<<<<<< HEAD
 	Texture(std::string fileKey,
 		std::string name = "newTexture",
 		AssetPathIndex assetPathIndex = ASSET_TEXTURE_PATH_BASIC);
+=======
+	Texture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> coreTexture,
+			std::string fileKey,
+			std::string name = "newTexture",
+			AssetPathIndex assetPathIndex = ASSET_TEXTURE_PATH_BASIC);
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 	~Texture();
 
 	virtual void SetTexture();
@@ -38,6 +48,7 @@ public:
 	AssetPathIndex GetAssetPathIndex();
 	void SetAssetPathIndex(AssetPathIndex pathIndex);
 
+<<<<<<< HEAD
 	bool IsTextureTemp();
 	void SetIsTextureTemp(bool tempState);
 
@@ -75,4 +86,6 @@ public:
 
 	void SetTexture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture);
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetTexture();
+=======
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 };

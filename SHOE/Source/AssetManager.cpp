@@ -532,7 +532,16 @@ std::shared_ptr<Texture> AssetManager::CreateTexture(std::string nameToLoad, std
 		
 		newTexture->SetAssetPathIndex(assetPath);
 
+<<<<<<< HEAD
 		globalTextures.push_back(newTexture);
+=======
+	if (isNameFullPath) {
+		newTexture->SetTextureFilenameKey(nameToLoad);
+	}
+	else {
+		newTexture->SetAssetPathIndex(assetPath);
+	}
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 
 #if defined(DEBUG) || defined(_DEBUG)
 		printf("Successfully initialized texture %s\n", textureName.c_str());
@@ -1310,12 +1319,19 @@ void AssetManager::InitializeTextureSampleStates() {
 
 void AssetManager::InitializeGameEntities() {
 	//Initializes default values for components
+<<<<<<< HEAD
 	MeshRenderer::SetDefaults(GetMeshByName("Cube"), GetMaterialByName("defaultMaterial"));
 
 	// Show example render
 	CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("defaultMaterial"), "Basic Sphere");
 	//CreateGameEntity(GetMeshByName("Sphere"), GetMaterialByName("basicGlassMaterial"), "Clear Sphere");
 	//CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("refractiveBasicGlass"), "Refractive Cube");
+=======
+	MeshRenderer::SetDefaults(GetMeshByName("Cube"), GetMaterialByName("largeCobbleMat"));
+
+	// Show example render
+	CreateGameEntity(GetMeshByName("Cube"), GetMaterialByName("bronzeMat"), "Bronze Cube");
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
@@ -1581,11 +1597,19 @@ void AssetManager::InitializeMeshes() {
 	// Test loading failure
 	//CreateMesh("ExceptionTest", "InvalidPath");
 
+<<<<<<< HEAD
 	CreateMesh("Cube", "cube.obj", false, false);
 	CreateMesh("Sphere", "sphere.obj", false, false);
 	CreateMesh("Cylinder", "cylinder.obj", false, false);
 	CreateMesh("Helix", "helix.obj", false, false);
 	CreateMesh("Torus", "torus.obj", false, false);
+=======
+	CreateMesh("Cube", "cube.obj");
+	CreateMesh("Sphere", "sphere.obj");
+	CreateMesh("Cylinder", "cylinder.obj");
+	//CreateMesh("Helix", "helix.obj");
+	//CreateMesh("Torus", "torus.obj");
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 }
 
 
@@ -1634,9 +1658,14 @@ void AssetManager::InitializeTerrainEntities() {
 
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
+<<<<<<< HEAD
 	//std::shared_ptr<Terrain> mainTerrain = CreateTerrainEntity("valley.raw16", GetTerrainMaterialByName("Forest Terrain Material"), "Basic Terrain");
 	//mainTerrain->GetTransform()->SetPosition(-256.0f, -14.0f, -256.0f);
 	//mainTerrain->SetEnabled(false);
+=======
+	/*std::shared_ptr<Terrain> mainTerrain = CreateTerrainEntity("valley.raw16", GetTerrainMaterialByName("Forest Terrain Material"), "Basic Terrain");
+	mainTerrain->GetTransform()->SetPosition(-256.0f, -14.0f, -256.0f);*/
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 }
 
 void AssetManager::InitializeTerrainMaterials() {
@@ -1679,8 +1708,11 @@ void AssetManager::InitializeTerrainMaterials() {
 
 	//tMats.clear();
 
+<<<<<<< HEAD
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
+=======
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 	//// Must be kept in PBR order!
 	//// This sections is only for testing and should be commented on push.
 	//// Since these materials already exist, it's quicker and more efficient
@@ -1721,6 +1753,7 @@ void AssetManager::InitializeTerrainMaterials() {
 	//// This is the correct way to load a tMat that doesn't use blend mapping
 	//// Note that even with one material, it must be pushed to the vector
 	//std::shared_ptr<TerrainMaterial> floorTerrainMaterial;
+<<<<<<< HEAD
 
 	//tMats.clear();
 
@@ -1734,6 +1767,14 @@ void AssetManager::InitializeTerrainMaterials() {
 	// Get the default material
 	tMats.push_back(GetMaterialAtID(0));
 	defaultTMat = CreateTerrainMaterial("Default Terrain Material", tMats);
+=======
+
+	//tMats.clear();
+
+	//tMats.push_back(GetMaterialByName("terrainFloorMat"));
+
+	//floorTerrainMaterial = CreateTerrainMaterial("Floor Terrain Material", tMats);
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 }
 
 void AssetManager::InitializeCameras() {
@@ -1866,9 +1907,16 @@ void AssetManager::InitializeIMGUI(HWND hwnd) {
 }
 
 void AssetManager::InitializeColliders() {
+<<<<<<< HEAD
 	// OUTDATED: Initializes lots of objects for demo.
 	// These can still be viewed by loading the demo scene.
 	//CreateColliderOnEntity(GetGameEntityByName("Bronze Cube"));
+=======
+	CreateColliderOnEntity(GetGameEntityByName("Bronze Cube"));
+
+	// OUTDATED: Initializes lots of objects for demo.
+	// These can still be viewed by loading the demo scene.
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 	//CreateColliderOnEntity(GetGameEntityByName("Scratched Sphere"));
 	//CreateColliderOnEntity(GetGameEntityByName("Shiny Rough Sphere"));
 	//CreateColliderOnEntity(GetGameEntityByName("Floor Cube"));

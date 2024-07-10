@@ -6,14 +6,22 @@ Texture::Texture() {
 
 }
 
+<<<<<<< HEAD
 Texture::Texture(std::string fileKey,
+=======
+Texture::Texture(Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texture,
+				 std::string fileKey,
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 				 std::string name,
 				 AssetPathIndex assetPathIndex)
 {
 	this->fileKey = fileKey;
 	this->name = name;
 	this->assetPathIndex = assetPathIndex;
+<<<<<<< HEAD
 	this->tempTexture = false;
+=======
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
 }
 
 Texture::~Texture() {
@@ -51,6 +59,7 @@ AssetPathIndex Texture::GetAssetPathIndex() {
 
 void Texture::SetAssetPathIndex(AssetPathIndex pathIndex) {
 	this->assetPathIndex = pathIndex;
+<<<<<<< HEAD
 }
 
 bool Texture::IsTextureTemp() {
@@ -126,3 +135,6 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> DX12Texture::GetTexture() {
 }
 
 #pragma endregion
+=======
+}
+>>>>>>> 6be2a01f49bf99da24916a08a5518ac0493f2b05
