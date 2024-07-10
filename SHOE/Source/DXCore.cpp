@@ -34,8 +34,7 @@ DXCore::DXCore(
 	const char* titleBarText,	// Text for the window's title bar
 	unsigned int windowWidth,	// Width of the window's client area
 	unsigned int windowHeight,	// Height of the window's client area
-	bool debugTitleBarStats,    // Show extra stats (fps) in title bar?
-	DirectXVersion dxVersion)				// Which version of directX is this?
+	bool debugTitleBarStats)    // Show extra stats (fps) in title bar?
 {
 	// Save a static reference to this object.
 	//  - Since the OS-level message function must be a non-member (global) function, 
@@ -59,8 +58,6 @@ DXCore::DXCore(
 	this->deltaTime = 0;
 	this->startTime = 0;
 	this->totalTime = 0;
-
-	this->dxVersion = dxVersion;
 
 	// Query performance counter for accurate timing information
 	__int64 perfFreq;
@@ -180,6 +177,8 @@ HRESULT DXCore::InitDirectX11()
 	deviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
+	dxVersion = DIRECT_X_11;
+
 	// Create a description of how our swap
 	// chain should work
 	DXGI_SWAP_CHAIN_DESC swapDesc = {};
@@ -216,7 +215,12 @@ HRESULT DXCore::InitDirectX11()
 		device.GetAddressOf(),		// Pointer to our Device pointer
 		&dxFeatureLevel,			// This will hold the actual feature level the app will use
 		context.GetAddressOf());	// Pointer to our Device Context pointer
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr)) {
+#if defined(DEBUG) || defined(_DEBUG)
+		printf("Failed to create device with errorcode: %i", hr);
+#endif
+		return hr;
+	}
 
 	// The above function created the back buffer render target
 	// for us, but we need a reference to it
@@ -303,6 +307,7 @@ HRESULT DXCore::InitDirectX12()
 	D3D12GetDebugInterface(IID_PPV_ARGS(&debugController));
 	debugController->EnableDebugLayer();
 #endif
+	dxVersion = DIRECT_X_12;
 
 	// Result variable for below function calls
 	HRESULT hr = S_OK;
@@ -610,43 +615,122 @@ void DXCore::Quit()
 	PostMessage(this->hWnd, WM_CLOSE, NULL, NULL);
 }
 
+void DXCore::SetProjectPath(std::string projPath) {
+	this->projectPath = projPath;
+	this->mainAssetPath = projPath + "\\Assets\\";
+}
+
+void DXCore::SetEngineInstallPath(std::string enginePath) {
+	this->engineInstallPath = enginePath;
+	this->engineAssetsPath = enginePath + "\\Assets\\";
+}
+
+void DXCore::SetStartupSceneName(std::string sceneName) {
+	this->startupSceneName = sceneName;
+}
+
+void DXCore::SetHasStartupScene(bool hasScene) {
+	this->hasStartupScene = hasScene;
+}
+
+std::string DXCore::GetProjectPath() {
+	return this->projectPath;
+}
+
+std::string DXCore::GetProjectAssetPath() {
+	return this->mainAssetPath;
+}
+
+std::string DXCore::GetEngineInstallPath() {
+	return this->engineInstallPath;
+}
+
+std::string DXCore::GetEngineAssetsPath() {
+	return this->engineAssetsPath;
+}
+
+std::string DXCore::GetStartupSceneName() {
+	return this->startupSceneName;
+}
+
+Microsoft::WRL::ComPtr<IDXGISwapChain> DXCore::GetSwapChain() {
+	return this->swapChain;
+}
+
+Microsoft::WRL::ComPtr<ID3D11DepthStencilView> DXCore::GetDepthStencilView() {
+	return this->depthStencilView;
+}
+
+Microsoft::WRL::ComPtr<ID3D11RenderTargetView> DXCore::GetBackBufferRTV() {
+	return this->backBufferRTV;
+}
+
+bool DXCore::HasStartupScene() {
+	return this->hasStartupScene;
+}
+
 // This is so cursed. Visual Studio why
+// Finally going to fix this by going around it entirely
 void DXCore::SetBuildAssetPaths() {
-	assetPathStrings[0] = "..\\..\\..\\Assets\\Models\\";
-	assetPathStrings[1] = "..\\..\\..\\Assets\\Scenes\\";
-	assetPathStrings[2] = "..\\..\\..\\Assets\\HeightMaps\\";
-	assetPathStrings[3] = "..\\..\\..\\Assets\\Fonts\\";
-	assetPathStrings[4] = "..\\..\\..\\Assets\\Particles\\";
-	assetPathStrings[5] = "..\\..\\..\\Assets\\Sounds\\";
-	assetPathStrings[6] = "..\\..\\..\\Assets\\Textures\\";
-	assetPathStrings[7] = "..\\..\\..\\Assets\\Textures\\Skies\\";
-	assetPathStrings[8] = "..\\..\\..\\Assets\\PBR\\";
-	assetPathStrings[9] = "..\\..\\..\\Assets\\PBR\\Albedo\\";
-	assetPathStrings[10] = "..\\..\\..\\Assets\\PBR\\Normals\\";
-	assetPathStrings[11] = "..\\..\\..\\Assets\\PBR\\Metalness\\";
-	assetPathStrings[12] = "..\\..\\..\\Assets\\PBR\\Roughness\\";
-	assetPathStrings[13] = "..\\..\\..\\Assets\\Shaders\\";
+	// Set up the critical asset paths - not all paths need to be set
+	criticalAssetPaths[0] = this->engineAssetsPath + "\\Models\\";
+	criticalAssetPaths[3] = this->engineAssetsPath + "\\Fonts\\";
+	criticalAssetPaths[6] = this->engineAssetsPath + "\\Textures\\";
+	criticalAssetPaths[7] = this->engineAssetsPath + "\\Textures\\Skies\\";
+	criticalAssetPaths[9] = this->engineAssetsPath + "\\Textures\\Albedo\\";
+	criticalAssetPaths[10] = this->engineAssetsPath + "\\Textures\\Normals\\";
+	criticalAssetPaths[11] = this->engineAssetsPath + "\\Textures\\Metalness\\";
+	criticalAssetPaths[12] = this->engineAssetsPath + "\\Textures\\Roughness\\";
+	criticalAssetPaths[13] = this->engineAssetsPath + "\\Shaders\\";
+
+	// Set up the project-based asset paths - all paths should be set here
+	projectAssetPaths[0] = this->mainAssetPath + "\\Models\\";
+	projectAssetPaths[1] = this->mainAssetPath + "\\Scenes\\";
+	projectAssetPaths[2] = this->mainAssetPath + "\\HeightMaps\\";
+	projectAssetPaths[3] = this->mainAssetPath + "\\Fonts\\";
+	projectAssetPaths[4] = this->mainAssetPath + "\\Particles\\";
+	projectAssetPaths[5] = this->mainAssetPath + "\\Sounds\\";
+	projectAssetPaths[6] = this->mainAssetPath + "\\Textures\\";
+	projectAssetPaths[7] = this->mainAssetPath + "\\Textures\\Skies\\";
+	projectAssetPaths[8] = this->mainAssetPath + "\\Textures\\"; // No longer differentiating PBR
+	projectAssetPaths[9] = this->mainAssetPath + "\\Textures\\Albedo\\";
+	projectAssetPaths[10] = this->mainAssetPath + "\\Textures\\Normals\\";
+	projectAssetPaths[11] = this->mainAssetPath + "\\Textures\\Metalness\\";
+	projectAssetPaths[12] = this->mainAssetPath + "\\Textures\\Roughness\\";
+	projectAssetPaths[13] = this->mainAssetPath + "\\Shaders\\";
+	projectAssetPaths[14] = this->mainAssetPath + "\\Textures\\BlendMaps\\";
 }
 
 void DXCore::SetVSAssetPaths() {
-	assetPathStrings[0] = "..\\Assets\\Models\\";
-	assetPathStrings[1] = "..\\Assets\\Scenes\\";
-	assetPathStrings[2] = "..\\Assets\\HeightMaps\\";
-	assetPathStrings[3] = "..\\Assets\\Fonts\\";
-	assetPathStrings[4] = "..\\Assets\\Particles\\";
-	assetPathStrings[5] = "..\\Assets\\Sounds\\";
-	assetPathStrings[6] = "..\\Assets\\Textures\\";
-	assetPathStrings[7] = "..\\Assets\\Textures\\Skies\\";
-	assetPathStrings[8] = "..\\Assets\\PBR\\";
-	assetPathStrings[9] = "..\\Assets\\PBR\\Albedo\\";
-	assetPathStrings[10] = "..\\Assets\\PBR\\Normals\\";
-	assetPathStrings[11] = "..\\Assets\\PBR\\Metalness\\";
-	assetPathStrings[12] = "..\\Assets\\PBR\\Roughness\\";
-	assetPathStrings[13] = "..\\Assets\\Shaders\\";
+	criticalAssetPaths[0] = "..\\Assets\\Models\\";
+	criticalAssetPaths[1] = "..\\Assets\\Scenes\\";
+	criticalAssetPaths[2] = "..\\Assets\\HeightMaps\\";
+	criticalAssetPaths[3] = "..\\Assets\\Fonts\\";
+	criticalAssetPaths[4] = "..\\Assets\\Particles\\";
+	criticalAssetPaths[5] = "..\\Assets\\Sounds\\";
+	criticalAssetPaths[6] = "..\\Assets\\Textures\\";
+	criticalAssetPaths[7] = "..\\Assets\\Textures\\Skies\\";
+	criticalAssetPaths[8] = "..\\Assets\\PBR\\";
+	criticalAssetPaths[9] = "..\\Assets\\PBR\\Albedo\\";
+	criticalAssetPaths[10] = "..\\Assets\\PBR\\Normals\\";
+	criticalAssetPaths[11] = "..\\Assets\\PBR\\Metalness\\";
+	criticalAssetPaths[12] = "..\\Assets\\PBR\\Roughness\\";
+	criticalAssetPaths[13] = "..\\Assets\\Shaders\\";
 }
 
-std::string DXCore::GetAssetPathString(AssetPathIndex index) {
-	return assetPathStrings[index];
+std::string DXCore::GetAssetPathString(AssetPathIndex index, AssetPathType type) {
+	if (type == ENGINE_ASSET) {
+		return criticalAssetPaths[index];
+	}
+	else if (type == PROJECT_ASSET) {
+		return projectAssetPaths[index];
+	}
+	else if (type == EXTERNAL_ASSET) {
+		// TODO: implement external asset storage
+		return "";
+	}
+	// Shouldn't reach this point if function is used correctly
+	return "";
 }
 
 // --------------------------------------------------------
@@ -940,8 +1024,10 @@ LRESULT DXCore::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
-
 bool DXCore::IsDirectX12() {
 	return dxVersion;
 }
 
+DirectXVersion DXCore::GetDXVersion() {
+	return this->dxVersion;
+}

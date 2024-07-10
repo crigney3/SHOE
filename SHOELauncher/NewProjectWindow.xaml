@@ -1,0 +1,38 @@
+﻿<Window x:Class="SHOELauncher.NewProjectWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SHOELauncher"
+        mc:Ignorable="d"
+        Title="NewProjectWindow" Height="450" Width="400">
+    <Grid Background="Black">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
+        </Grid.RowDefinitions>
+        <TextBlock x:Name="NewProjectsLabel" FontSize="20" Foreground="White" Grid.Column="0" VerticalAlignment="Top" Text="New Project"></TextBlock>
+        <TextBlock x:Name="ProjectNameLabel" FontSize="14" Foreground="White" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" Text="Name:"/>
+        <TextBox x:Name="ProjectName" Grid.Column="0" VerticalAlignment="Center" TextChanged="ProjectName_TextChanged" HorizontalAlignment="Center" Text="NewProject" Width="135"/>
+        <TextBlock x:Name="StarterAssetsLabel" FontSize="14" Foreground="White" Grid.Column="0" VerticalAlignment="Bottom" HorizontalAlignment="Left" Text="Include Starter Assets:"/>
+        <CheckBox Name="StarterAssetsChecked" Checked="StarterAssetsChecked_Checked" Unchecked="StarterAssetsChecked_Unchecked" HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Row="0" IsChecked="True"/>
+        <TextBlock x:Name="ProjectDirLabel" Foreground="White" Text="Project Directory:" FontSize="14" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Left" />
+        <TextBox x:Name="ProjectDirectory" Grid.Column="0" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Text="C:\" Width="135"/>
+        <Button x:Name="SelectProjectDirectory" Content="Select Project Directory" Click="SelectProjectDirectory_Click" FontSize="14" Grid.Row="1" Grid.Column="2" VerticalAlignment="Bottom" HorizontalAlignment="Center"/>
+        <TextBlock x:Name="DirectXLabel" Foreground="White" Text="DirectX Version:" FontSize="14" Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Left" />
+        <ListBox x:Name="DirectXChoiceListBox" SelectionChanged="DirectXChoiceListBox_SelectionChanged" Grid.Column="0" Grid.Row="2" SelectionMode="Single" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Title}"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <TextBlock x:Name="DirectXWarning" Foreground="Red" Text="Warning! DX12 is not fully supported at this time. Expect significant issues." FontSize="10" Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" Visibility="Hidden" />
+        <Button x:Name="CreateProjectButton" Content="Create New Project" HorizontalAlignment="Center" IsEnabled="False" VerticalAlignment="Center" Grid.Row="3" Click="CreateProjectButton_Click"/>
+    </Grid>
+</Window>

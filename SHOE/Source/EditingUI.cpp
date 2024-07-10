@@ -26,6 +26,7 @@ EditingUI::EditingUI(std::shared_ptr<Renderer> renderer) {
 	entityUIIndex = 0;
 	skyUIIndex = 0;
 	materialUIIndex = 0;
+	terrainMaterialUIIndex = 0;
 
 	this->renderer = renderer;
 }
@@ -45,6 +46,7 @@ void EditingUI::ReInitializeEditingUI(std::shared_ptr<Renderer> renderer) {
 	entityUIIndex = 0;
 	skyUIIndex = 0;
 	materialUIIndex = 0;
+	terrainMaterialUIIndex = 0;
 
 	this->renderer = renderer;
 }
@@ -82,7 +84,7 @@ void EditingUI::DisplayMenu() {
 		if (ImGui::BeginMenu("File")) {
 			ImGui::Text("This menu will eventually contain a saving and loading system, designed for swapping between feature test scenes.");
 			if (ImGui::MenuItem("Save Scene", "ctrl+s")) {
-				sceneManager.SaveScene("FIX");
+				sceneManager.SaveScene();
 			}
 
 			if (ImGui::MenuItem("Save Scene As", "ctrl++shift+s")) {
@@ -90,7 +92,27 @@ void EditingUI::DisplayMenu() {
 			}
 
 			if (ImGui::MenuItem("Load Scene", "ctrl+s")) {
-				sceneManager.LoadScene("structureTest.json");
+				char filename[MAX_PATH];
+				OPENFILENAME ofn;
+
+				ZeroMemory(&ofn, sizeof(ofn));
+				ZeroMemory(&filename, sizeof(filename));
+				ofn.lpstrFilter = _T("Scene JSON files (.json)\0*.json;\0Any File\0*.*\0");
+				ofn.lpstrTitle = _T("Select a scene file:");
+				ofn.lStructSize = sizeof(ofn);
+				ofn.hwndOwner = dxCore->hWnd;
+				ofn.lpstrFile = filename;
+				ofn.nMaxFile = MAX_PATH;
+				ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
+
+				if (GetOpenFileName(&ofn)) {
+					sceneManager.LoadScene(ofn.lpstrFile, true);
+
+					// Reset the shaders used as defaults for DX11 rendering
+					// This is a virtual function so DX12 can also use it if it
+					// ends up needing it
+					renderer->ReloadDefaultShaders();
+				}
 			}
 
 			ImGui::Separator();
@@ -137,6 +159,7 @@ void EditingUI::DisplayMenu() {
 			ImGui::MenuItem("Sound", "", GetSoundWindowEnabled());
 			ImGui::MenuItem("Texture", "", GetTextureWindowEnabled());
 			ImGui::MenuItem("Material", "", GetMaterialWindowEnabled());
+			ImGui::MenuItem("Terrain Materials", "", GetTerrainMaterialWindowEnabled());
 			ImGui::MenuItem("Colliders", "", GetCollidersWindowEnabled());
 
 			ImGui::EndMenu();
@@ -425,8 +448,16 @@ void EditingUI::GenerateEditingUI() {
 		currentSky->SetName(nameBuf);
 
 		bool skyEnabled = currentSky->IsEnabled();
-		ImGui::Checkbox("Enabled ", &skyEnabled);
+		ImGui::Checkbox("Enabled ##SkyEnabled", &skyEnabled);
 		currentSky->SetEnabled(skyEnabled);
+
+		bool skyIBLEnabled = currentSky->IsIBLEnabled();
+		ImGui::Checkbox("IBL Enabled ##SkyIBLEnabled", &skyIBLEnabled);
+		currentSky->SetIBLEnabled(skyIBLEnabled);
+
+		float skyIBLIntensity = currentSky->GetIBLIntensity();
+		ImGui::InputFloat("IBL Intensity ##SkyIBLIntensity", &skyIBLIntensity);
+		currentSky->SetIBLIntensity(skyIBLIntensity);
 
 		if (skyEnabled && ImGui::CollapsingHeader("BRDF Lookup Texture")) {
 			ImGui::Image((ImTextureID*)currentSky->GetBRDFLookupTexture().Get(), ImVec2(256, 256));
@@ -523,7 +554,7 @@ void EditingUI::GenerateEditingUI() {
 		UIScaleEdit = currentEntity->GetTransform()->GetLocalScale();
 
 		ImGui::DragFloat3("Position ", &UIPositionEdit.x, 0.5f);
-		ImGui::DragFloat3("Rotation ", &UIRotationEdit.x, 0.5f, 0, 360);
+		ImGui::DragFloat3("Rotation ", &UIRotationEdit.x, 0.01f, 0, XM_2PI);
 		ImGui::InputFloat3("Scale ", &UIScaleEdit.x);
 
 		currentEntity->GetTransform()->SetPosition(UIPositionEdit.x, UIPositionEdit.y, UIPositionEdit.z);
@@ -569,7 +600,7 @@ void EditingUI::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap##Material")) {
 						meshRenderer->SetMaterial(globalAssets.GetMaterialAtID(materialIndex));
 					}
 
@@ -601,7 +632,7 @@ void EditingUI::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap##Mesh")) {
 						meshRenderer->SetMesh(globalAssets.GetMeshAtID(meshIndex));
 					}
 				}
@@ -636,16 +667,16 @@ void EditingUI::GenerateEditingUI() {
 				particleSystem->SetScale(scale);
 
 				float particlesPerSecond = particleSystem->GetParticlesPerSecond();
-				ImGui::SliderFloat("Particles per Second ", &particlesPerSecond, 0.1f, 20.0f);
+				ImGui::SliderFloat("Particles per Second ", &particlesPerSecond, 0.1f, 100.0f);
 				//ImGui::SameLine();
 				//ImGui::InputFloat("#ExtraEditor", &particlesPerSecond);
-				//particleSystem->SetParticlesPerSecond(particlesPerSecond);
+				particleSystem->SetParticlesPerSecond(particlesPerSecond);
 
 				float particlesLifetime = particleSystem->GetParticleLifetime();
-				ImGui::SliderFloat("Particles Lifetime ", &particlesLifetime, 0.1f, 20.0f);
+				ImGui::SliderFloat("Particles Lifetime ", &particlesLifetime, 0.1f, 100.0f);
 				//ImGui::SameLine();
 				//ImGui::InputFloat("#ExtraEditor2", &particlesLifetime);
-				//particleSystem->SetParticleLifetime(particlesLifetime);
+				particleSystem->SetParticleLifetime(particlesLifetime);
 
 				float speed = particleSystem->GetSpeed();
 				ImGui::SliderFloat("Particle Speed ", &speed, 0.1f, 5.0f);
@@ -658,6 +689,100 @@ void EditingUI::GenerateEditingUI() {
 				int maxParticles = particleSystem->GetMaxParticles();
 				ImGui::InputInt("Max Particles ", &maxParticles);
 				particleSystem->SetMaxParticles(maxParticles);
+
+				if (ImGui::CollapsingHeader("Particle Texture Swapping")) {
+					static int particleTextureIndex = 0;
+					static int particleTexToEditIndex = 0;
+					static std::vector<std::string> particleTextureNames = std::vector<std::string>();
+					ImTextureID* currentTexDisplay;
+					Texture* currentTexture;
+
+					particleTextureNames.clear();
+
+					for (int i = 0; i < particleSystem->GetParticleTextureCount(); i++) {
+						currentTexture = particleSystem->GetParticleTexture(i).get();
+						ImTextureID* currentTexDisplay;
+
+						if (dxCore->IsDirectX12()) {
+							// Temporary
+							currentTexDisplay = NULL;
+						}
+						else {
+							currentTexDisplay = (ImTextureID*)currentTexture->GetDX11Texture().Get();
+						}
+						ImGui::Image(currentTexDisplay, ImVec2(256, 256));
+						if (i < particleSystem->GetParticleTextureCount() - 1) {
+							ImGui::SameLine();
+						}	
+
+						particleTextureNames.push_back(currentTexture->GetName());
+					}
+
+					if (ImGui::BeginCombo("Particle Texture to Swap", particleTextureNames[particleTexToEditIndex].c_str())) {
+						for (int n = 0; n < particleTextureNames.size(); n++)
+						{
+							const bool is_selected = (particleTexToEditIndex == n);
+							if (ImGui::Selectable(particleTextureNames[n].c_str(), is_selected))
+								particleTexToEditIndex = n;
+
+							// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+							if (is_selected)
+								ImGui::SetItemDefaultFocus();
+						}
+						ImGui::EndCombo();
+					}
+
+					if (ImGui::BeginListBox("TextureList ##ParticleTextureListBox")) {
+						for (int i = 0; i < globalAssets.GetTextureArraySize(); i++) {
+							const bool is_selected = (particleTextureIndex == i);
+							if (ImGui::Selectable(globalAssets.GetTextureAtID(i)->GetName().c_str(), is_selected)) {
+								particleTextureIndex = i;
+							}
+
+							if (is_selected) ImGui::SetItemDefaultFocus();
+						}
+
+						ImGui::EndListBox();
+						ImGui::SameLine();
+
+						if (dxCore->IsDirectX12()) {
+							// Temporary
+							currentTexDisplay = NULL;
+						}
+						else {
+							currentTexDisplay = (ImTextureID*)globalAssets.GetTextureAtID(particleTextureIndex)->GetDX11Texture().Get();
+						}
+						ImGui::Image(currentTexDisplay, ImVec2(256, 256));
+
+					}
+
+					if (ImGui::Button("Swap Texture##Swap ParticleTexture Button")) {
+						particleSystem->SetParticleTexture(globalAssets.GetTextureAtID(particleTextureIndex), particleTexToEditIndex);
+						ImGui::SameLine();
+					}
+
+					if (ImGui::Button("Add Texture##Add ParticleTexture Button")) {
+						std::vector<std::shared_ptr<Texture>> newTextures = particleSystem->GetParticleTextures();
+						newTextures.push_back(globalAssets.GetTextureAtID(particleTextureIndex));
+						particleSystem->SetParticleTextures(newTextures);
+						if (newTextures.size() > 1) {
+							particleSystem->SetIsMultiParticle(true);
+						}
+						ImGui::SameLine();
+					}
+
+					if (ImGui::Button("Remove Texture##Remove ParticleTexture Button")) {
+						std::vector<std::shared_ptr<Texture>> newTextures = particleSystem->GetParticleTextures();
+						newTextures.erase(newTextures.begin() + particleTexToEditIndex);
+						if (!newTextures.empty()) {
+							particleSystem->SetParticleTextures(newTextures);
+							if (newTextures.size() < 2) {
+								particleSystem->SetIsMultiParticle(false);
+							}
+							particleTexToEditIndex = 0;
+						}
+					}
+				}
 			}
 
 			else if (std::shared_ptr<Terrain> terrain = std::dynamic_pointer_cast<Terrain>(componentList[c]))
@@ -694,7 +819,7 @@ void EditingUI::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap ##Terrain Material Swap Button")) {
 						terrain->SetMaterial(globalAssets.GetTerrainMaterialAtID(materialIndex));
 					}
 				}
@@ -722,7 +847,7 @@ void EditingUI::GenerateEditingUI() {
 						ImGui::EndListBox();
 					}
 
-					if (ImGui::Button("Swap")) {
+					if (ImGui::Button("Swap ##Terrain Mesh Swap Button")) {
 						terrain->SetMesh(globalAssets.GetMeshAtID(meshIndex));
 					}
 				}
@@ -768,16 +893,32 @@ void EditingUI::GenerateEditingUI() {
 					light->SetEnabled(lightEnabled);
 
 				UILightType = light->GetType();
-				ImGui::DragFloat("Type ", &UILightType, 1.0f, 0.0f, 2.0f);
+				ImGui::Text("Light Type: ");
+				ImGui::SameLine();
+				ImGui::InputFloat("##LightTypeSelector", &UILightType); //ImGui::SetFloat("Type ", &UILightType, 1.0f, 0.0f, 2.0f);
+				ImGui::SameLine();
+				if (ImGui::ArrowButton("PrevLightType", ImGuiDir_Left)) {
+					if (UILightType != 0) {
+						UILightType -= 1;
+					}
+				}
+				ImGui::SameLine();
+				if (ImGui::ArrowButton("NextLightType", ImGuiDir_Right)) {
+					if (UILightType < 2) {
+						UILightType += 1;
+					}
+				}
 				light->SetType(UILightType);
 
-				//Directional Light
+				//Directional Light/Spot Light
 				if (light->GetType() == 0.0f || light->GetType() == 2.0f) {
 					bool castsShadows = light->CastsShadows();
 					ImGui::Checkbox("Casts Shadows ", &castsShadows);
-					light->SetCastsShadows(castsShadows);
+					if ((castsShadows && !light->CastsShadows()) || (!castsShadows && light->CastsShadows())) {
+						light->SetCastsShadows(castsShadows);
+					}			
 				}
-				//Point Light
+				//Point Light/Spot Light
 				if (light->GetType() == 1.0f || light->GetType() == 2.0f) {
 					UILightRange = light->GetRange();
 					ImGui::DragFloat("Range ", &UILightRange, 1, 5.0f, 20.0f);
@@ -790,9 +931,10 @@ void EditingUI::GenerateEditingUI() {
 				ImGui::DragFloat("Intensity ", &UILightIntensity, 0.1f, 0.01f, 1.0f);
 				light->SetIntensity(UILightIntensity);
 
-				if (ImGui::Button("Mark as main")) {
-					globalAssets.SetMainCamera(light->GetShadowProjector());
-				}
+				// What?
+				//if (ImGui::Button("Mark as main")) {
+				//	globalAssets.SetMainCamera(light->GetShadowProjector());
+				//}
 			}
 
 			else if (std::shared_ptr<Camera> camera = std::dynamic_pointer_cast<Camera>(componentList[c]))
@@ -1246,23 +1388,29 @@ void EditingUI::GenerateEditingUI() {
 		currentMaterial->SetTiling(currTiling);
 
 		XMFLOAT4 currColorTint = currentMaterial->GetTint();
-		ImGui::DragFloat3("Color Tint ", &currColorTint.x);
+		ImGui::DragFloat3("Color Tint ", &currColorTint.x, 1.0f, 0.0f, 256.0f);
 		currentMaterial->SetTint(currColorTint);
 
 		bool currentTransparencyEnabled = currentMaterial->GetTransparent();
 		ImGui::Checkbox("Transparancy", &currentTransparencyEnabled);
 		currentMaterial->SetTransparent(currentTransparencyEnabled);
+		if (currentTransparencyEnabled && currentMaterial->GetRefractivePixelShader() == nullptr) {
+			currentMaterial->SetRefractivePixelShader(globalAssets.GetPixelShaderByName("RefractivePS"));
+		}
 
 		bool currentRefractionEnabled = currentMaterial->GetRefractive();
 		ImGui::Checkbox("Refraction (Enabling this will also enable transparency)", &currentRefractionEnabled);
 		currentMaterial->SetRefractive(currentRefractionEnabled);
+		if (currentRefractionEnabled && currentMaterial->GetRefractivePixelShader() == nullptr) {
+			currentMaterial->SetRefractivePixelShader(globalAssets.GetPixelShaderByName("RefractivePS"));
+		}
 
 		float currIndexOfRefraction = currentMaterial->GetIndexOfRefraction();
-		ImGui::DragFloat("Index of Refraction ", &currIndexOfRefraction);
+		ImGui::DragFloat("Index of Refraction ", &currIndexOfRefraction, 0.05f, 0.0f, 1.0f);
 		currentMaterial->SetIndexOfRefraction(currIndexOfRefraction);
 
 		float currRefractionScale = currentMaterial->GetRefractionScale();
-		ImGui::DragFloat("Refraction Scale ", &currRefractionScale);
+		ImGui::DragFloat("Refraction Scale ", &currRefractionScale, 0.05f, 0.0f, 1.0f);
 		currentMaterial->SetRefractionScale(currRefractionScale);
 
 		ImGui::Separator();
@@ -1491,6 +1639,158 @@ void EditingUI::GenerateEditingUI() {
 		ImGui::End();
 	}
 
+	if (*(GetTerrainMaterialWindowEnabled())) {
+		ImGui::Begin("Terrain Material Editor");
+
+		std::shared_ptr<TerrainMaterial> currentTMat = globalAssets.GetTerrainMaterialAtID(GetTerrainMaterialUIIndex());
+
+		std::string infoStr = currentTMat->GetName();
+		std::string node = "Edting Terrain Material: " + infoStr;
+
+		ImGui::Text(node.c_str());
+
+		if (ImGui::ArrowButton("Previous Terrain Material", ImGuiDir_Left)) {
+			terrainMaterialUIIndex--;
+			if (terrainMaterialUIIndex < 0) {
+				terrainMaterialUIIndex = globalAssets.GetTerrainMaterialArraySize() - 1;
+			}
+		};
+		ImGui::SameLine();
+
+		if (ImGui::ArrowButton("Next Terrain Material", ImGuiDir_Right)) {
+			terrainMaterialUIIndex++;
+			if (terrainMaterialUIIndex > globalAssets.GetTerrainMaterialArraySize() - 1) {
+				terrainMaterialUIIndex = 0;
+			}
+		};
+
+		std::string nameBuffer;
+		static char nameBuf[64] = "";
+		nameBuffer = currentTMat->GetName();
+		strcpy_s(nameBuf, nameBuffer.c_str());
+		ImGui::InputText("Rename Terrain Material ", nameBuf, sizeof(nameBuffer));
+
+		currentTMat->SetName(nameBuf);
+
+		ImGui::Text("Current Materials in TMat List:");
+		for (int i = 0; i < currentTMat->GetMaterialCount(); i++) {
+			ImGui::Text(currentTMat->GetMaterialAtID(i)->GetName().c_str());
+		}
+
+		if (ImGui::CollapsingHeader("Swap Blend Map")) {
+			static int textureIndex = 0;
+			ImTextureID* currentTexDisplay;
+			std::shared_ptr<Texture> currentBlendMap;
+
+			currentBlendMap = currentTMat->GetBlendMapTexture();
+
+			std::string nameBuffer;
+			static char nameBuf[64] = "";
+			if (currentBlendMap != nullptr) {
+				nameBuffer = currentBlendMap->GetName();							
+			}
+			else {
+				nameBuffer = "No blendmap assigned!";
+			}
+			strcpy_s(nameBuf, nameBuffer.c_str());
+			ImGui::Text(nameBuf);
+
+			if (ImGui::BeginListBox("TextureBlendMapList")) {
+				for (int i = 0; i < globalAssets.GetTextureArraySize(); i++) {
+					const bool is_selected = (textureIndex == i);
+					if (ImGui::Selectable(globalAssets.GetTextureAtID(i)->GetName().c_str(), is_selected)) {
+						textureIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+				ImGui::SameLine();
+
+				if (dxCore->IsDirectX12()) {
+					// Temporary
+					currentTexDisplay = NULL;
+				}
+				else {
+					currentTexDisplay = (ImTextureID*)globalAssets.GetTextureAtID(textureIndex)->GetDX11Texture().Get();
+				}
+				ImGui::Image(currentTexDisplay, ImVec2(256, 256));
+
+			}
+
+			if (ImGui::Button("Swap Texture###TMatBlendSwap")) {
+				currentTMat->SetBlendMapFromTexture(globalAssets.GetTextureAtID(textureIndex));
+				currentTMat->SetBlendMapFilenameKey(globalAssets.GetTextureAtID(textureIndex)->GetTextureFilenameKey());
+			}
+		}
+
+		static int allMatsIndex = 0;
+		if (ImGui::CollapsingHeader("Change Individual Materials")) {
+			static int currentMatIndex = 0;
+			
+			std::string infoStr = currentTMat->GetMaterialAtID(currentMatIndex)->GetName();
+			std::string node = "Swapping Material: " + infoStr;
+
+			ImGui::Text(node.c_str());
+
+			if (ImGui::ArrowButton("Previous Material###TMatListPrev", ImGuiDir_Left)) {
+				currentMatIndex--;
+				if (currentMatIndex < 0) {
+					currentMatIndex = currentTMat->GetMaterialCount() - 1;
+				}
+			};
+			ImGui::SameLine();
+
+			if (ImGui::ArrowButton("Next Terrain Material###TMatListNext", ImGuiDir_Right)) {
+				currentMatIndex++;
+				if (currentMatIndex > currentTMat->GetMaterialCount() - 1) {
+					currentMatIndex = 0;
+				}
+			};
+
+			if (ImGui::BeginListBox("TMaterialList")) {
+				for (int i = 0; i < globalAssets.GetMaterialArraySize(); i++) {
+					const bool is_selected = (allMatsIndex == i);
+					if (ImGui::Selectable(globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
+						allMatsIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+				ImGui::SameLine();
+			}
+
+			if (ImGui::Button("Swap Material###TMaterialSwap")) {
+				currentTMat->SetMaterialAtID(globalAssets.GetMaterialAtID(allMatsIndex), currentMatIndex);
+			}
+		}
+
+		if (ImGui::CollapsingHeader("Add Material to Terrain Material")) {
+			if (ImGui::BeginListBox("TMaterialAddList")) {
+				for (int i = 0; i < globalAssets.GetMaterialArraySize(); i++) {
+					const bool is_selected = (allMatsIndex == i);
+					if (ImGui::Selectable(globalAssets.GetMaterialAtID(i)->GetName().c_str(), is_selected)) {
+						allMatsIndex = i;
+					}
+
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+
+				ImGui::EndListBox();
+				ImGui::SameLine();
+			}
+
+			if (ImGui::Button("Add Material###TMaterialAdd")) {
+				currentTMat->AddMaterial(globalAssets.GetMaterialAtID(allMatsIndex));
+			}
+		}
+
+		ImGui::End();
+	}
+
 	if (*(GetCollidersWindowEnabled()))
 	{
 		ImGui::Begin("Collider Bulk Operations");
@@ -1532,8 +1832,6 @@ void EditingUI::GenerateEditingUI() {
 
 		ImGui::End();
 	}
-
-	// TODO: Add Material Edit menu
 }
 
 // Getters
@@ -1559,6 +1857,10 @@ bool* EditingUI::GetTextureWindowEnabled() {
 
 bool* EditingUI::GetMaterialWindowEnabled() {
 	return &materialWindowEnabled;
+}
+
+bool* EditingUI::GetTerrainMaterialWindowEnabled() {
+	return &terrainMaterialWindowEnabled;
 }
 
 bool* EditingUI::GetCollidersWindowEnabled() {
@@ -1590,6 +1892,10 @@ int EditingUI::GetSkyUIIndex() {
 int EditingUI::GetMaterialUIIndex() {
 	return materialUIIndex;
 };
+
+int EditingUI::GetTerrainMaterialUIIndex() {
+	return terrainMaterialUIIndex;
+}
 
 
 // Setters

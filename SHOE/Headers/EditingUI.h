@@ -53,8 +53,8 @@ public:
 	void SetEntityUIIndex(int NewEntityUIIndex);
 	void SetSkyUIIndex(int NewSkyUIIndex);
 	void SetObjWindowEnabled(bool enabled);
-	void EditingUI::SetMaterialUIIndex(int newIndex);
-	void EditingUI::SetMaterialWindowEnabled(bool enabled);
+	void SetMaterialUIIndex(int newIndex);
+	void SetMaterialWindowEnabled(bool enabled);
 
 	// Getters
 	bool* GetObjWindowEnabled();
@@ -63,6 +63,7 @@ public:
 	bool* GetSoundWindowEnabled();
 	bool* GetTextureWindowEnabled();
 	bool* GetMaterialWindowEnabled();
+	bool* GetTerrainMaterialWindowEnabled();
 	bool* GetCollidersWindowEnabled();
 	bool* GetRtvWindowEnabled();
 	bool* GetRenderWindowEnabled();
@@ -73,6 +74,7 @@ public:
 	int GetEntityUIIndex();
 	int GetSkyUIIndex();
 	int GetMaterialUIIndex();
+	int GetTerrainMaterialUIIndex();
 
 private:
 	std::shared_ptr<Renderer> renderer;
@@ -84,6 +86,7 @@ private:
 	bool skyWindowEnabled;
 	bool textureWindowEnabled;
 	bool materialWindowEnabled;
+	bool terrainMaterialWindowEnabled;
 	bool movingEnabled;
 	bool rtvWindowEnabled;
 	bool soundWindowEnabled;
@@ -95,6 +98,7 @@ private:
 	int entityUIIndex;
 	int skyUIIndex;
 	int materialUIIndex;
+	int terrainMaterialUIIndex;
 
 	//For selecting objects with a click
 	std::shared_ptr<GameEntity> GetClickedEntity();

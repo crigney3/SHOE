@@ -139,6 +139,8 @@ public:
         Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain);
     virtual ~Renderer();
 
+    virtual void ReloadDefaultShaders();
+
     virtual void PostResize();
     virtual void PreResize();
     virtual void InitShadows();

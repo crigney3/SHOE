@@ -74,6 +74,20 @@ DX11Renderer::~DX11Renderer() {
 	shadowViewMatArray.clear();
 }
 
+void DX11Renderer::ReloadDefaultShaders() {
+	this->basicVS = globalAssets.GetVertexShaderByName("BasicVS");
+	this->perFrameVS = globalAssets.GetVertexShaderByName("NormalsVS");
+	this->fullscreenVS = globalAssets.GetVertexShaderByName("FullscreenVS");
+	this->solidColorPS = globalAssets.GetPixelShaderByName("SolidColorPS");
+	this->perFramePS = globalAssets.GetPixelShaderByName("NormalsPS");
+	this->textureSamplePS = globalAssets.GetPixelShaderByName("TextureSamplePS");
+	this->outlinePS = globalAssets.GetPixelShaderByName("OutlinePS");
+
+	this->ssaoPS = globalAssets.GetPixelShaderByName("SSAOPS");
+	this->ssaoBlurPS = globalAssets.GetPixelShaderByName("SSAOBlurPS");
+	this->ssaoCombinePS = globalAssets.GetPixelShaderByName("SSAOCombinePS");
+}
+
 void DX11Renderer::InitRenderTargetViews() {
 	for (int i = 0; i < 3; i++) {
 		ssaoTexture2D[i].Reset();
@@ -928,6 +942,8 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 	perFramePS->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 	if (globalAssets.currentSky->IsEnabled()) {
 		perFramePS->SetInt("specIBLTotalMipLevels", globalAssets.currentSky->GetIBLMipLevelCount());
+		perFramePS->SetInt("indirectLightingEnabled", (int)globalAssets.currentSky->IsIBLEnabled());
+		perFramePS->SetFloat("iblIntensity", globalAssets.currentSky->GetIBLIntensity());
 	}
 
 	int meshIt = 0;
@@ -992,15 +1008,19 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 			currentPS->SetSamplerState("sampleState", currentMaterial->GetSamplerState().Get());
 			currentPS->SetSamplerState("clampSampler", currentMaterial->GetClampSamplerState().Get());
 			currentPS->SetShaderResourceView("textureAlbedo", currentMaterial->GetAlbedoMapSRV().Get());
-			currentPS->SetShaderResourceView("textureRough", currentMaterial->GetRoughMapSRV().Get());
-			currentPS->SetShaderResourceView("textureMetal", currentMaterial->GetMetalMapSRV().Get());
+			if (currentMaterial->GetMetalMap() != nullptr) {
+				currentPS->SetShaderResourceView("textureMetal", currentMaterial->GetMetalMapSRV().Get());
+			}
+			if (currentMaterial->GetRoughMap() != nullptr) {
+				currentPS->SetShaderResourceView("textureRough", currentMaterial->GetRoughMapSRV().Get());
+			}
 			if (currentMaterial->GetNormalMap() != nullptr) {
 				currentPS->SetShaderResourceView("textureNormal", currentMaterial->GetNormalMapSRV().Get());
 			}
 
+			currentPS->SetSamplerState("shadowState", shadowSampler.Get());
 			if (shadowCount > 0) {
-				currentPS->SetShaderResourceView("shadowMaps", shadowDSVArraySRV.Get());
-				currentPS->SetSamplerState("shadowState", shadowSampler.Get());
+				currentPS->SetShaderResourceView("shadowMaps", shadowDSVArraySRV.Get());	
 			}
 
 			if (globalAssets.currentSky->IsEnabled()) {
@@ -1043,7 +1063,7 @@ void DX11Renderer::Draw(std::shared_ptr<Camera> cam, EngineState engineState) {
 		currentMat = dynamic_cast<DX11Material*>(terrainMat->GetMaterialAtID(0).get());
 
 		PSTerrain->SetShader();
-		PSTerrain->SetData("lights", Light::GetLightArray(), sizeof(Light) * MAX_LIGHTS);
+		PSTerrain->SetData("lights", Light::GetLightArray(), sizeof(LightData) * MAX_LIGHTS);
 		PSTerrain->SetData("lightCount", &lightCount, sizeof(unsigned int));
 		PSTerrain->SetFloat3("cameraPos", cam->GetTransform()->GetLocalPosition());
 		PSTerrain->SetFloat("uvMultNear", 50.0f);

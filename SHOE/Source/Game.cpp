@@ -22,37 +22,98 @@ using namespace DirectX;
 //
 // hInstance - the application's OS-level handle (unique ID)
 // --------------------------------------------------------
-Game::Game(HINSTANCE hInstance, DirectXVersion dxVersion)
+Game::Game(HINSTANCE hInstance, LPSTR cmdLine)
 	: DXCore(
 		hInstance,		   // The application's handle
 		"SHOE",	   // Text for the window's title bar
 		1280,			   // Width of the window's client area
 		720,			   // Height of the window's client area
-		true,			   // Show extra stats (fps) in title bar?
-		dxVersion)
+		true)			   // Show extra stats (fps) in title bar?
 {
 
 #if defined(DEBUG) || defined(_DEBUG)
 	// Do we want a console window?  Probably only in debug mode
 	CreateConsoleWindow(500, 120, 32, 120);
 	printf("Console window created successfully.  Feel free to printf() here.\n");
-	printf("Use arrow keys to switch skyboxes. \n");
 #endif
 
+	{
+		// Process Command line input
+		std::string startCmdString = cmdLine;
+		std::string currentSubstring;
+		std::string firstHalfOfParameter;
+		std::string secondHalfOfParameter;
+		std::string delimiter = " ";
+		std::string paramDelimiter = ":";
+		size_t innerEnd;
+		size_t innerSecondStart;
+
+		auto start = 0U;
+		auto end = startCmdString.find(delimiter);
+		while (true)
+		{
+			currentSubstring = startCmdString.substr(start, end - start);
+			innerEnd = currentSubstring.find(paramDelimiter, 0);
+			innerSecondStart = innerEnd + paramDelimiter.length();
+
+			firstHalfOfParameter = currentSubstring.substr(0, innerEnd);
+
+			secondHalfOfParameter = currentSubstring.substr(innerSecondStart, currentSubstring.length() - innerSecondStart);
+
+			if (!firstHalfOfParameter.compare("/DXVersion")) {
+				if (!secondHalfOfParameter.compare("DX11")) {
+					this->dxVersion = DIRECT_X_11;
+				}
+				else if (!secondHalfOfParameter.compare("DX12")) {
+					this->dxVersion = DIRECT_X_12;
+				}
+			}
+
+			if (!firstHalfOfParameter.compare("/ProjectPath")) {
+				SetProjectPath(secondHalfOfParameter);
+			}
+
+			if (!firstHalfOfParameter.compare("/EngineInstallPath")) {
+				SetEngineInstallPath(secondHalfOfParameter);
+			}
+
+			if (!firstHalfOfParameter.compare("/StartupScene")) {
+				SetStartupSceneName(secondHalfOfParameter);
+				SetHasStartupScene(true);
+			}
+
+			if (end == std::string::npos) {
+				// Loop's over, break
+				// Can't just have this be the loop condition,
+				// because it misses the last argument
+				break;
+			}
+
+			start = end + delimiter.length();
+			end = startCmdString.find(delimiter, start);
+		}
+	}
+
 	// Check if the directory defines are correct
+	// TODO: Remove in favor of launcher cmdline params
+	// But also, keeping a run in visual studio would be nice
+	// Could I teach VS to launch with parameters + copy critical assets?
 	char pathBuf[1024];
 
 	GetFullPathNameA("SHOE.exe", sizeof(pathBuf), pathBuf, NULL);
 	std::string::size_type pos = std::string(pathBuf).find_last_of("\\/");
 
-	std::string currentSubPath = std::string(pathBuf);// .substr(40, pos);
-
-	if (currentSubPath.find("SHOE\\x64\\") != std::string::npos) {
-		SetBuildAssetPaths();
-	}
-	else {
-		SetVSAssetPaths();
-	}
+	std::string currentSubPath = std::string(pathBuf);
+	
+	// Need to figure out a way to detect if this is run from visual studio
+	// Or turns out I can just run VS with command line params targeting my
+	// local SHOE install
+	//if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VisualStudioEdition"))) {
+	SetBuildAssetPaths();
+	//}
+	//else {
+	//	SetVSAssetPaths();
+	//}
 }
 
 // --------------------------------------------------------
@@ -88,23 +149,38 @@ void Game::Init()
 {
 	engineState = EngineState::INIT;
 
-	if (dxVersion) {
-
-	}
-	else {
+	if (!IsDirectX12()) {
 		loadingSpriteBatch = new SpriteBatch(context.Get());
 
 #if defined(DEBUG) || defined(_DEBUG)
 		printf("Took %3.4f seconds for pre-initialization. \n", this->GetTotalTime());
 #endif
 
-		sceneManager.Initialize(&engineState, std::bind(&Game::DrawLoadingScreen, this));
+		sceneManager.Initialize(&engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
 
 		globalAssets.Initialize(device, context, hWnd, &engineState, std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
 
 #if defined(DEBUG) || defined(_DEBUG)
 		printf("Took %3.4f seconds for main initialization. \n", this->GetDeltaTime());
 #endif
+
+		if (GetProjectPath() != "") {
+			globalAssets.ScanProjectAssetsAndImport(GetProjectAssetPath(), std::bind(&Game::DrawInitializingScreen, this, std::placeholders::_1));
+		}
+
+		if (HasStartupScene()) {
+			engineState = EngineState::LOAD_SCENE;
+			sceneManager.LoadScene(GetStartupSceneName());
+
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("Took %3.4f seconds for project-specific initialization. \n", this->GetDeltaTime());
+#endif
+		}
+		else {
+#if defined(DEBUG) || defined(_DEBUG)
+			printf("No startup scene set, skipping project-specific initialization. \n");
+#endif
+		}
 
 		// Tell the input assembler stage of the pipeline what kind of
 		// geometric primitives (points, lines or triangles) we want to draw.  
@@ -176,9 +252,8 @@ void Game::OnResize()
 	}
 }
 
-// --------------------------------------------------------
-// Update your game here - user input, move objects, AI, etc.
-// --------------------------------------------------------
+// The main logic loop for taking input and updating components.
+// No direct rendering is performed here - see Game::Draw().
 void Game::Update()
 {
 	audioHandler.GetSoundSystem()->update();
@@ -216,14 +291,24 @@ void Game::Update()
 void Game::DrawInitializingScreen(std::string category)
 {
 	// Screen clear color
+	
+#if defined(DEBUG) || defined(_DEBUG)
+	const float color[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
+#else
 	const float color[4] = { 0.0f, 0.0f, 0.1f, 0.0f };
+#endif
 
 	DirectX::XMFLOAT2 categoryOrigin;
+	DirectX::XMFLOAT2 titleOrigin;
 
 	static std::shared_ptr<SpriteFont> categoryFont = globalAssets.GetFontByName("SmoochSans-Bold")->spritefont;
+	static std::shared_ptr<SpriteFont> titleFont = globalAssets.GetFontByName("Roboto-Bold-72pt")->spritefont;
 
 	std::string categoryString = "Loading Default " + category;
+	std::string titleString = "SHOE";
+
 	DirectX::XMStoreFloat2(&categoryOrigin, categoryFont->MeasureString(categoryString.c_str()) / 2.0f);
+	DirectX::XMStoreFloat2(&titleOrigin, titleFont->MeasureString(titleString.c_str()) / 2.0f);
 
 	context->ClearRenderTargetView(backBufferRTV.Get(), color);
 	context->ClearDepthStencilView(
@@ -233,6 +318,7 @@ void Game::DrawInitializingScreen(std::string category)
 		0);
 
 	loadingSpriteBatch->Begin();
+	titleFont->DrawString(loadingSpriteBatch, titleString.c_str(), DirectX::XMFLOAT2(width / 2, height / 3), DirectX::Colors::Gold, 0.0f, titleOrigin);
 	categoryFont->DrawString(loadingSpriteBatch, categoryString.c_str(), DirectX::XMFLOAT2(width / 2, height / 1.5), DirectX::Colors::White, 0.0f, categoryOrigin);
 	loadingSpriteBatch->End();
 

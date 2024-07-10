@@ -17,7 +17,7 @@
 class Game : public DXCore
 {
 public:
-	Game(HINSTANCE hInstance, DirectXVersion dxVersion);
+	Game(HINSTANCE hInstance, LPSTR cmdLine);
 	~Game();
 
 	// Overridden setup and game loop methods, which

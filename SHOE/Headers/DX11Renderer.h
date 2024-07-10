@@ -96,6 +96,7 @@ public:
         Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV
     );
     ~DX11Renderer();
+    void ReloadDefaultShaders();
 
     void PostResize(
         unsigned int windowHeight,

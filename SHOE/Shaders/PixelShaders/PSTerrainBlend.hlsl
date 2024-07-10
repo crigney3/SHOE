@@ -202,13 +202,14 @@ PS_Output main(VertexToPixelNormal input)
 											   roughnessMain.r,
 											   specularColorMain);
 
-	float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse.r, indirectSpecular, metalMain.r) * albedoColorMain.rgb;
+    float3 balancedDiff = DiffuseEnergyConserve(indirectDiffuse, indirectSpecular, metalMain.r) * albedoColorMain.rgb;
+    float3 fullIndirect = indirectSpecular + balancedDiff * albedoColorMain.rgb;
 
-	totalLighting *= albedoColorMain.rgb;
+	//totalLighting *= albedoColorMain.rgb;
 
 	PS_Output output;
-	output.colorNoAmbient = float4(totalLighting + indirectSpecular, 1);
-	output.ambientColor = float4(balancedDiff, 1);
+	output.colorNoAmbient = float4(totalLighting, 1);
+    output.ambientColor = float4(fullIndirect, 1);
 	output.normals = float4(input.normal * 0.5f + 0.5f, 1);
 	output.depths = input.position.z;
 

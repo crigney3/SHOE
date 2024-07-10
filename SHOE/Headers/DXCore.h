@@ -37,12 +37,21 @@ enum AssetPathIndex {
 	ASSET_TEXTURE_PATH_PBR_METALNESS,
 	ASSET_TEXTURE_PATH_PBR_ROUGHNESS,
 	ASSET_SHADER_PATH,
+	ASSET_TEXTURE_BLENDMAP_PATH,
 	ASSET_PATH_COUNT
+};
+
+enum AssetPathType {
+	ENGINE_ASSET,
+	PROJECT_ASSET,
+	EXTERNAL_ASSET,
+	ASSET_PATH_TYPE_COUNT
 };
 
 enum DirectXVersion {
 	DIRECT_X_11,
-	DIRECT_X_12
+	DIRECT_X_12,
+	BAD_VERSION
 };
 
 //DX12 update TODO:
@@ -68,8 +77,7 @@ public:
 		const char* titleBarText,	// Text for the window's title bar
 		unsigned int windowWidth,	// Width of the window's client area
 		unsigned int windowHeight,	// Height of the window's client area
-		bool debugTitleBarStats,	// Show extra stats (fps) in title bar?
-		DirectXVersion dxVersion);	
+		bool debugTitleBarStats);	// Show extra stats (fps) in title bar?
 	~DXCore();
 
 	// Static requirements for OS-level message processing
@@ -86,6 +94,7 @@ public:
 
 	// Returns 0 for DirectX11 and 1 for DirectX12
 	bool IsDirectX12();
+	DirectXVersion GetDXVersion();
 
 	// Initialization and game-loop related methods
 	HRESULT InitWindow();
@@ -103,8 +112,23 @@ public:
 	std::string GetFullPathTo(std::string relativeFilePath);
 	std::wstring GetFullPathTo_Wide(std::wstring relativeFilePath);
 
+	std::string GetProjectPath();
+	std::string GetProjectAssetPath();
+	std::string GetEngineAssetsPath();
+	std::string GetEngineInstallPath();
+	std::string GetStartupSceneName();
+	bool HasStartupScene();
+	void SetProjectPath(std::string projPath);
+	void SetEngineInstallPath(std::string enginePath);
+	void SetStartupSceneName(std::string sceneName);
+	void SetHasStartupScene(bool hasScene);
+
 	void SetVSAssetPaths();
 	void SetBuildAssetPaths();
+
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> GetBackBufferRTV();
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> GetDepthStencilView();
+	Microsoft::WRL::ComPtr<IDXGISwapChain> GetSwapChain();
 
 	// Syncing tools
 	Microsoft::WRL::ComPtr<ID3D12Fence> fence;
@@ -113,7 +137,7 @@ public:
 	unsigned int width;
 	unsigned int height;
 
-	std::string GetAssetPathString(AssetPathIndex index);
+	std::string GetAssetPathString(AssetPathIndex index, AssetPathType type);
 
 	HWND		hWnd;			// The handle to the window itself
 
@@ -160,7 +184,8 @@ protected:
 	float GetTotalTime();
 	float GetDeltaTime();
 
-	std::string assetPathStrings[ASSET_PATH_COUNT];
+	std::string criticalAssetPaths[ASSET_PATH_COUNT];
+	std::string projectAssetPaths[ASSET_PATH_COUNT];
 
 	// What version of DX is this?
 	DirectXVersion dxVersion;
@@ -173,6 +198,14 @@ private:
 	__int64 startTime;
 	__int64 currentTime;
 	__int64 previousTime;
+
+	std::string projectPath;
+	std::string mainAssetPath;
+	std::string engineInstallPath;
+	std::string engineAssetsPath;
+	std::string startupSceneName;
+
+	bool hasStartupScene;
 
 	// FPS calculation
 	int fpsFrameCount;

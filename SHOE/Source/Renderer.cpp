@@ -36,6 +36,10 @@ Renderer::~Renderer() {
 	MFShutdown();
 }
 
+void Renderer::ReloadDefaultShaders() {
+
+}
+
 void Renderer::PreResize() {
 
 }
